@@ -1,0 +1,20 @@
+:root {
+  --surface-canvas: #0b0c0f;
+  --surface-node: #17191e;
+  --surface-floating: #202229;
+  --text-primary: #f2efe8;
+  --text-muted: #aaaeb8;
+  --accent: #7268f0;
+  --status-success: #61b6a7;
+  --status-error: #e27f78;
+  --focus-ring: #a9a2ff;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+}
