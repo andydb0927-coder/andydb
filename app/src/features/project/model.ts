@@ -44,6 +44,7 @@ export interface DependencyEdge {
   id: string
   sourceNodeId: string
   targetNodeId: string
+  sourceChanged?: boolean
 }
 
 export interface TimelineItem {

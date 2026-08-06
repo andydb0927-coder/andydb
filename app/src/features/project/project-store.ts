@@ -27,6 +27,9 @@ interface ProjectStore {
   future: Project[]
   addNode: (node: CanvasNode) => void
   updateNode: (nodeId: string, changes: NodeUpdates) => void
+  updateNodePositions: (
+    positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
+  ) => void
   deleteNode: (nodeId: string) => void
   connectNodes: (edge: DependencyEdge) => void
   appendVersion: (
@@ -49,6 +52,26 @@ const defaultRepository = new ProjectRepository()
 
 function withUpdatedTimestamp(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() }
+}
+
+function findDownstream(project: Project, nodeId: string) {
+  const nodeIds = new Set<string>()
+  const edgeIds = new Set<string>()
+  const queue = [nodeId]
+
+  while (queue.length > 0) {
+    const sourceId = queue.shift()!
+    for (const edge of project.edges) {
+      if (edge.sourceNodeId !== sourceId) continue
+      edgeIds.add(edge.id)
+      if (nodeIds.has(edge.targetNodeId)) continue
+      nodeIds.add(edge.targetNodeId)
+      queue.push(edge.targetNodeId)
+    }
+  }
+
+  nodeIds.delete(nodeId)
+  return { nodeIds, edgeIds }
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -113,13 +136,44 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
-    deleteNode: (nodeId) => {
+    updateNodePositions: (positions) => {
       commit((project) => {
-        if (!project.nodes.some((node) => node.id === nodeId)) return project
+        const positionsById = new Map(
+          positions.map(({ nodeId, position }) => [nodeId, position]),
+        )
+        const changed = project.nodes.some((node) => {
+          const position = positionsById.get(node.id)
+          return (
+            position !== undefined &&
+            (position.x !== node.position.x || position.y !== node.position.y)
+          )
+        })
+        if (!changed) return project
 
         return withUpdatedTimestamp({
           ...project,
-          nodes: project.nodes.filter((node) => node.id !== nodeId),
+          nodes: project.nodes.map((node) => {
+            const position = positionsById.get(node.id)
+            return position ? { ...node, position } : node
+          }),
+        })
+      })
+    },
+
+    deleteNode: (nodeId) => {
+      commit((project) => {
+        if (!project.nodes.some((node) => node.id === nodeId)) return project
+        const downstream = findDownstream(project, nodeId)
+
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes
+            .filter((node) => node.id !== nodeId)
+            .map((node) =>
+              downstream.nodeIds.has(node.id)
+                ? { ...node, sourceChanged: true }
+                : node,
+            ),
           edges: project.edges.filter(
             (edge) =>
               edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId,
@@ -132,12 +186,33 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     connectNodes: (edge) => {
       commit((project) =>
-        withUpdatedTimestamp({ ...project, edges: [...project.edges, edge] }),
+        withUpdatedTimestamp({
+          ...project,
+          edges: [...project.edges, { ...edge, sourceChanged: false }],
+        }),
       )
     },
 
     appendVersion: (nodeId, version) => {
-      commit((project) => appendNodeVersion(project, nodeId, version))
+      commit((project) => {
+        const versioned = appendNodeVersion(project, nodeId, version)
+        if (versioned === project) return project
+        const downstream = findDownstream(versioned, nodeId)
+
+        return {
+          ...versioned,
+          nodes: versioned.nodes.map((node) =>
+            downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node,
+          ),
+          edges: versioned.edges.map((edge) =>
+            downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
+        }
+      })
     },
 
     addToTimeline: (item) => {
