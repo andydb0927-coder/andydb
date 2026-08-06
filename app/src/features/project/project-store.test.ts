@@ -2,7 +2,12 @@ import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { makeProjectFixture } from '../../test/fixtures'
-import { appendNodeVersion, createProject, type CanvasNode } from './model'
+import {
+  appendNodeVersion,
+  createProject,
+  type CanvasNode,
+  type DependencyEdge,
+} from './model'
 import {
   WirelessCanvasDatabase,
   ProjectRepository,
@@ -309,6 +314,55 @@ describe('project store history and persistence', () => {
 
     expect(useProjectStore.getState().activeProject).toBe(originalProject)
     expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('validates a large dependency graph with linear edge traversal', () => {
+    const base = makeProjectFixture()
+    const nodeCount = 200
+    const nodes = Array.from({ length: nodeCount }, (_, index): CanvasNode => ({
+      ...base.nodes[0],
+      id: `node-${index}`,
+      title: `Node ${index}`,
+      position: { x: index * 10, y: 0 },
+    }))
+    let sourceReads = 0
+    const edges = Array.from(
+      { length: nodeCount - 1 },
+      (_, index): DependencyEdge => ({
+        id: `edge-${index}-${index + 1}`,
+        get sourceNodeId() {
+          sourceReads += 1
+          return `node-${index}`
+        },
+        targetNodeId: `node-${index + 1}`,
+      }),
+    )
+    const project = {
+      ...base,
+      id: 'project-large-chain',
+      nodes,
+      edges,
+      timeline: [],
+      jobs: [],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      past: [],
+      future: [],
+    })
+    sourceReads = 0
+
+    useProjectStore.getState().connectNodes({
+      id: 'edge-close-chain',
+      sourceNodeId: `node-${nodeCount - 1}`,
+      targetNodeId: 'node-0',
+    })
+
+    expect(useProjectStore.getState().activeProject).toBe(project)
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(sourceReads).toBeLessThanOrEqual(edges.length * 3)
   })
 
   test('rejects a timeline reorder containing duplicate IDs without adding history', () => {

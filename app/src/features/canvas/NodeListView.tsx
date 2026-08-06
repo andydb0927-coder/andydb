@@ -41,8 +41,8 @@ function dependencyDepths(nodes: CanvasNode[], edges: DependencyEdge[]) {
     .filter((node) => indegree.get(node.id) === 0)
     .map((node) => node.id)
 
-  while (queue.length > 0) {
-    const sourceNodeId = queue.shift()!
+  for (let index = 0; index < queue.length; index += 1) {
+    const sourceNodeId = queue[index]
     for (const targetNodeId of outgoing.get(sourceNodeId) ?? []) {
       depth.set(
         targetNodeId,

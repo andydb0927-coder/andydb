@@ -79,22 +79,24 @@ function hasDependencyPath(
   sourceNodeId: string,
   targetNodeId: string,
 ) {
-  const visited = new Set<string>()
+  const outgoing = new Map<string, string[]>()
+  for (const edge of edges) {
+    const targets = outgoing.get(edge.sourceNodeId)
+    if (targets) targets.push(edge.targetNodeId)
+    else outgoing.set(edge.sourceNodeId, [edge.targetNodeId])
+  }
+
+  const visited = new Set([sourceNodeId])
   const queue = [sourceNodeId]
 
-  while (queue.length > 0) {
-    const currentNodeId = queue.shift()!
+  for (let index = 0; index < queue.length; index += 1) {
+    const currentNodeId = queue[index]
     if (currentNodeId === targetNodeId) return true
-    if (visited.has(currentNodeId)) continue
-    visited.add(currentNodeId)
 
-    for (const edge of edges) {
-      if (
-        edge.sourceNodeId === currentNodeId &&
-        !visited.has(edge.targetNodeId)
-      ) {
-        queue.push(edge.targetNodeId)
-      }
+    for (const nextNodeId of outgoing.get(currentNodeId) ?? []) {
+      if (visited.has(nextNodeId)) continue
+      visited.add(nextNodeId)
+      queue.push(nextNodeId)
     }
   }
 
