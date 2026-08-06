@@ -6,6 +6,7 @@ import type {
   GenerationJob,
   TimelineItem,
 } from '../project/model'
+import { selectNodeGenerationJob } from './job-selector'
 
 const kindCopy = {
   character: '角色',
@@ -25,17 +26,37 @@ const jobCopy = {
 
 function dependencyDepths(nodes: CanvasNode[], edges: DependencyEdge[]) {
   const depth = new Map(nodes.map((node) => [node.id, 0]))
-  for (let iteration = 0; iteration < nodes.length; iteration += 1) {
-    let changed = false
-    for (const edge of edges) {
-      const candidate = (depth.get(edge.sourceNodeId) ?? 0) + 1
-      if (candidate > (depth.get(edge.targetNodeId) ?? 0)) {
-        depth.set(edge.targetNodeId, candidate)
-        changed = true
-      }
+  const indegree = new Map(nodes.map((node) => [node.id, 0]))
+  const outgoing = new Map(nodes.map((node) => [node.id, [] as string[]]))
+
+  for (const edge of edges) {
+    if (!indegree.has(edge.sourceNodeId) || !indegree.has(edge.targetNodeId)) {
+      continue
     }
-    if (!changed) break
+    outgoing.get(edge.sourceNodeId)!.push(edge.targetNodeId)
+    indegree.set(edge.targetNodeId, indegree.get(edge.targetNodeId)! + 1)
   }
+
+  const queue = nodes
+    .filter((node) => indegree.get(node.id) === 0)
+    .map((node) => node.id)
+
+  while (queue.length > 0) {
+    const sourceNodeId = queue.shift()!
+    for (const targetNodeId of outgoing.get(sourceNodeId) ?? []) {
+      depth.set(
+        targetNodeId,
+        Math.max(
+          depth.get(targetNodeId) ?? 0,
+          (depth.get(sourceNodeId) ?? 0) + 1,
+        ),
+      )
+      const remaining = indegree.get(targetNodeId)! - 1
+      indegree.set(targetNodeId, remaining)
+      if (remaining === 0) queue.push(targetNodeId)
+    }
+  }
+
   return depth
 }
 
@@ -110,7 +131,7 @@ export function NodeListView({
         </div>
         <ul>
           {orderedNodes.map((node) => {
-            const job = jobs.find((candidate) => candidate.nodeId === node.id)
+            const job = selectNodeGenerationJob(node, jobs)
             const status = node.sourceChanged
               ? '上游来源已变更'
               : job

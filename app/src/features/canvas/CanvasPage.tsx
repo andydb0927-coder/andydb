@@ -16,6 +16,7 @@ import { CanvasToolbar } from './CanvasToolbar'
 import { CanvasTopBar } from './CanvasTopBar'
 import { DependencyImpactDialog } from './DependencyImpactDialog'
 import { edgeTypes, type DependencyFlowEdge } from './edge-types'
+import { selectNodeGenerationJob } from './job-selector'
 import {
   nodeTypes,
   type CreativeFlowNode,
@@ -25,6 +26,7 @@ import { NodeListView } from './NodeListView'
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load'>
+type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 
 const defaultRepository = new ProjectRepository()
 
@@ -53,7 +55,9 @@ export interface CanvasPageProps {
 
 export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
-  const project = useProjectStore((state) => state.activeProject)
+  const activeProject = useProjectStore((state) => state.activeProject)
+  const project =
+    activeProject?.id === projectId ? activeProject : undefined
   const saveStatus = useProjectStore((state) => state.saveStatus)
   const canUndo = useProjectStore((state) => state.past.length > 0)
   const canRedo = useProjectStore((state) => state.future.length > 0)
@@ -64,21 +68,65 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     (state) => state.updateNodePositions,
   )
   const deleteNode = useProjectStore((state) => state.deleteNode)
-  const [selectedNodeId, setSelectedNodeId] = useState<string>()
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [primaryNodeId, setPrimaryNodeId] = useState<string>()
   const [nodeListOpen, setNodeListOpen] = useState(false)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
+  const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
+    project ? 'ready' : 'loading',
+  )
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const deleteTriggerRef = useRef<HTMLButtonElement>(undefined)
 
+  const selectOnlyNode = useCallback((nodeId: string) => {
+    setSelectedNodeIds(new Set([nodeId]))
+    setPrimaryNodeId(nodeId)
+  }, [])
+
+  const removeSelectedNode = useCallback((nodeId: string) => {
+    setSelectedNodeIds((current) => {
+      const next = new Set(current)
+      next.delete(nodeId)
+      return next
+    })
+    setPrimaryNodeId((current) => (current === nodeId ? undefined : current))
+  }, [])
+
   useEffect(() => {
-    if (!projectId || project?.id === projectId) return
+    if (!projectId) {
+      setLoadState('error')
+      return
+    }
+    if (useProjectStore.getState().activeProject?.id === projectId) {
+      setLoadState('ready')
+      return
+    }
 
     const abortController = new AbortController()
-    void useProjectStore
-      .getState()
-      .hydrate(projectId, repository, abortController.signal)
+    let active = true
+    setLoadState('loading')
 
-    return () => abortController.abort()
-  }, [project?.id, projectId, repository])
+    const hydrateRoute = async () => {
+      try {
+        const hydrated = await useProjectStore
+          .getState()
+          .hydrate(projectId, repository, abortController.signal)
+        if (!active || abortController.signal.aborted) return
+        setLoadState(hydrated ? 'ready' : 'not-found')
+      } catch {
+        if (!active || abortController.signal.aborted) return
+        setLoadState('error')
+      }
+    }
+    void hydrateRoute()
+
+    return () => {
+      active = false
+      abortController.abort()
+    }
+  }, [loadAttempt, projectId, repository])
 
   const handleAction = useCallback(
     (_nodeId: string, _action: CreativeNodeAction) => {
@@ -93,13 +141,13 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       const consumers = downstreamConsumers(project, nodeId)
       if (consumers.length === 0) {
         deleteNode(nodeId)
-        setSelectedNodeId(undefined)
+        removeSelectedNode(nodeId)
         return
       }
       deleteTriggerRef.current = trigger
       setDeleteCandidateId(nodeId)
     },
-    [deleteNode, project],
+    [deleteNode, project, removeSelectedNode],
   )
 
   const flowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -112,8 +160,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       const asset = project.assets.find(
         (candidate) => candidate.id === activeVersion?.assetId,
       )
-      const job = project.jobs.find((candidate) => candidate.nodeId === node.id)
-      const selected = node.id === selectedNodeId
+      const job = selectNodeGenerationJob(node, project.jobs)
+      const selected = selectedNodeIds.has(node.id)
 
       return {
         id: node.id,
@@ -125,15 +173,23 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           asset,
           job,
           selected,
+          contextual: node.id === primaryNodeId,
           actionsPlacement:
             node.position.x === rightmostX ? 'before' : 'after',
-          onSelect: () => setSelectedNodeId(node.id),
+          onSelect: () => selectOnlyNode(node.id),
           onDelete: (trigger) => requestDelete(node.id, trigger),
           onAction: (action) => handleAction(node.id, action),
         },
       }
     })
-  }, [handleAction, project, requestDelete, selectedNodeId])
+  }, [
+    handleAction,
+    primaryNodeId,
+    project,
+    requestDelete,
+    selectOnlyNode,
+    selectedNodeIds,
+  ])
 
   const flowEdges = useMemo<DependencyFlowEdge[]>(
     () =>
@@ -158,12 +214,29 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       )
       if (positions.length > 0) updateNodePositions(positions)
 
-      const selection = changes.find(
-        (change) => change.type === 'select' && change.selected,
+      const selectionChanges = changes.filter(
+        (change) => change.type === 'select',
       )
-      if (selection?.type === 'select') setSelectedNodeId(selection.id)
+      if (selectionChanges.length > 0) {
+        const nextSelection = new Set(selectedNodeIds)
+        for (const change of selectionChanges) {
+          if (change.type !== 'select') continue
+          if (change.selected) nextSelection.add(change.id)
+          else nextSelection.delete(change.id)
+        }
+        setSelectedNodeIds(nextSelection)
+        const latestSelected = selectionChanges.findLast(
+          (change) => change.type === 'select' && change.selected,
+        )
+        setPrimaryNodeId((current) =>
+          latestSelected?.id ??
+          (current && nextSelection.has(current)
+            ? current
+            : [...nextSelection].at(-1)),
+        )
+      }
     },
-    [updateNodePositions],
+    [selectedNodeIds, updateNodePositions],
   )
 
   const handleConnect = useCallback(
@@ -180,7 +253,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   const closeNodeList = useCallback(() => {
     setNodeListOpen(false)
-    const nodeId = selectedNodeId
+    const nodeId = primaryNodeId
     queueMicrotask(() => {
       if (!nodeId) return
       const candidate = document.querySelector<HTMLElement>(
@@ -188,7 +261,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       )
       candidate?.focus()
     })
-  }, [selectedNodeId])
+  }, [primaryNodeId])
 
   const deleteCandidate = project?.nodes.find(
     (node) => node.id === deleteCandidateId,
@@ -207,7 +280,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     if (!deleteCandidate) return
     deleteNode(deleteCandidate.id)
     setDeleteCandidateId(undefined)
-    setSelectedNodeId(undefined)
+    removeSelectedNode(deleteCandidate.id)
   }
 
   return (
@@ -216,8 +289,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         projectId={project?.id}
         projectTitle={project?.title ?? '项目画布'}
         saveStatus={saveStatus}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        canUndo={Boolean(project) && canUndo}
+        canRedo={Boolean(project) && canRedo}
         onUndo={undo}
         onRedo={redo}
         onOpenNodeList={() => setNodeListOpen(true)}
@@ -231,7 +304,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
           onConnect={handleConnect}
-          onNodeClick={(_event, node) => setSelectedNodeId(node.id)}
+          onNodeClick={(_event, node) => selectOnlyNode(node.id)}
           fitView
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll
@@ -246,6 +319,28 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           <Controls showInteractive={false} />
         </ReactFlow>
         <CanvasToolbar />
+        {!project ? (
+          <div
+            className="canvas-route-state"
+            role={loadState === 'loading' ? 'status' : 'alert'}
+          >
+            <p>
+              {loadState === 'loading'
+                ? '正在加载项目'
+                : loadState === 'not-found'
+                  ? '未找到项目'
+                  : '无法加载项目'}
+            </p>
+            {loadState === 'error' ? (
+              <button
+                type="button"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              >
+                重试加载
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {nodeListOpen && project ? (
         <NodeListView
@@ -253,8 +348,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           edges={project.edges}
           timeline={project.timeline}
           jobs={project.jobs}
-          selectedNodeId={selectedNodeId}
-          onSelect={setSelectedNodeId}
+          selectedNodeId={primaryNodeId}
+          onSelect={selectOnlyNode}
           onClose={closeNodeList}
         />
       ) : null}

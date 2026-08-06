@@ -228,6 +228,89 @@ describe('project store history and persistence', () => {
     expect(updatedNode?.activeVersionId).toBe('version-shot-river-v1')
   })
 
+  test('resolves regenerated input state while marking only downstream consumers stale', () => {
+    const base = makeProjectFixture()
+    const makeNode = (
+      id: string,
+      sourceChanged: boolean,
+      createdAt: string,
+    ): CanvasNode => ({
+      id,
+      kind: 'storyboard',
+      title: id,
+      position: { x: 0, y: 0 },
+      versions: [
+        {
+          id: `version-${id}-old`,
+          createdAt,
+          prompt: `${id} old`,
+          assetId: 'asset-shot-river-v1',
+        },
+      ],
+      activeVersionId: `version-${id}-old`,
+      sourceChanged,
+    })
+    const project = {
+      ...base,
+      id: 'project-chain',
+      nodes: [
+        makeNode('A', false, '2026-08-06T08:00:00.000Z'),
+        makeNode('B', true, '2026-08-06T08:01:00.000Z'),
+        makeNode('C', true, '2026-08-06T08:02:00.000Z'),
+      ],
+      edges: [
+        {
+          id: 'A-B',
+          sourceNodeId: 'A',
+          targetNodeId: 'B',
+          sourceChanged: true,
+        },
+        {
+          id: 'B-C',
+          sourceNodeId: 'B',
+          targetNodeId: 'C',
+          sourceChanged: true,
+        },
+      ],
+      timeline: [],
+      jobs: [],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      past: [],
+      future: [],
+    })
+
+    useProjectStore.getState().appendVersion('B', {
+      prompt: 'B regenerated',
+      generationJobId: 'job-B-current',
+    })
+
+    const next = useProjectStore.getState().activeProject!
+    expect(next.nodes.find(({ id }) => id === 'B')?.sourceChanged).toBe(false)
+    expect(next.nodes.find(({ id }) => id === 'C')?.sourceChanged).toBe(true)
+    expect(next.edges.find(({ id }) => id === 'A-B')?.sourceChanged).toBe(false)
+    expect(next.edges.find(({ id }) => id === 'B-C')?.sourceChanged).toBe(true)
+    expect(next.assets).toEqual(project.assets)
+    expect(next.nodes.find(({ id }) => id === 'B')?.versions).toHaveLength(2)
+    expect(useProjectStore.getState().past).toEqual([project])
+  })
+
+  test('rejects a dependency edge that would create a cycle without adding history', () => {
+    const originalProject = useProjectStore.getState().activeProject
+
+    useProjectStore.getState().connectNodes({
+      id: 'edge-audio-to-shot',
+      sourceNodeId: 'rain-audio',
+      targetNodeId: 'shot-1',
+    })
+
+    expect(useProjectStore.getState().activeProject).toBe(originalProject)
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
   test('rejects a timeline reorder containing duplicate IDs without adding history', () => {
     const originalTimeline = useProjectStore.getState().activeProject?.timeline
 

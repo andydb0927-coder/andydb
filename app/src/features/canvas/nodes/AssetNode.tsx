@@ -78,7 +78,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
 }
 
 export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
-  const { node, asset, job, selected } = data
+  const { node, asset, job, selected, contextual } = data
   const KindIcon = kindIcons[node.kind]
   const activeVersion = node.versions.find(
     (version) => version.id === node.activeVersionId,
@@ -124,7 +124,7 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
         </button>
         <Handle type="source" position={Position.Right} />
       </article>
-      {selected ? <NodeActions data={data} /> : null}
+      {contextual ? <NodeActions data={data} /> : null}
     </div>
   )
 }

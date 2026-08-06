@@ -74,6 +74,33 @@ function findDownstream(project: Project, nodeId: string) {
   return { nodeIds, edgeIds }
 }
 
+function hasDependencyPath(
+  edges: DependencyEdge[],
+  sourceNodeId: string,
+  targetNodeId: string,
+) {
+  const visited = new Set<string>()
+  const queue = [sourceNodeId]
+
+  while (queue.length > 0) {
+    const currentNodeId = queue.shift()!
+    if (currentNodeId === targetNodeId) return true
+    if (visited.has(currentNodeId)) continue
+    visited.add(currentNodeId)
+
+    for (const edge of edges) {
+      if (
+        edge.sourceNodeId === currentNodeId &&
+        !visited.has(edge.targetNodeId)
+      ) {
+        queue.push(edge.targetNodeId)
+      }
+    }
+  }
+
+  return false
+}
+
 export const useProjectStore = create<ProjectStore>((set, get) => {
   let persistenceRequestId = 0
   let hydrationRequestId = 0
@@ -185,12 +212,35 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     connectNodes: (edge) => {
-      commit((project) =>
-        withUpdatedTimestamp({
+      commit((project) => {
+        const nodeIds = new Set(project.nodes.map((node) => node.id))
+        const duplicatesExistingEdge = project.edges.some(
+          (existingEdge) =>
+            existingEdge.id === edge.id ||
+            (existingEdge.sourceNodeId === edge.sourceNodeId &&
+              existingEdge.targetNodeId === edge.targetNodeId),
+        )
+        const wouldCreateCycle = hasDependencyPath(
+          project.edges,
+          edge.targetNodeId,
+          edge.sourceNodeId,
+        )
+
+        if (
+          !nodeIds.has(edge.sourceNodeId) ||
+          !nodeIds.has(edge.targetNodeId) ||
+          edge.sourceNodeId === edge.targetNodeId ||
+          duplicatesExistingEdge ||
+          wouldCreateCycle
+        ) {
+          return project
+        }
+
+        return withUpdatedTimestamp({
           ...project,
           edges: [...project.edges, { ...edge, sourceChanged: false }],
-        }),
-      )
+        })
+      })
     },
 
     appendVersion: (nodeId, version) => {
@@ -202,12 +252,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         return {
           ...versioned,
           nodes: versioned.nodes.map((node) =>
-            downstream.nodeIds.has(node.id)
+            node.id === nodeId
+              ? { ...node, sourceChanged: false }
+              : downstream.nodeIds.has(node.id)
               ? { ...node, sourceChanged: true }
               : node,
           ),
           edges: versioned.edges.map((edge) =>
-            downstream.edgeIds.has(edge.id)
+            edge.targetNodeId === nodeId
+              ? { ...edge, sourceChanged: false }
+              : downstream.edgeIds.has(edge.id)
               ? { ...edge, sourceChanged: true }
               : edge,
           ),

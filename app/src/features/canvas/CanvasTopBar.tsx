@@ -49,7 +49,11 @@ export function CanvasTopBar({
           <ListTree aria-hidden="true" />
           节点列表
         </button>
-        <Link to={projectId ? `/project/${projectId}/preview` : '#'}>预览</Link>
+        {projectId ? (
+          <Link to={`/project/${projectId}/preview`}>预览</Link>
+        ) : (
+          <button type="button" disabled>预览</button>
+        )}
         <button type="button">
           <Download aria-hidden="true" />
           导出

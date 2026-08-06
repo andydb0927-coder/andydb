@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Project } from '../project/model'
 import { useProjectStore } from '../project/project-store'
 import { CanvasPage } from './CanvasPage'
+import { sortNodesForList } from './NodeListView'
 
 interface FlowNodeFixture {
   id: string
@@ -186,6 +187,34 @@ afterEach(() => {
 })
 
 describe('creative canvas', () => {
+  test('keeps legacy cyclic dependency data in stable creation order', () => {
+    const project = makeCanvasProject()
+    const nodes = project.nodes.slice(0, 3)
+    const cyclicEdges = [
+      {
+        id: 'character-scene',
+        sourceNodeId: 'character',
+        targetNodeId: 'scene',
+      },
+      {
+        id: 'scene-character',
+        sourceNodeId: 'scene',
+        targetNodeId: 'character',
+      },
+      {
+        id: 'scene-storyboard',
+        sourceNodeId: 'scene',
+        targetNodeId: 'storyboard',
+      },
+    ]
+
+    expect(sortNodesForList(nodes, cyclicEdges, []).map((node) => node.id)).toEqual([
+      'character',
+      'scene',
+      'storyboard',
+    ])
+  })
+
   test('hydrates a saved project when the project URL is opened directly', async () => {
     const project = makeCanvasProject()
     useProjectStore.setState({
@@ -204,6 +233,59 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.id).toBe('project-canvas')
   })
 
+  test('hides an old route project after load failure and retries successfully', async () => {
+    const user = userEvent.setup()
+    const requestedProject = makeCanvasProject()
+    const oldProject = {
+      ...makeCanvasProject(),
+      id: 'project-old',
+      title: '旧项目',
+    }
+    const load = vi
+      .fn<(projectId: string) => Promise<Project | undefined>>()
+      .mockRejectedValueOnce(new Error('disk unavailable'))
+      .mockResolvedValueOnce(requestedProject)
+    act(() => activate(oldProject))
+
+    renderCanvas({ repository: { load } })
+
+    expect(screen.queryByRole('heading', { name: '旧项目' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: '预览' }),
+    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('无法加载项目')
+    expect(
+      screen.queryByRole('link', { name: '预览' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '重试加载' }))
+
+    expect(
+      await screen.findByRole('heading', { name: '雨夜追寻' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: '预览' })).toHaveAttribute(
+      'href',
+      '/project/project-canvas/preview',
+    )
+  })
+
+  test('shows a not-found state without leaking the previous project', async () => {
+    const oldProject = {
+      ...makeCanvasProject(),
+      id: 'project-old',
+      title: '旧项目',
+    }
+    act(() => activate(oldProject))
+
+    renderCanvas({ repository: { load: async () => undefined } })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('未找到项目')
+    expect(screen.queryByText('旧项目')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: '预览' }),
+    ).not.toBeInTheDocument()
+  })
+
   test('renders all creative nodes and reveals actions for the selected storyboard', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -218,6 +300,73 @@ describe('creative canvas', () => {
     for (const action of ['重生成', '扩展镜头', '生成视频', '加入时间线']) {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
+  })
+
+  test('shows the active version job in both canvas and node list', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const withCurrentJob = {
+      ...project,
+      nodes: project.nodes.map((node) =>
+        node.id === 'storyboard'
+          ? {
+              ...node,
+              versions: node.versions.map((version) => ({
+                ...version,
+                generationJobId: 'job-storyboard-current',
+              })),
+            }
+          : node,
+      ),
+      jobs: [
+        {
+          ...project.jobs[0],
+          id: 'job-storyboard-old',
+          status: 'succeeded' as const,
+          updatedAt: '2026-08-06T08:10:00.000Z',
+        },
+        {
+          ...project.jobs[0],
+          id: 'job-storyboard-current',
+          status: 'running' as const,
+          updatedAt: '2026-08-06T08:02:00.000Z',
+        },
+      ],
+    }
+    act(() => activate(withCurrentJob))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+
+    expect(screen.getAllByText('生成中')).toHaveLength(2)
+  })
+
+  test('uses the deterministic latest job for legacy versions without a job reference', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const legacyProject = {
+      ...project,
+      jobs: [
+        {
+          ...project.jobs[0],
+          id: 'job-storyboard-old',
+          status: 'succeeded' as const,
+          updatedAt: '2026-08-06T08:01:00.000Z',
+        },
+        {
+          ...project.jobs[0],
+          id: 'job-storyboard-latest',
+          status: 'running' as const,
+          updatedAt: '2026-08-06T08:10:00.000Z',
+        },
+      ],
+    }
+    act(() => activate(legacyProject))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+
+    expect(screen.getAllByText('生成中')).toHaveLength(2)
   })
 
   test('keeps the node selection surface available as a React Flow drag handle', () => {
@@ -249,6 +398,20 @@ describe('creative canvas', () => {
 
   test('moves every selected node in one undoable mutation', () => {
     renderCanvas()
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        { id: 'character', type: 'select', selected: true },
+        { id: 'scene', type: 'select', selected: true },
+      ])
+    })
+
+    expect(
+      latestFlowProps?.nodes
+        .filter(({ selected }) => selected)
+        .map(({ id }) => id),
+    ).toEqual(['character', 'scene'])
+    expect(screen.getAllByRole('button', { name: '重生成' })).toHaveLength(1)
 
     act(() => {
       latestFlowProps?.onNodesChange([

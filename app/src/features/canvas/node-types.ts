@@ -27,6 +27,7 @@ export interface CreativeNodeProps {
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
   asset?: Asset
   actionsPlacement: 'before' | 'after'
+  contextual: boolean
   onSelect(): void
   onDelete(trigger: HTMLButtonElement): void
 }
