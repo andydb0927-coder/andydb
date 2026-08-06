@@ -81,7 +81,17 @@ export function makeProjectFixture(): Project {
         track: 'audio',
       },
     ],
-    jobs: [],
+    jobs: [
+      {
+        id: 'generation-job-shot-1',
+        nodeId: 'shot-1',
+        status: 'succeeded',
+        prompt: '远景，雨夜河岸',
+        createdAt: '2026-08-06T07:59:00.000Z',
+        updatedAt: '2026-08-06T08:00:00.000Z',
+        assetId: 'asset-shot-river-v1',
+      },
+    ],
     exportJobs: [],
   }
 }

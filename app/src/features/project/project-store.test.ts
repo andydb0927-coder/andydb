@@ -17,6 +17,17 @@ function createRepository() {
   return new ProjectRepository(new WirelessCanvasDatabase(name))
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, resolve, reject }
+}
+
 function activateFixture() {
   const project = makeProjectFixture()
   useProjectStore.setState({
@@ -199,6 +210,55 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().future).toEqual([])
   })
 
+  test('updateNode cannot replace immutable versions or select an unknown active version', () => {
+    const originalNode = useProjectStore.getState().activeProject?.nodes[0]
+    const unsafeChanges = {
+      title: '只更新可编辑标题',
+      versions: [],
+      activeVersionId: 'unknown-version',
+    } as unknown as Parameters<
+      ReturnType<typeof useProjectStore.getState>['updateNode']
+    >[1]
+
+    useProjectStore.getState().updateNode('shot-1', unsafeChanges)
+
+    const updatedNode = useProjectStore.getState().activeProject?.nodes[0]
+    expect(updatedNode?.title).toBe('只更新可编辑标题')
+    expect(updatedNode?.versions).toEqual(originalNode?.versions)
+    expect(updatedNode?.activeVersionId).toBe('version-shot-river-v1')
+  })
+
+  test('rejects a timeline reorder containing duplicate IDs without adding history', () => {
+    const originalTimeline = useProjectStore.getState().activeProject?.timeline
+
+    useProjectStore
+      .getState()
+      .reorderTimeline(['timeline-shot-1', 'timeline-shot-1'])
+
+    expect(useProjectStore.getState().activeProject?.timeline).toEqual(
+      originalTimeline,
+    )
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('deleting a node removes its generation jobs and undo restores them', () => {
+    useProjectStore.getState().deleteNode('shot-1')
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.jobs.some((job) => job.nodeId === 'shot-1'),
+    ).toBe(false)
+
+    useProjectStore.getState().undo()
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.jobs.map((job) => job.id),
+    ).toEqual(['generation-job-shot-1'])
+  })
+
   test('keeps an edit after a rejected save and allows a later retry', async () => {
     useProjectStore.getState().updateNode('shot-1', { title: '失败后仍保留' })
     const save = vi
@@ -220,6 +280,60 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().activeProject?.nodes[0].title).toBe(
       '失败后仍保留',
     )
+  })
+
+  test('does not mark a newer edit saved when an older snapshot finishes saving', async () => {
+    const deferred = createDeferred<void>()
+    const persistence = useProjectStore
+      .getState()
+      .persistActive({ save: () => deferred.promise })
+    useProjectStore.getState().updateNode('shot-1', { title: '保存期间的新编辑' })
+
+    deferred.resolve(undefined)
+    await persistence
+
+    expect(useProjectStore.getState().saveStatus).toBe('saving')
+    expect(useProjectStore.getState().activeProject?.nodes[0].title).toBe(
+      '保存期间的新编辑',
+    )
+  })
+
+  test('ignores a stale save failure after hydration activates another project', async () => {
+    const saveDeferred = createDeferred<void>()
+    const persistence = useProjectStore
+      .getState()
+      .persistActive({ save: () => saveDeferred.promise })
+    const hydrated = {
+      ...createProject('新激活项目', '切换项目'),
+      id: 'project-hydrated',
+    }
+
+    await useProjectStore
+      .getState()
+      .hydrate(hydrated.id, { load: async () => hydrated })
+    saveDeferred.reject(new Error('stale request failure'))
+    await persistence
+
+    expect(useProjectStore.getState().activeProject?.id).toBe('project-hydrated')
+    expect(useProjectStore.getState().saveStatus).toBe('saved')
+  })
+
+  test('ignores an older overlapping save after the latest save succeeds', async () => {
+    const first = createDeferred<void>()
+    const second = createDeferred<void>()
+    const save = vi
+      .fn<() => Promise<void>>()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+
+    const olderPersistence = useProjectStore.getState().persistActive({ save })
+    const latestPersistence = useProjectStore.getState().persistActive({ save })
+    second.resolve(undefined)
+    await latestPersistence
+    first.reject(new Error('older request failed late'))
+    await olderPersistence
+
+    expect(useProjectStore.getState().saveStatus).toBe('saved')
   })
 
   test('reports offline without discarding the local edit', async () => {

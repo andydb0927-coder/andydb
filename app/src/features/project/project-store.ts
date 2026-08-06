@@ -14,6 +14,9 @@ export type PersistenceStatus = 'saved' | 'saving' | 'failed' | 'offline'
 
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
+type NodeUpdates = Partial<
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged'>
+>
 
 interface ProjectStore {
   projectsById: Record<string, Project>
@@ -23,7 +26,7 @@ interface ProjectStore {
   past: Project[]
   future: Project[]
   addNode: (node: CanvasNode) => void
-  updateNode: (nodeId: string, changes: Partial<CanvasNode>) => void
+  updateNode: (nodeId: string, changes: NodeUpdates) => void
   deleteNode: (nodeId: string) => void
   connectNodes: (edge: DependencyEdge) => void
   appendVersion: (
@@ -45,6 +48,8 @@ function withUpdatedTimestamp(project: Project): Project {
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
+  let persistenceRequestId = 0
+
   const commit = (mutate: (project: Project) => Project) => {
     const current = get().activeProject
     if (!current) return
@@ -81,7 +86,23 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         return withUpdatedTimestamp({
           ...project,
           nodes: project.nodes.map((node) =>
-            node.id === nodeId ? { ...node, ...changes, id: node.id } : node,
+            node.id === nodeId
+              ? {
+                  ...node,
+                  ...(changes.kind === undefined
+                    ? {}
+                    : { kind: changes.kind }),
+                  ...(changes.title === undefined
+                    ? {}
+                    : { title: changes.title }),
+                  ...(changes.position === undefined
+                    ? {}
+                    : { position: changes.position }),
+                  ...(changes.sourceChanged === undefined
+                    ? {}
+                    : { sourceChanged: changes.sourceChanged }),
+                }
+              : node,
           ),
         })
       })
@@ -99,6 +120,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
               edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId,
           ),
           timeline: project.timeline.filter((item) => item.nodeId !== nodeId),
+          jobs: project.jobs.filter((job) => job.nodeId !== nodeId),
         })
       })
     },
@@ -125,12 +147,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     reorderTimeline: (orderedItemIds) => {
       commit((project) => {
         const itemsById = new Map(project.timeline.map((item) => [item.id, item]))
-        const reordered = orderedItemIds.flatMap((id, order) => {
-          const item = itemsById.get(id)
-          return item ? [{ ...item, order }] : []
-        })
+        const hasExactUniqueIds =
+          orderedItemIds.length === project.timeline.length &&
+          new Set(orderedItemIds).size === project.timeline.length &&
+          orderedItemIds.every((id) => itemsById.has(id))
+        if (!hasExactUniqueIds) return project
 
-        if (reordered.length !== project.timeline.length) return project
+        const reordered = orderedItemIds.map((id, order) => ({
+          ...itemsById.get(id)!,
+          order,
+        }))
 
         return withUpdatedTimestamp({ ...project, timeline: reordered })
       })
@@ -167,6 +193,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     persistActive: async (repository = defaultRepository) => {
+      const requestId = ++persistenceRequestId
       const project = get().activeProject
       if (!project) return
 
@@ -178,9 +205,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set({ saveStatus: 'saving' })
       try {
         await repository.save(project)
-        set({ saveStatus: 'saved' })
+        if (
+          requestId === persistenceRequestId &&
+          get().activeProject === project
+        ) {
+          set({ saveStatus: 'saved' })
+        }
       } catch {
-        set({ saveStatus: 'failed' })
+        if (
+          requestId === persistenceRequestId &&
+          get().activeProject === project
+        ) {
+          set({ saveStatus: 'failed' })
+        }
       }
     },
 
@@ -188,6 +225,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       const project = await repository.load(projectId)
       if (!project) return
 
+      persistenceRequestId += 1
       set((state) => ({
         projectsById: { ...state.projectsById, [project.id]: project },
         activeProjectId: project.id,
