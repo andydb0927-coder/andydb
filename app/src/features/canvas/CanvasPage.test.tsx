@@ -174,6 +174,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   act(() => {
     useProjectStore.setState({
       projectsById: {},
@@ -300,6 +301,115 @@ describe('creative canvas', () => {
     for (const action of ['重生成', '扩展镜头', '生成视频', '加入时间线']) {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
+  })
+
+  test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+    expect(screen.getByText('生成中')).toBeVisible()
+    const job = useProjectStore
+      .getState()
+      .activeProject?.jobs.find(
+        (candidate) =>
+          candidate.nodeId === 'storyboard' && candidate.status === 'running',
+      )
+    expect(job?.status).toBe('running')
+
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const project = useProjectStore.getState().activeProject!
+    const node = project.nodes.find((candidate) => candidate.id === 'storyboard')!
+    expect(node.versions).toHaveLength(2)
+    expect(node.versions[0].assetId).toBe('asset-shot')
+    expect(node.versions[1]).toMatchObject({
+      generationJobId: job?.id,
+    })
+    expect(
+      project.assets.find((asset) => asset.id === node.versions[1].assetId),
+    ).toBeDefined()
+  })
+
+  test('creates and selects the corresponding video from the selected storyboard action', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+
+    act(() => screen.getByRole('button', { name: '生成视频' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const project = useProjectStore.getState().activeProject!
+    const video = project.nodes.find((node) => node.title === '视频 02')!
+    expect(video.kind).toBe('video')
+    expect(project.edges).toContainEqual(
+      expect.objectContaining({
+        sourceNodeId: 'storyboard',
+        targetNodeId: video.id,
+      }),
+    )
+    expect(latestFlowProps?.nodes.find((node) => node.id === video.id)?.selected).toBe(
+      true,
+    )
+  })
+
+  test('adds the selected video to the timeline from its contextual action', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+
+    await user.click(screen.getByRole('button', { name: '加入时间线' }))
+
+    expect(useProjectStore.getState().activeProject?.timeline).toContainEqual(
+      expect.objectContaining({ nodeId: 'video', track: 'video', order: 0 }),
+    )
+  })
+
+  test('keeps the floating AI director non-mutating for unknown input', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const viewport = screen.getByRole('region', { name: '项目画布' }).parentElement!
+    expect(within(viewport).getByRole('heading', { name: 'AI 导演' })).toBeVisible()
+    const before = useProjectStore.getState().activeProject
+
+    await user.type(
+      screen.getByRole('textbox', { name: '告诉我下一步要做什么' }),
+      '让它更有感觉',
+    )
+    await user.click(screen.getByRole('button', { name: '提交给 AI 导演' }))
+
+    expect(screen.getByText(/扩展这个镜头/)).toBeVisible()
+    expect(screen.getByText(/重新生成这个镜头/)).toBeVisible()
+    expect(screen.getByText(/把这个片段加入时间线/)).toBeVisible()
+    expect(screen.queryByRole('button', { name: '执行' })).not.toBeInTheDocument()
+    expect(useProjectStore.getState().activeProject).toBe(before)
+  })
+
+  test('waits for explicit Execute confirmation before a destructive director command', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '场景设定' }))
+    await user.type(
+      screen.getByRole('textbox', { name: '告诉我下一步要做什么' }),
+      '删除这个节点',
+    )
+
+    await user.click(screen.getByRole('button', { name: '提交给 AI 导演' }))
+
+    expect(
+      useProjectStore.getState().activeProject?.nodes.some((node) => node.id === 'scene'),
+    ).toBe(true)
+    expect(screen.getByText(/删除所选节点/)).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '执行' }))
+
+    expect(
+      useProjectStore.getState().activeProject?.nodes.some((node) => node.id === 'scene'),
+    ).toBe(false)
   })
 
   test('shows the active version job in both canvas and node list', async () => {

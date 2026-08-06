@@ -567,6 +567,90 @@ select {
   background: var(--accent);
 }
 
+.director-composer {
+  position: absolute;
+  z-index: 11;
+  bottom: var(--space-5);
+  left: 50%;
+  width: min(620px, calc(100vw - 160px));
+  padding: var(--space-3);
+  transform: translateX(-50%);
+}
+
+.director-composer__heading,
+.director-composer__input-row,
+.director-composer__proposal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.director-composer__heading {
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.director-composer h2,
+.director-composer p {
+  margin: 0;
+}
+
+.director-composer h2 {
+  font-size: 0.875rem;
+}
+
+.director-composer__heading span,
+.director-composer label,
+.director-composer__proposal p {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.director-composer label {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.director-composer textarea {
+  min-width: 0;
+  flex: 1;
+  resize: none;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(11 12 15 / 72%);
+  line-height: 1.4;
+}
+
+.director-composer button {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 7%);
+  cursor: pointer;
+}
+
+.director-composer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.director-composer__proposal {
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.director-composer__proposal button {
+  min-height: 32px;
+  border-color: rgb(169 162 255 / 36%);
+  background: rgb(114 104 240 / 18%);
+}
+
 .creative-node-layout {
   position: relative;
 }
@@ -837,5 +921,10 @@ select {
 
   .recent-project__badge {
     justify-self: start;
+  }
+
+  .director-composer {
+    bottom: var(--space-3);
+    width: calc(100vw - 32px);
   }
 }

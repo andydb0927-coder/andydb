@@ -12,6 +12,11 @@ export type JobStatus =
   | 'failed'
   | 'cancelled'
 
+export type GenerationOperation =
+  | 'regenerate'
+  | 'extend-shot'
+  | 'generate-video'
+
 export interface NodeVersion {
   id: string
   createdAt: string
@@ -64,6 +69,8 @@ export interface GenerationJob {
   updatedAt: string
   assetId?: string
   error?: string
+  operation?: GenerationOperation
+  attempt?: number
 }
 
 export interface ExportJob {

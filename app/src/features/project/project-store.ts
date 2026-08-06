@@ -1,14 +1,17 @@
 import { create } from 'zustand'
 
 import {
+  type Asset,
   appendNodeVersion,
   type CanvasNode,
   type DependencyEdge,
+  type GenerationJob,
   type NodeVersion,
   type Project,
   type TimelineItem,
 } from './model'
 import { ProjectRepository } from './project-repository'
+import type { GenerationResult } from '../generation/generation-adapter'
 
 export type PersistenceStatus = 'saved' | 'saving' | 'failed' | 'offline'
 
@@ -35,6 +38,11 @@ interface ProjectStore {
   appendVersion: (
     nodeId: string,
     version: Omit<NodeVersion, 'id' | 'createdAt'>,
+  ) => void
+  updateGenerationJob: (job: GenerationJob) => void
+  applyGenerationSuccess: (
+    job: GenerationJob,
+    result: GenerationResult,
   ) => void
   addToTimeline: (item: TimelineItem) => void
   reorderTimeline: (orderedItemIds: string[]) => void
@@ -101,6 +109,34 @@ function hasDependencyPath(
   }
 
   return false
+}
+
+function replaceGenerationJob(jobs: GenerationJob[], job: GenerationJob) {
+  return jobs.some((candidate) => candidate.id === job.id)
+    ? jobs.map((candidate) => (candidate.id === job.id ? job : candidate))
+    : [...jobs, job]
+}
+
+function nextNumber(nodes: CanvasNode[], kind: 'storyboard' | 'video') {
+  const label = kind === 'storyboard' ? '分镜' : '视频'
+  return (
+    nodes.reduce((highest, node) => {
+      if (node.kind !== kind) return highest
+      const match = node.title.match(new RegExp(`^${label}\\s*(\\d+)$`))
+      return Math.max(highest, match ? Number(match[1]) : 0)
+    }, 0) + 1
+  )
+}
+
+function sourceNumber(source: CanvasNode) {
+  const match = source.title.match(/(\d+)$/)
+  return match ? Number(match[1]) : undefined
+}
+
+function appendUniqueAsset(assets: Asset[], asset: Asset) {
+  return assets.some((candidate) => candidate.id === asset.id)
+    ? assets
+    : [...assets, asset]
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -268,6 +304,125 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
               : edge,
           ),
         }
+      })
+    },
+
+    updateGenerationJob: (job) => {
+      if (job.status === 'succeeded') return
+      const project = get().activeProject
+      if (!project) return
+      const next = {
+        ...project,
+        updatedAt: job.updatedAt,
+        jobs: replaceGenerationJob(project.jobs, job),
+        nodes: project.nodes.map((node) =>
+          node.id === job.nodeId
+            ? {
+                ...node,
+                versions: node.versions.map((version) =>
+                  version.id === node.activeVersionId
+                    ? { ...version, generationJobId: job.id }
+                    : version,
+                ),
+              }
+            : node,
+        ),
+      }
+      set((state) => ({
+        projectsById: { ...state.projectsById, [next.id]: next },
+        activeProject: next,
+      }))
+    },
+
+    applyGenerationSuccess: (job, result) => {
+      commit((project) => {
+        const source = project.nodes.find((node) => node.id === job.nodeId)
+        if (!source || !job.operation) return project
+
+        const version: NodeVersion = {
+          ...result.version,
+          assetId: result.asset.id,
+          generationJobId: job.id,
+        }
+        const assets = appendUniqueAsset(project.assets, result.asset)
+
+        if (job.operation === 'regenerate') {
+          const nextProject = withUpdatedTimestamp({
+            ...project,
+            assets,
+            jobs: replaceGenerationJob(project.jobs, {
+              ...job,
+              status: 'succeeded',
+              assetId: result.asset.id,
+            }),
+            nodes: project.nodes.map((node) =>
+              node.id === source.id
+                ? {
+                    ...node,
+                    versions: [...node.versions, version],
+                    activeVersionId: version.id,
+                    sourceChanged: false,
+                  }
+                : node,
+            ),
+          })
+          const downstream = findDownstream(nextProject, source.id)
+          return {
+            ...nextProject,
+            nodes: nextProject.nodes.map((node) =>
+              downstream.nodeIds.has(node.id)
+                ? { ...node, sourceChanged: true }
+                : node,
+            ),
+            edges: nextProject.edges.map((edge) =>
+              downstream.edgeIds.has(edge.id)
+                ? { ...edge, sourceChanged: true }
+                : edge,
+            ),
+          }
+        }
+
+        const kind =
+          job.operation === 'extend-shot' ? 'storyboard' : 'video'
+        const number =
+          kind === 'video'
+            ? sourceNumber(source) ?? nextNumber(project.nodes, kind)
+            : nextNumber(project.nodes, kind)
+        const paddedNumber = String(number).padStart(2, '0')
+        const nodeId = `${kind}-${paddedNumber}-${crypto.randomUUID()}`
+        const generatedNode: CanvasNode = {
+          id: nodeId,
+          kind,
+          title: `${kind === 'storyboard' ? '分镜' : '视频'} ${paddedNumber}`,
+          position: {
+            x: source.position.x + 340,
+            y: source.position.y + (kind === 'storyboard' ? 120 : 180),
+          },
+          versions: [version],
+          activeVersionId: version.id,
+          sourceChanged: false,
+        }
+        const completedJob: GenerationJob = {
+          ...job,
+          nodeId,
+          status: 'succeeded',
+          assetId: result.asset.id,
+        }
+        return withUpdatedTimestamp({
+          ...project,
+          assets,
+          nodes: [...project.nodes, generatedNode],
+          edges: [
+            ...project.edges,
+            {
+              id: `edge-${source.id}-${nodeId}`,
+              sourceNodeId: source.id,
+              targetNodeId: nodeId,
+              sourceChanged: false,
+            },
+          ],
+          jobs: replaceGenerationJob(project.jobs, completedJob),
+        })
       })
     },
 

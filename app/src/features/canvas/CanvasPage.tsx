@@ -9,6 +9,10 @@ import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { DirectorComposer } from '../director/DirectorComposer'
+import type { DirectorCommand } from '../director/director-command'
+import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
+import { GenerationQueue } from '../generation/generation-queue'
 import type { Project } from '../project/model'
 import { ProjectRepository } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
@@ -79,11 +83,38 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   )
   const [loadAttempt, setLoadAttempt] = useState(0)
   const deleteTriggerRef = useRef<HTMLButtonElement>(undefined)
+  const generationQueueRef = useRef<GenerationQueue>(undefined)
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
     setPrimaryNodeId(nodeId)
   }, [])
+
+  if (!generationQueueRef.current) {
+    generationQueueRef.current = new GenerationQueue({
+      adapter: new DemoGenerationAdapter(),
+      onJobChange(job) {
+        if (job.status !== 'succeeded') {
+          useProjectStore.getState().updateGenerationJob(job)
+        }
+      },
+      onSuccess(job, result) {
+        useProjectStore.getState().applyGenerationSuccess(job, result)
+        if (job.operation !== 'generate-video') return
+
+        const generatedNode = useProjectStore
+          .getState()
+          .activeProject?.nodes.find((node) => {
+            if (node.kind !== 'video') return false
+            const activeVersion = node.versions.find(
+              (version) => version.id === node.activeVersionId,
+            )
+            return activeVersion?.generationJobId === job.id
+          })
+        if (generatedNode) selectOnlyNode(generatedNode.id)
+      },
+    })
+  }
 
   const removeSelectedNode = useCallback((nodeId: string) => {
     setSelectedNodeIds((current) => {
@@ -129,10 +160,65 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   }, [loadAttempt, projectId, repository])
 
   const handleAction = useCallback(
-    (_nodeId: string, _action: CreativeNodeAction) => {
-      // Generation and timeline mutations are intentionally handed to Task 6.
+    (nodeId: string, action: CreativeNodeAction) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const node = currentProject?.nodes.find(
+        (candidate) => candidate.id === nodeId,
+      )
+      if (!currentProject || !node) return
+
+      const activeVersion = node.versions.find(
+        (version) => version.id === node.activeVersionId,
+      )
+      const asset = currentProject.assets.find(
+        (candidate) => candidate.id === activeVersion?.assetId,
+      )
+
+      if (action === 'add-to-timeline') {
+        useProjectStore.getState().addToTimeline({
+          id: crypto.randomUUID(),
+          nodeId,
+          order: currentProject.timeline.length,
+          durationSeconds: asset?.durationSeconds ?? 5,
+          track: 'video',
+        })
+        return
+      }
+
+      generationQueueRef.current?.enqueue({
+        nodeId,
+        operation: action,
+        prompt: activeVersion?.prompt ?? currentProject.intent,
+        referenceAssetUrls: asset ? [asset.url] : [],
+      })
     },
     [],
+  )
+
+  const handleDirectorCommand = useCallback(
+    (command: Exclude<DirectorCommand, { type: 'unknown' }>) => {
+      switch (command.type) {
+        case 'regenerate':
+          handleAction(command.nodeId, 'regenerate')
+          return
+        case 'replace-node':
+          handleAction(command.nodeId, 'regenerate')
+          return
+        case 'extend-shot':
+          handleAction(command.sourceNodeId, 'extend-shot')
+          return
+        case 'generate-video':
+          handleAction(command.sourceNodeId, 'generate-video')
+          return
+        case 'add-to-timeline':
+          handleAction(command.nodeId, 'add-to-timeline')
+          return
+        case 'remove-node':
+          deleteNode(command.nodeId)
+          removeSelectedNode(command.nodeId)
+      }
+    },
+    [deleteNode, handleAction, removeSelectedNode],
   )
 
   const requestDelete = useCallback(
@@ -319,6 +405,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           <Controls showInteractive={false} />
         </ReactFlow>
         <CanvasToolbar />
+        {project ? (
+          <DirectorComposer
+            selectedNodeId={primaryNodeId}
+            onExecute={handleDirectorCommand}
+          />
+        ) : null}
         {!project ? (
           <div
             className="canvas-route-state"
