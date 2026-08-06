@@ -367,4 +367,50 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().activeProject?.id).toBe(project.id)
     expect(useProjectStore.getState().past).toEqual([])
   })
+
+  test('clears a stale active project when the requested project is missing', async () => {
+    const hydrated = await useProjectStore
+      .getState()
+      .hydrate('project-missing', { load: async () => undefined })
+
+    expect(hydrated).toBe(false)
+    expect(useProjectStore.getState().activeProjectId).toBeUndefined()
+    expect(useProjectStore.getState().activeProject).toBeUndefined()
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().future).toEqual([])
+  })
+
+  test('allows only the latest overlapping hydration to activate a project', async () => {
+    const first = createDeferred<ReturnType<typeof makeProjectFixture>>()
+    const second = createDeferred<ReturnType<typeof makeProjectFixture>>()
+    const firstProject = {
+      ...makeProjectFixture(),
+      id: 'project-first',
+      title: '先选项目',
+    }
+    const secondProject = {
+      ...makeProjectFixture(),
+      id: 'project-second',
+      title: '后选项目',
+    }
+    const load = vi.fn((projectId: string) =>
+      projectId === firstProject.id ? first.promise : second.promise,
+    )
+
+    const firstHydration = useProjectStore
+      .getState()
+      .hydrate(firstProject.id, { load })
+    const secondHydration = useProjectStore
+      .getState()
+      .hydrate(secondProject.id, { load })
+
+    second.resolve(secondProject)
+    expect(await secondHydration).toBe(true)
+    first.resolve(firstProject)
+    expect(await firstHydration).toBe(false)
+
+    expect(useProjectStore.getState().activeProject?.id).toBe(
+      secondProject.id,
+    )
+  })
 })

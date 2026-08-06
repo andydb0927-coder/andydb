@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
@@ -22,7 +22,25 @@ export type RecipeParser = (
 type LauncherState =
   | { status: 'idle' }
   | { status: 'parsing'; abortController: AbortController }
+  | { status: 'creating' }
+  | { status: 'failed'; message: string; operation: RetryOperation }
+
+type RetryOperation =
+  | { kind: 'recipe' }
+  | { kind: 'blank' }
+  | { kind: 'recent'; projectId: string }
+  | { kind: 'example' }
+
+type RecentProjectsState =
+  | { status: 'loading' }
+  | { status: 'loaded'; projects: Project[] }
   | { status: 'failed'; message: string }
+
+interface LauncherOperation {
+  id: number
+  key: string
+  abortController: AbortController
+}
 
 interface RecipeDefinition {
   id: RecipeId
@@ -222,27 +240,101 @@ export function ProjectLauncherPage({
     status: 'idle',
   })
   const [validationMessage, setValidationMessage] = useState('')
-  const [recentProjects, setRecentProjects] = useState<Project[] | null>(null)
+  const [recentProjectsState, setRecentProjectsState] =
+    useState<RecentProjectsState>({ status: 'loading' })
+  const mountedRef = useRef(true)
+  const operationIdRef = useRef(0)
+  const activeOperationRef = useRef<LauncherOperation | undefined>(undefined)
+  const recentListRequestIdRef = useRef(0)
+  const recentListInFlightRef = useRef(false)
 
   useEffect(() => {
-    let active = true
-    repository
-      .listRecent(6)
-      .then((projects) => {
-        if (active) setRecentProjects(projects)
-      })
-      .catch(() => {
-        if (active) setRecentProjects([])
-      })
-
+    mountedRef.current = true
     return () => {
-      active = false
+      mountedRef.current = false
+      operationIdRef.current += 1
+      recentListRequestIdRef.current += 1
+      recentListInFlightRef.current = false
+      activeOperationRef.current?.abortController.abort()
+      activeOperationRef.current = undefined
+    }
+  }, [])
+
+  const loadRecentProjects = useCallback(async () => {
+    if (recentListInFlightRef.current) return
+    recentListInFlightRef.current = true
+    const requestId = ++recentListRequestIdRef.current
+    setRecentProjectsState({ status: 'loading' })
+    try {
+      const projects = await repository.listRecent(6)
+      if (
+        mountedRef.current &&
+        requestId === recentListRequestIdRef.current
+      ) {
+        setRecentProjectsState({ status: 'loaded', projects })
+      }
+    } catch {
+      if (
+        mountedRef.current &&
+        requestId === recentListRequestIdRef.current
+      ) {
+        setRecentProjectsState({
+          status: 'failed',
+          message: '无法读取最近项目',
+        })
+      }
+    } finally {
+      if (requestId === recentListRequestIdRef.current) {
+        recentListInFlightRef.current = false
+      }
     }
   }, [repository])
 
-  const persistAndOpen = async (project: Project) => {
+  useEffect(() => {
+    void loadRecentProjects()
+  }, [loadRecentProjects])
+
+  const beginOperation = (key: string): LauncherOperation | undefined => {
+    if (
+      activeOperationRef.current?.key === key &&
+      !activeOperationRef.current.abortController.signal.aborted
+    ) {
+      return undefined
+    }
+
+    activeOperationRef.current?.abortController.abort()
+    const operation = {
+      id: ++operationIdRef.current,
+      key,
+      abortController: new AbortController(),
+    }
+    activeOperationRef.current = operation
+    return operation
+  }
+
+  const isCurrentOperation = (operation: LauncherOperation) =>
+    mountedRef.current &&
+    operationIdRef.current === operation.id &&
+    !operation.abortController.signal.aborted
+
+  const finishOperation = (operation: LauncherOperation) => {
+    if (activeOperationRef.current === operation) {
+      activeOperationRef.current = undefined
+    }
+  }
+
+  const persistAndOpen = async (
+    project: Project,
+    operation: LauncherOperation,
+  ) => {
     await repository.save(project)
-    await useProjectStore.getState().hydrate(project.id, repository)
+    if (!isCurrentOperation(operation)) return
+    const hydrated = await useProjectStore
+      .getState()
+      .hydrate(project.id, repository, operation.abortController.signal)
+    if (!isCurrentOperation(operation)) return
+    if (!hydrated) throw new Error('未找到该项目')
+    finishOperation(operation)
     navigate(`/project/${project.id}`)
   }
 
@@ -254,60 +346,125 @@ export function ProjectLauncherPage({
     }
 
     setValidationMessage('')
-    const abortController = new AbortController()
-    setLauncherState({ status: 'parsing', abortController })
+    const operation = beginOperation('recipe')
+    if (!operation) return
+    setLauncherState({
+      status: 'parsing',
+      abortController: operation.abortController,
+    })
 
     try {
       await parseRecipe(
         selectedRecipeId,
         trimmedIntent,
-        abortController.signal,
+        operation.abortController.signal,
       )
-      if (abortController.signal.aborted) return
+      if (!isCurrentOperation(operation)) return
 
+      setLauncherState({ status: 'creating' })
       const recipe = recipes.find(({ id }) => id === selectedRecipeId)!
-      await persistAndOpen(buildRecipeProject(trimmedIntent, recipe))
+      await persistAndOpen(buildRecipeProject(trimmedIntent, recipe), operation)
     } catch (error) {
-      if (abortController.signal.aborted) {
-        setLauncherState({ status: 'idle' })
-        return
-      }
-      setLauncherState({ status: 'failed', message: readableError(error) })
+      if (!isCurrentOperation(operation)) return
+      finishOperation(operation)
+      setLauncherState({
+        status: 'failed',
+        message: readableError(error),
+        operation: { kind: 'recipe' },
+      })
     }
   }
 
   const cancelParsing = () => {
     if (launcherState.status !== 'parsing') return
     launcherState.abortController.abort()
+    operationIdRef.current += 1
+    activeOperationRef.current = undefined
     setLauncherState({ status: 'idle' })
   }
 
   const openBlankCanvas = async () => {
+    const operation = beginOperation('blank')
+    if (!operation) return
+    setLauncherState({ status: 'creating' })
     try {
-      await persistAndOpen(createProject('空白项目', intent.trim()))
+      await persistAndOpen(
+        createProject('空白项目', intent.trim()),
+        operation,
+      )
     } catch (error) {
-      setLauncherState({ status: 'failed', message: readableError(error) })
+      if (!isCurrentOperation(operation)) return
+      finishOperation(operation)
+      setLauncherState({
+        status: 'failed',
+        message: readableError(error),
+        operation: { kind: 'blank' },
+      })
     }
   }
 
   const openRecentProject = async (projectId: string) => {
+    const operation = beginOperation(`recent:${projectId}`)
+    if (!operation) return
+    setLauncherState({ status: 'creating' })
     try {
-      await useProjectStore.getState().hydrate(projectId, repository)
+      const hydrated = await useProjectStore
+        .getState()
+        .hydrate(projectId, repository, operation.abortController.signal)
+      if (!isCurrentOperation(operation)) return
+      if (!hydrated) throw new Error('未找到该项目')
+      finishOperation(operation)
       navigate(`/project/${projectId}`)
     } catch (error) {
-      setLauncherState({ status: 'failed', message: readableError(error) })
+      if (!isCurrentOperation(operation)) return
+      finishOperation(operation)
+      setLauncherState({
+        status: 'failed',
+        message: readableError(error),
+        operation: { kind: 'recent', projectId },
+      })
     }
   }
 
   const openExampleProject = async () => {
+    const operation = beginOperation('example')
+    if (!operation) return
+    setLauncherState({ status: 'creating' })
     try {
-      await persistAndOpen(buildExampleProject())
+      await persistAndOpen(buildExampleProject(), operation)
     } catch (error) {
-      setLauncherState({ status: 'failed', message: readableError(error) })
+      if (!isCurrentOperation(operation)) return
+      finishOperation(operation)
+      setLauncherState({
+        status: 'failed',
+        message: readableError(error),
+        operation: { kind: 'example' },
+      })
+    }
+  }
+
+  const retryFailedOperation = () => {
+    if (launcherState.status !== 'failed') return
+
+    switch (launcherState.operation.kind) {
+      case 'recipe':
+        void startRecipe()
+        break
+      case 'blank':
+        void openBlankCanvas()
+        break
+      case 'recent':
+        void openRecentProject(launcherState.operation.projectId)
+        break
+      case 'example':
+        void openExampleProject()
+        break
     }
   }
 
   const isParsing = launcherState.status === 'parsing'
+  const isCreating = launcherState.status === 'creating'
+  const isBusy = isParsing || isCreating
 
   return (
     <main className="launcher-page">
@@ -340,7 +497,7 @@ export function ProjectLauncherPage({
             id="creative-intent"
             className="launcher-intent focus-visible"
             value={intent}
-            disabled={isParsing}
+            disabled={isBusy}
             rows={5}
             placeholder="例如：一位女子在雨夜寻找失踪的弟弟……"
             aria-describedby={validationMessage ? 'intent-error' : undefined}
@@ -356,7 +513,7 @@ export function ProjectLauncherPage({
             </p>
           ) : null}
 
-          <fieldset className="launcher-recipes" disabled={isParsing}>
+          <fieldset className="launcher-recipes" disabled={isBusy}>
             <legend>选择创作配方</legend>
             <div className="launcher-recipes__grid">
               {recipes.map((recipe) => (
@@ -364,7 +521,7 @@ export function ProjectLauncherPage({
                   key={recipe.id}
                   {...recipe}
                   checked={selectedRecipeId === recipe.id}
-                  disabled={isParsing}
+                  disabled={isBusy}
                   onChange={setSelectedRecipeId}
                 />
               ))}
@@ -377,13 +534,15 @@ export function ProjectLauncherPage({
                 {launcherState.message}
               </p>
               <div className="launcher-recovery__actions">
-                <Button onClick={() => void startRecipe()}>重试</Button>
-                <Button
-                  className="launcher-button--secondary"
-                  onClick={() => void openBlankCanvas()}
-                >
-                  直接进入空白画布
-                </Button>
+                <Button onClick={retryFailedOperation}>重试</Button>
+                {launcherState.operation.kind === 'recipe' ? (
+                  <Button
+                    className="launcher-button--secondary"
+                    onClick={() => void openBlankCanvas()}
+                  >
+                    直接进入空白画布
+                  </Button>
+                ) : null}
               </div>
             </div>
           ) : isParsing ? (
@@ -397,6 +556,10 @@ export function ProjectLauncherPage({
               >
                 取消
               </Button>
+            </div>
+          ) : isCreating ? (
+            <div className="launcher-progress">
+              <StatusText status="saving">正在创建项目</StatusText>
             </div>
           ) : (
             <Button
@@ -412,11 +575,26 @@ export function ProjectLauncherPage({
       <section className="launcher-recent" aria-labelledby="recent-title">
         <div className="launcher-recent__heading">
           <h2 id="recent-title">最近项目</h2>
-          <span>{recentProjects === null ? '正在读取' : '继续创作'}</span>
+          <span>
+            {recentProjectsState.status === 'loading' ? '正在读取' : '继续创作'}
+          </span>
         </div>
         <div className="launcher-recent__list">
-          {recentProjects?.length ? (
-            recentProjects.map((project) => (
+          {recentProjectsState.status === 'failed' ? (
+            <div className="launcher-recent__error">
+              <p className="launcher-message" role="alert">
+                {recentProjectsState.message}
+              </p>
+              <Button
+                className="launcher-button--secondary"
+                onClick={() => void loadRecentProjects()}
+              >
+                重试加载最近项目
+              </Button>
+            </div>
+          ) : recentProjectsState.status === 'loaded' &&
+            recentProjectsState.projects.length ? (
+            recentProjectsState.projects.map((project) => (
               <Link
                 key={project.id}
                 className="recent-project focus-visible"
@@ -433,7 +611,7 @@ export function ProjectLauncherPage({
                 </span>
               </Link>
             ))
-          ) : recentProjects ? (
+          ) : recentProjectsState.status === 'loaded' ? (
             <Link
               className="recent-project recent-project--example focus-visible"
               to={`/project/${exampleProject.id}`}

@@ -38,7 +38,11 @@ interface ProjectStore {
   undo: () => void
   redo: () => void
   persistActive: (repository?: SaveRepository) => Promise<void>
-  hydrate: (projectId: string, repository?: LoadRepository) => Promise<void>
+  hydrate: (
+    projectId: string,
+    repository?: LoadRepository,
+    signal?: AbortSignal,
+  ) => Promise<boolean>
 }
 
 const defaultRepository = new ProjectRepository()
@@ -49,6 +53,7 @@ function withUpdatedTimestamp(project: Project): Project {
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
   let persistenceRequestId = 0
+  let hydrationRequestId = 0
 
   const commit = (mutate: (project: Project) => Project) => {
     const current = get().activeProject
@@ -221,11 +226,23 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
     },
 
-    hydrate: async (projectId, repository = defaultRepository) => {
+    hydrate: async (projectId, repository = defaultRepository, signal) => {
+      const requestId = ++hydrationRequestId
       const project = await repository.load(projectId)
-      if (!project) return
+      if (requestId !== hydrationRequestId || signal?.aborted) return false
 
       persistenceRequestId += 1
+      if (!project) {
+        set({
+          activeProjectId: undefined,
+          activeProject: undefined,
+          past: [],
+          future: [],
+          saveStatus: 'saved',
+        })
+        return false
+      }
+
       set((state) => ({
         projectsById: { ...state.projectsById, [project.id]: project },
         activeProjectId: project.id,
@@ -234,6 +251,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         future: [],
         saveStatus: 'saved',
       }))
+      return true
     },
   }
 })
