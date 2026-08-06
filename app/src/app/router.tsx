@@ -1,5 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 
+import { ProjectLauncherPage } from '../features/launcher/ProjectLauncherPage'
+
 const Stub = ({ title }: { title: string }) => (
   <main>
     <h1>{title}</h1>
@@ -7,7 +9,7 @@ const Stub = ({ title }: { title: string }) => (
 )
 
 export const routes: RouteObject[] = [
-  { path: '/', element: <Stub title="创建你的第一部短片" /> },
+  { path: '/', element: <ProjectLauncherPage /> },
   { path: '/project/:projectId', element: <Stub title="项目画布" /> },
   { path: '/project/:projectId/preview', element: <Stub title="成片预览" /> },
 ]

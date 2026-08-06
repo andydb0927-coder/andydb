@@ -111,3 +111,319 @@ select {
 .status-text--queued {
   color: var(--focus-ring);
 }
+
+.launcher-page {
+  min-height: 100vh;
+  padding: 0 clamp(var(--space-4), 5vw, var(--space-8)) var(--space-8);
+  background:
+    radial-gradient(circle at 50% 18%, rgb(114 104 240 / 12%), transparent 38%),
+    var(--surface-canvas);
+}
+
+.launcher-header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.launcher-brand,
+.launcher-header__link,
+.recent-project {
+  color: inherit;
+  text-decoration: none;
+}
+
+.launcher-brand {
+  font-size: 1rem;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+
+.launcher-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.launcher-header__link,
+.launcher-account {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.launcher-header__link:hover,
+.launcher-account:hover {
+  color: var(--text-primary);
+}
+
+.launcher-account {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.launcher-hero,
+.launcher-recent {
+  width: min(920px, 100%);
+  margin-inline: auto;
+}
+
+.launcher-hero {
+  padding-top: clamp(var(--space-8), 9vh, 88px);
+}
+
+.launcher-eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--focus-ring);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.launcher-hero h1 {
+  max-width: 690px;
+  margin: 0;
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+
+.launcher-intro {
+  margin: var(--space-4) 0 var(--space-7);
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.launcher-form {
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 16px;
+  background: rgb(23 25 30 / 92%);
+  box-shadow: 0 28px 80px rgb(0 0 0 / 28%);
+}
+
+.launcher-intent-label,
+.launcher-recipes legend {
+  display: block;
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.launcher-intent {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+  line-height: 1.6;
+}
+
+.launcher-intent::placeholder {
+  color: var(--text-muted);
+}
+
+.launcher-intent:disabled {
+  opacity: 0.72;
+}
+
+.launcher-message {
+  margin: var(--space-3) 0 0;
+  color: var(--status-error);
+  font-size: 0.875rem;
+}
+
+.launcher-recipes {
+  min-width: 0;
+  margin: var(--space-5) 0;
+  padding: 0;
+  border: 0;
+}
+
+.launcher-recipes__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.recipe-row {
+  position: relative;
+  display: flex;
+  min-height: 112px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: rgb(11 12 15 / 54%);
+  cursor: pointer;
+}
+
+.recipe-row:has(.recipe-row__radio:checked) {
+  border-color: var(--accent);
+  background: rgb(114 104 240 / 10%);
+}
+
+.recipe-row:has(.recipe-row__radio:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.recipe-row__radio {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.recipe-row__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recipe-row__title {
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.recipe-row__description {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.launcher-submit {
+  min-width: 148px;
+}
+
+.launcher-button--secondary {
+  border-color: rgb(255 255 255 / 14%);
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.launcher-button--secondary:hover:not(:disabled) {
+  background: rgb(255 255 255 / 7%);
+}
+
+.launcher-progress,
+.launcher-recovery__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.launcher-recovery {
+  padding-top: var(--space-2);
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.launcher-recovery .launcher-message {
+  margin: 0 0 var(--space-3);
+}
+
+.launcher-recovery__actions {
+  justify-content: flex-start;
+}
+
+.launcher-recent {
+  margin-top: var(--space-8);
+}
+
+.launcher-recent__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.launcher-recent__heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.launcher-recent__heading span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.launcher-recent__list {
+  min-height: 100px;
+}
+
+.recent-project {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.7fr) minmax(220px, 1.5fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 76px;
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  background: var(--surface-node);
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.recent-project + .recent-project {
+  margin-top: var(--space-2);
+}
+
+.recent-project:hover {
+  border-color: rgb(169 162 255 / 58%);
+  transform: translateY(-1px);
+}
+
+.recent-project--example {
+  grid-template-columns: auto minmax(110px, 0.6fr) minmax(220px, 1.5fr) auto;
+}
+
+.recent-project__badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  color: var(--focus-ring);
+  background: rgb(114 104 240 / 13%);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.recent-project__title {
+  font-weight: 650;
+}
+
+.recent-project__intent,
+.recent-project__meta {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 720px) {
+  .launcher-recipes__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recipe-row {
+    min-height: 0;
+  }
+
+  .recent-project,
+  .recent-project--example {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .recent-project__badge {
+    justify-self: start;
+  }
+}
