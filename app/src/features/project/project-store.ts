@@ -397,6 +397,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set((state) => ({
         projectsById: { ...state.projectsById, [projectId]: next },
         ...(state.activeProjectId === projectId ? { activeProject: next } : {}),
+        ...(terminal
+          ? {
+              past: state.past.map((snapshot) =>
+                snapshot.id === projectId
+                  ? sanitizeGenerationBaseline(snapshot, next)
+                  : snapshot,
+              ),
+              future: state.future.map((snapshot) =>
+                snapshot.id === projectId
+                  ? sanitizeGenerationBaseline(snapshot, next)
+                  : snapshot,
+              ),
+            }
+          : {}),
       }))
       if (terminal) generationBaselines.delete(baselineKey)
     },

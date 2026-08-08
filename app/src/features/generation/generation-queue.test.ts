@@ -404,6 +404,70 @@ describe('generation result mutations', () => {
   })
 
   test.each(['failed', 'cancelled'] as const)(
+    'undo keeps job B %s when job A succeeded while B was running',
+    async (terminalStatus) => {
+      const jobBResult = deferred<GenerationResult>()
+      const jobAResult = deferred<GenerationResult>()
+      const queue = createQueue({
+        start: async (request) =>
+          request.nodeId === 'rain-audio'
+            ? jobBResult.promise
+            : jobAResult.promise,
+      })
+      const jobBRequest = {
+        ...regenerateRequest,
+        nodeId: 'rain-audio',
+        prompt: '雨声并发重生成',
+      }
+      const jobB = queue.enqueue(jobBRequest)
+      await Promise.resolve()
+      expect(queue.get(jobB.id)?.status).toBe('running')
+      useProjectStore
+        .getState()
+        .updateNode('rain-audio', { title: '并发期间保留的编辑' })
+
+      const jobA = queue.enqueue(regenerateRequest)
+      await Promise.resolve()
+      expect(queue.get(jobA.id)?.status).toBe('running')
+      jobAResult.resolve(
+        resultWithIds(regenerateRequest, 'asset-job-a', 'version-job-a'),
+      )
+      await vi.waitFor(() => expect(queue.get(jobA.id)?.status).toBe('succeeded'))
+      expect(queue.get(jobB.id)?.status).toBe('running')
+
+      if (terminalStatus === 'failed') {
+        jobBResult.reject(new Error('job B failed after job A succeeded'))
+      } else {
+        queue.cancel(jobB.id)
+      }
+      await vi.waitFor(() =>
+        expect(queue.get(jobB.id)?.status).toBe(terminalStatus),
+      )
+
+      useProjectStore.getState().undo()
+
+      const project = useProjectStore.getState().activeProject!
+      const jobBNode = project.nodes.find((node) => node.id === 'rain-audio')!
+      const activeVersion = jobBNode.versions.find(
+        (version) => version.id === jobBNode.activeVersionId,
+      )!
+      expect(jobBNode.title).toBe('并发期间保留的编辑')
+      expect(project.jobs.find((job) => job.id === jobB.id)?.status).toBe(
+        terminalStatus,
+      )
+      expect(
+        project.jobs.find((job) => job.id === activeVersion.generationJobId)
+          ?.status,
+      ).toBe(terminalStatus)
+      expect(
+        project.jobs.some(
+          (job) => job.status === 'queued' || job.status === 'running',
+        ),
+      ).toBe(false)
+    },
+  )
+
+  test.each(['failed', 'cancelled'] as const)(
     'replaces the generation baseline after a %s attempt',
     async (terminalStatus) => {
       const firstAttempt = deferred<GenerationResult>()
