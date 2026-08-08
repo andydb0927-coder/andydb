@@ -40,12 +40,14 @@ function PreviewMedia({
 interface PreviewPlayerProps {
   items: ResolvedTimelineItem[]
   activeIndex: number
+  selectionRevision: number
   onActiveIndexChange(index: number): void
 }
 
 export function PreviewPlayer({
   items,
   activeIndex,
+  selectionRevision,
   onActiveIndexChange,
 }: PreviewPlayerProps) {
   const active = items[activeIndex]
@@ -56,11 +58,15 @@ export function PreviewPlayer({
   const [loopCurrent, setLoopCurrent] = useState(false)
   const [comparePrevious, setComparePrevious] = useState(false)
   const currentSeconds = currentFrame / FRAME_RATE
+  const selectedItemRef = useRef(active)
+  selectedItemRef.current = active
 
   useEffect(() => {
-    setCurrentFrame(Math.round((active?.startSeconds ?? 0) * FRAME_RATE))
+    setCurrentFrame(
+      Math.round((selectedItemRef.current?.startSeconds ?? 0) * FRAME_RATE),
+    )
     setComparePrevious(false)
-  }, [active?.item.id, active?.startSeconds])
+  }, [selectionRevision])
 
   const totalFrames = useMemo(
     () => Math.round((items.at(-1)?.endSeconds ?? 0) * FRAME_RATE),

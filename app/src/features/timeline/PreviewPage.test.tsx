@@ -1,11 +1,25 @@
-import { act, render, screen, within } from '@testing-library/react'
+import Dexie from 'dexie'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 
 import type { Project } from '../project/model'
+import {
+  ProjectRepository,
+  WirelessCanvasDatabase,
+} from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
-import { PreviewPage } from './PreviewPage'
+import { PreviewPage, type PreviewPageProps } from './PreviewPage'
+
+const databases: WirelessCanvasDatabase[] = []
+
+function createRepository() {
+  const name = `wireless-canvas-preview-${crypto.randomUUID()}`
+  const database = new WirelessCanvasDatabase(name)
+  databases.push(database)
+  return new ProjectRepository(database)
+}
 
 function makePreviewProject(): Project {
   const createdAt = '2026-08-06T08:00:00.000Z'
@@ -139,13 +153,13 @@ function activate(project = makePreviewProject()) {
   })
 }
 
-function renderPreview() {
+function renderPreview(repository?: PreviewPageProps['repository']) {
   return render(
     <MemoryRouter initialEntries={['/project/project-preview/preview']}>
       <Routes>
         <Route
           path="/project/:projectId/preview"
-          element={<PreviewPage />}
+          element={<PreviewPage repository={repository} />}
         />
       </Routes>
     </MemoryRouter>,
@@ -154,7 +168,7 @@ function renderPreview() {
 
 beforeEach(() => act(() => activate()))
 
-afterEach(() => {
+afterEach(async () => {
   act(() => {
     useProjectStore.setState({
       projectsById: {},
@@ -165,6 +179,13 @@ afterEach(() => {
       future: [],
     })
   })
+  await Promise.all(
+    databases.splice(0).map(async (database) => {
+      const name = database.name
+      database.close()
+      await Dexie.delete(name)
+    }),
+  )
 })
 
 describe('preview journey', () => {
@@ -182,6 +203,35 @@ describe('preview journey', () => {
 
     await user.click(screen.getByRole('button', { name: '上一帧' }))
     expect(position).toHaveAttribute('data-seconds', '0')
+  })
+
+  test('catches backward clip-boundary stepping resetting to the previous clip start', async () => {
+    const user = userEvent.setup()
+    renderPreview()
+    const position = screen.getByLabelText('当前播放时间')
+
+    for (let frame = 0; frame < 24; frame += 1) {
+      await user.click(screen.getByRole('button', { name: '下一帧' }))
+    }
+
+    expect(position).toHaveAttribute('data-seconds', '1')
+    expect(screen.getByRole('button', { name: '选择视频 02' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByTestId('preview-video')).toHaveProperty('currentTime', 0)
+
+    await user.click(screen.getByRole('button', { name: '上一帧' }))
+
+    expect(position).toHaveAttribute('data-seconds', String(23 / 24))
+    expect(screen.getByRole('button', { name: '选择视频 01' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByTestId('preview-video')).toHaveProperty(
+      'currentTime',
+      23 / 24,
+    )
   })
 
   test('catches loop mode allowing playback to escape the active clip', async () => {
@@ -283,5 +333,44 @@ describe('preview journey', () => {
       'video-missing',
     ])
     expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('catches timeline reorder staying in memory instead of surviving direct hydration', async () => {
+    const user = userEvent.setup()
+    const repository = createRepository()
+    const view = renderPreview(repository)
+
+    await user.click(screen.getByRole('button', { name: '将视频 02 前移' }))
+
+    await waitFor(async () => {
+      expect(
+        (await repository.load('project-preview'))?.timeline.map(
+          (item) => item.nodeId,
+        ),
+      ).toEqual(['video-2', 'video-1', 'video-missing', 'audio-1'])
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    view.unmount()
+    act(() => {
+      useProjectStore.setState({
+        projectsById: {},
+        activeProjectId: undefined,
+        activeProject: undefined,
+        saveStatus: 'saved',
+        past: [],
+        future: [],
+      })
+    })
+    renderPreview(repository)
+
+    expect(
+      await screen.findByRole('heading', { name: '视频 02' }),
+    ).toBeVisible()
+    expect(
+      useProjectStore.getState().activeProject?.timeline.map(
+        (item) => item.nodeId,
+      ),
+    ).toEqual(['video-2', 'video-1', 'video-missing', 'audio-1'])
   })
 })

@@ -1,5 +1,5 @@
 import { ArrowLeft, TriangleAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ExportPanel } from '../export/ExportPanel'
@@ -10,7 +10,7 @@ import { TimelineTrack } from './TimelineTrack'
 import { resolveTimeline } from './timeline-model'
 import '../../styles/global.css'
 
-type PreviewRepository = Pick<ProjectRepository, 'load'>
+type PreviewRepository = Pick<ProjectRepository, 'load' | 'save'>
 
 const defaultRepository = new ProjectRepository()
 
@@ -24,6 +24,7 @@ export function PreviewPage({ repository = defaultRepository }: PreviewPageProps
   const project = activeProject?.id === projectId ? activeProject : undefined
   const reorderProjectTimeline = useProjectStore((state) => state.reorderTimeline)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [selectionRevision, setSelectionRevision] = useState(0)
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing' | 'error'>(
     project ? 'ready' : 'loading',
   )
@@ -49,6 +50,22 @@ export function PreviewPage({ repository = defaultRepository }: PreviewPageProps
     active?.aspectRatio && active.aspectRatio !== '16:9',
   )
 
+  const selectTimelineItem = useCallback((index: number) => {
+    setActiveIndex(index)
+    setSelectionRevision((revision) => revision + 1)
+  }, [])
+
+  const reorderTimeline = useCallback(
+    (orderedItemIds: string[]) => {
+      reorderProjectTimeline(orderedItemIds)
+      void useProjectStore
+        .getState()
+        .persistActive(repository)
+        .catch(() => undefined)
+    },
+    [reorderProjectTimeline, repository],
+  )
+
   return (
     <main className="preview-page">
       <header className="preview-page__header">
@@ -69,6 +86,7 @@ export function PreviewPage({ repository = defaultRepository }: PreviewPageProps
             <PreviewPlayer
               items={items}
               activeIndex={activeIndex}
+              selectionRevision={selectionRevision}
               onActiveIndexChange={setActiveIndex}
             />
             <aside className="preview-inspector" aria-label="当前片段检查器">
@@ -100,8 +118,8 @@ export function PreviewPage({ repository = defaultRepository }: PreviewPageProps
             project={project}
             items={items}
             activeIndex={activeIndex}
-            onActiveIndexChange={setActiveIndex}
-            onReorder={reorderProjectTimeline}
+            onActiveIndexChange={selectTimelineItem}
+            onReorder={reorderTimeline}
           />
           <ExportPanel projectId={project.id} />
         </>
