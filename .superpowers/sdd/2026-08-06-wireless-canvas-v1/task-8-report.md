@@ -55,7 +55,7 @@ Strict TDD exposed the following genuine failures before implementation:
 - `npm run test:run`: PASS — 10 files, 133 tests.
 - `npm run typecheck`: PASS — exit 0.
 - `npm run build`: PASS — exit 0; Vite reports only its existing advisory that the main minified chunk exceeds 500 kB.
-- `npm run e2e -- --reporter=line`: PASS — 6 Chromium tests.
+- `npm run e2e -- --reporter=line`: PASS — 7 Chromium tests.
 - Product design QA: `design-qa.md` — `final result: passed` with round 1 actual-zoom and round 2 exact-layout evidence explicitly distinguished.
 
 ## Files
@@ -141,3 +141,27 @@ Strict TDD exposed the following genuine failures before implementation:
 - Result: 加入时间线 click succeeded; preview 主视频轨 text was `视频 01\n5.00s`; console errors were `[]`.
 - Evidence: `design-qa-evidence/zoom-200-equivalent-round2-after.png` (real 721×778 PNG) and `design-qa-evidence/zoom-200-equivalent-console-errors.json`.
 - Acceptance rationale: round 1 proves genuine 200% browser zoom yields the 721×778 CSS viewport at DPR 2. Round 2 validates the revised `max-width:800px` CSS geometry, center hit testing, and real actions in the exact same CSS layout after reload. Since DPR changes raster density rather than CSS-pixel layout, the combined evidence closes the scoped finding without mislabeling round 2 as actual zoom.
+
+## Fix round 3 — 720px cascade boundary
+
+### RED
+
+- The later `@media (max-width:720px)` width declaration overrode the round 2 260px composer at the inclusive boundary.
+- New focused 720×778 post-generation E2E failed its no-intersection contract: selected 视频 01 and AI Director rectangles overlapped (`Expected false`, `Received true`).
+
+### GREEN
+
+- Removed only `width: calc(100vw - 32px)` from the later rule, allowing the earlier 260px narrow composer to cascade through 720px while preserving bottom spacing and the existing ≤720×480 compact rule.
+- 720×778: PASS — node/action full containment, no composer intersection, action-center hit target, real 加入时间线 click, and 视频 01 in 主视频轨.
+- 721×778: PASS with the same complete contract.
+- 640×360 strict small layout: PASS; core controls remain available.
+
+### Verification
+
+- Focused 720×778 RED then GREEN: 1/1.
+- Neighboring 721×778 plus 640×360: 2/2.
+- `npm run test:run`: PASS — 10 files, 133 tests.
+- `npm run typecheck`: PASS — exit 0.
+- `npm run build`: PASS — exit 0; only the existing >500 kB advisory remains.
+- `npm run e2e -- --reporter=line`: PASS — 7 Chromium tests.
+- `git diff --check`: PASS.

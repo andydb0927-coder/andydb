@@ -65,6 +65,14 @@ No open P0, P1, or P2 defect remains in the approved desktop direction or the 72
 - Round 2 evidence: `design-qa-evidence/zoom-200-equivalent-round2-after.png` (real PNG, 721×778) and `design-qa-evidence/zoom-200-equivalent-console-errors.json` (`[]`).
 - Evidence conclusion: round 1 proves genuine browser zoom produces a 721×778 CSS viewport at DPR 2; round 2 validates the revised width-driven CSS geometry, hit testing, and core actions in the same 721×778 layout after reload. DPR affects raster density, while this fix depends only on CSS viewport width. The combined actual-zoom and exact-layout evidence is sufficient for acceptance, with the round 2 limitation explicitly recorded.
 
+### Review fix round 3
+
+- Important cascade finding: the later `max-width:720px` rule reset the narrow AI Director from 260px to `calc(100vw - 32px)`, so the round 2 `≤800px` claim did not hold at the inclusive 720px boundary.
+- RED: the new 720×778 post-generation Chromium regression kept the selected 视频 01 visible but detected a node/AI Director rectangle intersection (`Expected false`, `Received true`).
+- Minimal fix: removed only the later width override. At 720×778 the composer now inherits the 260px width and left docking from the `max-width:800px` rule; the existing `max-width:720px and max-height:480px` compact rule remains intact for very short layouts, so no core control is hidden.
+- GREEN: both 720×778 and 721×778 prove full selected-node and action containment, no composer intersection, action-center hit testing, real 加入时间线 click, and 视频 01 in 主视频轨. The existing 640×360 strict small-layout path also remains GREEN.
+- Visual scope: the cascade change applies only at ≤720px and does not alter the approved 1440×1024 comparison. The round 2 721×778 visual evidence remains the adjacent-boundary reference; the new 720×778 browser-rendered regression is the post-fix boundary proof without adding another committed per-run screenshot path.
+
 ## Interaction and accessibility checks
 
 - Created a project, extended 分镜 01 to 分镜 02, generated 视频 02, selected 分镜 02, and invoked Fit View in the in-app Browser.

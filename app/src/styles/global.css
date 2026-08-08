@@ -1401,7 +1401,6 @@ select {
 
   .director-composer {
     bottom: var(--space-3);
-    width: calc(100vw - 32px);
   }
 }
 
