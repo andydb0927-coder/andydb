@@ -11,6 +11,7 @@ import {
 } from './model'
 import { ProjectRepository } from './project-repository'
 import type { GenerationResult } from '../generation/generation-adapter'
+import { reorderTimeline as reorderTimelineItems } from '../timeline/timeline-model'
 
 export type PersistenceStatus = 'saved' | 'saving' | 'failed' | 'offline'
 
@@ -587,10 +588,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           orderedItemIds.every((id) => itemsById.has(id))
         if (!hasExactUniqueIds) return project
 
-        const reordered = orderedItemIds.map((id, order) => ({
-          ...itemsById.get(id)!,
-          order,
-        }))
+        let reordered = project.timeline
+        orderedItemIds.forEach((id, toIndex) => {
+          const fromIndex = reordered.findIndex((item) => item.id === id)
+          reordered = reorderTimelineItems(reordered, fromIndex, toIndex)
+        })
 
         return withUpdatedTimestamp({ ...project, timeline: reordered })
       })
