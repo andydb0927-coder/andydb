@@ -93,6 +93,14 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     () =>
       new GenerationQueue({
         adapter: new DemoGenerationAdapter(),
+        getLatestSequence(queueProjectId) {
+          const jobs =
+            useProjectStore.getState().projectsById[queueProjectId]?.jobs ?? []
+          return jobs.reduce(
+            (latest, job) => Math.max(latest, job.sequence ?? 0),
+            0,
+          )
+        },
         onJobChange(job) {
           if (job.projectId !== projectId) return
           if (job.status !== 'succeeded') {
@@ -193,7 +201,15 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       }
 
       if (action === 'retry-generation') {
-        if (job) generationQueue.retry(job.id)
+        if (job?.operation) {
+          generationQueue.retry(job, {
+            projectId: currentProject.id,
+            nodeId: job.nodeId,
+            operation: job.operation,
+            prompt: job.prompt,
+            referenceAssetUrls: asset ? [asset.url] : [],
+          })
+        }
         return
       }
 

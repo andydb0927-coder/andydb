@@ -14,6 +14,7 @@ export interface QueueGenerationJob extends GenerationJob {
 
 export interface GenerationQueueOptions {
   adapter: GenerationAdapter
+  getLatestSequence?(projectId: string): number
   onJobChange(job: GenerationJob): void
   onSuccess(job: GenerationJob, result: GenerationResult): void
 }
@@ -28,6 +29,20 @@ function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === 'AbortError'
 }
 
+function isRestorableJob(
+  job: GenerationJob,
+  request: GenerationRequest,
+): job is QueueGenerationJob {
+  return (
+    job.id.length > 0 &&
+    job.projectId === request.projectId &&
+    job.nodeId === request.nodeId &&
+    job.operation === request.operation &&
+    typeof job.attempt === 'number' &&
+    typeof job.sequence === 'number'
+  )
+}
+
 export class GenerationQueue {
   private readonly entries = new Map<string, QueueEntry>()
   private readonly options: GenerationQueueOptions
@@ -40,6 +55,10 @@ export class GenerationQueue {
 
   enqueue(request: GenerationRequest) {
     if (this.disposed) throw new Error('Generation queue is disposed')
+    this.nextSequence = Math.max(
+      this.nextSequence,
+      this.options.getLatestSequence?.(request.projectId) ?? 0,
+    )
     const timestamp = new Date().toISOString()
     const entry: QueueEntry = {
       request,
@@ -80,8 +99,24 @@ export class GenerationQueue {
     return this.update(entry, { status: 'cancelled', error: undefined })
   }
 
-  retry(id: string) {
-    const entry = this.entries.get(id)
+  retry(jobOrId: string | GenerationJob, request?: GenerationRequest) {
+    if (this.disposed) return undefined
+    const id = typeof jobOrId === 'string' ? jobOrId : jobOrId.id
+    let entry = this.entries.get(id)
+    if (
+      !entry &&
+      typeof jobOrId !== 'string' &&
+      request &&
+      isRestorableJob(jobOrId, request)
+    ) {
+      entry = {
+        job: { ...jobOrId },
+        request,
+        controller: new AbortController(),
+      }
+      this.entries.set(id, entry)
+      this.nextSequence = Math.max(this.nextSequence, entry.job.sequence)
+    }
     if (
       !entry ||
       (entry.job.status !== 'failed' && entry.job.status !== 'cancelled')

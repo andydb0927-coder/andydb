@@ -368,6 +368,84 @@ describe('generation result mutations', () => {
     expect(project.nodes[0].versions[0].generationJobId).toBeUndefined()
   })
 
+  test('undo does not resurrect a non-live concurrent job on another node', async () => {
+    const attempts = [deferred<GenerationResult>(), deferred<GenerationResult>()]
+    let started = 0
+    const queue = createQueue({ start: async () => attempts[started++].promise })
+    const first = queue.enqueue(regenerateRequest)
+    await Promise.resolve()
+    expect(queue.get(first.id)?.status).toBe('running')
+
+    const secondRequest = {
+      ...regenerateRequest,
+      nodeId: 'rain-audio',
+      prompt: '雨声重生成',
+    }
+    const second = queue.enqueue(secondRequest)
+    await Promise.resolve()
+    expect(queue.get(second.id)?.status).toBe('running')
+
+    attempts[0].reject(new Error('first node failed'))
+    await vi.waitFor(() => expect(queue.get(first.id)?.status).toBe('failed'))
+    attempts[1].resolve(
+      resultWithIds(secondRequest, 'asset-second-node', 'version-second-node'),
+    )
+    await vi.waitFor(() => expect(queue.get(second.id)?.status).toBe('succeeded'))
+
+    useProjectStore.getState().undo()
+
+    const project = useProjectStore.getState().activeProject!
+    expect(project.jobs.find((job) => job.id === first.id)?.status).toBe('failed')
+    expect(
+      project.jobs.some(
+        (job) => job.status === 'queued' || job.status === 'running',
+      ),
+    ).toBe(false)
+  })
+
+  test.each(['failed', 'cancelled'] as const)(
+    'replaces the generation baseline after a %s attempt',
+    async (terminalStatus) => {
+      const firstAttempt = deferred<GenerationResult>()
+      let started = 0
+      const queue = createQueue({
+        async start(request) {
+          started += 1
+          if (started === 1) {
+            if (terminalStatus === 'failed') throw new Error('first attempt failed')
+            return firstAttempt.promise
+          }
+          return resultWithIds(request, 'asset-later-success', 'version-later-success')
+        },
+      })
+      const first = queue.enqueue(regenerateRequest)
+      await Promise.resolve()
+      if (terminalStatus === 'cancelled') queue.cancel(first.id)
+      await vi.waitFor(() =>
+        expect(queue.get(first.id)?.status).toBe(terminalStatus),
+      )
+
+      useProjectStore
+        .getState()
+        .updateNode('rain-audio', { title: '终态后的无关编辑' })
+      const later = queue.enqueue({
+        ...regenerateRequest,
+        prompt: '新一轮生成',
+      })
+      await vi.waitFor(() => expect(queue.get(later.id)?.status).toBe('succeeded'))
+
+      useProjectStore.getState().undo()
+
+      const project = useProjectStore.getState().activeProject!
+      expect(project.nodes.find((node) => node.id === 'rain-audio')?.title).toBe(
+        '终态后的无关编辑',
+      )
+      expect(project.jobs.find((job) => job.id === first.id)?.status).toBe(
+        terminalStatus,
+      )
+    },
+  )
+
   test.each([
     ['duplicate asset', 'asset-shot-river-v1', 'version-new', 'asset-shot-river-v1'],
     ['duplicate version', 'asset-new', 'version-shot-river-v1', 'asset-new'],

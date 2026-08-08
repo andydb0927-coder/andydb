@@ -117,6 +117,40 @@ function replaceGenerationJob(jobs: GenerationJob[], job: GenerationJob) {
     : [...jobs, job]
 }
 
+function isTransientGenerationJob(job: GenerationJob) {
+  return job.status === 'queued' || job.status === 'running'
+}
+
+function sanitizeGenerationBaseline(baseline: Project, current: Project) {
+  const currentJobs = new Map(current.jobs.map((job) => [job.id, job]))
+  const removedJobIds = new Set<string>()
+  const jobs = baseline.jobs.flatMap((job) => {
+    if (!isTransientGenerationJob(job)) return [job]
+    const latest = currentJobs.get(job.id)
+    if (latest) return [latest]
+    removedJobIds.add(job.id)
+    return []
+  })
+  if (
+    removedJobIds.size === 0 &&
+    jobs.every((job, index) => job === baseline.jobs[index])
+  ) {
+    return baseline
+  }
+  return {
+    ...baseline,
+    jobs,
+    nodes: baseline.nodes.map((node) => ({
+      ...node,
+      versions: node.versions.map((version) =>
+        version.generationJobId && removedJobIds.has(version.generationJobId)
+          ? { ...version, generationJobId: undefined }
+          : version,
+      ),
+    })),
+  }
+}
+
 function nextNumber(nodes: CanvasNode[], kind: 'storyboard' | 'video') {
   const label = kind === 'storyboard' ? '分镜' : '视频'
   return (
@@ -327,8 +361,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         return
       }
 
-      const baselineKey = `${projectId}:${job.nodeId}`
-      if (!generationBaselines.has(baselineKey)) {
+      const baselineKey = `${projectId}:${job.id}`
+      const terminal = job.status === 'failed' || job.status === 'cancelled'
+      if (!terminal && !generationBaselines.has(baselineKey)) {
         generationBaselines.set(baselineKey, project)
       }
       const source = project.nodes.find((node) => node.id === job.nodeId)
@@ -363,6 +398,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         projectsById: { ...state.projectsById, [projectId]: next },
         ...(state.activeProjectId === projectId ? { activeProject: next } : {}),
       }))
+      if (terminal) generationBaselines.delete(baselineKey)
     },
 
     applyGenerationSuccess: (projectId, job, result) => {
@@ -480,8 +516,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         })
       }
 
-      const baselineKey = `${projectId}:${job.nodeId}`
-      const baseline = generationBaselines.get(baselineKey) ?? project
+      const baselineKey = `${projectId}:${job.id}`
+      const baseline = sanitizeGenerationBaseline(
+        generationBaselines.get(baselineKey) ?? project,
+        project,
+      )
       generationBaselines.delete(baselineKey)
       set((state) => ({
         projectsById: { ...state.projectsById, [projectId]: next },

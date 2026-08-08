@@ -458,6 +458,67 @@ describe('creative canvas', () => {
     expect(screen.getByRole('button', { name: '重试生成' })).toBeVisible()
   })
 
+  test('retries the persisted cancelled job after the Canvas remounts', async () => {
+    const user = userEvent.setup()
+    const firstView = renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+    const firstJob = useProjectStore
+      .getState()
+      .activeProject?.jobs.find((job) => job.status === 'running')
+    expect(firstJob).toMatchObject({ attempt: 1, sequence: 1 })
+
+    firstView.unmount()
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.jobs.find((job) => job.id === firstJob?.id)?.status,
+    ).toBe('cancelled')
+
+    renderCanvas()
+    act(() => screen.getByRole('button', { name: '分镜 02' }).click())
+    act(() => screen.getByRole('button', { name: '重试生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const project = useProjectStore.getState().activeProject!
+    expect(project.jobs.find((job) => job.id === firstJob?.id)).toMatchObject({
+      id: firstJob?.id,
+      status: 'succeeded',
+      attempt: 2,
+      sequence: 1,
+    })
+    expect(
+      project.nodes.find((node) => node.id === 'storyboard')?.versions,
+    ).toHaveLength(2)
+  })
+
+  test('continues persisted queue sequencing for a new generation after remount', async () => {
+    const user = userEvent.setup()
+    const firstView = renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+    firstView.unmount()
+
+    renderCanvas()
+    act(() => screen.getByRole('button', { name: '分镜 02' }).click())
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const project = useProjectStore.getState().activeProject!
+    const generatedJobs = project.jobs.filter(
+      (job) => job.operation === 'regenerate',
+    )
+    expect(generatedJobs.map((job) => job.sequence)).toEqual([1, 2])
+    expect(generatedJobs.at(-1)?.status).toBe('succeeded')
+    expect(
+      project.nodes.find((node) => node.id === 'storyboard')?.versions,
+    ).toHaveLength(3)
+  })
+
   test('cancels in-flight generation on unmount before a late result can apply', async () => {
     const user = userEvent.setup()
     const view = renderCanvas()
