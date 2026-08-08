@@ -32,6 +32,17 @@ import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
+type CanvasNodePosition = Project['nodes'][number]['position']
+
+interface DragPreviewState {
+  projectId?: string
+  positions: Record<string, CanvasNodePosition>
+}
+
+interface NodeMeasurementState {
+  projectId?: string
+  measurements: Record<string, { width: number; height: number }>
+}
 
 const defaultRepository = new ProjectRepository()
 
@@ -80,6 +91,11 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     () => new Set(),
   )
   const [primaryNodeId, setPrimaryNodeId] = useState<string>()
+  const [dragPreview, setDragPreview] = useState<DragPreviewState>({
+    positions: {},
+  })
+  const [nodeMeasurements, setNodeMeasurements] =
+    useState<NodeMeasurementState>({ measurements: {} })
   const [nodeListOpen, setNodeListOpen] = useState(false)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
@@ -323,7 +339,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [handleAction, requestDelete],
   )
 
-  const flowNodes = useMemo<CreativeFlowNode[]>(() => {
+  const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
     const rightmostX = Math.max(...project.nodes.map((node) => node.position.x))
     return project.nodes.map((node) => {
@@ -364,6 +380,30 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     selectedNodeIds,
   ])
 
+  const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
+    if (!project || nodeMeasurements.projectId !== project.id) {
+      return projectFlowNodes
+    }
+
+    return projectFlowNodes.map((node) => {
+      const measured = nodeMeasurements.measurements[node.id]
+      return measured ? { ...node, measured } : node
+    })
+  }, [nodeMeasurements, project, projectFlowNodes])
+
+  const flowNodes = useMemo<CreativeFlowNode[]>(() => {
+    if (!project || dragPreview.projectId !== project.id) {
+      return measuredFlowNodes
+    }
+
+    return measuredFlowNodes.map((node) => {
+      const previewPosition = dragPreview.positions[node.id]
+      return previewPosition
+        ? { ...node, position: previewPosition, dragging: true }
+        : node
+    })
+  }, [dragPreview, measuredFlowNodes, project])
+
   const flowEdges = useMemo<DependencyFlowEdge[]>(
     () =>
       (project?.edges ?? []).map((edge) => ({
@@ -378,14 +418,89 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<CreativeFlowNode>[]) => {
-      const positions = changes.flatMap((change) =>
+      const measurements = changes.flatMap((change) =>
+        change.type === 'dimensions' && change.dimensions !== undefined
+          ? [{ nodeId: change.id, dimensions: change.dimensions }]
+          : [],
+      )
+      if (project && measurements.length > 0) {
+        setNodeMeasurements((current) => {
+          const nextMeasurements =
+            current.projectId === project.id
+              ? { ...current.measurements }
+              : {}
+          let changed = current.projectId !== project.id
+
+          for (const { nodeId, dimensions } of measurements) {
+            const previous = nextMeasurements[nodeId]
+            if (
+              previous?.width === dimensions.width &&
+              previous.height === dimensions.height
+            ) {
+              continue
+            }
+            nextMeasurements[nodeId] = dimensions
+            changed = true
+          }
+
+          return changed
+            ? { projectId: project.id, measurements: nextMeasurements }
+            : current
+        })
+      }
+
+      const previewPositions = changes.flatMap((change) =>
+        change.type === 'position' &&
+        change.position !== undefined &&
+        change.dragging === true
+          ? [{ nodeId: change.id, position: change.position }]
+          : [],
+      )
+      if (project && previewPositions.length > 0) {
+        setDragPreview((current) => {
+          const positions =
+            current.projectId === project.id ? { ...current.positions } : {}
+          let changed = current.projectId !== project.id
+
+          for (const { nodeId, position } of previewPositions) {
+            const previous = positions[nodeId]
+            if (
+              previous?.x === position.x &&
+              previous.y === position.y
+            ) {
+              continue
+            }
+            positions[nodeId] = position
+            changed = true
+          }
+
+          return changed ? { projectId: project.id, positions } : current
+        })
+      }
+
+      const committedPositions = changes.flatMap((change) =>
         change.type === 'position' &&
         change.position !== undefined &&
         change.dragging !== true
           ? [{ nodeId: change.id, position: change.position }]
           : [],
       )
-      if (positions.length > 0) updateNodePositions(positions)
+      if (committedPositions.length > 0) {
+        updateNodePositions(committedPositions)
+        setDragPreview((current) => {
+          if (current.projectId !== project?.id) return current
+          const positions = { ...current.positions }
+          let changed = false
+
+          for (const { nodeId } of committedPositions) {
+            if (!(nodeId in positions)) continue
+            delete positions[nodeId]
+            changed = true
+          }
+
+          return changed ? { ...current, positions } : current
+        })
+      }
 
       const selectionChanges = changes.filter(
         (change) => change.type === 'select',
@@ -409,7 +524,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         )
       }
     },
-    [selectedNodeIds, updateNodePositions],
+    [project, selectedNodeIds, updateNodePositions],
   )
 
   const handleConnect = useCallback(

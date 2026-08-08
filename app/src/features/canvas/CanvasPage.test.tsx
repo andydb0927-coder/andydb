@@ -24,6 +24,8 @@ interface FlowNodeFixture {
   id: string
   type?: string
   selected?: boolean
+  position: { x: number; y: number }
+  measured?: { width?: number; height?: number }
   data: Record<string, unknown>
 }
 
@@ -956,6 +958,75 @@ describe('creative canvas', () => {
       { x: 80, y: 80 },
       { x: 390, y: 210 },
     ])
+  })
+
+  test('renders drag positions continuously but commits one history entry on release', () => {
+    renderCanvas()
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        {
+          id: 'character',
+          type: 'dimensions',
+          dimensions: { width: 270, height: 200 },
+        },
+      ])
+    })
+
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.measured,
+    ).toEqual({ width: 270, height: 200 })
+    const stableSceneNode = latestFlowProps?.nodes.find(
+      ({ id }) => id === 'scene',
+    )
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        {
+          id: 'character',
+          type: 'position',
+          position: { x: 160, y: 120 },
+          dragging: true,
+        },
+      ])
+    })
+
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.position,
+    ).toEqual({ x: 160, y: 120 })
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.measured,
+    ).toEqual({ width: 270, height: 200 })
+    expect(latestFlowProps?.nodes.find(({ id }) => id === 'scene')).toBe(
+      stableSceneNode,
+    )
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'character')?.position,
+    ).toEqual({ x: 80, y: 80 })
+    expect(useProjectStore.getState()).toMatchObject({
+      saveStatus: 'saved',
+      past: [],
+    })
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        {
+          id: 'character',
+          type: 'position',
+          position: { x: 160, y: 120 },
+          dragging: false,
+        },
+      ])
+    })
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'character')?.position,
+    ).toEqual({ x: 160, y: 120 })
+    expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
   test('offers exactly seven floating creation tools', () => {
