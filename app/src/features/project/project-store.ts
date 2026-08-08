@@ -13,7 +13,12 @@ import { ProjectRepository } from './project-repository'
 import type { GenerationResult } from '../generation/generation-adapter'
 import { reorderTimeline as reorderTimelineItems } from '../timeline/timeline-model'
 
-export type PersistenceStatus = 'saved' | 'saving' | 'failed' | 'offline'
+export type PersistenceStatus =
+  | 'dirty'
+  | 'saving'
+  | 'saved'
+  | 'error'
+  | 'offline'
 
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
@@ -201,6 +206,7 @@ function nextVideoNumber(nodes: CanvasNode[], source: CanvasNode) {
 export const useProjectStore = create<ProjectStore>((set, get) => {
   let persistenceRequestId = 0
   let hydrationRequestId = 0
+  let persistenceChain: Promise<void> = Promise.resolve()
   const generationBaselines = new Map<string, Project>()
 
   const commit = (mutate: (project: Project) => Project) => {
@@ -213,6 +219,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     set((state) => ({
       projectsById: { ...state.projectsById, [next.id]: next },
       activeProject: next,
+      saveStatus: 'dirty',
       past: [...state.past, current],
       future: [],
     }))
@@ -418,7 +425,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
       set((state) => ({
         projectsById: { ...state.projectsById, [projectId]: next },
-        ...(state.activeProjectId === projectId ? { activeProject: next } : {}),
+        ...(state.activeProjectId === projectId
+          ? { activeProject: next, saveStatus: 'dirty' as const }
+          : {}),
         ...(terminal
           ? {
               past: state.past.map((snapshot) =>
@@ -560,6 +569,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         ...(state.activeProjectId === projectId
           ? {
               activeProject: next,
+              saveStatus: 'dirty' as const,
               past: [...state.past, baseline],
               future: [],
             }
@@ -626,6 +636,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         projectsById: { ...state.projectsById, [previous.id]: previous },
         activeProjectId: previous.id,
         activeProject: previous,
+        saveStatus: 'dirty',
         past: state.past.slice(0, -1),
         future: [current, ...state.future],
       })
@@ -641,6 +652,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         projectsById: { ...state.projectsById, [next.id]: next },
         activeProjectId: next.id,
         activeProject: next,
+        saveStatus: 'dirty',
         past: [...state.past, current],
         future: state.future.slice(1),
       })
@@ -657,8 +669,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
 
       set({ saveStatus: 'saving' })
+      const write = persistenceChain.then(() => repository.save(project))
+      persistenceChain = write.catch(() => undefined)
       try {
-        await repository.save(project)
+        await write
         if (
           requestId === persistenceRequestId &&
           get().activeProject === project
@@ -670,7 +684,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           requestId === persistenceRequestId &&
           get().activeProject === project
         ) {
-          set({ saveStatus: 'failed' })
+          set({ saveStatus: 'error' })
         }
       }
     },

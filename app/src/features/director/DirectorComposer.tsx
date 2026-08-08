@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import {
   parseDirectorCommand,
@@ -7,7 +7,10 @@ import {
 
 interface DirectorComposerProps {
   selectedNodeId?: string
-  onExecute(command: Exclude<DirectorCommand, { type: 'unknown' }>): void
+  onExecute(
+    command: Exclude<DirectorCommand, { type: 'unknown' }>,
+    focusReturnTarget?: HTMLElement,
+  ): void
 }
 
 function describeCommand(command: DirectorCommand) {
@@ -35,6 +38,7 @@ export function DirectorComposer({
 }: DirectorComposerProps) {
   const [input, setInput] = useState('')
   const [proposal, setProposal] = useState<DirectorCommand>()
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     setProposal(undefined)
@@ -47,7 +51,7 @@ export function DirectorComposer({
 
   const execute = () => {
     if (!proposal || proposal.type === 'unknown') return
-    onExecute(proposal)
+    onExecute(proposal, inputRef.current ?? undefined)
     setProposal(undefined)
     setInput('')
   }
@@ -70,6 +74,7 @@ export function DirectorComposer({
         <label htmlFor="director-command-input">告诉我下一步要做什么</label>
         <div className="director-composer__input-row">
           <textarea
+            ref={inputRef}
             id="director-command-input"
             value={input}
             rows={2}

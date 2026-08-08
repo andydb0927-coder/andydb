@@ -6,10 +6,12 @@ export type StatusTextStatus =
   | 'idle'
   | 'queued'
   | 'running'
+  | 'dirty'
   | 'saving'
   | 'saved'
   | 'succeeded'
   | 'failed'
+  | 'error'
   | 'offline'
 
 export interface StatusTextProps extends HTMLAttributes<HTMLSpanElement> {

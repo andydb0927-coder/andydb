@@ -1,4 +1,5 @@
-import { act, render, screen, within } from '@testing-library/react'
+import Dexie from 'dexie'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps, ComponentType } from 'react'
 import {
@@ -10,9 +11,14 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
+import {
+  ProjectRepository,
+  WirelessCanvasDatabase,
+} from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { CanvasPage } from './CanvasPage'
 import { sortNodesForList } from './NodeListView'
+import { PreviewPage } from '../timeline/PreviewPage'
 
 interface FlowNodeFixture {
   id: string
@@ -31,6 +37,7 @@ interface FlowPropsFixture {
   panActivationKeyCode: string
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
+  onInit?(instance: { fitView(options: unknown): Promise<boolean> }): void
 }
 
 let latestFlowProps: FlowPropsFixture | undefined
@@ -161,8 +168,15 @@ function activate(project = makeCanvasProject()) {
   })
 }
 
+const noOpCanvasRepository = {
+  load: async () => undefined,
+  save: async () => undefined,
+}
+
 function renderCanvas(
-  props: ComponentProps<typeof CanvasPage> = {},
+  props: ComponentProps<typeof CanvasPage> = {
+    repository: noOpCanvasRepository,
+  },
 ) {
   return render(
     <MemoryRouter initialEntries={['/project/project-canvas']}>
@@ -248,12 +262,77 @@ describe('creative canvas', () => {
       future: [],
     })
 
-    renderCanvas({ repository: { load: async () => project } })
+    renderCanvas({
+      repository: { load: async () => project, save: async () => undefined },
+    })
 
     expect(
       await screen.findByRole('heading', { name: '雨夜追寻' }),
     ).toBeVisible()
     expect(useProjectStore.getState().activeProject?.id).toBe('project-canvas')
+  })
+
+  test('returns from preview to the focused origin node and reveals it in React Flow', async () => {
+    const user = userEvent.setup()
+    const project = {
+      ...makeCanvasProject(),
+      timeline: [
+        {
+          id: 'timeline-video',
+          nodeId: 'video',
+          order: 0,
+          durationSeconds: 5,
+          track: 'video' as const,
+        },
+      ],
+    }
+    act(() => activate(project))
+    const fitView = vi.fn().mockResolvedValue(true)
+
+    render(
+      <MemoryRouter
+        initialEntries={['/project/project-canvas/preview']}
+      >
+        <Routes>
+          <Route
+            path="/project/:projectId/preview"
+            element={<PreviewPage />}
+          />
+          <Route path="/project/:projectId" element={<CanvasPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('link', { name: '返回画布' }))
+    expect(await screen.findByRole('region', { name: '项目画布' })).toBeVisible()
+    act(() => latestFlowProps?.onInit?.({ fitView }))
+
+    await waitFor(() => {
+      expect(
+        latestFlowProps?.nodes.find((node) => node.id === 'video')?.selected,
+      ).toBe(true)
+    })
+    expect(fitView).toHaveBeenCalledWith(
+      expect.objectContaining({ nodes: [{ id: 'video' }] }),
+    )
+  })
+
+  test('ignores a focus query that does not belong to the active project', () => {
+    const fitView = vi.fn().mockResolvedValue(true)
+    render(
+      <MemoryRouter
+        initialEntries={['/project/project-canvas?focus=missing-node']}
+      >
+        <Routes>
+          <Route path="/project/:projectId" element={<CanvasPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    act(() => latestFlowProps?.onInit?.({ fitView }))
+
+    expect(latestFlowProps?.nodes.every((node) => !node.selected)).toBe(true)
+    expect(fitView).not.toHaveBeenCalled()
   })
 
   test('hides an old route project after load failure and retries successfully', async () => {
@@ -270,7 +349,7 @@ describe('creative canvas', () => {
       .mockResolvedValueOnce(requestedProject)
     act(() => activate(oldProject))
 
-    renderCanvas({ repository: { load } })
+    renderCanvas({ repository: { load, save: async () => undefined } })
 
     expect(screen.queryByRole('heading', { name: '旧项目' })).not.toBeInTheDocument()
     expect(
@@ -300,7 +379,7 @@ describe('creative canvas', () => {
     }
     act(() => activate(oldProject))
 
-    renderCanvas({ repository: { load: async () => undefined } })
+    renderCanvas({ repository: noOpCanvasRepository })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('未找到项目')
     expect(screen.queryByText('旧项目')).not.toBeInTheDocument()
@@ -378,6 +457,74 @@ describe('creative canvas', () => {
     expect(latestFlowProps?.nodes.find((node) => node.id === video.id)?.selected).toBe(
       true,
     )
+  })
+
+  test('autosaves generated video and timeline state and rehydrates it from Dexie', async () => {
+    const user = userEvent.setup()
+    const database = new WirelessCanvasDatabase(
+      `wireless-canvas-durable-${crypto.randomUUID()}`,
+    )
+    const repository = new ProjectRepository(database)
+    const view = renderCanvas({ repository })
+    let rehydratedView: ReturnType<typeof renderCanvas> | undefined
+
+    try {
+      await user.click(screen.getByRole('button', { name: '分镜 02' }))
+      await user.click(screen.getByRole('button', { name: '生成视频' }))
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: '视频 02' })).toBeVisible()
+        },
+        { timeout: 2500 },
+      )
+
+      await user.click(screen.getByRole('button', { name: '加入时间线' }))
+      await waitFor(() => {
+        expect(useProjectStore.getState().saveStatus).toBe('saved')
+      })
+
+      const saved = await repository.load('project-canvas')
+      const video = saved?.nodes.find((node) => node.title === '视频 02')
+      const version = video?.versions.find(
+        (candidate) => candidate.id === video.activeVersionId,
+      )
+      expect(video?.kind).toBe('video')
+      expect(saved?.assets.some((asset) => asset.id === version?.assetId)).toBe(true)
+      expect(saved?.jobs.find((job) => job.id === version?.generationJobId)).toMatchObject({
+        status: 'succeeded',
+        nodeId: video?.id,
+      })
+      expect(saved?.timeline).toContainEqual(
+        expect.objectContaining({ nodeId: video?.id, track: 'video' }),
+      )
+
+      view.unmount()
+      act(() => {
+        useProjectStore.setState({
+          projectsById: {},
+          activeProjectId: undefined,
+          activeProject: undefined,
+          saveStatus: 'saved',
+          past: [],
+          future: [],
+        })
+      })
+      rehydratedView = renderCanvas({ repository })
+
+      expect(await screen.findByRole('button', { name: '视频 02' })).toBeVisible()
+      const rehydrated = useProjectStore.getState().activeProject
+      expect(rehydrated?.nodes.find((node) => node.id === video?.id)?.versions).toEqual(
+        video?.versions,
+      )
+      expect(rehydrated?.timeline).toEqual(saved?.timeline)
+      expect(rehydrated?.assets).toEqual(saved?.assets)
+      expect(rehydrated?.jobs).toEqual(saved?.jobs)
+    } finally {
+      view.unmount()
+      rehydratedView?.unmount()
+      database.close()
+      await Dexie.delete(database.name)
+    }
   })
 
   test('adds the selected video to the timeline from its contextual action', async () => {
@@ -494,6 +641,29 @@ describe('creative canvas', () => {
     ).toHaveLength(2)
   })
 
+  test('persists terminal cancellation when an in-flight Canvas unmounts', async () => {
+    const user = userEvent.setup()
+    let savedProject: Project | undefined
+    const repository = {
+      load: async () => undefined,
+      save: async (project: Project) => {
+        savedProject = structuredClone(project)
+      },
+    }
+    const view = renderCanvas({ repository })
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    view.unmount()
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    expect(
+      savedProject?.jobs.find((job) => job.operation === 'regenerate')?.status,
+    ).toBe('cancelled')
+  })
+
   test('continues persisted queue sequencing for a new generation after remount', async () => {
     const user = userEvent.setup()
     const firstView = renderCanvas()
@@ -544,7 +714,12 @@ describe('creative canvas', () => {
     const projectB = { ...makeCanvasProject(), id: 'project-b', title: '项目 B' }
     render(
       <MemoryRouter initialEntries={['/project/project-canvas']}>
-        <SwitchingCanvas repository={{ load: async () => projectB }} />
+        <SwitchingCanvas
+          repository={{
+            load: async () => projectB,
+            save: async () => undefined,
+          }}
+        />
       </MemoryRouter>,
     )
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
@@ -586,7 +761,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject).toBe(before)
   })
 
-  test('waits for explicit Execute confirmation before a destructive director command', async () => {
+  test('routes a destructive Director command through dependency confirmation and restores Director focus', async () => {
     const user = userEvent.setup()
     renderCanvas()
     await user.click(screen.getByRole('button', { name: '场景设定' }))
@@ -604,9 +779,15 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '执行' }))
 
+    const dialog = screen.getByRole('dialog', { name: '删除“场景设定”？' })
+    expect(within(dialog).getByText('分镜 02')).toBeVisible()
+    expect(within(dialog).getByText('视频片段')).toBeVisible()
     expect(
       useProjectStore.getState().activeProject?.nodes.some((node) => node.id === 'scene'),
-    ).toBe(false)
+    ).toBe(true)
+
+    await user.click(within(dialog).getByRole('button', { name: '取消' }))
+    expect(screen.getByRole('textbox', { name: '告诉我下一步要做什么' })).toHaveFocus()
   })
 
   test('invalidates a director proposal when the selected node changes', async () => {
@@ -876,7 +1057,7 @@ describe('canvas top bar', () => {
   test.each([
     ['saved', '已保存'],
     ['saving', '保存中'],
-    ['failed', '保存失败，本地更改已保留'],
+    ['error', '保存失败，本地更改已保留'],
     ['offline', '已离线，本地更改已保留'],
   ] as const)('shows %s persistence copy', (saveStatus, copy) => {
     useProjectStore.setState({ saveStatus })

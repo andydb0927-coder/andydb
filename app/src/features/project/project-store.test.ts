@@ -216,6 +216,55 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().future).toEqual([])
   })
 
+  test('marks canvas mutations and history traversal dirty until persisted', () => {
+    expect(useProjectStore.getState().saveStatus).toBe('saved')
+
+    useProjectStore.getState().updateNode('shot-1', {
+      position: { x: 640, y: 360 },
+    })
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+
+    useProjectStore.setState({ saveStatus: 'saved' })
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+
+    useProjectStore.setState({ saveStatus: 'saved' })
+    useProjectStore.getState().redo()
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+  })
+
+  test('persists a moved node and the later undo snapshot through Dexie', async () => {
+    const repository = createRepository()
+
+    useProjectStore.getState().updateNodePositions([
+      { nodeId: 'shot-1', position: { x: 640, y: 360 } },
+    ])
+    await useProjectStore.getState().persistActive(repository)
+    expect((await repository.load('project-frost-river'))?.nodes[0].position).toEqual({
+      x: 640,
+      y: 360,
+    })
+
+    useProjectStore.getState().undo()
+    await useProjectStore.getState().persistActive(repository)
+    useProjectStore.setState({
+      projectsById: {},
+      activeProjectId: undefined,
+      activeProject: undefined,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+    await useProjectStore
+      .getState()
+      .hydrate('project-frost-river', repository)
+
+    expect(useProjectStore.getState().activeProject?.nodes[0].position).toEqual({
+      x: 120,
+      y: 240,
+    })
+  })
+
   test('updateNode cannot replace immutable versions or select an unknown active version', () => {
     const originalNode = useProjectStore.getState().activeProject?.nodes[0]
     const unsafeChanges = {
@@ -407,7 +456,7 @@ describe('project store history and persistence', () => {
 
     await useProjectStore.getState().persistActive(repository)
 
-    expect(useProjectStore.getState().saveStatus).toBe('failed')
+    expect(useProjectStore.getState().saveStatus).toBe('error')
     expect(useProjectStore.getState().activeProject?.nodes[0].title).toBe(
       '失败后仍保留',
     )
@@ -430,7 +479,7 @@ describe('project store history and persistence', () => {
     deferred.resolve(undefined)
     await persistence
 
-    expect(useProjectStore.getState().saveStatus).toBe('saving')
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
     expect(useProjectStore.getState().activeProject?.nodes[0].title).toBe(
       '保存期间的新编辑',
     )
@@ -456,21 +505,33 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().saveStatus).toBe('saved')
   })
 
-  test('ignores an older overlapping save after the latest save succeeds', async () => {
+  test('serializes overlapping saves so the newer snapshot is written last', async () => {
     const first = createDeferred<void>()
     const second = createDeferred<void>()
-    const save = vi
-      .fn<() => Promise<void>>()
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise)
+    const savedTitles: string[] = []
+    const save = vi.fn<(project: ReturnType<typeof makeProjectFixture>) => Promise<void>>()
+      .mockImplementationOnce(async (project) => {
+        await first.promise
+        savedTitles.push(project.nodes[0].title)
+      })
+      .mockImplementationOnce(async (project) => {
+        await second.promise
+        savedTitles.push(project.nodes[0].title)
+      })
 
     const olderPersistence = useProjectStore.getState().persistActive({ save })
+    useProjectStore.getState().updateNode('shot-1', { title: '最新标题' })
     const latestPersistence = useProjectStore.getState().persistActive({ save })
+
+    await Promise.resolve()
+    expect(save).toHaveBeenCalledTimes(1)
+    first.resolve(undefined)
+    await olderPersistence
+    expect(save).toHaveBeenCalledTimes(2)
     second.resolve(undefined)
     await latestPersistence
-    first.reject(new Error('older request failed late'))
-    await olderPersistence
 
+    expect(savedTitles).toEqual(['河岸寻人', '最新标题'])
     expect(useProjectStore.getState().saveStatus).toBe('saved')
   })
 

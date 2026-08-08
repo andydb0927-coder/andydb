@@ -4,10 +4,11 @@ import {
   ReactFlow,
   type Connection,
   type NodeChange,
+  type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import { DirectorComposer } from '../director/DirectorComposer'
 import type { DirectorCommand } from '../director/director-command'
@@ -29,7 +30,7 @@ import {
 import { NodeListView } from './NodeListView'
 import '../../styles/global.css'
 
-type CanvasRepository = Pick<ProjectRepository, 'load'>
+type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 
 const defaultRepository = new ProjectRepository()
@@ -59,6 +60,8 @@ export interface CanvasPageProps {
 
 export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams] = useSearchParams()
+  const focusNodeId = searchParams.get('focus')
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
@@ -67,6 +70,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const canRedo = useProjectStore((state) => state.future.length > 0)
   const undo = useProjectStore((state) => state.undo)
   const redo = useProjectStore((state) => state.redo)
+  const persistActive = useProjectStore((state) => state.persistActive)
   const connectNodes = useProjectStore((state) => state.connectNodes)
   const updateNodePositions = useProjectStore(
     (state) => state.updateNodePositions,
@@ -82,7 +86,11 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     project ? 'ready' : 'loading',
   )
   const [loadAttempt, setLoadAttempt] = useState(0)
-  const deleteTriggerRef = useRef<HTMLButtonElement>(undefined)
+  const [flowInstance, setFlowInstance] = useState<
+    ReactFlowInstance<CreativeFlowNode, DependencyFlowEdge>
+  >()
+  const appliedFocusRef = useRef<string | undefined>(undefined)
+  const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
   const nodeListSelectionMadeRef = useRef(false)
 
@@ -137,8 +145,38 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   useEffect(() => {
     generationQueue.resume()
-    return () => generationQueue.dispose()
-  }, [generationQueue])
+    return () => {
+      generationQueue.dispose()
+      const state = useProjectStore.getState()
+      if (
+        state.activeProject?.id === projectId &&
+        state.saveStatus === 'dirty'
+      ) {
+        void state.persistActive(repository)
+      }
+    }
+  }, [generationQueue, projectId, repository])
+
+  useEffect(() => {
+    if (!project || saveStatus !== 'dirty') return
+    void persistActive(repository)
+  }, [persistActive, project, repository, saveStatus])
+
+  useEffect(() => {
+    if (!project || !flowInstance || !focusNodeId) return
+    const focusKey = `${project.id}:${focusNodeId}`
+    if (appliedFocusRef.current === focusKey) return
+    const node = project.nodes.find((candidate) => candidate.id === focusNodeId)
+    if (!node) return
+
+    appliedFocusRef.current = focusKey
+    selectOnlyNode(node.id)
+    void flowInstance.fitView({
+      nodes: [{ id: node.id }],
+      duration: 300,
+      padding: 0.4,
+    })
+  }, [flowInstance, focusNodeId, project, selectOnlyNode])
 
   const removeSelectedNode = useCallback((nodeId: string) => {
     setSelectedNodeIds((current) => {
@@ -240,8 +278,26 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [generationQueue, projectId],
   )
 
+  const requestDelete = useCallback(
+    (nodeId: string, focusReturnTarget: HTMLElement) => {
+      if (!project) return
+      const consumers = downstreamConsumers(project, nodeId)
+      if (consumers.length === 0) {
+        deleteNode(nodeId)
+        removeSelectedNode(nodeId)
+        return
+      }
+      deleteTriggerRef.current = focusReturnTarget
+      setDeleteCandidateId(nodeId)
+    },
+    [deleteNode, project, removeSelectedNode],
+  )
+
   const handleDirectorCommand = useCallback(
-    (command: Exclude<DirectorCommand, { type: 'unknown' }>) => {
+    (
+      command: Exclude<DirectorCommand, { type: 'unknown' }>,
+      focusReturnTarget?: HTMLElement,
+    ) => {
       switch (command.type) {
         case 'regenerate':
           handleAction(command.nodeId, 'regenerate')
@@ -259,26 +315,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           handleAction(command.nodeId, 'add-to-timeline')
           return
         case 'remove-node':
-          deleteNode(command.nodeId)
-          removeSelectedNode(command.nodeId)
+          if (focusReturnTarget) {
+            requestDelete(command.nodeId, focusReturnTarget)
+          }
       }
     },
-    [deleteNode, handleAction, removeSelectedNode],
-  )
-
-  const requestDelete = useCallback(
-    (nodeId: string, trigger: HTMLButtonElement) => {
-      if (!project) return
-      const consumers = downstreamConsumers(project, nodeId)
-      if (consumers.length === 0) {
-        deleteNode(nodeId)
-        removeSelectedNode(nodeId)
-        return
-      }
-      deleteTriggerRef.current = trigger
-      setDeleteCandidateId(nodeId)
-    },
-    [deleteNode, project, removeSelectedNode],
+    [handleAction, requestDelete],
   )
 
   const flowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -432,6 +474,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     deleteNode(deleteCandidate.id)
     setDeleteCandidateId(undefined)
     removeSelectedNode(deleteCandidate.id)
+    queueMicrotask(() => deleteTriggerRef.current?.focus())
   }
 
   return (
@@ -460,6 +503,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           onNodesChange={handleNodesChange}
           onConnect={handleConnect}
           onNodeClick={(_event, node) => selectOnlyNode(node.id)}
+          onInit={setFlowInstance}
           fitView
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll

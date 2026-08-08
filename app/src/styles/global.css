@@ -102,6 +102,7 @@ select {
 }
 
 .status-text--failed,
+.status-text--error,
 .status-text--offline {
   color: var(--status-error);
 }

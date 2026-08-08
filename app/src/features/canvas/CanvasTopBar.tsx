@@ -5,9 +5,10 @@ import { StatusText } from '../../ui/StatusText'
 import type { PersistenceStatus } from '../project/project-store'
 
 const persistenceCopy: Record<PersistenceStatus, string> = {
+  dirty: '有未保存更改',
   saved: '已保存',
   saving: '保存中',
-  failed: '保存失败，本地更改已保留',
+  error: '保存失败，本地更改已保留',
   offline: '已离线，本地更改已保留',
 }
 
