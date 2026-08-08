@@ -1355,6 +1355,15 @@ select {
   }
 }
 
+@media (max-width: 800px) {
+  .creative-node-actions,
+  .creative-node-actions[data-placement='before'] {
+    top: var(--space-2);
+    right: var(--space-2);
+    left: auto;
+  }
+}
+
 .node-list-view li button[aria-pressed='true'] {
   border-color: var(--accent);
   background: rgb(114 104 240 / 14%);

@@ -19,7 +19,7 @@ interface CanvasTopBarProps {
   canRedo: boolean
   onUndo(): void
   onRedo(): void
-  onOpenNodeList(): void
+  onOpenNodeList(trigger: HTMLButtonElement): void
 }
 
 export function CanvasTopBar({
@@ -45,7 +45,10 @@ export function CanvasTopBar({
       </div>
       <StatusText status={saveStatus}>{persistenceCopy[saveStatus]}</StatusText>
       <div className="canvas-top-bar__actions">
-        <button type="button" onClick={onOpenNodeList}>
+        <button
+          type="button"
+          onClick={(event) => onOpenNodeList(event.currentTarget)}
+        >
           <ListTree aria-hidden="true" />
           节点列表
         </button>

@@ -828,6 +828,21 @@ describe('creative canvas', () => {
     expect(screen.getByRole('button', { name: '重生成' })).toBeVisible()
   })
 
+  test('returns focus to the node list trigger when the dialog closes without a selection', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    const listTrigger = screen.getByRole('button', { name: '节点列表' })
+    listTrigger.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('dialog', { name: '节点列表' })).toBeVisible()
+
+    await user.keyboard('{Escape}')
+
+    expect(listTrigger).toHaveFocus()
+  })
+
   test('warns about all downstream consumers and preserves them as source-changed after deletion', async () => {
     const user = userEvent.setup()
     renderCanvas()

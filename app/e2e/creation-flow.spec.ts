@@ -37,17 +37,25 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(page.getByText('演示导出已完成')).toBeVisible()
 })
 
-test('keyboard and list view preserve core actions at 200% zoom', async ({
+test('keyboard and list view preserve core actions in a strict small layout', async ({
   page,
 }) => {
   await createCinematicProject(page)
 
   const storyboard = page.getByRole('button', { name: '分镜 01' })
+  const storyboardActions = page.getByLabel('分镜 01操作')
   await storyboard.focus()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('button', { name: '生成视频' })).toBeVisible()
+  await expect(storyboardActions).toBeVisible()
+
+  const scene = page.getByRole('button', { name: '场景设定' })
+  await scene.focus()
+  await page.keyboard.press('Enter')
+  await expect(storyboardActions).toBeHidden()
+
+  await storyboard.focus()
   await page.keyboard.press('Space')
-  await expect(page.getByRole('button', { name: '生成视频' })).toBeVisible()
+  await expect(storyboardActions).toBeVisible()
 
   await page.getByRole('button', { name: '节点列表' }).click()
   const list = page.getByRole('dialog', { name: '节点列表' })
@@ -81,4 +89,34 @@ test('keyboard and list view preserve core actions at 200% zoom', async ({
   await page.screenshot({
     path: '../design-qa-evidence/zoom-200-reachability.png',
   })
+})
+
+test('keeps the selected node primary action inside a 200% zoom layout viewport', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '角色参考' }).click()
+  const zoomIn = page.getByRole('button', { name: 'Zoom In' })
+  for (let step = 0; step < 10 && (await zoomIn.isEnabled()); step += 1) {
+    await zoomIn.click()
+  }
+  await page.setViewportSize({ width: 721, height: 778 })
+  const canvas = page.getByRole('application', { name: '创作节点图' })
+  await canvas.focus()
+  await page.keyboard.down('Space')
+  await page.mouse.move(300, 320)
+  await page.mouse.down()
+  await page.mouse.move(580, 320, { steps: 5 })
+  await page.mouse.up()
+  await page.keyboard.up('Space')
+  await expect(page.getByRole('button', { name: '角色参考' })).toBeVisible()
+  const primaryAction = page
+    .getByLabel('角色参考操作')
+    .getByRole('button', { name: '生成视频' })
+  const actionBox = await primaryAction.boundingBox()
+  expect(actionBox).not.toBeNull()
+  expect(actionBox!.x).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(
+    await page.evaluate(() => window.innerWidth),
+  )
 })

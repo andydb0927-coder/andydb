@@ -83,6 +83,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   )
   const [loadAttempt, setLoadAttempt] = useState(0)
   const deleteTriggerRef = useRef<HTMLButtonElement>(undefined)
+  const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
+  const nodeListSelectionMadeRef = useRef(false)
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
@@ -380,15 +382,35 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [connectNodes],
   )
 
+  const openNodeList = useCallback((trigger: HTMLButtonElement) => {
+    nodeListTriggerRef.current = trigger
+    nodeListSelectionMadeRef.current = false
+    setNodeListOpen(true)
+  }, [])
+
+  const selectFromNodeList = useCallback(
+    (nodeId: string) => {
+      nodeListSelectionMadeRef.current = true
+      selectOnlyNode(nodeId)
+    },
+    [selectOnlyNode],
+  )
+
   const closeNodeList = useCallback(() => {
     setNodeListOpen(false)
     const nodeId = primaryNodeId
+    const selectionWasMade = nodeListSelectionMadeRef.current
+    const trigger = nodeListTriggerRef.current
+    nodeListSelectionMadeRef.current = false
     queueMicrotask(() => {
-      if (!nodeId) return
-      const candidate = document.querySelector<HTMLElement>(
-        `[data-canvas-node-id="${nodeId}"]`,
-      )
-      candidate?.focus()
+      if (selectionWasMade && nodeId) {
+        const candidate = document.querySelector<HTMLElement>(
+          `[data-canvas-node-id="${nodeId}"]`,
+        )
+        candidate?.focus()
+        return
+      }
+      trigger?.focus()
     })
   }, [primaryNodeId])
 
@@ -422,7 +444,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         canRedo={Boolean(project) && canRedo}
         onUndo={undo}
         onRedo={redo}
-        onOpenNodeList={() => setNodeListOpen(true)}
+        onOpenNodeList={openNodeList}
       />
       <div
         className="canvas-page__viewport"
@@ -488,7 +510,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           timeline={project.timeline}
           jobs={project.jobs}
           selectedNodeId={primaryNodeId}
-          onSelect={selectOnlyNode}
+          onSelect={selectFromNodeList}
           onAction={handleAction}
           onClose={closeNodeList}
         />
