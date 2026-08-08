@@ -44,6 +44,7 @@ test('keyboard and list view preserve core actions in a strict small layout', as
 
   const storyboard = page.getByRole('button', { name: '分镜 01' })
   const storyboardActions = page.getByLabel('分镜 01操作')
+  await expect(storyboardActions).toBeHidden()
   await storyboard.focus()
   await page.keyboard.press('Enter')
   await expect(storyboardActions).toBeVisible()
@@ -114,9 +115,82 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     .getByLabel('角色参考操作')
     .getByRole('button', { name: '生成视频' })
   const actionBox = await primaryAction.boundingBox()
+  const viewport = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }))
   expect(actionBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
-  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(
-    await page.evaluate(() => window.innerWidth),
-  )
+  expect(actionBox!.y).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height)
+  expect(
+    await page.evaluate(
+      ({ x, y }) =>
+        document
+          .elementFromPoint(x, y)
+          ?.closest('button')
+          ?.textContent?.trim(),
+      {
+        x: actionBox!.x + actionBox!.width / 2,
+        y: actionBox!.y + actionBox!.height / 2,
+      },
+    ),
+  ).toContain('生成视频')
+  await primaryAction.click()
+  await expect(page.getByRole('button', { name: '视频 01' })).toBeVisible()
+})
+
+test('keeps the generated selection clear of the AI Director at a 200% zoom viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 721, height: 778 })
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '角色参考' }).click()
+  await page
+    .getByLabel('角色参考操作')
+    .getByRole('button', { name: '生成视频' })
+    .click()
+
+  const generatedNode = page.getByRole('button', { name: '视频 01' })
+  await expect(generatedNode).toBeVisible()
+  const primaryAction = page
+    .getByLabel('视频 01操作')
+    .getByRole('button', { name: '加入时间线' })
+  await expect(primaryAction).toBeVisible()
+
+  const nodeBox = await generatedNode.boundingBox()
+  const actionBox = await primaryAction.boundingBox()
+  const composerBox = await page.locator('.director-composer').boundingBox()
+  expect(nodeBox).not.toBeNull()
+  expect(actionBox).not.toBeNull()
+  expect(composerBox).not.toBeNull()
+  expect(
+    nodeBox!.x < composerBox!.x + composerBox!.width &&
+      nodeBox!.x + nodeBox!.width > composerBox!.x &&
+      nodeBox!.y < composerBox!.y + composerBox!.height &&
+      nodeBox!.y + nodeBox!.height > composerBox!.y,
+  ).toBe(false)
+  expect(actionBox!.x).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.y).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(721)
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(778)
+  expect(
+    await page.evaluate(
+      ({ x, y }) =>
+        document
+          .elementFromPoint(x, y)
+          ?.closest('button')
+          ?.textContent?.trim(),
+      {
+        x: actionBox!.x + actionBox!.width / 2,
+        y: actionBox!.y + actionBox!.height / 2,
+      },
+    ),
+  ).toContain('加入时间线')
+  await primaryAction.click()
+  await page.getByRole('link', { name: '预览' }).click()
+  await expect(
+    page.getByRole('list', { name: '主视频轨' }).getByRole('listitem'),
+  ).toContainText('视频 01')
 })

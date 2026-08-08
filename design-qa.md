@@ -13,7 +13,7 @@
 
 ## Final findings
 
-No open P0, P1, or P2 visual or accessibility defects remain in the approved desktop canvas direction.
+No open P0, P1, or P2 defect remains in the approved desktop direction or the 721×778 zoom-equivalent CSS layout.
 
 - Typography: the restrained dark-canvas hierarchy is preserved. Node titles, node metadata, toolbar labels, status text, and AI Director text remain legible; no text is cropped.
 - Spacing and layout: the canvas dominates the viewport; the dependency chain reads diagonally; the left toolbar stays compact; the selected-node action panel clears adjacent nodes; the bottom composer does not obscure the selected action in the approved viewport.
@@ -52,6 +52,19 @@ No open P0, P1, or P2 visual or accessibility defects remain in the approved des
 - Fix: at CSS viewport widths ≤800px, either context-action placement variant is inset inside its selected node. Automated RED measured action right edge 806.40 > 721; focused GREEN keeps the full action rectangle inside the viewport.
 - Actual 200% GREEN: at the same fixed outer 1349×864 and actual DPR 2 / 721×778 inner viewport, the complete 生成视频 button occupied x=135.95…222.21. The real click succeeded and produced one 视频 01 after waiting. Evidence: `design-qa-evidence/zoom-200-browser-actual-after.png` (721×778).
 
+### Review fix round 2
+
+- Acceptance-evidence finding: the Enter path now explicitly asserts that 分镜 01 actions are hidden before Enter and visible afterward.
+- Acceptance-evidence finding: the 721×778 regression now checks the complete x/y action rectangle, confirms the center hit target is the named button, clicks it, and verifies 视频 01 is generated.
+- P1 RED: after generation at 721×778, the selected 视频 01 rectangle intersected the AI Director rectangle (`Expected false`, `Received true`), matching the obstruction visible in the prior committed after screenshot.
+- Automated fix: at widths ≤800px, the AI Director remains fully functional but narrows to 260px and docks left. The selected generated node and its 加入时间线 action no longer intersect it; the complete action rectangle stays inside the viewport, center hit-testing resolves to the button, the real click succeeds, and 视频 01 appears in 主视频轨.
+- Evidence encoding: both preserved actual-zoom screenshots were mechanically converted from JPEG payloads to real 721×778 PNG files with `sips`; their `.png` extensions now match their file encoding.
+- Round 2 root equivalence evidence: the embedded tab could not be returned to actual 200%—Codex View-menu zoom and focused-WebView Command+Plus left it at 1280×720. The in-app Browser viewport capability therefore set the exact 721×778 CSS layout and reloaded to avoid retaining a 1280px transform. Metrics were DPR 1, `visualViewport.scale=1`, and document zoom 1. This is exact-layout equivalence, not a second actual-zoom capture.
+- Pre-generation proof: 生成视频 rect x=135.946…222.208, y=292.742…314.650; complete in the viewport, center hit target 生成视频, click succeeded, and 视频 01 count became 1.
+- Post-generation proof: selected node x=281.769…466.615, y=560.427…746.230; 加入时间线 x=368.715…454.977, y=646.004…667.912; actions panel x=362.554…461.138, y=565.904…698.719; composer x=16…276, y=589.594…754. All rectangles are contained in 721×778; node/composer and actions/composer intersection checks are false. The action center hit target is 加入时间线; click succeeded and 主视频轨 reported `视频 01` / `5.00s`.
+- Round 2 evidence: `design-qa-evidence/zoom-200-equivalent-round2-after.png` (real PNG, 721×778) and `design-qa-evidence/zoom-200-equivalent-console-errors.json` (`[]`).
+- Evidence conclusion: round 1 proves genuine browser zoom produces a 721×778 CSS viewport at DPR 2; round 2 validates the revised width-driven CSS geometry, hit testing, and core actions in the same 721×778 layout after reload. DPR affects raster density, while this fix depends only on CSS viewport width. The combined actual-zoom and exact-layout evidence is sufficient for acceptance, with the round 2 limitation explicitly recorded.
+
 ## Interaction and accessibility checks
 
 - Created a project, extended 分镜 01 to 分镜 02, generated 视频 02, selected 分镜 02, and invoked Fit View in the in-app Browser.
@@ -60,6 +73,7 @@ No open P0, P1, or P2 visual or accessibility defects remain in the approved des
 - Strict small-layout regression: at 640×360, selected 视频 01 details and 加入时间线 remain visible, focusable, and clickable. Evidence: `design-qa-evidence/zoom-200-reachability.png`. This is responsive-layout evidence, not browser-zoom evidence.
 - At actual 200% browser zoom, selected details and the complete primary action remained visible; clicking 生成视频 succeeded and produced 视频 01.
 - Raw post-fix in-app Browser console error query: `design-qa-evidence/zoom-200-console-errors.json`, contents `[]`.
+- At the round 2 exact 721×778 CSS layout, the generated selected node, full action panel, and AI Director do not overlap; 生成视频 and 加入时间线 center hit tests and real clicks succeeded. Raw console errors: `design-qa-evidence/zoom-200-equivalent-console-errors.json`, contents `[]`.
 
 ## Acceptance
 

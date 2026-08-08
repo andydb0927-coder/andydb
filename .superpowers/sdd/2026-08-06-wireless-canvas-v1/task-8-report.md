@@ -55,8 +55,8 @@ Strict TDD exposed the following genuine failures before implementation:
 - `npm run test:run`: PASS — 10 files, 133 tests.
 - `npm run typecheck`: PASS — exit 0.
 - `npm run build`: PASS — exit 0; Vite reports only its existing advisory that the main minified chunk exceeds 500 kB.
-- `npm run e2e -- --reporter=line`: PASS — 5 Chromium tests.
-- Product design QA: `design-qa.md` — `final result: passed`.
+- `npm run e2e -- --reporter=line`: PASS — 6 Chromium tests.
+- Product design QA: `design-qa.md` — `final result: passed` with round 1 actual-zoom and round 2 exact-layout evidence explicitly distinguished.
 
 ## Files
 
@@ -104,3 +104,40 @@ Strict TDD exposed the following genuine failures before implementation:
 - `npm run build`: PASS — exit 0; only the existing >500 kB advisory remains.
 - `npm run e2e -- --reporter=line`: PASS — 5 Chromium tests.
 - `git diff --check`: PASS.
+
+## Fix round 2 — Scoped re-review
+
+### RED
+
+1. Enter evidence lacked a pre-key assertion, so the path did not explicitly prove hidden→visible. The test now asserts the action panel is hidden before Enter.
+2. The 721×778 regression only checked horizontal bounds. It now checks full x/y containment, button-center hit testing, actual click, and the 视频 01 result.
+3. A new 721×778 post-generation regression failed because the selected 视频 01 rectangle intersected the AI Director rectangle (`Expected false`, `Received true`). This catches the obstruction visible in the prior actual-zoom after screenshot.
+
+### Automated GREEN
+
+- At ≤800px, the AI Director remains available but narrows to 260px and docks left, clearing the selected generated node.
+- Focused post-generation E2E: GREEN — no node/composer intersection, full primary-action viewport containment, correct center hit target, successful 加入时间线 click, and 视频 01 present in 主视频轨.
+- Focused containment/generation E2E: GREEN — complete x/y bounds, center hit target, actual 生成视频 click, and 视频 01 visible.
+- Focused independent-key E2E: GREEN — explicit hidden-before-Enter, visible-after-Enter, hide through keyboard reselection, visible-after-Space.
+- `zoom-200-browser-actual-before.png` and `zoom-200-browser-actual-after.png` were mechanically converted with `sips` to genuine 721×778 PNG encoding; both evidence states are preserved.
+
+### Automated verification
+
+- Focused independent-key E2E: PASS — 1/1.
+- Focused full-containment/click/result E2E: PASS — 1/1.
+- Focused generated-node/composer separation E2E: PASS — 1/1.
+- `npm run test:run`: PASS — 10 files, 133 tests.
+- `npm run typecheck`: PASS — exit 0.
+- `npm run build`: PASS — exit 0; only the existing >500 kB advisory remains.
+- `npm run e2e -- --reporter=line`: PASS — 6 Chromium tests.
+- `git diff --check`: PASS.
+
+### Round 2 root exact-layout evidence
+
+- Limitation: Codex View-menu zoom and focused-WebView Command+Plus did not change the embedded tab from 1280×720, so round 2 is not described as a second actual-zoom capture.
+- Method: the in-app Browser viewport capability set 721×778 and reloaded at DPR 1, `visualViewport.scale=1`, document zoom 1, avoiding the old 1280px canvas transform.
+- Before generation: 生成视频 rect x=135.946…222.208, y=292.742…314.650; full containment, center hit target 生成视频, click success, 视频 01 count 1.
+- After generation: node x=281.769…466.615, y=560.427…746.230; 加入时间线 x=368.715…454.977, y=646.004…667.912; actions panel x=362.554…461.138, y=565.904…698.719; composer x=16…276, y=589.594…754. All are within 721×778; node/composer and actions/composer intersections are false; center hit target is 加入时间线.
+- Result: 加入时间线 click succeeded; preview 主视频轨 text was `视频 01\n5.00s`; console errors were `[]`.
+- Evidence: `design-qa-evidence/zoom-200-equivalent-round2-after.png` (real 721×778 PNG) and `design-qa-evidence/zoom-200-equivalent-console-errors.json`.
+- Acceptance rationale: round 1 proves genuine 200% browser zoom yields the 721×778 CSS viewport at DPR 2. Round 2 validates the revised `max-width:800px` CSS geometry, center hit testing, and real actions in the exact same CSS layout after reload. Since DPR changes raster density rather than CSS-pixel layout, the combined evidence closes the scoped finding without mislabeling round 2 as actual zoom.
