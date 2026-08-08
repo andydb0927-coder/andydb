@@ -62,6 +62,7 @@ export interface TimelineItem {
 
 export interface GenerationJob {
   id: string
+  projectId?: string
   nodeId: string
   status: JobStatus
   prompt: string
@@ -71,6 +72,7 @@ export interface GenerationJob {
   error?: string
   operation?: GenerationOperation
   attempt?: number
+  sequence?: number
 }
 
 export interface ExportJob {

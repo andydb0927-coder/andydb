@@ -12,6 +12,7 @@ import {
   ScanLine,
   Trash2,
   UserRound,
+  X,
 } from 'lucide-react'
 
 import { StatusText } from '../../../ui/StatusText'
@@ -60,10 +61,24 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
         <Film aria-hidden="true" />
         生成视频
       </button>
-      <button type="button" onClick={() => data.onAction('add-to-timeline')}>
-        <Clapperboard aria-hidden="true" />
-        加入时间线
-      </button>
+      {data.node.kind === 'video' && data.asset ? (
+        <button type="button" onClick={() => data.onAction('add-to-timeline')}>
+          <Clapperboard aria-hidden="true" />
+          加入时间线
+        </button>
+      ) : null}
+      {data.job?.status === 'queued' || data.job?.status === 'running' ? (
+        <button type="button" onClick={() => data.onAction('cancel-generation')}>
+          <X aria-hidden="true" />
+          取消生成
+        </button>
+      ) : null}
+      {data.job?.status === 'failed' || data.job?.status === 'cancelled' ? (
+        <button type="button" onClick={() => data.onAction('retry-generation')}>
+          <RefreshCw aria-hidden="true" />
+          重试生成
+        </button>
+      ) : null}
       <button
         type="button"
         className="creative-node-actions__danger"

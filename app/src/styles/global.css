@@ -611,6 +611,11 @@ select {
   margin-bottom: var(--space-1);
 }
 
+.director-composer__disclosure {
+  margin-bottom: var(--space-2) !important;
+  color: var(--focus-ring) !important;
+}
+
 .director-composer textarea {
   min-width: 0;
   flex: 1;

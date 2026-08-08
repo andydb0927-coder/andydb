@@ -5,6 +5,7 @@ import type {
 } from '../project/model'
 
 export interface GenerationRequest {
+  projectId: string
   nodeId: string
   operation: GenerationOperation
   prompt: string

@@ -6,8 +6,10 @@ import type {
 } from './generation-adapter'
 
 export interface QueueGenerationJob extends GenerationJob {
+  projectId: string
   attempt: number
   operation: GenerationOperation
+  sequence: number
 }
 
 export interface GenerationQueueOptions {
@@ -29,21 +31,26 @@ function isAbortError(error: unknown) {
 export class GenerationQueue {
   private readonly entries = new Map<string, QueueEntry>()
   private readonly options: GenerationQueueOptions
+  private nextSequence = 0
+  private disposed = false
 
   constructor(options: GenerationQueueOptions) {
     this.options = options
   }
 
   enqueue(request: GenerationRequest) {
+    if (this.disposed) throw new Error('Generation queue is disposed')
     const timestamp = new Date().toISOString()
     const entry: QueueEntry = {
       request,
       controller: new AbortController(),
       job: {
         id: crypto.randomUUID(),
+        projectId: request.projectId,
         nodeId: request.nodeId,
         operation: request.operation,
         attempt: 1,
+        sequence: ++this.nextSequence,
         status: 'queued',
         prompt: request.prompt,
         createdAt: timestamp,
@@ -52,7 +59,7 @@ export class GenerationQueue {
     }
     this.entries.set(entry.job.id, entry)
     this.options.onJobChange(entry.job)
-    queueMicrotask(() => void this.start(entry))
+    queueMicrotask(() => void this.start(entry, entry.job.attempt))
     return entry.job
   }
 
@@ -75,7 +82,12 @@ export class GenerationQueue {
 
   retry(id: string) {
     const entry = this.entries.get(id)
-    if (!entry || entry.job.status !== 'failed') return undefined
+    if (
+      !entry ||
+      (entry.job.status !== 'failed' && entry.job.status !== 'cancelled')
+    ) {
+      return undefined
+    }
 
     entry.controller = new AbortController()
     const job = this.update(entry, {
@@ -84,8 +96,14 @@ export class GenerationQueue {
       error: undefined,
       assetId: undefined,
     })
-    queueMicrotask(() => void this.start(entry))
+    queueMicrotask(() => void this.start(entry, job.attempt))
     return job
+  }
+
+  dispose() {
+    if (this.disposed) return
+    this.disposed = true
+    for (const entry of this.entries.values()) this.cancel(entry.job.id)
   }
 
   private update(
@@ -101,8 +119,8 @@ export class GenerationQueue {
     return entry.job
   }
 
-  private async start(entry: QueueEntry) {
-    if (entry.job.status !== 'queued') return
+  private async start(entry: QueueEntry, attempt: number) {
+    if (entry.job.status !== 'queued' || entry.job.attempt !== attempt) return
     this.update(entry, { status: 'running' })
 
     let result: GenerationResult
@@ -112,6 +130,7 @@ export class GenerationQueue {
         entry.controller.signal,
       )
     } catch (error) {
+      if (!this.isCurrentAttempt(entry, attempt)) return
       if (this.isCancelled(entry) || isAbortError(error)) return
       this.update(entry, {
         status: 'failed',
@@ -120,23 +139,57 @@ export class GenerationQueue {
       return
     }
 
-    if (this.isCancelled(entry)) return
-    const job = this.update(entry, {
+    if (!this.isCurrentAttempt(entry, attempt) || this.isCancelled(entry)) {
+      return
+    }
+    const job: QueueGenerationJob = {
+      ...entry.job,
       status: 'succeeded',
       assetId: result.asset.id,
       error: undefined,
-    })
-    this.options.onSuccess(job, {
+      updatedAt: new Date().toISOString(),
+    }
+    if (
+      result.version.assetId !== result.asset.id ||
+      (result.version.generationJobId !== undefined &&
+        result.version.generationJobId !== job.id)
+    ) {
+      this.update(entry, {
+        status: 'failed',
+        error: 'Generation result asset reference mismatch',
+      })
+      return
+    }
+    const completedResult: GenerationResult = {
       ...result,
       version: {
         ...result.version,
         assetId: result.asset.id,
         generationJobId: job.id,
       },
-    })
+    }
+    try {
+      this.options.onSuccess(job, completedResult)
+    } catch (error) {
+      this.update(entry, {
+        status: 'failed',
+        assetId: undefined,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Generation result rejected',
+      })
+      return
+    }
+    entry.job = job
+    this.options.onJobChange(job)
   }
 
   private isCancelled(entry: QueueEntry) {
     return this.entries.get(entry.job.id)?.job.status === 'cancelled'
+  }
+
+  private isCurrentAttempt(entry: QueueEntry, attempt: number) {
+    return entry.job.attempt === attempt && entry.job.status === 'running'
   }
 }

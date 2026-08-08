@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import {
   parseDirectorCommand,
@@ -36,6 +36,10 @@ export function DirectorComposer({
   const [input, setInput] = useState('')
   const [proposal, setProposal] = useState<DirectorCommand>()
 
+  useEffect(() => {
+    setProposal(undefined)
+  }, [selectedNodeId])
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setProposal(parseDirectorCommand(input, { selectedNodeId }))
@@ -57,6 +61,9 @@ export function DirectorComposer({
         <h2 id="director-composer-title">AI 导演</h2>
         <span>{selectedNodeId ? '已读取所选节点' : '请先选择节点'}</span>
       </div>
+      <p className="director-composer__disclosure">
+        本地演示生成 · 视频结果使用 PNG 视觉缩略图
+      </p>
       <form onSubmit={submit}>
         <label htmlFor="director-command-input">告诉我下一步要做什么</label>
         <div className="director-composer__input-row">

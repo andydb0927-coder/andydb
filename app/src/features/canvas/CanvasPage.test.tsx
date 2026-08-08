@@ -1,7 +1,12 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps, ComponentType } from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
@@ -168,6 +173,23 @@ function renderCanvas(
   )
 }
 
+function SwitchingCanvas({ repository }: ComponentProps<typeof CanvasPage>) {
+  const navigate = useNavigate()
+  return (
+    <>
+      <button type="button" onClick={() => navigate('/project/project-b')}>
+        切换到项目 B
+      </button>
+      <Routes>
+        <Route
+          path="/project/:projectId"
+          element={<CanvasPage repository={repository} />}
+        />
+      </Routes>
+    </>
+  )
+}
+
 beforeEach(() => {
   latestFlowProps = undefined
   act(() => activate())
@@ -298,9 +320,10 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
 
-    for (const action of ['重生成', '扩展镜头', '生成视频', '加入时间线']) {
+    for (const action of ['重生成', '扩展镜头', '生成视频']) {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
+    expect(screen.queryByRole('button', { name: '加入时间线' })).not.toBeInTheDocument()
   })
 
   test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
@@ -369,6 +392,119 @@ describe('creative canvas', () => {
     )
   })
 
+  test.each(['角色参考', '场景设定', '分镜 02', '成片预览'])(
+    'hides timeline insertion for ineligible %s nodes',
+    async (title) => {
+      const user = userEvent.setup()
+      renderCanvas()
+
+      await user.click(screen.getByRole('button', { name: title }))
+
+      expect(
+        screen.queryByRole('button', { name: '加入时间线' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  test('offers node-local Cancel and Retry controls for generation state', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    expect(screen.getByRole('button', { name: '取消生成' })).toBeVisible()
+    act(() => screen.getByRole('button', { name: '取消生成' }).click())
+    expect(screen.getByText('已取消')).toBeVisible()
+    expect(screen.getByRole('button', { name: '重试生成' })).toBeVisible()
+
+    act(() => screen.getByRole('button', { name: '重试生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    expect(screen.getByText('已完成')).toBeVisible()
+  })
+
+  test('offers node-local Retry for a failed generation', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const failedJob = {
+      ...project.jobs[0],
+      id: 'job-storyboard-failed',
+      status: 'failed' as const,
+      error: 'demo failed',
+    }
+    act(() =>
+      activate({
+        ...project,
+        jobs: [failedJob],
+        nodes: project.nodes.map((node) =>
+          node.id === 'storyboard'
+            ? {
+                ...node,
+                versions: node.versions.map((version) => ({
+                  ...version,
+                  generationJobId: failedJob.id,
+                })),
+              }
+            : node,
+        ),
+      }),
+    )
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+
+    expect(screen.getByRole('button', { name: '重试生成' })).toBeVisible()
+  })
+
+  test('cancels in-flight generation on unmount before a late result can apply', async () => {
+    const user = userEvent.setup()
+    const view = renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+    const before = useProjectStore.getState().activeProject!
+    const job = before.jobs.find((candidate) => candidate.status === 'running')!
+
+    view.unmount()
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const project = useProjectStore.getState().projectsById[before.id]
+    expect(project.jobs.find((candidate) => candidate.id === job.id)?.status).toBe(
+      'cancelled',
+    )
+    expect(project.nodes.find((node) => node.id === 'storyboard')?.versions).toHaveLength(1)
+  })
+
+  test('scopes callbacks to project A when the route switches to project B', async () => {
+    const user = userEvent.setup()
+    const projectB = { ...makeCanvasProject(), id: 'project-b', title: '项目 B' }
+    render(
+      <MemoryRouter initialEntries={['/project/project-canvas']}>
+        <SwitchingCanvas repository={{ load: async () => projectB }} />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    vi.useFakeTimers()
+    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    act(() => screen.getByRole('button', { name: '切换到项目 B' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(0))
+    await act(() => vi.advanceTimersByTimeAsync(1200))
+
+    const state = useProjectStore.getState()
+    expect(state.activeProject?.id).toBe('project-b')
+    expect(state.activeProject?.nodes.find((node) => node.id === 'storyboard')?.versions).toHaveLength(1)
+    expect(
+      state.projectsById['project-canvas'].jobs.some(
+        (job) => job.status === 'cancelled',
+      ),
+    ).toBe(true)
+  })
+
   test('keeps the floating AI director non-mutating for unknown input', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -410,6 +546,33 @@ describe('creative canvas', () => {
     expect(
       useProjectStore.getState().activeProject?.nodes.some((node) => node.id === 'scene'),
     ).toBe(false)
+  })
+
+  test('invalidates a director proposal when the selected node changes', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '场景设定' }))
+    await user.type(
+      screen.getByRole('textbox', { name: '告诉我下一步要做什么' }),
+      '删除这个节点',
+    )
+    await user.click(screen.getByRole('button', { name: '提交给 AI 导演' }))
+    expect(screen.getByRole('button', { name: '执行' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+
+    expect(screen.queryByRole('button', { name: '执行' })).not.toBeInTheDocument()
+    expect(
+      useProjectStore.getState().activeProject?.nodes.some((node) => node.id === 'scene'),
+    ).toBe(true)
+  })
+
+  test('discloses that generation is a local PNG-thumbnail demo', () => {
+    renderCanvas()
+
+    expect(
+      screen.getByText('本地演示生成 · 视频结果使用 PNG 视觉缩略图'),
+    ).toBeVisible()
   })
 
   test('shows the active version job in both canvas and node list', async () => {

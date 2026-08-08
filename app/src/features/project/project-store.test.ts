@@ -154,6 +154,7 @@ describe('project store history and persistence', () => {
     })
     useProjectStore.getState().appendVersion('shot-2', {
       prompt: '中景，人物从桥下跑过',
+      assetId: 'asset-shot-river-v1',
       generationJobId: 'generation-job-2',
     })
     useProjectStore.getState().addToTimeline({

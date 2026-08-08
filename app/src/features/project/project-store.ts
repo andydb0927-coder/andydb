@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 
 import {
-  type Asset,
   appendNodeVersion,
   type CanvasNode,
   type DependencyEdge,
@@ -39,8 +38,9 @@ interface ProjectStore {
     nodeId: string,
     version: Omit<NodeVersion, 'id' | 'createdAt'>,
   ) => void
-  updateGenerationJob: (job: GenerationJob) => void
+  updateGenerationJob: (projectId: string, job: GenerationJob) => void
   applyGenerationSuccess: (
+    projectId: string,
     job: GenerationJob,
     result: GenerationResult,
   ) => void
@@ -128,20 +128,24 @@ function nextNumber(nodes: CanvasNode[], kind: 'storyboard' | 'video') {
   )
 }
 
-function sourceNumber(source: CanvasNode) {
-  const match = source.title.match(/(\d+)$/)
-  return match ? Number(match[1]) : undefined
-}
-
-function appendUniqueAsset(assets: Asset[], asset: Asset) {
-  return assets.some((candidate) => candidate.id === asset.id)
-    ? assets
-    : [...assets, asset]
+function nextVideoNumber(nodes: CanvasNode[], source: CanvasNode) {
+  const used = new Set(
+    nodes.flatMap((node) => {
+      if (node.kind !== 'video') return []
+      const match = node.title.match(/^视频\s*(\d+)$/)
+      return match ? [Number(match[1])] : []
+    }),
+  )
+  const sourceMatch = source.title.match(/(\d+)$/)
+  let candidate = sourceMatch ? Number(sourceMatch[1]) : 1
+  while (used.has(candidate)) candidate += 1
+  return candidate
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
   let persistenceRequestId = 0
   let hydrationRequestId = 0
+  const generationBaselines = new Map<string, Project>()
 
   const commit = (mutate: (project: Project) => Project) => {
     const current = get().activeProject
@@ -307,10 +311,37 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
-    updateGenerationJob: (job) => {
+    updateGenerationJob: (projectId, job) => {
       if (job.status === 'succeeded') return
-      const project = get().activeProject
+      if (job.projectId !== undefined && job.projectId !== projectId) return
+      const project = get().projectsById[projectId]
       if (!project) return
+      const existingJob = project.jobs.find(
+        (candidate) => candidate.id === job.id,
+      )
+      if (
+        existingJob?.attempt !== undefined &&
+        job.attempt !== undefined &&
+        existingJob.attempt > job.attempt
+      ) {
+        return
+      }
+
+      const baselineKey = `${projectId}:${job.nodeId}`
+      if (!generationBaselines.has(baselineKey)) {
+        generationBaselines.set(baselineKey, project)
+      }
+      const source = project.nodes.find((node) => node.id === job.nodeId)
+      const activeVersion = source?.versions.find(
+        (version) => version.id === source.activeVersionId,
+      )
+      const referencedJob = project.jobs.find(
+        (candidate) => candidate.id === activeVersion?.generationJobId,
+      )
+      const shouldRelink =
+        !referencedJob ||
+        referencedJob.id === job.id ||
+        (job.sequence ?? 0) > (referencedJob.sequence ?? 0)
       const next = {
         ...project,
         updatedAt: job.updatedAt,
@@ -320,7 +351,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             ? {
                 ...node,
                 versions: node.versions.map((version) =>
-                  version.id === node.activeVersionId
+                  shouldRelink && version.id === node.activeVersionId
                     ? { ...version, generationJobId: job.id }
                     : version,
                 ),
@@ -329,64 +360,93 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         ),
       }
       set((state) => ({
-        projectsById: { ...state.projectsById, [next.id]: next },
-        activeProject: next,
+        projectsById: { ...state.projectsById, [projectId]: next },
+        ...(state.activeProjectId === projectId ? { activeProject: next } : {}),
       }))
     },
 
-    applyGenerationSuccess: (job, result) => {
-      commit((project) => {
-        const source = project.nodes.find((node) => node.id === job.nodeId)
-        if (!source || !job.operation) return project
+    applyGenerationSuccess: (projectId, job, result) => {
+      const project = get().projectsById[projectId]
+      if (!project || job.projectId !== projectId) {
+        throw new Error('Generation project mismatch')
+      }
+      const source = project.nodes.find((node) => node.id === job.nodeId)
+      const storedJob = project.jobs.find((candidate) => candidate.id === job.id)
+      const activeVersion = source?.versions.find(
+        (version) => version.id === source.activeVersionId,
+      )
+      if (
+        !source ||
+        !job.operation ||
+        storedJob?.status !== 'running' ||
+        storedJob.attempt !== job.attempt ||
+        storedJob.nodeId !== job.nodeId ||
+        storedJob.operation !== job.operation ||
+        storedJob.projectId !== job.projectId ||
+        storedJob.sequence !== job.sequence
+      ) {
+        throw new Error('Generation source or attempt mismatch')
+      }
+      if (activeVersion?.generationJobId !== job.id) {
+        throw new Error('Stale generation result')
+      }
+      if (project.assets.some((asset) => asset.id === result.asset.id)) {
+        throw new Error('Generation asset ID collision')
+      }
+      if (
+        project.nodes.some((node) =>
+          node.versions.some((version) => version.id === result.version.id),
+        )
+      ) {
+        throw new Error('Generation version ID collision')
+      }
+      if (
+        result.version.assetId !== result.asset.id ||
+        result.version.generationJobId !== job.id
+      ) {
+        throw new Error('Generation result reference mismatch')
+      }
 
-        const version: NodeVersion = {
-          ...result.version,
-          assetId: result.asset.id,
-          generationJobId: job.id,
+      const version: NodeVersion = result.version
+      const assets = [...project.assets, result.asset]
+      let next: Project
+
+      if (job.operation === 'regenerate') {
+        const nextProject = withUpdatedTimestamp({
+          ...project,
+          assets,
+          jobs: replaceGenerationJob(project.jobs, job),
+          nodes: project.nodes.map((node) =>
+            node.id === source.id
+              ? {
+                  ...node,
+                  versions: [...node.versions, version],
+                  activeVersionId: version.id,
+                  sourceChanged: false,
+                }
+              : node,
+          ),
+        })
+        const downstream = findDownstream(nextProject, source.id)
+        next = {
+          ...nextProject,
+          nodes: nextProject.nodes.map((node) =>
+            downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node,
+          ),
+          edges: nextProject.edges.map((edge) =>
+            downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
         }
-        const assets = appendUniqueAsset(project.assets, result.asset)
-
-        if (job.operation === 'regenerate') {
-          const nextProject = withUpdatedTimestamp({
-            ...project,
-            assets,
-            jobs: replaceGenerationJob(project.jobs, {
-              ...job,
-              status: 'succeeded',
-              assetId: result.asset.id,
-            }),
-            nodes: project.nodes.map((node) =>
-              node.id === source.id
-                ? {
-                    ...node,
-                    versions: [...node.versions, version],
-                    activeVersionId: version.id,
-                    sourceChanged: false,
-                  }
-                : node,
-            ),
-          })
-          const downstream = findDownstream(nextProject, source.id)
-          return {
-            ...nextProject,
-            nodes: nextProject.nodes.map((node) =>
-              downstream.nodeIds.has(node.id)
-                ? { ...node, sourceChanged: true }
-                : node,
-            ),
-            edges: nextProject.edges.map((edge) =>
-              downstream.edgeIds.has(edge.id)
-                ? { ...edge, sourceChanged: true }
-                : edge,
-            ),
-          }
-        }
-
+      } else {
         const kind =
           job.operation === 'extend-shot' ? 'storyboard' : 'video'
         const number =
           kind === 'video'
-            ? sourceNumber(source) ?? nextNumber(project.nodes, kind)
+            ? nextVideoNumber(project.nodes, source)
             : nextNumber(project.nodes, kind)
         const paddedNumber = String(number).padStart(2, '0')
         const nodeId = `${kind}-${paddedNumber}-${crypto.randomUUID()}`
@@ -402,13 +462,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           activeVersionId: version.id,
           sourceChanged: false,
         }
-        const completedJob: GenerationJob = {
-          ...job,
-          nodeId,
-          status: 'succeeded',
-          assetId: result.asset.id,
-        }
-        return withUpdatedTimestamp({
+        const completedJob: GenerationJob = { ...job, nodeId }
+        next = withUpdatedTimestamp({
           ...project,
           assets,
           nodes: [...project.nodes, generatedNode],
@@ -423,16 +478,51 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ],
           jobs: replaceGenerationJob(project.jobs, completedJob),
         })
-      })
+      }
+
+      const baselineKey = `${projectId}:${job.nodeId}`
+      const baseline = generationBaselines.get(baselineKey) ?? project
+      generationBaselines.delete(baselineKey)
+      set((state) => ({
+        projectsById: { ...state.projectsById, [projectId]: next },
+        ...(state.activeProjectId === projectId
+          ? {
+              activeProject: next,
+              past: [...state.past, baseline],
+              future: [],
+            }
+          : {}),
+      }))
     },
 
     addToTimeline: (item) => {
-      commit((project) =>
-        withUpdatedTimestamp({
+      commit((project) => {
+        const node = project.nodes.find(
+          (candidate) => candidate.id === item.nodeId,
+        )
+        const activeVersion = node?.versions.find(
+          (version) => version.id === node.activeVersionId,
+        )
+        const asset = project.assets.find(
+          (candidate) => candidate.id === activeVersion?.assetId,
+        )
+        if (
+          node?.kind !== 'video' ||
+          !asset ||
+          (asset.kind !== 'video' && asset.kind !== 'image') ||
+          item.track !== 'video' ||
+          project.timeline.some(
+            (existing) =>
+              existing.nodeId === item.nodeId && existing.track === item.track,
+          )
+        ) {
+          return project
+        }
+        return withUpdatedTimestamp({
           ...project,
           timeline: [...project.timeline, item],
-        }),
-      )
+        })
+      })
     },
 
     reorderTimeline: (orderedItemIds) => {

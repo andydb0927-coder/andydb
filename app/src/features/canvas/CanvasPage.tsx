@@ -83,38 +83,49 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   )
   const [loadAttempt, setLoadAttempt] = useState(0)
   const deleteTriggerRef = useRef<HTMLButtonElement>(undefined)
-  const generationQueueRef = useRef<GenerationQueue>(undefined)
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
     setPrimaryNodeId(nodeId)
   }, [])
 
-  if (!generationQueueRef.current) {
-    generationQueueRef.current = new GenerationQueue({
-      adapter: new DemoGenerationAdapter(),
-      onJobChange(job) {
-        if (job.status !== 'succeeded') {
-          useProjectStore.getState().updateGenerationJob(job)
-        }
-      },
-      onSuccess(job, result) {
-        useProjectStore.getState().applyGenerationSuccess(job, result)
-        if (job.operation !== 'generate-video') return
+  const generationQueue = useMemo(
+    () =>
+      new GenerationQueue({
+        adapter: new DemoGenerationAdapter(),
+        onJobChange(job) {
+          if (job.projectId !== projectId) return
+          if (job.status !== 'succeeded') {
+            useProjectStore
+              .getState()
+              .updateGenerationJob(job.projectId!, job)
+          }
+        },
+        onSuccess(job, result) {
+          if (job.projectId !== projectId) {
+            throw new Error('Generation callback route mismatch')
+          }
+          useProjectStore
+            .getState()
+            .applyGenerationSuccess(job.projectId!, job, result)
+          if (job.operation !== 'generate-video') return
 
-        const generatedNode = useProjectStore
-          .getState()
-          .activeProject?.nodes.find((node) => {
+          const state = useProjectStore.getState()
+          if (state.activeProjectId !== job.projectId) return
+          const generatedNode = state.activeProject?.nodes.find((node) => {
             if (node.kind !== 'video') return false
             const activeVersion = node.versions.find(
               (version) => version.id === node.activeVersionId,
             )
             return activeVersion?.generationJobId === job.id
           })
-        if (generatedNode) selectOnlyNode(generatedNode.id)
-      },
-    })
-  }
+          if (generatedNode) selectOnlyNode(generatedNode.id)
+        },
+      }),
+    [projectId, selectOnlyNode],
+  )
+
+  useEffect(() => () => generationQueue.dispose(), [generationQueue])
 
   const removeSelectedNode = useCallback((nodeId: string) => {
     setSelectedNodeIds((current) => {
@@ -165,7 +176,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       const node = currentProject?.nodes.find(
         (candidate) => candidate.id === nodeId,
       )
-      if (!currentProject || !node) return
+      if (!currentProject || currentProject.id !== projectId || !node) return
 
       const activeVersion = node.versions.find(
         (version) => version.id === node.activeVersionId,
@@ -173,6 +184,18 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       const asset = currentProject.assets.find(
         (candidate) => candidate.id === activeVersion?.assetId,
       )
+
+      const job = selectNodeGenerationJob(node, currentProject.jobs)
+
+      if (action === 'cancel-generation') {
+        if (job) generationQueue.cancel(job.id)
+        return
+      }
+
+      if (action === 'retry-generation') {
+        if (job) generationQueue.retry(job.id)
+        return
+      }
 
       if (action === 'add-to-timeline') {
         useProjectStore.getState().addToTimeline({
@@ -185,14 +208,15 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         return
       }
 
-      generationQueueRef.current?.enqueue({
+      generationQueue.enqueue({
+        projectId: currentProject.id,
         nodeId,
         operation: action,
         prompt: activeVersion?.prompt ?? currentProject.intent,
         referenceAssetUrls: asset ? [asset.url] : [],
       })
     },
-    [],
+    [generationQueue, projectId],
   )
 
   const handleDirectorCommand = useCallback(

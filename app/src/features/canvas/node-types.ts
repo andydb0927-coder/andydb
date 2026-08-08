@@ -16,6 +16,8 @@ export type CreativeNodeAction =
   | 'extend-shot'
   | 'generate-video'
   | 'add-to-timeline'
+  | 'cancel-generation'
+  | 'retry-generation'
 
 export interface CreativeNodeProps {
   node: CanvasNode
