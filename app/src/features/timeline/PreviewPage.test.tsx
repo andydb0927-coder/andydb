@@ -278,7 +278,7 @@ describe('preview journey', () => {
     const user = userEvent.setup()
     renderPreview()
 
-    expect(screen.getByRole('list', { name: '视频轨道' })).toBeVisible()
+    expect(screen.getByRole('list', { name: '主视频轨' })).toBeVisible()
     expect(screen.getByRole('row', { name: '音频轨道' })).toBeVisible()
     expect(screen.getByText('缺少片段')).toBeVisible()
     expect(screen.getByRole('link', { name: '返回画布' })).toHaveAttribute(

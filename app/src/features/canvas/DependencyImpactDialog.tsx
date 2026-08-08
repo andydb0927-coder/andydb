@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import type { CanvasNode } from '../project/model'
+import { useDialogKeyboard } from './dialog-keyboard'
 
 interface DependencyImpactDialogProps {
   node: CanvasNode
@@ -16,14 +17,18 @@ export function DependencyImpactDialog({
   onConfirm,
 }: DependencyImpactDialogProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     headingRef.current?.focus()
   }, [])
 
+  useDialogKeyboard(dialogRef, onCancel)
+
   return (
     <div className="canvas-dialog-backdrop">
       <section
+        ref={dialogRef}
         className="canvas-dialog"
         role="dialog"
         aria-modal="true"

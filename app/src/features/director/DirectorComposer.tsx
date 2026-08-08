@@ -59,11 +59,13 @@ export function DirectorComposer({
     >
       <div className="director-composer__heading">
         <h2 id="director-composer-title">AI 导演</h2>
-        <span>{selectedNodeId ? '已读取所选节点' : '请先选择节点'}</span>
+        <div className="director-composer__meta">
+          <span>{selectedNodeId ? '已读取所选节点' : '请先选择节点'}</span>
+          <p className="director-composer__disclosure">
+            本地演示生成 · 视频结果使用 PNG 视觉缩略图
+          </p>
+        </div>
       </div>
-      <p className="director-composer__disclosure">
-        本地演示生成 · 视频结果使用 PNG 视觉缩略图
-      </p>
       <form onSubmit={submit}>
         <label htmlFor="director-command-input">告诉我下一步要做什么</label>
         <div className="director-composer__input-row">

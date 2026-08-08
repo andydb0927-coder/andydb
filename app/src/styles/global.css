@@ -572,7 +572,7 @@ select {
   z-index: 11;
   bottom: var(--space-5);
   left: 50%;
-  width: min(620px, calc(100vw - 160px));
+  width: min(540px, calc(100vw - 160px));
   padding: var(--space-3);
   transform: translateX(-50%);
 }
@@ -587,7 +587,7 @@ select {
 
 .director-composer__heading {
   justify-content: space-between;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .director-composer h2,
@@ -606,14 +606,27 @@ select {
   font-size: 0.75rem;
 }
 
+.director-composer__meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+
 .director-composer label {
-  display: block;
-  margin-bottom: var(--space-1);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .director-composer__disclosure {
-  margin-bottom: var(--space-2) !important;
+  margin: 0 !important;
   color: var(--focus-ring) !important;
+  font-size: 0.6875rem !important;
 }
 
 .director-composer textarea {
@@ -891,12 +904,24 @@ select {
   list-style: none;
 }
 
-.node-list-view li button {
+.node-list-view li > button {
   display: grid;
   width: 100%;
   grid-template-columns: minmax(0, 1fr) auto auto;
   justify-content: stretch;
   text-align: left;
+}
+
+.node-list-view__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 0;
+}
+
+.node-list-view__actions button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
 }
 
 .preview-page {
@@ -1362,5 +1387,25 @@ select {
   .director-composer {
     bottom: var(--space-3);
     width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 720px) and (max-height: 480px) {
+  .react-flow__controls {
+    top: var(--space-3);
+    right: auto;
+    bottom: auto;
+    left: 76px;
+  }
+
+  .director-composer {
+    right: auto;
+    left: var(--space-4);
+    width: min(280px, calc(100vw - 32px));
+    transform: none;
+  }
+
+  .director-composer__meta {
+    display: none;
   }
 }

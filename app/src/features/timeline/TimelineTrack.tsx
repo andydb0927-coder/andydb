@@ -41,7 +41,7 @@ export function TimelineTrack({
 
   return (
     <section className="timeline-track" aria-label="时间线">
-      <ol className="timeline-track__video" aria-label="视频轨道">
+      <ol className="timeline-track__video" aria-label="主视频轨">
         {items.map((resolved, index) => {
           const ordinal = String(index + 1).padStart(2, '0')
           const label = resolved.node?.title ?? `视频 ${ordinal}`

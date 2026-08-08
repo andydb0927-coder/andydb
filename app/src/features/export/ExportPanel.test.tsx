@@ -51,7 +51,7 @@ describe('export panel', () => {
     const adapter = new ControlledExportAdapter()
     render(<ExportPanel projectId="project-preview" adapter={adapter} />)
 
-    act(() => screen.getByRole('button', { name: '开始演示导出' }).click())
+    act(() => screen.getByRole('button', { name: '导出影片' }).click())
     expect(screen.getByText('排队中')).toBeVisible()
 
     await act(() => vi.advanceTimersByTimeAsync(0))
@@ -64,7 +64,7 @@ describe('export panel', () => {
     expect(screen.getByLabelText('总体进度')).toHaveTextContent('33%')
 
     await act(async () => adapter.pending[0].resolve(result))
-    expect(screen.getByText('导出完成')).toBeVisible()
+    expect(screen.getByText('演示导出已完成')).toBeVisible()
     expect(screen.getByText('演示导出')).toBeVisible()
     expect(screen.getByRole('link', { name: '下载演示文件' })).toHaveAttribute(
       'href',
@@ -77,7 +77,7 @@ describe('export panel', () => {
     const adapter = new ControlledExportAdapter()
     render(<ExportPanel projectId="project-preview" adapter={adapter} />)
 
-    act(() => screen.getByRole('button', { name: '开始演示导出' }).click())
+    act(() => screen.getByRole('button', { name: '导出影片' }).click())
     await act(() => vi.advanceTimersByTimeAsync(0))
     await act(() => screen.getByRole('button', { name: '取消导出' }).click())
 
@@ -90,24 +90,24 @@ describe('export panel', () => {
     const adapter = new ControlledExportAdapter()
     render(<ExportPanel projectId="project-preview" adapter={adapter} />)
 
-    act(() => screen.getByRole('button', { name: '开始演示导出' }).click())
+    act(() => screen.getByRole('button', { name: '导出影片' }).click())
     await act(() => vi.advanceTimersByTimeAsync(0))
     await act(async () => adapter.pending[0].resolve(result))
 
-    act(() => screen.getByRole('button', { name: '开始演示导出' }).click())
+    act(() => screen.getByRole('button', { name: '导出影片' }).click())
     await act(() => vi.advanceTimersByTimeAsync(0))
     await act(async () => adapter.pending[1].reject(new Error('disk full')))
 
     const failed = screen.getByRole('listitem', { name: '导出任务 2' })
     expect(within(failed).getByText('导出失败')).toBeVisible()
-    expect(screen.getAllByText('导出完成')).toHaveLength(1)
+    expect(screen.getAllByText('演示导出已完成')).toHaveLength(1)
 
     act(() => within(failed).getByRole('button', { name: '重试任务 2' }).click())
     await act(() => vi.advanceTimersByTimeAsync(0))
 
     expect(adapter.requests).toHaveLength(3)
     expect(screen.getByRole('listitem', { name: '导出任务 1' })).toHaveTextContent(
-      '导出完成',
+      '演示导出已完成',
     )
     expect(screen.getAllByRole('listitem', { name: /导出任务/ })).toHaveLength(2)
   })

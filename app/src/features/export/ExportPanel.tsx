@@ -34,7 +34,7 @@ interface ExportPanelJob {
 const statusCopy: Record<JobStatus, string> = {
   queued: '排队中',
   running: '正在导出',
-  succeeded: '导出完成',
+  succeeded: '演示导出已完成',
   failed: '导出失败',
   cancelled: '已取消',
 }
@@ -139,7 +139,7 @@ export function ExportPanel({ projectId, adapter }: ExportPanelProps) {
           <p>本地原型</p>
           <h2 id="export-panel-title">导出设置</h2>
         </div>
-        <button type="button" onClick={start}>开始演示导出</button>
+        <button type="button" onClick={start}>导出影片</button>
       </div>
       <div className="export-panel__settings">
         <label>

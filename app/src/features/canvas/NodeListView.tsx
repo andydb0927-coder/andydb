@@ -7,6 +7,8 @@ import type {
   TimelineItem,
 } from '../project/model'
 import { selectNodeGenerationJob } from './job-selector'
+import type { CreativeNodeAction } from './node-types'
+import { useDialogKeyboard } from './dialog-keyboard'
 
 const kindCopy = {
   character: '角色',
@@ -87,6 +89,7 @@ interface NodeListViewProps {
   jobs: GenerationJob[]
   selectedNodeId?: string
   onSelect(nodeId: string): void
+  onAction(nodeId: string, action: CreativeNodeAction): void
   onClose(): void
 }
 
@@ -97,9 +100,11 @@ export function NodeListView({
   jobs,
   selectedNodeId,
   onSelect,
+  onAction,
   onClose,
 }: NodeListViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
   const orderedNodes = useMemo(
     () => sortNodesForList(nodes, edges, timeline),
     [nodes, edges, timeline],
@@ -109,17 +114,12 @@ export function NodeListView({
     headingRef.current?.focus()
   }, [])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  useDialogKeyboard(dialogRef, onClose)
 
   return (
     <div className="canvas-dialog-backdrop canvas-dialog-backdrop--list">
       <section
+        ref={dialogRef}
         className="node-list-view"
         role="dialog"
         aria-modal="true"
@@ -137,10 +137,14 @@ export function NodeListView({
               : job
                 ? jobCopy[job.status]
                 : '就绪'
+            const isOnTimeline = timeline.some(
+              (item) => item.track === 'video' && item.nodeId === node.id,
+            )
             return (
               <li key={node.id}>
                 <button
                   type="button"
+                  aria-label={`选择 ${node.title}`}
                   aria-pressed={selectedNodeId === node.id}
                   onClick={() => onSelect(node.id)}
                 >
@@ -148,6 +152,25 @@ export function NodeListView({
                   <span>{kindCopy[node.kind]}</span>
                   <span>{status}</span>
                 </button>
+                <div className="node-list-view__actions">
+                  <button
+                    type="button"
+                    aria-label={`重生成 ${node.title}`}
+                    onClick={() => onAction(node.id, 'regenerate')}
+                  >
+                    重生成
+                  </button>
+                  {node.kind === 'video' ? (
+                    <button
+                      type="button"
+                      aria-label={`加入时间线 ${node.title}`}
+                      disabled={isOnTimeline}
+                      onClick={() => onAction(node.id, 'add-to-timeline')}
+                    >
+                      {isOnTimeline ? '已加入时间线' : '加入时间线'}
+                    </button>
+                  ) : null}
+                </div>
               </li>
             )
           })}

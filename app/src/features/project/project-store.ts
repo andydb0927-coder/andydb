@@ -118,6 +118,27 @@ function replaceGenerationJob(jobs: GenerationJob[], job: GenerationJob) {
     : [...jobs, job]
 }
 
+function placeGeneratedNode(
+  project: Project,
+  source: CanvasNode,
+  kind: 'storyboard' | 'video',
+) {
+  const x = source.position.x + 340
+  let y = source.position.y + (kind === 'storyboard' ? 260 : 180)
+
+  while (
+    project.nodes.some(
+      (node) =>
+        Math.abs(node.position.x - x) < 300 &&
+        Math.abs(node.position.y - y) < 300,
+    )
+  ) {
+    y += 300
+  }
+
+  return { x, y }
+}
+
 function isTransientGenerationJob(job: GenerationJob) {
   return job.status === 'queued' || job.status === 'running'
 }
@@ -505,10 +526,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           id: nodeId,
           kind,
           title: `${kind === 'storyboard' ? '分镜' : '视频'} ${paddedNumber}`,
-          position: {
-            x: source.position.x + 340,
-            y: source.position.y + (kind === 'storyboard' ? 120 : 180),
-          },
+          position: placeGeneratedNode(project, source, kind),
           versions: [version],
           activeVersionId: version.id,
           sourceChanged: false,

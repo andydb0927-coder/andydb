@@ -133,7 +133,10 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [projectId, selectOnlyNode],
   )
 
-  useEffect(() => () => generationQueue.dispose(), [generationQueue])
+  useEffect(() => {
+    generationQueue.resume()
+    return () => generationQueue.dispose()
+  }, [generationQueue])
 
   const removeSelectedNode = useCallback((nodeId: string) => {
     setSelectedNodeIds((current) => {
@@ -421,9 +424,13 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         onRedo={redo}
         onOpenNodeList={() => setNodeListOpen(true)}
       />
-      <div className="canvas-page__viewport">
+      <div
+        className="canvas-page__viewport"
+        role="region"
+        aria-label="项目画布"
+      >
         <ReactFlow<CreativeFlowNode, DependencyFlowEdge>
-          aria-label="项目画布"
+          aria-label="创作节点图"
           nodes={flowNodes}
           edges={flowEdges}
           nodeTypes={nodeTypes}
@@ -482,6 +489,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           jobs={project.jobs}
           selectedNodeId={primaryNodeId}
           onSelect={selectOnlyNode}
+          onAction={handleAction}
           onClose={closeNodeList}
         />
       ) : null}

@@ -155,6 +155,7 @@ describe('project launcher', () => {
     expect(
       screen.getByText('正在整理角色、场景与镜头结构'),
     ).toBeVisible()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
     await user.click(screen.getByRole('button', { name: '取消' }))
 
     expect(parsingSignal?.aborted).toBe(true)

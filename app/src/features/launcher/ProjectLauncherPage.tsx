@@ -148,7 +148,7 @@ function buildRecipeProject(
         id: 'character-reference',
         kind: 'character',
         title: '角色参考',
-        position: { x: 120, y: 180 },
+        position: { x: 80, y: 80 },
         versions: [
           {
             id: 'version-character-reference',
@@ -164,7 +164,7 @@ function buildRecipeProject(
         id: 'scene-reference',
         kind: 'scene',
         title: '场景设定',
-        position: { x: 460, y: 180 },
+        position: { x: 390, y: 210 },
         versions: [
           {
             id: 'version-scene-reference',
@@ -180,7 +180,7 @@ function buildRecipeProject(
         id: 'storyboard-01',
         kind: 'storyboard',
         title: '分镜 01',
-        position: { x: 800, y: 180 },
+        position: { x: 720, y: 350 },
         versions: [
           {
             id: 'version-storyboard-01',
@@ -547,7 +547,7 @@ export function ProjectLauncherPage({
             </div>
           ) : isParsing ? (
             <div className="launcher-progress">
-              <StatusText status="running">
+              <StatusText status="running" role="status" aria-live="polite">
                 正在整理角色、场景与镜头结构
               </StatusText>
               <Button
@@ -559,7 +559,9 @@ export function ProjectLauncherPage({
             </div>
           ) : isCreating ? (
             <div className="launcher-progress">
-              <StatusText status="saving">正在创建项目</StatusText>
+              <StatusText status="saving" role="status" aria-live="polite">
+                正在创建项目
+              </StatusText>
             </div>
           ) : (
             <Button

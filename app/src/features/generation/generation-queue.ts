@@ -141,6 +141,10 @@ export class GenerationQueue {
     for (const entry of this.entries.values()) this.cancel(entry.job.id)
   }
 
+  resume() {
+    this.disposed = false
+  }
+
   private update(
     entry: QueueEntry,
     changes: Partial<QueueGenerationJob>,

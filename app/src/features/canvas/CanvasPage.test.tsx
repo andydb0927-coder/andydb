@@ -810,7 +810,16 @@ describe('creative canvas', () => {
     const listDialog = screen.getByRole('dialog', { name: '节点列表' })
     expect(listDialog).toBeVisible()
 
-    const storyboard = within(listDialog).getByRole('button', { name: /分镜 02/ })
+    await user.keyboard('{Shift>}{Tab}{/Shift}')
+    expect(
+      within(listDialog).getByRole('button', {
+        name: '重生成 成片预览',
+      }),
+    ).toHaveFocus()
+
+    const storyboard = within(listDialog).getByRole('button', {
+      name: '选择 分镜 02',
+    })
     storyboard.focus()
     await user.keyboard('{Enter}')
     await user.keyboard('{Escape}')
@@ -830,7 +839,9 @@ describe('creative canvas', () => {
     expect(within(dialog).getByText('视频片段')).toBeVisible()
     expect(within(dialog).getByText('成片预览')).toBeVisible()
 
-    await user.click(within(dialog).getByRole('button', { name: '取消' }))
+    await user.keyboard('{Shift>}{Tab}{/Shift}')
+    expect(within(dialog).getByRole('button', { name: '仍要删除' })).toHaveFocus()
+    await user.keyboard('{Escape}')
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
     expect(deleteTrigger).toHaveFocus()
