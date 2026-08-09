@@ -568,6 +568,140 @@ select {
   background: var(--accent);
 }
 
+.node-draft-panel {
+  position: absolute;
+  z-index: 15;
+  padding: var(--space-4);
+}
+
+.node-draft-panel form,
+.node-draft-panel__field,
+.node-draft-panel__file {
+  display: grid;
+}
+
+.node-draft-panel form {
+  gap: var(--space-2);
+}
+
+.node-draft-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.node-draft-panel__heading span,
+.node-draft-panel__field > span,
+.node-draft-panel__file > span,
+.node-draft-panel__hint,
+.node-draft-panel__file-status {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.node-draft-panel h2,
+.node-draft-panel p {
+  margin: 0;
+}
+
+.node-draft-panel h2 {
+  margin-top: 2px;
+  font-size: 1rem;
+}
+
+.node-draft-panel kbd {
+  padding: 2px var(--space-1);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 5px;
+  color: var(--text-muted);
+  background: rgb(11 12 15 / 48%);
+  font-size: 0.6875rem;
+}
+
+.node-draft-panel__field,
+.node-draft-panel__file {
+  gap: var(--space-1);
+}
+
+.node-draft-panel input:not([type='file']),
+.node-draft-panel textarea,
+.node-draft-panel input[type='file'] {
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(11 12 15 / 72%);
+}
+
+.node-draft-panel input:not([type='file']),
+.node-draft-panel input[type='file'] {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+}
+
+.node-draft-panel textarea {
+  min-height: 76px;
+  resize: vertical;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.45;
+}
+
+.node-draft-panel input[aria-invalid='true'],
+.node-draft-panel textarea[aria-invalid='true'] {
+  border-color: var(--status-error);
+}
+
+.node-draft-panel input:focus-visible,
+.node-draft-panel textarea:focus-visible,
+.node-draft-panel button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.node-draft-panel__error {
+  color: var(--status-error);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.node-draft-panel__file-status {
+  overflow-wrap: anywhere;
+}
+
+.node-draft-panel__hint {
+  margin-top: var(--space-1) !important;
+  text-align: right;
+}
+
+.node-draft-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.node-draft-panel__actions button {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 7%);
+  cursor: pointer;
+}
+
+.node-draft-panel__actions button[type='submit'] {
+  border-color: rgb(169 162 255 / 36%);
+  background: rgb(114 104 240 / 24%);
+}
+
+.node-draft-panel__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .director-composer {
   position: absolute;
   z-index: 11;
