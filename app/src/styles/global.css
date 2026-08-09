@@ -577,7 +577,8 @@ select {
   cursor: crosshair;
 }
 
-.canvas-placement-hint {
+.canvas-placement-hint,
+.canvas-connection-hint {
   position: absolute;
   z-index: 12;
   top: var(--space-4);
@@ -592,6 +593,12 @@ select {
   font-size: 0.75rem;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.canvas-connection-hint--error {
+  border-color: rgb(255 122 144 / 48%);
+  color: #ffb4c1;
+  background: rgb(54 27 34 / 94%);
 }
 
 .node-draft-panel {
@@ -854,6 +861,17 @@ select {
   border-style: dashed;
 }
 
+.creative-node--connection-mode {
+  border-color: rgb(169 162 255 / 42%);
+}
+
+.creative-node--connection-source {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px rgb(114 104 240 / 32%),
+    0 20px 54px rgb(0 0 0 / 42%);
+}
+
 .creative-node__select {
   display: flex;
   width: 100%;
@@ -958,6 +976,12 @@ select {
   height: 9px;
   border: 2px solid #d8d5ff;
   background: var(--accent);
+}
+
+.creative-node--connection-mode .react-flow__handle {
+  width: 12px;
+  height: 12px;
+  cursor: crosshair;
 }
 
 .react-flow__edge-path.dependency-edge,

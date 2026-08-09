@@ -4,6 +4,7 @@ import {
   ReactFlow,
   type Connection,
   type NodeChange,
+  type OnConnectEnd,
   type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -22,6 +23,10 @@ import type { DirectorCommand } from '../director/director-command'
 import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
 import { GenerationQueue } from '../generation/generation-queue'
 import type { Project } from '../project/model'
+import {
+  connectionFailureMessage,
+  validateDependencyConnection,
+} from '../project/dependency-policy'
 import { ProjectRepository } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import {
@@ -47,6 +52,12 @@ import {
   nextNodeTitle,
   type CreatableNodeKind,
 } from './node-draft'
+import {
+  cancelConnectionTool,
+  chooseConnectionNode,
+  startConnectionTool,
+  type ConnectionToolState,
+} from './connection-tool'
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
@@ -137,6 +148,10 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     useState<NodeMeasurementState>({ measurements: {} })
   const [nodeListOpen, setNodeListOpen] = useState(false)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [connectionTool, setConnectionTool] = useState<ConnectionToolState>({
+    phase: 'idle',
+  })
+  const [connectionFeedback, setConnectionFeedback] = useState<string>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
@@ -151,6 +166,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const placementTriggerRef = useRef<HTMLButtonElement>(null)
+  const connectionTriggerRef = useRef<HTMLButtonElement>(null)
   const createdNodeFocusRef = useRef<string | undefined>(undefined)
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
@@ -163,10 +179,17 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   useEffect(() => {
     setActiveTool('select')
+    setConnectionTool(cancelConnectionTool())
+    setConnectionFeedback(undefined)
     setPendingPlacement(undefined)
     createdNodeFocusRef.current = undefined
     setFocusRequestVersion((version) => version + 1)
     placementTriggerRef.current = null
+    connectionTriggerRef.current = null
+
+    return () => {
+      connectionTriggerRef.current = null
+    }
   }, [projectId])
 
   const generationQueue = useMemo(
@@ -393,6 +416,77 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [handleAction, requestDelete],
   )
 
+  const cancelConnection = useCallback((restoreFocus = true) => {
+    const trigger = connectionTriggerRef.current
+    setConnectionTool(cancelConnectionTool())
+    setConnectionFeedback(undefined)
+    setActiveTool('select')
+    connectionTriggerRef.current = null
+    if (restoreFocus) queueMicrotask(() => trigger?.focus())
+  }, [])
+
+  const attemptConnection = useCallback(
+    (
+      sourceNodeId: string,
+      targetNodeId: string,
+      origin: 'drag' | 'tool',
+    ) => {
+      const result = connectNodes({
+        id: crypto.randomUUID(),
+        sourceNodeId,
+        targetNodeId,
+      })
+      if (!result.ok) {
+        setConnectionFeedback(connectionFailureMessage(result.reason))
+        return false
+      }
+      setConnectionFeedback(undefined)
+      if (origin === 'tool') {
+        setConnectionTool(cancelConnectionTool())
+        setActiveTool('select')
+        queueMicrotask(() => connectionTriggerRef.current?.focus())
+      }
+      return true
+    },
+    [connectNodes],
+  )
+
+  const handleNodeSelection = useCallback(
+    (nodeId: string) => {
+      if (connectionTool.phase === 'idle') {
+        selectOnlyNode(nodeId)
+        return
+      }
+
+      const selection = chooseConnectionNode(connectionTool, nodeId)
+      if (!selection.connection) {
+        setConnectionFeedback(undefined)
+        setConnectionTool(selection.state)
+        return
+      }
+
+      if (
+        !attemptConnection(
+          selection.connection.sourceNodeId,
+          selection.connection.targetNodeId,
+          'tool',
+        )
+      ) {
+        setConnectionTool(selection.state)
+      }
+    },
+    [attemptConnection, connectionTool, selectOnlyNode],
+  )
+
+  useEffect(() => {
+    if (connectionTool.phase === 'idle') return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') cancelConnection()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [cancelConnection, connectionTool.phase])
+
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
     const rightmostX = Math.max(...project.nodes.map((node) => node.position.x))
@@ -417,13 +511,15 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           job,
           selected,
           contextual: node.id === primaryNodeId,
-          connectionMode: false,
-          connectionSource: false,
+          connectionMode: connectionTool.phase !== 'idle',
+          connectionSource:
+            connectionTool.phase === 'selecting-target' &&
+            connectionTool.sourceNodeId === node.id,
           focusOnMount: node.id === createdNodeFocusRef.current,
           focusRequestVersion,
           actionsPlacement:
             node.position.x === rightmostX ? 'before' : 'after',
-          onSelect: () => selectOnlyNode(node.id),
+          onSelect: () => handleNodeSelection(node.id),
           onFocusComplete: () => {
             if (createdNodeFocusRef.current !== node.id) return
             createdNodeFocusRef.current = undefined
@@ -436,11 +532,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     })
   }, [
     handleAction,
+    connectionTool,
     focusRequestVersion,
+    handleNodeSelection,
     primaryNodeId,
     project,
     requestDelete,
-    selectOnlyNode,
     selectedNodeIds,
   ])
 
@@ -594,13 +691,32 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return
-      connectNodes({
-        id: crypto.randomUUID(),
-        sourceNodeId: connection.source,
-        targetNodeId: connection.target,
-      })
+      attemptConnection(connection.source, connection.target, 'drag')
     },
-    [connectNodes],
+    [attemptConnection],
+  )
+
+  const isValidConnection = useCallback(
+    (connection: Connection | DependencyFlowEdge) =>
+      Boolean(
+        project &&
+          connection.source &&
+          connection.target &&
+          validateDependencyConnection(
+            project,
+            connection.source,
+            connection.target,
+          ).ok,
+      ),
+    [project],
+  )
+
+  const handleConnectEnd: OnConnectEnd = useCallback(
+    (_event, state) => {
+      if (state.isValid || !state.fromNode || !state.toNode) return
+      attemptConnection(state.fromNode.id, state.toNode.id, 'drag')
+    },
+    [attemptConnection],
   )
 
   const cancelPlacement = useCallback((restoreFocus = true) => {
@@ -614,6 +730,21 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const handleToolChange = useCallback(
     (tool: CanvasTool, trigger: HTMLButtonElement) => {
       if (!project) return
+      if (tool === 'connect') {
+        if (pendingPlacement) return
+        if (connectionTool.phase !== 'idle') {
+          cancelConnection(false)
+          return
+        }
+        placementTriggerRef.current = null
+        connectionTriggerRef.current = trigger
+        setConnectionFeedback(undefined)
+        setConnectionTool(startConnectionTool())
+        setActiveTool('connect')
+        return
+      }
+
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       if (tool === 'select') {
         if (pendingPlacement) cancelPlacement()
         else setActiveTool('select')
@@ -624,11 +755,21 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       placementTriggerRef.current = trigger
       setActiveTool(tool)
     },
-    [cancelPlacement, pendingPlacement, project],
+    [
+      cancelConnection,
+      cancelPlacement,
+      connectionTool.phase,
+      pendingPlacement,
+      project,
+    ],
   )
 
   const handlePaneClick = useCallback(
     (event: ReactMouseEvent<Element>) => {
+      if (connectionTool.phase !== 'idle') {
+        cancelConnection()
+        return
+      }
       if (
         !project ||
         !flowInstance ||
@@ -664,7 +805,14 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         bounds,
       })
     },
-    [activeTool, flowInstance, pendingPlacement, project],
+    [
+      activeTool,
+      cancelConnection,
+      connectionTool.phase,
+      flowInstance,
+      pendingPlacement,
+      project,
+    ],
   )
 
   const submitPlacement = useCallback(
@@ -779,9 +927,20 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
+          isValidConnection={isValidConnection}
           onConnect={handleConnect}
+          onConnectEnd={handleConnectEnd}
           onPaneClick={handlePaneClick}
-          onNodeClick={(_event, node) => selectOnlyNode(node.id)}
+          onNodeClick={(event, node) => {
+            const target = event.target
+            if (
+              target instanceof Element &&
+              target.closest('[data-canvas-node-id]')
+            ) {
+              return
+            }
+            handleNodeSelection(node.id)
+          }}
           onInit={setFlowInstance}
           fitView
           fitViewOptions={{ padding: 0.16 }}
@@ -811,6 +970,20 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
                 : activeTool === 'storyboard'
                   ? '分镜'
                   : '视频'}节点
+          </p>
+        ) : null}
+        {connectionTool.phase !== 'idle' || connectionFeedback ? (
+          <p
+            className={`canvas-connection-hint${
+              connectionFeedback ? ' canvas-connection-hint--error' : ''
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {connectionFeedback ??
+              (connectionTool.phase === 'selecting-source'
+                ? '请选择来源节点'
+                : '请选择目标节点')}
           </p>
         ) : null}
         {project && pendingPlacement ? (

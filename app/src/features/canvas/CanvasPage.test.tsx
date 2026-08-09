@@ -31,16 +31,32 @@ interface FlowNodeFixture {
 
 interface FlowPropsFixture {
   nodes: FlowNodeFixture[]
+  edges: Array<{ id: string; source: string; target: string }>
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>
   onNodesChange(changes: unknown[]): void
   onConnect(connection: { source: string; target: string }): void
+  isValidConnection(connection: {
+    source: string | null
+    target: string | null
+  }): boolean
+  onConnectEnd?(
+    event: unknown,
+    state: {
+      isValid: boolean
+      fromNode?: { id: string }
+      toNode?: { id: string }
+    },
+  ): void
   zoomOnScroll: boolean
   panOnScroll: boolean
   panActivationKeyCode: string
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
   onPaneClick?(event: { clientX: number; clientY: number }): void
-  onNodeClick?(event: unknown, node: FlowNodeFixture): void
+  onNodeClick?(
+    event: { target?: EventTarget | null },
+    node: FlowNodeFixture,
+  ): void
   onInit?(instance: {
     fitView(options: unknown): Promise<boolean>
     screenToFlowPosition(position: { x: number; y: number }): {
@@ -1093,6 +1109,253 @@ describe('creative canvas', () => {
         connectionSource: false,
       })
     }
+  })
+
+  test('connects with the toolbar and reports a reverse edge as a cycle', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    await user.click(connect)
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(
+      latestFlowProps?.nodes.every(
+        (node) => node.data.connectionMode === true,
+      ),
+    ).toBe(true)
+
+    const characterButton = screen.getByRole('button', { name: '角色参考' })
+    await user.click(characterButton)
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
+    ).toMatchObject({ connectionMode: true, connectionSource: true })
+
+    act(() => {
+      latestFlowProps?.onNodeClick?.(
+        { target: characterButton },
+        latestFlowProps.nodes.find(({ id }) => id === 'character')!,
+      )
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    expect(
+      useProjectStore.getState().activeProject?.edges.some(
+        (edge) =>
+          edge.sourceNodeId === 'character' &&
+          edge.targetNodeId === 'storyboard',
+      ),
+    ).toBe(true)
+    expect(
+      latestFlowProps?.edges.some(
+        (edge) => edge.source === 'character' && edge.target === 'storyboard',
+      ),
+    ).toBe(true)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(connect).toHaveFocus()
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '此连接会形成循环依赖',
+    )
+    expect(connect).toHaveAttribute('aria-pressed', 'true')
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    await user.keyboard('{Escape}')
+    expect(connect).toHaveFocus()
+    expect(screen.queryByText('此连接会形成循环依赖')).not.toBeInTheDocument()
+  })
+
+  test('keeps an acyclic incompatible toolbar source for a valid retry', async () => {
+    const user = userEvent.setup()
+    act(() => activate({ ...makeCanvasProject(), edges: [] }))
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '这两种节点不能建立生成依赖',
+    )
+    expect(connect).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'storyboard')?.data,
+    ).toMatchObject({ connectionMode: true, connectionSource: true })
+    expect(useProjectStore.getState().past).toEqual([])
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    expect(
+      useProjectStore.getState().activeProject?.edges.some(
+        (edge) =>
+          edge.sourceNodeId === 'storyboard' && edge.targetNodeId === 'video',
+      ),
+    ).toBe(true)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(
+      screen.queryByText('这两种节点不能建立生成依赖'),
+    ).not.toBeInTheDocument()
+    expect(connect).toHaveFocus()
+  })
+
+  test('uses Store authority for valid drags and concrete invalid-drop feedback', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    expect(
+      latestFlowProps?.isValidConnection({ source: 'scene', target: 'video' }),
+    ).toBe(true)
+    expect(
+      latestFlowProps?.isValidConnection({
+        source: 'storyboard',
+        target: 'character',
+      }),
+    ).toBe(false)
+
+    act(() => {
+      latestFlowProps?.onConnect({ source: 'scene', target: 'video' })
+    })
+    expect(
+      useProjectStore.getState().activeProject?.edges.some(
+        (edge) =>
+          edge.sourceNodeId === 'scene' && edge.targetNodeId === 'video',
+      ),
+    ).toBe(true)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => {
+      latestFlowProps?.onConnectEnd?.({}, {
+        isValid: true,
+        fromNode: { id: 'scene' },
+        toNode: { id: 'video' },
+      })
+    })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(5)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => {
+      latestFlowProps?.onConnectEnd?.({}, {
+        isValid: false,
+        fromNode: { id: 'storyboard' },
+        toNode: { id: 'character' },
+      })
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '此连接会形成循环依赖',
+    )
+    expect(screen.getByRole('status')).toHaveClass(
+      'canvas-connection-hint--error',
+    )
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(5)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    const connect = screen.getByRole('button', { name: '连线' })
+    await user.click(connect)
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(screen.getByRole('status')).not.toHaveClass(
+      'canvas-connection-hint--error',
+    )
+    await user.click(connect)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('cancels toolbar connection selection from a blank pane without history', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    clickPane()
+
+    expect(screen.queryByText('请选择目标节点')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
+    await waitFor(() => expect(connect).toHaveFocus())
+  })
+
+  test('switches from connection selection to a creation tool without stealing focus', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+    const text = screen.getByRole('button', { name: '文本' })
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    await user.click(text)
+
+    expect(screen.getByRole('status')).toHaveTextContent('点击画布放置文本节点')
+    expect(text).toHaveAttribute('aria-pressed', 'true')
+    expect(text).toHaveFocus()
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('discards connection selection on project switch without restoring old focus', async () => {
+    const user = userEvent.setup()
+    const projectB = {
+      ...makeCanvasProject(),
+      id: 'project-b',
+      title: '第二项目',
+    }
+    render(
+      <MemoryRouter initialEntries={['/project/project-canvas']}>
+        <SwitchingCanvas
+          repository={{
+            load: async (id) => (id === 'project-b' ? projectB : undefined),
+            save: async () => undefined,
+          }}
+        />
+      </MemoryRouter>,
+    )
+    const connect = screen.getByRole('button', { name: '连线' })
+    const switchProject = screen.getByRole('button', { name: '切换到项目 B' })
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    await user.click(switchProject)
+
+    expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
+    expect(screen.queryByText('请选择目标节点')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(switchProject).toHaveFocus()
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('cleans up active connection selection on unmount without history', async () => {
+    const user = userEvent.setup()
+    const view = renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '连线' }))
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    view.unmount()
+    await Promise.resolve()
+
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
+    expect(document.activeElement).toBe(document.body)
   })
 
   test('keeps dependency creation out of the timeline and configures real canvas gestures', () => {
