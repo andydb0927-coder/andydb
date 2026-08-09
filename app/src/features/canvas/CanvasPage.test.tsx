@@ -31,9 +31,21 @@ interface FlowNodeFixture {
 
 interface FlowPropsFixture {
   nodes: FlowNodeFixture[]
-  edges: Array<{ id: string; source: string; target: string }>
+  edges: Array<{
+    id: string
+    source: string
+    target: string
+    selected?: boolean
+    ariaLabel?: string
+    data?: {
+      sourceChanged: boolean
+      ariaLabel: string
+      onDelete(edgeId: string): void
+    }
+  }>
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>
   onNodesChange(changes: unknown[]): void
+  onEdgesChange(changes: unknown[]): void
   onConnect(connection: { source: string; target: string }): void
   isValidConnection(connection: {
     source: string | null
@@ -58,6 +70,12 @@ interface FlowPropsFixture {
     event: { target?: EventTarget | null },
     node: FlowNodeFixture,
   ): void
+  onEdgeClick?(
+    event: { target?: EventTarget | null },
+    edge: FlowPropsFixture['edges'][number],
+  ): void
+  edgesFocusable?: boolean
+  deleteKeyCode?: string[]
   onInit?(instance: {
     fitView(options: unknown): Promise<boolean>
     screenToFlowPosition(position: { x: number; y: number }): {
@@ -75,6 +93,7 @@ vi.mock('@xyflow/react', () => ({
   Controls: () => null,
   Handle: () => null,
   Position: { Left: 'left', Right: 'right' },
+  MarkerType: { ArrowClosed: 'arrowclosed' },
   ReactFlow: (props: FlowPropsFixture & { 'aria-label'?: string }) => {
     latestFlowProps = props
     return (
@@ -1377,6 +1396,162 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toEqual([])
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
     await waitFor(() => expect(connect).toHaveFocus())
+  })
+
+  test('activates Connect with L from the canvas and preserves Escape focus restoration', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    await user.keyboard('l')
+
+    expect(connect).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByText('请选择来源节点')).not.toBeInTheDocument()
+    await waitFor(() => expect(connect).toHaveFocus())
+  })
+
+  test('ignores the L shortcut for modifiers, editable targets, and an open draft dialog', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+    const directorInput = screen.getByLabelText('告诉我下一步要做什么')
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true }))
+    })
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(directorInput)
+    await user.keyboard('l')
+    expect(directorInput).toHaveValue('l')
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
+
+    initializeFlow()
+    await user.click(screen.getByRole('button', { name: '视频' }))
+    clickPane()
+    const cancel = screen.getByRole('button', { name: '取消' })
+    cancel.focus()
+    await user.keyboard('l')
+
+    expect(
+      screen.getByRole('dialog', { name: '创建视频节点' }),
+    ).toBeVisible()
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('selects and deletes an edge with one history entry, restores source focus, and keeps timeline unchanged through undo', async () => {
+    const project = makeCanvasProject()
+    project.timeline = [
+      {
+        id: 'timeline-video',
+        nodeId: 'video',
+        order: 0,
+        durationSeconds: 5,
+        track: 'video',
+      },
+    ]
+    activate(project)
+    renderCanvas()
+    const originalTimeline = structuredClone(project.timeline)
+    const edge = latestFlowProps!.edges.find(
+      ({ id }) => id === 'character-scene',
+    )!
+
+    act(() => latestFlowProps?.onEdgeClick?.({}, edge))
+    expect(
+      latestFlowProps?.edges.find(({ id }) => id === edge.id),
+    ).toMatchObject({
+      selected: true,
+      ariaLabel: '角色参考 → 场景设定',
+    })
+
+    act(() => {
+      latestFlowProps?.edges
+        .find(({ id }) => id === edge.id)
+        ?.data?.onDelete(edge.id)
+    })
+
+    expect(useProjectStore.getState().activeProject?.edges).not.toContainEqual(
+      expect.objectContaining({ id: edge.id }),
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(useProjectStore.getState().activeProject?.timeline).toEqual(
+      originalTimeline,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '角色参考' })).toHaveFocus(),
+    )
+
+    act(() => useProjectStore.getState().undo())
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
+      expect.objectContaining({ id: edge.id }),
+    )
+    expect(useProjectStore.getState().activeProject?.timeline).toEqual(
+      originalTimeline,
+    )
+  })
+
+  test('routes keyboard edge removal through the same one-step disconnect command', async () => {
+    const project = makeCanvasProject()
+    const originalTimeline = structuredClone(project.timeline)
+    renderCanvas()
+    const edge = latestFlowProps!.edges.find(
+      ({ id }) => id === 'scene-storyboard',
+    )!
+
+    act(() => latestFlowProps?.onEdgeClick?.({}, edge))
+    act(() => latestFlowProps?.onEdgesChange([{ type: 'remove', id: edge.id }]))
+
+    expect(useProjectStore.getState().activeProject?.edges).not.toContainEqual(
+      expect.objectContaining({ id: edge.id }),
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(useProjectStore.getState().activeProject?.timeline).toEqual(
+      originalTimeline,
+    )
+    expect(latestFlowProps).toMatchObject({
+      edgesFocusable: true,
+      deleteKeyCode: ['Backspace', 'Delete'],
+    })
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '场景设定' })).toHaveFocus(),
+    )
+  })
+
+  test('focuses the canvas viewport after deletion when the source node is unavailable', async () => {
+    renderCanvas()
+    const viewport = screen.getByRole('region', { name: '项目画布' })
+    const edge = latestFlowProps!.edges.find(
+      ({ id }) => id === 'character-scene',
+    )!
+    screen.getByRole('button', { name: '角色参考' }).remove()
+
+    act(() => edge.data?.onDelete(edge.id))
+
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    await waitFor(() => expect(viewport).toHaveFocus())
+  })
+
+  test('clears edge selection from a node or blank pane without changing history', () => {
+    renderCanvas()
+    const edge = latestFlowProps!.edges[0]
+
+    act(() => latestFlowProps?.onEdgeClick?.({}, edge))
+    expect(latestFlowProps?.edges[0].selected).toBe(true)
+
+    act(() =>
+      latestFlowProps?.onNodeClick?.({}, latestFlowProps.nodes[0]),
+    )
+    expect(latestFlowProps?.edges[0].selected).toBe(false)
+
+    act(() => latestFlowProps?.onEdgeClick?.({}, latestFlowProps.edges[0]))
+    act(() => latestFlowProps?.onPaneClick?.({ clientX: 0, clientY: 0 }))
+    expect(latestFlowProps?.edges[0].selected).toBe(false)
+    expect(useProjectStore.getState().past).toEqual([])
   })
 
   test('switches from connection selection to a creation tool without stealing focus', async () => {

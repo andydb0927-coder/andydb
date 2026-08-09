@@ -1,8 +1,10 @@
 import {
   Background,
   Controls,
+  MarkerType,
   ReactFlow,
   type Connection,
+  type EdgeChange,
   type NodeChange,
   type OnConnectEnd,
   type ReactFlowInstance,
@@ -130,6 +132,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const redo = useProjectStore((state) => state.redo)
   const persistActive = useProjectStore((state) => state.persistActive)
   const connectNodes = useProjectStore((state) => state.connectNodes)
+  const disconnectNodes = useProjectStore((state) => state.disconnectNodes)
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
   )
@@ -141,6 +144,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     () => new Set(),
   )
   const [primaryNodeId, setPrimaryNodeId] = useState<string>()
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string>()
   const [dragPreview, setDragPreview] = useState<DragPreviewState>({
     positions: {},
   })
@@ -181,6 +185,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
+    setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
     createdNodeFocusRef.current = undefined
     setFocusRequestVersion((version) => version + 1)
@@ -565,16 +570,72 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     })
   }, [dragPreview, measuredFlowNodes, project])
 
+  const disconnectEdge = useCallback(
+    (edgeId: string) => {
+      const current = useProjectStore.getState().activeProject
+      const edge = current?.edges.find(({ id }) => id === edgeId)
+      if (!edge || !disconnectNodes(edgeId)) return
+      setSelectedEdgeId(undefined)
+      queueMicrotask(() => {
+        const source = document.querySelector<HTMLElement>(
+          `[data-canvas-node-id="${edge.sourceNodeId}"]`,
+        )
+        const focusTarget = source ?? viewportRef.current
+        focusTarget?.focus()
+      })
+    },
+    [disconnectNodes],
+  )
+
   const flowEdges = useMemo<DependencyFlowEdge[]>(
     () =>
-      (project?.edges ?? []).map((edge) => ({
-        id: edge.id,
-        source: edge.sourceNodeId,
-        target: edge.targetNodeId,
-        type: 'dependency',
-        data: { sourceChanged: edge.sourceChanged ?? false },
-      })),
-    [project?.edges],
+      (project?.edges ?? []).map((edge) => {
+        const sourceTitle = project?.nodes.find(
+          ({ id }) => id === edge.sourceNodeId,
+        )?.title ?? edge.sourceNodeId
+        const targetTitle = project?.nodes.find(
+          ({ id }) => id === edge.targetNodeId,
+        )?.title ?? edge.targetNodeId
+        const ariaLabel = `${sourceTitle} → ${targetTitle}`
+        return {
+          id: edge.id,
+          source: edge.sourceNodeId,
+          target: edge.targetNodeId,
+          type: 'dependency',
+          selected: edge.id === selectedEdgeId,
+          focusable: true,
+          ariaLabel,
+          markerEnd: { type: MarkerType.ArrowClosed },
+          data: {
+            sourceChanged: edge.sourceChanged ?? false,
+            ariaLabel,
+            onDelete: disconnectEdge,
+          },
+        }
+      }),
+    [disconnectEdge, project, selectedEdgeId],
+  )
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<DependencyFlowEdge>[]) => {
+      let nextSelectedEdgeId = selectedEdgeId
+      for (const change of changes) {
+        if (change.type === 'select') {
+          if (change.selected) nextSelectedEdgeId = change.id
+          else if (nextSelectedEdgeId === change.id) {
+            nextSelectedEdgeId = undefined
+          }
+        }
+        if (change.type === 'remove') {
+          disconnectEdge(change.id)
+          if (nextSelectedEdgeId === change.id) {
+            nextSelectedEdgeId = undefined
+          }
+        }
+      }
+      setSelectedEdgeId(nextSelectedEdgeId)
+    },
+    [disconnectEdge, selectedEdgeId],
   )
 
   const handleNodesChange = useCallback(
@@ -769,8 +830,60 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     ],
   )
 
+  useEffect(() => {
+    const handleConnectShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.repeat ||
+        event.key.toLowerCase() !== 'l' ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !project ||
+        pendingPlacement ||
+        nodeListOpen ||
+        deleteCandidateId ||
+        connectionTool.phase !== 'idle'
+      ) {
+        return
+      }
+
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          Boolean(
+            target.closest(
+              'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+            ),
+          ))
+      ) {
+        return
+      }
+
+      const trigger = viewportRef.current?.querySelector<HTMLButtonElement>(
+        '.canvas-toolbar button[aria-label="连线"]',
+      )
+      if (!trigger || trigger.disabled) return
+      event.preventDefault()
+      handleToolChange('connect', trigger)
+    }
+
+    window.addEventListener('keydown', handleConnectShortcut)
+    return () => window.removeEventListener('keydown', handleConnectShortcut)
+  }, [
+    connectionTool.phase,
+    deleteCandidateId,
+    handleToolChange,
+    nodeListOpen,
+    pendingPlacement,
+    project,
+  ])
+
   const handlePaneClick = useCallback(
     (event: ReactMouseEvent<Element>) => {
+      setSelectedEdgeId(undefined)
       if (connectionTool.phase !== 'idle') {
         cancelConnection()
         return
@@ -944,6 +1057,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         }`}
         role="region"
         aria-label="项目画布"
+        tabIndex={-1}
       >
         <ReactFlow<CreativeFlowNode, DependencyFlowEdge>
           aria-label="创作节点图"
@@ -952,10 +1066,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
           isValidConnection={isValidConnection}
           onConnect={handleConnect}
           onConnectEnd={handleConnectEnd}
           onPaneClick={handlePaneClick}
+          onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}
           onNodeClick={(event, node) => {
             const target = event.target
             if (
@@ -966,6 +1082,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
             ) {
               return
             }
+            setSelectedEdgeId(undefined)
             handleNodeSelection(node.id)
           }}
           onInit={setFlowInstance}
@@ -976,6 +1093,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           panActivationKeyCode="Space"
           selectionOnDrag
           zoomOnDoubleClick={false}
+          edgesFocusable
+          deleteKeyCode={['Backspace', 'Delete']}
           minZoom={0.35}
           maxZoom={1.8}
         >

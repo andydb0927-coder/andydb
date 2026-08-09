@@ -976,6 +976,24 @@ select {
   height: 9px;
   border: 2px solid #d8d5ff;
   background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    width 140ms ease,
+    height 140ms ease,
+    opacity 140ms ease,
+    outline-offset 140ms ease;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node:focus-within .react-flow__handle,
+.react-flow__node.selected .react-flow__handle,
+.creative-node--selected .react-flow__handle,
+.creative-node--connection-mode .react-flow__handle,
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .creative-node--connection-mode .react-flow__handle {
@@ -984,15 +1002,80 @@ select {
   cursor: crosshair;
 }
 
+.creative-node--connection-source .react-flow__handle-source,
+.react-flow__handle.connectingfrom {
+  border-style: double;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.react-flow__handle.connectingto.valid {
+  border-radius: 50%;
+  outline: 3px solid var(--status-success);
+  outline-offset: 3px;
+}
+
+.react-flow__handle.connectingto:not(.valid) {
+  border-style: dashed;
+  border-radius: 2px;
+  outline: 2px dashed var(--status-error);
+  outline-offset: 4px;
+}
+
 .react-flow__edge-path.dependency-edge,
 .react-flow__edge-path.dependency-edge--changed {
   stroke: rgb(190 193 201 / 64%);
-  stroke-width: 1.4;
+  stroke-width: 2;
 }
 
 .react-flow__edge-path.dependency-edge--changed {
   stroke: var(--status-error);
   stroke-dasharray: 6 5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--focus-ring);
+  stroke-width: 2.8;
+}
+
+.react-flow__edge:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.dependency-edge__delete {
+  position: absolute;
+  z-index: 14;
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 180 193 / 55%);
+  border-radius: 999px;
+  color: #ffd1d9;
+  background: rgb(54 27 34 / 96%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 36%);
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.dependency-edge__delete:hover {
+  color: white;
+  background: rgb(102 39 52 / 98%);
+}
+
+.dependency-edge__delete:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.dependency-edge__delete svg {
+  width: 16px;
+  height: 16px;
 }
 
 .react-flow__controls {
@@ -1552,6 +1635,22 @@ select {
     left: var(--space-4);
     width: 260px;
     transform: none;
+  }
+
+  .dependency-edge__delete {
+    transform: translate(-50%, -50%)
+      translate(
+        clamp(64px, var(--dependency-edge-label-x), calc(100vw - 40px)),
+        clamp(40px, var(--dependency-edge-label-y), calc(100vh - 180px))
+      ) !important;
+  }
+
+  .canvas-connection-hint {
+    right: var(--space-4);
+    left: 72px;
+    max-width: calc(100vw - 88px);
+    transform: none;
+    text-align: center;
   }
 }
 
