@@ -12,6 +12,7 @@ import type { DependencyFlowEdge } from './edge-types'
 const DELETE_CONTROL_HALF_SIZE = 16
 const DELETE_CONTROL_GUTTER = 8
 const NARROW_BOTTOM_RESERVE = 180
+const INTERACTION_WIDTH = 24
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum)
@@ -26,7 +27,7 @@ function clampLabelToContainer(
   const [viewportX, viewportY, zoom] = viewport
   if (zoom <= 0) return [labelX, labelY] as const
 
-  const controlInset = DELETE_CONTROL_HALF_SIZE * zoom + DELETE_CONTROL_GUTTER
+  const controlInset = DELETE_CONTROL_HALF_SIZE + DELETE_CONTROL_GUTTER
   const screenX = bounds.left + viewportX + labelX * zoom
   const screenY = bounds.top + viewportY + labelY * zoom
   const minimumX = bounds.left + controlInset
@@ -76,6 +77,7 @@ function DependencyEdgeDeleteAction({
   const [deleteX, deleteY] = bounds
     ? clampLabelToContainer(labelX, labelY, viewport, bounds)
     : [labelX, labelY]
+  const zoom = viewport[2] > 0 ? viewport[2] : 1
 
   return (
     <button
@@ -83,7 +85,7 @@ function DependencyEdgeDeleteAction({
       className="dependency-edge__delete nodrag nopan"
       aria-label={`删除连接：${data.ariaLabel}`}
       style={{
-        transform: `translate(-50%, -50%) translate(${deleteX}px, ${deleteY}px)`,
+        transform: `translate(${deleteX}px, ${deleteY}px) scale(${1 / zoom}) translate(-50%, -50%)`,
       }}
       onClick={() => data.onDelete(id)}
     >
@@ -104,6 +106,9 @@ export function DependencyEdge({
   selected,
   data,
 }: EdgeProps<DependencyFlowEdge>) {
+  const viewportZoom = useStore((state) => state.transform[2])
+  const interactionStrokeWidth =
+    INTERACTION_WIDTH / (viewportZoom > 0 ? viewportZoom : 1)
   const [path, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -115,17 +120,29 @@ export function DependencyEdge({
 
   return (
     <>
-      <BaseEdge
-        id={id}
-        path={path}
-        markerEnd={markerEnd}
-        interactionWidth={24}
-        className={
-          data?.sourceChanged
-            ? 'dependency-edge--changed'
-            : 'dependency-edge'
-        }
-      />
+      <g className="dependency-edge__paths">
+        <BaseEdge
+          id={id}
+          path={path}
+          markerEnd={markerEnd}
+          interactionWidth={0}
+          vectorEffect="non-scaling-stroke"
+          className={
+            data?.sourceChanged
+              ? 'dependency-edge--changed'
+              : 'dependency-edge'
+          }
+        />
+        <path
+          d={path}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={interactionStrokeWidth}
+          vectorEffect="non-scaling-stroke"
+          pointerEvents="stroke"
+          className="react-flow__edge-interaction dependency-edge__interaction"
+        />
+      </g>
       {selected && data ? (
         <EdgeLabelRenderer>
           <DependencyEdgeDeleteAction

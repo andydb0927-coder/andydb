@@ -35,6 +35,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   focusOnMount: boolean
   focusRequestVersion: number
   onSelect(): void
+  onHandleActivate(type: 'source' | 'target', trigger: HTMLElement): void
   onFocusComplete(): void
   onDelete(trigger: HTMLButtonElement): void
 }

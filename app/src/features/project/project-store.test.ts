@@ -673,6 +673,59 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().past).toEqual([project])
   })
 
+  test('propagates a large source change with a linear number of edge reads', () => {
+    const base = makeProjectFixture()
+    const nodeCount = 500
+    const nodes = Array.from({ length: nodeCount }, (_, index): CanvasNode => ({
+      ...base.nodes[0],
+      id: `chain-${index}`,
+      title: `Chain ${index}`,
+      sourceChanged: false,
+    }))
+    let sourceReads = 0
+    const edges = Array.from(
+      { length: nodeCount - 1 },
+      (_, index): DependencyEdge => ({
+        id: `chain-edge-${index}-${index + 1}`,
+        get sourceNodeId() {
+          sourceReads += 1
+          return `chain-${index}`
+        },
+        targetNodeId: `chain-${index + 1}`,
+        sourceChanged: false,
+      }),
+    )
+    const project = {
+      ...base,
+      id: 'project-large-propagation-chain',
+      nodes,
+      edges,
+      timeline: [],
+      jobs: [],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      past: [],
+      future: [],
+    })
+    sourceReads = 0
+
+    useProjectStore.getState().appendVersion('chain-0', {
+      prompt: 'regenerated chain source',
+      generationJobId: 'job-chain-current',
+    })
+
+    const next = useProjectStore.getState().activeProject!
+    expect(sourceReads).toBeLessThanOrEqual(edges.length * 2)
+    expect(next.nodes[0].sourceChanged).toBe(false)
+    expect(next.nodes.slice(1).every(({ sourceChanged }) => sourceChanged)).toBe(
+      true,
+    )
+    expect(next.edges.every(({ sourceChanged }) => sourceChanged)).toBe(true)
+  })
+
   test('rejects a dependency edge that would create a cycle without adding history', () => {
     const originalProject = useProjectStore.getState().activeProject
 

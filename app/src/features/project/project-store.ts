@@ -78,20 +78,27 @@ function withUpdatedTimestamp(project: Project): Project {
 function findDownstream(project: Project, nodeId: string) {
   const nodeIds = new Set<string>()
   const edgeIds = new Set<string>()
+  const outgoing = new Map<string, DependencyEdge[]>()
+  for (const edge of project.edges) {
+    const sourceNodeId = edge.sourceNodeId
+    const edges = outgoing.get(sourceNodeId) ?? []
+    edges.push(edge)
+    outgoing.set(sourceNodeId, edges)
+  }
   const queue = [nodeId]
+  const visited = new Set(queue)
 
-  while (queue.length > 0) {
-    const sourceId = queue.shift()!
-    for (const edge of project.edges) {
-      if (edge.sourceNodeId !== sourceId) continue
+  for (let index = 0; index < queue.length; index += 1) {
+    const sourceId = queue[index]
+    for (const edge of outgoing.get(sourceId) ?? []) {
       edgeIds.add(edge.id)
-      if (nodeIds.has(edge.targetNodeId)) continue
+      if (visited.has(edge.targetNodeId)) continue
+      visited.add(edge.targetNodeId)
       nodeIds.add(edge.targetNodeId)
       queue.push(edge.targetNodeId)
     }
   }
 
-  nodeIds.delete(nodeId)
   return { nodeIds, edgeIds }
 }
 

@@ -166,7 +166,15 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
           id="dependency-target"
           type="target"
           position={Position.Left}
+          role="button"
+          tabIndex={0}
           aria-label={`连接到${node.title}`}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            event.stopPropagation()
+            data.onHandleActivate('target', event.currentTarget)
+          }}
         />
         <button
           ref={selectRef}
@@ -203,7 +211,15 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
           id="dependency-source"
           type="source"
           position={Position.Right}
+          role="button"
+          tabIndex={0}
           aria-label={`从${node.title}建立连接`}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            event.stopPropagation()
+            data.onHandleActivate('source', event.currentTarget)
+          }}
         />
       </article>
       {contextual ? <NodeActions data={data} /> : null}

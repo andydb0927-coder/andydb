@@ -1223,6 +1223,54 @@ describe('creative canvas', () => {
     expect(connect).toHaveFocus()
   })
 
+  test('routes keyboard handle actions through the existing Connect controller', async () => {
+    renderCanvas()
+    const sourceData = latestFlowProps?.nodes.find(
+      ({ id }) => id === 'character',
+    )?.data
+    const sourceHandle = document.createElement('div')
+    const targetHandle = document.createElement('div')
+
+    act(() => {
+      ;(
+        sourceData?.onHandleActivate as
+          | ((type: 'source' | 'target', trigger: HTMLElement) => void)
+          | undefined
+      )?.('source', sourceHandle)
+    })
+    expect(screen.getByRole('button', { name: '连线' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
+    ).toMatchObject({ connectionMode: true, connectionSource: true })
+
+    const targetData = latestFlowProps?.nodes.find(
+      ({ id }) => id === 'video',
+    )?.data
+    act(() => {
+      ;(
+        targetData?.onHandleActivate as
+          | ((type: 'source' | 'target', trigger: HTMLElement) => void)
+          | undefined
+      )?.('target', targetHandle)
+    })
+    expect(
+      useProjectStore.getState().activeProject?.edges.filter(
+        (edge) =>
+          edge.sourceNodeId === 'character' && edge.targetNodeId === 'video',
+      ),
+    ).toHaveLength(1)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '连线' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   test('uses Store authority for valid drags and concrete invalid-drop feedback', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -1464,6 +1512,59 @@ describe('creative canvas', () => {
     expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
   })
 
+  test.each([
+    { label: 'active Connect', selectSource: false },
+    { label: 'selected toolbar source', selectSource: true },
+  ])(
+    'cancels $label without focus theft before one native drag mutation',
+    async ({ selectSource }) => {
+      const user = userEvent.setup()
+      renderCanvas()
+      const connect = screen.getByRole('button', { name: '连线' })
+      await user.click(connect)
+      if (selectSource) {
+        await user.click(screen.getByRole('button', { name: '角色参考' }))
+        expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+      } else {
+        expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+      }
+      const nativeHandle = document.createElement('button')
+      document.body.append(nativeHandle)
+      nativeHandle.focus()
+
+      act(() => latestFlowProps?.onConnectStart?.({}, {}))
+      await Promise.resolve()
+
+      expect(nativeHandle).toHaveFocus()
+      expect(connect).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(
+        latestFlowProps?.nodes.some(
+          (node) => node.data.connectionSource === true,
+        ),
+      ).toBe(false)
+
+      act(() => {
+        latestFlowProps?.onConnect({ source: 'scene', target: 'video' })
+        latestFlowProps?.onConnectEnd?.({}, { isValid: true })
+      })
+      expect(
+        useProjectStore.getState().activeProject?.edges.filter(
+          (edge) =>
+            edge.sourceNodeId === 'scene' && edge.targetNodeId === 'video',
+        ),
+      ).toHaveLength(1)
+      expect(useProjectStore.getState().past).toHaveLength(1)
+      expect(connect).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      nativeHandle.remove()
+    },
+  )
+
   test('selects and deletes an edge with one history entry, restores source focus, and keeps timeline unchanged through undo', async () => {
     const project = makeCanvasProject()
     project.timeline = [
@@ -1543,7 +1644,21 @@ describe('creative canvas', () => {
     )
   })
 
-  test('focuses the canvas viewport after deletion when the source node is unavailable', async () => {
+  test('safely focuses the canvas viewport for an unavailable source with a CSS-special id', async () => {
+    const specialId = String.raw`node"]):not(*),\\#`
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'character' ? { ...node, id: specialId } : node,
+    )
+    project.edges = project.edges.map((edge) => ({
+      ...edge,
+      sourceNodeId:
+        edge.sourceNodeId === 'character' ? specialId : edge.sourceNodeId,
+      targetNodeId:
+        edge.targetNodeId === 'character' ? specialId : edge.targetNodeId,
+    }))
+    activate(project)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     renderCanvas()
     const viewport = screen.getByRole('region', { name: '项目画布' })
     const edge = latestFlowProps!.edges.find(
@@ -1551,10 +1666,15 @@ describe('creative canvas', () => {
     )!
     screen.getByRole('button', { name: '角色参考' }).remove()
 
-    act(() => edge.data?.onDelete(edge.id))
+    try {
+      act(() => edge.data?.onDelete(edge.id))
 
-    expect(useProjectStore.getState().past).toHaveLength(1)
-    await waitFor(() => expect(viewport).toHaveFocus())
+      expect(useProjectStore.getState().past).toHaveLength(1)
+      await waitFor(() => expect(viewport).toHaveFocus())
+      expect(consoleError).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   test('clears edge selection from a node or blank pane without changing history', () => {
@@ -1991,6 +2111,33 @@ describe('creative canvas', () => {
     expect(screen.getByRole('button', { name: '重生成' })).toBeVisible()
   })
 
+  test('returns node-list focus to a viewport node with a CSS-special persisted id', async () => {
+    const user = userEvent.setup()
+    const specialId = String.raw`node"]):not(*),\\#`
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'character' ? { ...node, id: specialId } : node,
+    )
+    project.edges = project.edges.map((edge) => ({
+      ...edge,
+      sourceNodeId:
+        edge.sourceNodeId === 'character' ? specialId : edge.sourceNodeId,
+      targetNodeId:
+        edge.targetNodeId === 'character' ? specialId : edge.targetNodeId,
+    }))
+    activate(project)
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+    const listDialog = screen.getByRole('dialog', { name: '节点列表' })
+    await user.click(
+      within(listDialog).getByRole('button', { name: '选择 角色参考' }),
+    )
+    await user.keyboard('{Escape}')
+
+    expect(screen.getByRole('button', { name: '角色参考' })).toHaveFocus()
+  })
+
   test('returns focus to the node list trigger when the dialog closes without a selection', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -2032,6 +2179,48 @@ describe('creative canvas', () => {
     expect(project?.edges).toHaveLength(2)
     expect(project?.nodes.find(({ id }) => id === 'video')?.sourceChanged).toBe(true)
     expect(project?.nodes.find(({ id }) => id === 'preview')?.sourceChanged).toBe(true)
+  })
+
+  test('builds deletion-impact consumers with one linear adjacency pass', async () => {
+    const user = userEvent.setup()
+    const base = makeCanvasProject()
+    const nodeCount = 80
+    const nodes = Array.from({ length: nodeCount }, (_, index) => ({
+      ...base.nodes[0],
+      id: `impact-${index}`,
+      title: `Impact ${index}`,
+      kind: 'storyboard' as const,
+      position: { x: index * 20, y: index * 10 },
+    }))
+    let sourceReads = 0
+    const edges = Array.from(
+      { length: nodeCount - 1 },
+      (_, index): Project['edges'][number] => ({
+        id: `impact-edge-${index}-${index + 1}`,
+        get sourceNodeId() {
+          sourceReads += 1
+          return `impact-${index}`
+        },
+        targetNodeId: `impact-${index + 1}`,
+      }),
+    )
+    activate({
+      ...base,
+      nodes,
+      edges,
+      timeline: [],
+      jobs: [],
+    })
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: 'Impact 0' }))
+    sourceReads = 0
+    await user.click(screen.getByRole('button', { name: '删除节点' }))
+
+    expect(
+      screen.getByRole('dialog', { name: '删除“Impact 0”？' }),
+    ).toHaveTextContent('Impact 79')
+    expect(sourceReads).toBeLessThanOrEqual(edges.length * 2)
   })
 })
 

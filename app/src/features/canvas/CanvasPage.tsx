@@ -96,22 +96,44 @@ function isCreatableTool(tool: CanvasTool): tool is CreatableNodeKind {
 }
 
 function downstreamConsumers(project: Project, nodeId: string) {
-  const consumerIds = new Set<string>()
-  const queue = [nodeId]
-
-  while (queue.length > 0) {
-    const sourceId = queue.shift()!
-    for (const edge of project.edges) {
-      if (edge.sourceNodeId !== sourceId || consumerIds.has(edge.targetNodeId)) {
-        continue
-      }
-      consumerIds.add(edge.targetNodeId)
-      queue.push(edge.targetNodeId)
+  const outgoing = new Map<string, string[]>()
+  for (const edge of project.edges) {
+    const sourceNodeId = edge.sourceNodeId
+    const targets = outgoing.get(sourceNodeId)
+    if (targets) {
+      targets.push(edge.targetNodeId)
+    } else {
+      outgoing.set(sourceNodeId, [edge.targetNodeId])
     }
   }
 
-  consumerIds.delete(nodeId)
+  const consumerIds = new Set<string>()
+  const visited = new Set([nodeId])
+  const queue = [nodeId]
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const sourceId = queue[index]
+    for (const targetNodeId of outgoing.get(sourceId) ?? []) {
+      if (visited.has(targetNodeId)) {
+        continue
+      }
+      visited.add(targetNodeId)
+      consumerIds.add(targetNodeId)
+      queue.push(targetNodeId)
+    }
+  }
+
   return project.nodes.filter((node) => consumerIds.has(node.id))
+}
+
+function findCanvasNodeControl(
+  viewport: HTMLElement | null,
+  nodeId: string,
+) {
+  if (!viewport) return undefined
+  return Array.from(
+    viewport.querySelectorAll<HTMLElement>('[data-canvas-node-id]'),
+  ).find((candidate) => candidate.dataset.canvasNodeId === nodeId)
 }
 
 export interface CanvasPageProps {
@@ -171,7 +193,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const viewportRef = useRef<HTMLDivElement>(null)
   const nativeConnectionActiveRef = useRef(false)
   const placementTriggerRef = useRef<HTMLButtonElement>(null)
-  const connectionTriggerRef = useRef<HTMLButtonElement>(null)
+  const connectionTriggerRef = useRef<HTMLElement>(null)
   const createdNodeFocusRef = useRef<string | undefined>(undefined)
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
@@ -486,6 +508,49 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [attemptConnection, connectionTool, selectOnlyNode],
   )
 
+  const handleConnectionHandleActivate = useCallback(
+    (
+      nodeId: string,
+      type: 'source' | 'target',
+      trigger: HTMLElement,
+    ) => {
+      if (type === 'source') {
+        placementTriggerRef.current = null
+        connectionTriggerRef.current = trigger
+        setConnectionFeedback(undefined)
+        setConnectionTool(
+          chooseConnectionNode(startConnectionTool(), nodeId).state,
+        )
+        setActiveTool('connect')
+        return
+      }
+
+      if (connectionTool.phase === 'selecting-target') {
+        const selection = chooseConnectionNode(connectionTool, nodeId)
+        if (
+          selection.connection &&
+          !attemptConnection(
+            selection.connection.sourceNodeId,
+            selection.connection.targetNodeId,
+            'tool',
+          )
+        ) {
+          setConnectionTool(selection.state)
+        }
+        return
+      }
+
+      if (connectionTool.phase === 'idle') {
+        placementTriggerRef.current = null
+        connectionTriggerRef.current = trigger
+        setConnectionFeedback(undefined)
+        setConnectionTool(startConnectionTool())
+        setActiveTool('connect')
+      }
+    },
+    [attemptConnection, connectionTool],
+  )
+
   useEffect(() => {
     if (connectionTool.phase === 'idle') return
     const handleEscape = (event: KeyboardEvent) => {
@@ -528,6 +593,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           actionsPlacement:
             node.position.x === rightmostX ? 'before' : 'after',
           onSelect: () => handleNodeSelection(node.id),
+          onHandleActivate: (type, trigger) =>
+            handleConnectionHandleActivate(node.id, type, trigger),
           onFocusComplete: () => {
             if (createdNodeFocusRef.current !== node.id) return
             createdNodeFocusRef.current = undefined
@@ -542,6 +609,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     handleAction,
     connectionTool,
     focusRequestVersion,
+    handleConnectionHandleActivate,
     handleNodeSelection,
     primaryNodeId,
     project,
@@ -580,8 +648,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       if (!edge || !disconnectNodes(edgeId)) return
       setSelectedEdgeId(undefined)
       queueMicrotask(() => {
-        const source = document.querySelector<HTMLElement>(
-          `[data-canvas-node-id="${edge.sourceNodeId}"]`,
+        const source = findCanvasNodeControl(
+          viewportRef.current,
+          edge.sourceNodeId,
         )
         const focusTarget = source ?? viewportRef.current
         focusTarget?.focus()
@@ -791,7 +860,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   const handleConnectStart = useCallback(() => {
     nativeConnectionActiveRef.current = true
-  }, [])
+    if (connectionTool.phase !== 'idle') cancelConnection(false)
+  }, [cancelConnection, connectionTool.phase])
 
   const cancelPlacement = useCallback((restoreFocus = true) => {
     const trigger = placementTriggerRef.current
@@ -994,9 +1064,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     nodeListSelectionMadeRef.current = false
     queueMicrotask(() => {
       if (selectionWasMade && nodeId) {
-        const candidate = document.querySelector<HTMLElement>(
-          `[data-canvas-node-id="${nodeId}"]`,
-        )
+        const candidate = findCanvasNodeControl(viewportRef.current, nodeId)
         candidate?.focus()
         return
       }

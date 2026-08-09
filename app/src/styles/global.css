@@ -1026,6 +1026,17 @@ select {
 .react-flow__edge-path.dependency-edge--changed {
   stroke: rgb(190 193 201 / 64%);
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.dependency-edge__interaction {
+  stroke: transparent;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+
+.react-flow__edgelabel-renderer {
+  z-index: 1001;
 }
 
 .react-flow__edge-path.dependency-edge--changed {
