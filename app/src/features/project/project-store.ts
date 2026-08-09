@@ -10,6 +10,10 @@ import {
   type Project,
   type TimelineItem,
 } from './model'
+import {
+  type ConnectionValidationResult,
+  validateDependencyConnection,
+} from './dependency-policy'
 import { ProjectRepository } from './project-repository'
 import type { GenerationResult } from '../generation/generation-adapter'
 import { reorderTimeline as reorderTimelineItems } from '../timeline/timeline-model'
@@ -41,7 +45,8 @@ interface ProjectStore {
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
   deleteNode: (nodeId: string) => void
-  connectNodes: (edge: DependencyEdge) => void
+  connectNodes: (edge: DependencyEdge) => ConnectionValidationResult
+  disconnectNodes: (edgeId: string) => boolean
   appendVersion: (
     nodeId: string,
     version: Omit<NodeVersion, 'id' | 'createdAt'>,
@@ -90,33 +95,21 @@ function findDownstream(project: Project, nodeId: string) {
   return { nodeIds, edgeIds }
 }
 
-function hasDependencyPath(
-  edges: DependencyEdge[],
-  sourceNodeId: string,
-  targetNodeId: string,
-) {
-  const outgoing = new Map<string, string[]>()
-  for (const edge of edges) {
-    const targets = outgoing.get(edge.sourceNodeId)
-    if (targets) targets.push(edge.targetNodeId)
-    else outgoing.set(edge.sourceNodeId, [edge.targetNodeId])
+function markDependencyConsumersChanged(project: Project, targetNodeId: string) {
+  const downstream = findDownstream(project, targetNodeId)
+  return {
+    ...project,
+    nodes: project.nodes.map((node) =>
+      node.id === targetNodeId || downstream.nodeIds.has(node.id)
+        ? { ...node, sourceChanged: true }
+        : node,
+    ),
+    edges: project.edges.map((edge) =>
+      downstream.edgeIds.has(edge.id)
+        ? { ...edge, sourceChanged: true }
+        : edge,
+    ),
   }
-
-  const visited = new Set([sourceNodeId])
-  const queue = [sourceNodeId]
-
-  for (let index = 0; index < queue.length; index += 1) {
-    const currentNodeId = queue[index]
-    if (currentNodeId === targetNodeId) return true
-
-    for (const nextNodeId of outgoing.get(currentNodeId) ?? []) {
-      if (visited.has(nextNodeId)) continue
-      visited.add(nextNodeId)
-      queue.push(nextNodeId)
-    }
-  }
-
-  return false
 }
 
 function replaceGenerationJob(jobs: GenerationJob[], job: GenerationJob) {
@@ -337,35 +330,45 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     connectNodes: (edge) => {
+      let result: ConnectionValidationResult = {
+        ok: false,
+        reason: 'missing-node',
+      }
       commit((project) => {
-        const nodeIds = new Set(project.nodes.map((node) => node.id))
-        const duplicatesExistingEdge = project.edges.some(
-          (existingEdge) =>
-            existingEdge.id === edge.id ||
-            (existingEdge.sourceNodeId === edge.sourceNodeId &&
-              existingEdge.targetNodeId === edge.targetNodeId),
-        )
-        const wouldCreateCycle = hasDependencyPath(
-          project.edges,
-          edge.targetNodeId,
-          edge.sourceNodeId,
-        )
-
-        if (
-          !nodeIds.has(edge.sourceNodeId) ||
-          !nodeIds.has(edge.targetNodeId) ||
-          edge.sourceNodeId === edge.targetNodeId ||
-          duplicatesExistingEdge ||
-          wouldCreateCycle
-        ) {
-          return project
-        }
-
-        return withUpdatedTimestamp({
+        result = project.edges.some(({ id }) => id === edge.id)
+          ? { ok: false, reason: 'duplicate' }
+          : validateDependencyConnection(
+              project,
+              edge.sourceNodeId,
+              edge.targetNodeId,
+            )
+        if (!result.ok) return project
+        const connected = {
           ...project,
           edges: [...project.edges, { ...edge, sourceChanged: false }],
-        })
+        }
+        return withUpdatedTimestamp(
+          markDependencyConsumersChanged(connected, edge.targetNodeId),
+        )
       })
+      return result
+    },
+
+    disconnectNodes: (edgeId) => {
+      let removed = false
+      commit((project) => {
+        const edge = project.edges.find(({ id }) => id === edgeId)
+        if (!edge) return project
+        removed = true
+        const disconnected = {
+          ...project,
+          edges: project.edges.filter(({ id }) => id !== edgeId),
+        }
+        return withUpdatedTimestamp(
+          markDependencyConsumersChanged(disconnected, edge.targetNodeId),
+        )
+      })
+      return removed
     },
 
     appendVersion: (nodeId, version) => {

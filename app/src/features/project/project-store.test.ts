@@ -277,6 +277,85 @@ describe('project store history and persistence', () => {
     expect(active?.timeline.some((item) => item.nodeId === 'shot-2')).toBe(false)
   })
 
+  test('connects and disconnects one dependency per history entry', () => {
+    const original = useProjectStore.getState().activeProject!
+    const text = {
+      ...original.nodes[0],
+      id: 'text-source',
+      kind: 'text' as const,
+      title: '文本来源',
+    }
+    const video = {
+      ...original.nodes[0],
+      id: 'video-consumer',
+      kind: 'video' as const,
+      title: '视频结果',
+    }
+    const project = {
+      ...original,
+      nodes: [text, { ...original.nodes[0], sourceChanged: false }, video],
+      edges: [
+        {
+          id: 'storyboard-video',
+          sourceNodeId: original.nodes[0].id,
+          targetNodeId: video.id,
+        },
+      ],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+
+    expect(
+      useProjectStore.getState().connectNodes({
+        id: 'text-storyboard',
+        sourceNodeId: text.id,
+        targetNodeId: original.nodes[0].id,
+      }),
+    ).toEqual({ ok: true })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(
+      useProjectStore.getState().activeProject?.nodes
+        .filter(({ sourceChanged }) => sourceChanged)
+        .map(({ id }) => id),
+    ).toEqual([original.nodes[0].id, video.id])
+
+    expect(useProjectStore.getState().disconnectNodes('text-storyboard')).toBe(
+      true,
+    )
+    expect(useProjectStore.getState().past).toHaveLength(2)
+    expect(useProjectStore.getState().activeProject?.edges).toEqual([
+      { ...project.edges[0], sourceChanged: true },
+    ])
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.edges.some(({ id }) => id === 'text-storyboard'),
+    ).toBe(true)
+  })
+
+  test('returns a reason and leaves state identity untouched for invalid changes', () => {
+    const before = useProjectStore.getState()
+    const result = before.connectNodes({
+      id: 'invalid',
+      sourceNodeId: 'shot-1',
+      targetNodeId: 'rain-audio',
+    })
+    expect(result).toEqual({ ok: false, reason: 'duplicate' })
+    expect(useProjectStore.getState().activeProject).toBe(before.activeProject)
+    expect(useProjectStore.getState().saveStatus).toBe('saved')
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().future).toEqual([])
+    expect(useProjectStore.getState().disconnectNodes('missing-edge')).toBe(false)
+    expect(useProjectStore.getState().activeProject).toBe(before.activeProject)
+  })
+
   test('undoes and redoes whole-project edits and a new edit clears the future', () => {
     useProjectStore
       .getState()
@@ -356,6 +435,154 @@ describe('project store history and persistence', () => {
       x: 120,
       y: 240,
     })
+  })
+
+  test('persists connected and disconnected dependencies through Dexie and undo', async () => {
+    const repository = createRepository()
+    const original = useProjectStore.getState().activeProject!
+    const text = {
+      ...original.nodes[0],
+      id: 'text-source',
+      kind: 'text' as const,
+      title: '文本来源',
+    }
+    const video = {
+      ...original.nodes[0],
+      id: 'video-consumer',
+      kind: 'video' as const,
+      title: '视频结果',
+    }
+    const project = {
+      ...original,
+      nodes: [text, { ...original.nodes[0], sourceChanged: false }, video],
+      edges: [
+        {
+          id: 'storyboard-video',
+          sourceNodeId: original.nodes[0].id,
+          targetNodeId: video.id,
+        },
+      ],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+
+    expect(
+      useProjectStore.getState().connectNodes({
+        id: 'text-storyboard',
+        sourceNodeId: text.id,
+        targetNodeId: original.nodes[0].id,
+      }),
+    ).toEqual({ ok: true })
+    await useProjectStore.getState().persistActive(repository)
+    useProjectStore.setState({
+      projectsById: {},
+      activeProjectId: undefined,
+      activeProject: undefined,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+    await useProjectStore.getState().hydrate(project.id, repository)
+    expect(useProjectStore.getState().activeProject?.edges.map(({ id }) => id)).toEqual([
+      'storyboard-video',
+      'text-storyboard',
+    ])
+    expect(
+      useProjectStore.getState().activeProject?.edges.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([
+      { id: 'storyboard-video', sourceChanged: true },
+      { id: 'text-storyboard', sourceChanged: false },
+    ])
+    expect(
+      useProjectStore.getState().activeProject?.nodes.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([
+      { id: 'text-source', sourceChanged: false },
+      { id: 'shot-1', sourceChanged: true },
+      { id: 'video-consumer', sourceChanged: true },
+    ])
+
+    expect(useProjectStore.getState().disconnectNodes('text-storyboard')).toBe(
+      true,
+    )
+    await useProjectStore.getState().persistActive(repository)
+    const disconnected = await repository.load(project.id)
+    expect(disconnected?.edges.map(({ id }) => id)).toEqual(['storyboard-video'])
+    expect(
+      disconnected?.edges.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([{ id: 'storyboard-video', sourceChanged: true }])
+    expect(
+      disconnected?.nodes.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([
+      { id: 'text-source', sourceChanged: false },
+      { id: 'shot-1', sourceChanged: true },
+      { id: 'video-consumer', sourceChanged: true },
+    ])
+
+    useProjectStore.getState().undo()
+    await useProjectStore.getState().persistActive(repository)
+    const undone = await repository.load(project.id)
+    expect(undone?.edges.map(({ id }) => id)).toEqual([
+      'storyboard-video',
+      'text-storyboard',
+    ])
+    expect(
+      undone?.edges.map(({ id, sourceChanged }) => ({ id, sourceChanged })),
+    ).toEqual([
+      { id: 'storyboard-video', sourceChanged: true },
+      { id: 'text-storyboard', sourceChanged: false },
+    ])
+    expect(
+      undone?.nodes.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([
+      { id: 'text-source', sourceChanged: false },
+      { id: 'shot-1', sourceChanged: true },
+      { id: 'video-consumer', sourceChanged: true },
+    ])
+
+    useProjectStore.getState().redo()
+    await useProjectStore.getState().persistActive(repository)
+    useProjectStore.setState({
+      projectsById: {},
+      activeProjectId: undefined,
+      activeProject: undefined,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+    await useProjectStore.getState().hydrate(project.id, repository)
+    expect(useProjectStore.getState().activeProject?.edges.map(({ id }) => id)).toEqual([
+      'storyboard-video',
+    ])
+    expect(
+      useProjectStore.getState().activeProject?.edges.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([{ id: 'storyboard-video', sourceChanged: true }])
+    expect(
+      useProjectStore.getState().activeProject?.nodes.map(
+        ({ id, sourceChanged }) => ({ id, sourceChanged }),
+      ),
+    ).toEqual([
+      { id: 'text-source', sourceChanged: false },
+      { id: 'shot-1', sourceChanged: true },
+      { id: 'video-consumer', sourceChanged: true },
+    ])
   })
 
   test('updateNode cannot replace immutable versions or select an unknown active version', () => {
@@ -465,6 +692,7 @@ describe('project store history and persistence', () => {
     const nodes = Array.from({ length: nodeCount }, (_, index): CanvasNode => ({
       ...base.nodes[0],
       id: `node-${index}`,
+      kind: index === 0 ? 'video' : 'storyboard',
       title: `Node ${index}`,
       position: { x: index * 10, y: 0 },
     }))

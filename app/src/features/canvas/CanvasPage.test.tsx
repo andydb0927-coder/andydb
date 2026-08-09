@@ -1095,7 +1095,7 @@ describe('creative canvas', () => {
     })
 
     act(() => {
-      latestFlowProps?.onConnect({ source: 'character', target: 'preview' })
+      latestFlowProps?.onConnect({ source: 'character', target: 'storyboard' })
     })
 
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(5)
