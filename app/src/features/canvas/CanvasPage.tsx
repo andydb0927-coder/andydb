@@ -139,6 +139,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
+  const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
     project ? 'ready' : 'loading',
@@ -150,6 +151,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const placementTriggerRef = useRef<HTMLButtonElement>(null)
+  const createdNodeFocusRef = useRef<string | undefined>(undefined)
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
   const nodeListSelectionMadeRef = useRef(false)
@@ -162,6 +164,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   useEffect(() => {
     setActiveTool('select')
     setPendingPlacement(undefined)
+    createdNodeFocusRef.current = undefined
+    setFocusRequestVersion((version) => version + 1)
     placementTriggerRef.current = null
   }, [projectId])
 
@@ -413,9 +417,16 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           job,
           selected,
           contextual: node.id === primaryNodeId,
+          focusOnMount: node.id === createdNodeFocusRef.current,
+          focusRequestVersion,
           actionsPlacement:
             node.position.x === rightmostX ? 'before' : 'after',
           onSelect: () => selectOnlyNode(node.id),
+          onFocusComplete: () => {
+            if (createdNodeFocusRef.current !== node.id) return
+            createdNodeFocusRef.current = undefined
+            setFocusRequestVersion((version) => version + 1)
+          },
           onDelete: (trigger) => requestDelete(node.id, trigger),
           onAction: (action) => handleAction(node.id, action),
         },
@@ -423,6 +434,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     })
   }, [
     handleAction,
+    focusRequestVersion,
     primaryNodeId,
     project,
     requestDelete,
@@ -672,18 +684,13 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         position: pendingPlacement.position,
         ...(value.image ? { image: value.image } : {}),
       })
+      createdNodeFocusRef.current = creation.node.id
+      setFocusRequestVersion((version) => version + 1)
       createCanvasContent(creation)
       selectOnlyNode(creation.node.id)
       setPendingPlacement(undefined)
       setActiveTool('select')
       placementTriggerRef.current = null
-      queueMicrotask(() => {
-        document
-          .querySelector<HTMLElement>(
-            `[data-canvas-node-id="${creation.node.id}"]`,
-          )
-          ?.focus()
-      })
     },
     [createCanvasContent, pendingPlacement, projectId, selectOnlyNode],
   )

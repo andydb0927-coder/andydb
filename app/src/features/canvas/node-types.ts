@@ -30,7 +30,10 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   asset?: Asset
   actionsPlacement: 'before' | 'after'
   contextual: boolean
+  focusOnMount: boolean
+  focusRequestVersion: number
   onSelect(): void
+  onFocusComplete(): void
   onDelete(trigger: HTMLButtonElement): void
 }
 

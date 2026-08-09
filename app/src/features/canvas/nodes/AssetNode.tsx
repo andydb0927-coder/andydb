@@ -3,6 +3,7 @@ import {
   Position,
   type NodeProps,
 } from '@xyflow/react'
+import { useEffect, useRef } from 'react'
 import {
   Clapperboard,
   Film,
@@ -106,11 +107,51 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
 }
 
 export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
-  const { node, asset, job, selected, contextual } = data
+  const {
+    node,
+    asset,
+    job,
+    selected,
+    contextual,
+    focusOnMount,
+    onFocusComplete,
+  } = data
+  const selectRef = useRef<HTMLButtonElement>(null)
   const KindIcon = kindIcons[node.kind]
   const activeVersion = node.versions.find(
     (version) => version.id === node.activeVersionId,
   )
+
+  useEffect(() => {
+    if (!focusOnMount) return
+    let animationFrame: number
+
+    const focusWhenVisible = () => {
+      const select = selectRef.current
+      const flowNode = select?.closest<HTMLElement>('.react-flow__node')
+      const canReceiveFocus = Boolean(
+        select?.isConnected &&
+          flowNode &&
+          getComputedStyle(flowNode).visibility !== 'hidden' &&
+          getComputedStyle(flowNode).display !== 'none' &&
+          !select.closest('[inert]'),
+      )
+      if (!select || !canReceiveFocus) {
+        animationFrame = requestAnimationFrame(focusWhenVisible)
+        return
+      }
+
+      select.focus({ preventScroll: true })
+      if (document.activeElement === select) {
+        onFocusComplete()
+        return
+      }
+      animationFrame = requestAnimationFrame(focusWhenVisible)
+    }
+
+    animationFrame = requestAnimationFrame(focusWhenVisible)
+    return () => cancelAnimationFrame(animationFrame)
+  }, [focusOnMount, onFocusComplete])
 
   return (
     <div className="creative-node-layout">
@@ -121,6 +162,7 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
       >
         <Handle type="target" position={Position.Left} />
         <button
+          ref={selectRef}
           type="button"
           className="creative-node__select"
           aria-label={node.title}

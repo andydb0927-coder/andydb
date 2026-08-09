@@ -65,12 +65,13 @@ vi.mock('@xyflow/react', () => ({
         {props.nodes.map((node) => {
           const Node = props.nodeTypes[node.type ?? 'asset']
           return (
-            <Node
-              key={node.id}
-              id={node.id}
-              data={node.data}
-              selected={node.selected ?? false}
-            />
+            <div key={node.id} className="react-flow__node">
+              <Node
+                id={node.id}
+                data={node.data}
+                selected={node.selected ?? false}
+              />
+            </div>
           )
         })}
       </div>
@@ -627,6 +628,90 @@ describe('creative canvas', () => {
       expect(rehydrated?.jobs).toEqual(saved?.jobs)
     } finally {
       view.unmount()
+      rehydratedView?.unmount()
+      database.close()
+      await Dexie.delete(database.name)
+    }
+  })
+
+  test('reloads toolbar-created image content from real Dexie persistence', async () => {
+    const user = userEvent.setup()
+    const database = new WirelessCanvasDatabase(
+      `wireless-canvas-toolbar-image-${crypto.randomUUID()}`,
+    )
+    const repository = new ProjectRepository(database)
+    const firstView = renderCanvas({ repository })
+    let rehydratedView: ReturnType<typeof renderCanvas> | undefined
+
+    try {
+      initializeFlow({ x: 612, y: 428 })
+      await user.click(screen.getByRole('button', { name: '图片' }))
+      clickPane(360, 280)
+      await user.upload(
+        screen.getByLabelText('本地图片'),
+        new File(['durable-image-bytes'], 'durable.png', {
+          type: 'image/png',
+        }),
+      )
+      await user.clear(screen.getByLabelText('标题'))
+      await user.type(screen.getByLabelText('标题'), '持久图片参考')
+      await user.type(
+        screen.getByLabelText('图片描述（选填）'),
+        '雨夜玻璃窗后的侧脸',
+      )
+      await user.click(screen.getByRole('button', { name: '确认创建' }))
+      await waitFor(() => {
+        expect(useProjectStore.getState().saveStatus).toBe('saved')
+      })
+
+      const saved = await repository.load('project-canvas')
+      const savedNode = saved?.nodes.find(
+        ({ title }) => title === '持久图片参考',
+      )
+      const savedVersion = savedNode?.versions.find(
+        ({ id }) => id === savedNode.activeVersionId,
+      )
+      const savedAsset = saved?.assets.find(
+        ({ id }) => id === savedVersion?.assetId,
+      )
+      expect(savedNode?.position).toEqual({ x: 612, y: 428 })
+      expect(savedVersion?.prompt).toBe('雨夜玻璃窗后的侧脸')
+      expect(savedAsset).toMatchObject({
+        kind: 'image',
+        mimeType: 'image/png',
+        url: expect.stringMatching(/^data:image\/png;base64,/),
+      })
+
+      firstView.unmount()
+      act(() => {
+        useProjectStore.setState({
+          projectsById: {},
+          activeProjectId: undefined,
+          activeProject: undefined,
+          saveStatus: 'saved',
+          past: [],
+          future: [],
+        })
+      })
+      rehydratedView = renderCanvas({ repository })
+
+      expect(
+        await screen.findByRole('button', { name: '持久图片参考' }),
+      ).toBeVisible()
+      const rehydrated = useProjectStore.getState().activeProject
+      const rehydratedNode = rehydrated?.nodes.find(
+        ({ id }) => id === savedNode?.id,
+      )
+      const rehydratedVersion = rehydratedNode?.versions.find(
+        ({ id }) => id === rehydratedNode.activeVersionId,
+      )
+      expect(rehydratedNode?.position).toEqual({ x: 612, y: 428 })
+      expect(rehydratedVersion).toEqual(savedVersion)
+      expect(
+        rehydrated?.assets.find(({ id }) => id === rehydratedVersion?.assetId),
+      ).toEqual(savedAsset)
+    } finally {
+      firstView.unmount()
       rehydratedView?.unmount()
       database.close()
       await Dexie.delete(database.name)
