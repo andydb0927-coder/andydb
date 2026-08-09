@@ -136,9 +136,10 @@ test('keeps the full delete control inside a 721 by 778 viewport after pan and z
   expect(match).not.toBeNull()
   const screenCenterX = 500 + Number(match![1]) * 2
   const screenCenterY = 400 + Number(match![2]) * 2
+  const renderedHalfSize = 16 * 2
 
-  expect(screenCenterX - 16).toBeGreaterThanOrEqual(0)
-  expect(screenCenterX + 16).toBeLessThanOrEqual(721)
-  expect(screenCenterY - 16).toBeGreaterThanOrEqual(0)
-  expect(screenCenterY + 16).toBeLessThanOrEqual(778)
+  expect(screenCenterX - renderedHalfSize).toBeGreaterThanOrEqual(0)
+  expect(screenCenterX + renderedHalfSize).toBeLessThanOrEqual(721)
+  expect(screenCenterY - renderedHalfSize).toBeGreaterThanOrEqual(0)
+  expect(screenCenterY + renderedHalfSize).toBeLessThanOrEqual(778)
 })

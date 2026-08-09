@@ -10,11 +10,11 @@ async function createCinematicProject(page: import('@playwright/test').Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
-async function clickBlankCanvas(
+async function findBlankCanvasPoint(
   page: import('@playwright/test').Page,
   fromBottomRight = false,
 ) {
-  const point = await page.locator('.react-flow__pane').evaluate(
+  return page.locator('.react-flow__pane').evaluate(
     (pane, reverse) => {
       const rect = pane.getBoundingClientRect()
       const xs: number[] = []
@@ -44,6 +44,13 @@ async function clickBlankCanvas(
     fromBottomRight,
   )
 
+}
+
+async function clickBlankCanvas(
+  page: import('@playwright/test').Page,
+  fromBottomRight = false,
+) {
+  const point = await findBlankCanvasPoint(page, fromBottomRight)
   await page.mouse.click(point.x, point.y)
 }
 
@@ -101,14 +108,22 @@ test('selects and deletes a toolbar-created dependency edge', async ({ page }) =
   const deleteAction = page.getByRole('button', {
     name: '删除连接：角色参考 → 视频 01',
   })
-  await page.getByRole('button', { name: 'Zoom In' }).click()
-  await page.getByRole('button', { name: 'Zoom In' }).click()
+  const zoomIn = page.getByRole('button', { name: 'Zoom In' })
+  while (await zoomIn.isEnabled()) await zoomIn.click()
+  const panStart = await findBlankCanvasPoint(page)
+  await page.keyboard.down('Space')
+  await page.mouse.move(panStart.x, panStart.y)
+  await page.mouse.down()
+  await page.mouse.move(710, panStart.y, { steps: 10 })
+  await page.mouse.up()
+  await page.keyboard.up('Space')
   const actionBox = await deleteAction.boundingBox()
   expect(actionBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(721)
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(778)
+  expect(actionBox!.x + actionBox!.width).toBeGreaterThanOrEqual(700)
   await deleteAction.click()
   await expect(edge).toBeHidden()
   await expect(page.getByRole('button', { name: '角色参考' })).toBeFocused()

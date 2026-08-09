@@ -9,7 +9,8 @@ import { Trash2 } from 'lucide-react'
 
 import type { DependencyFlowEdge } from './edge-types'
 
-const DELETE_CONTROL_INSET = 24
+const DELETE_CONTROL_HALF_SIZE = 16
+const DELETE_CONTROL_GUTTER = 8
 const NARROW_BOTTOM_RESERVE = 180
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -25,18 +26,19 @@ function clampLabelToContainer(
   const [viewportX, viewportY, zoom] = viewport
   if (zoom <= 0) return [labelX, labelY] as const
 
+  const controlInset = DELETE_CONTROL_HALF_SIZE * zoom + DELETE_CONTROL_GUTTER
   const screenX = bounds.left + viewportX + labelX * zoom
   const screenY = bounds.top + viewportY + labelY * zoom
-  const minimumX = bounds.left + DELETE_CONTROL_INSET
+  const minimumX = bounds.left + controlInset
   const maximumX = Math.max(
     minimumX,
-    bounds.right - DELETE_CONTROL_INSET,
+    bounds.right - controlInset,
   )
-  const minimumY = bounds.top + DELETE_CONTROL_INSET
+  const minimumY = bounds.top + controlInset
   const narrow = bounds.right - bounds.left <= 800
   const bottomInset = narrow
-    ? NARROW_BOTTOM_RESERVE
-    : DELETE_CONTROL_INSET
+    ? Math.max(NARROW_BOTTOM_RESERVE, controlInset)
+    : controlInset
   const maximumY = Math.max(minimumY, bounds.bottom - bottomInset)
   const clampedScreenX = clamp(screenX, minimumX, maximumX)
   const clampedScreenY = clamp(screenY, minimumY, maximumY)
