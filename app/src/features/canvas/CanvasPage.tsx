@@ -714,7 +714,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const handleConnectEnd: OnConnectEnd = useCallback(
     (_event, state) => {
       if (state.isValid || !state.fromNode || !state.toNode) return
-      attemptConnection(state.fromNode.id, state.toNode.id, 'drag')
+      const startsFromTarget = state.fromHandle?.type === 'target'
+      attemptConnection(
+        startsFromTarget ? state.toNode.id : state.fromNode.id,
+        startsFromTarget ? state.fromNode.id : state.toNode.id,
+        'drag',
+      )
     },
     [attemptConnection],
   )
@@ -884,6 +889,26 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     project && deleteCandidate
       ? downstreamConsumers(project, deleteCandidate.id)
       : []
+  const placementHint =
+    project && isCreatableTool(activeTool) && !pendingPlacement
+      ? `点击画布放置${
+          activeTool === 'text'
+            ? '文本'
+            : activeTool === 'image'
+              ? '图片'
+              : activeTool === 'storyboard'
+                ? '分镜'
+                : '视频'
+        }节点`
+      : undefined
+  const connectionHint =
+    connectionTool.phase === 'selecting-source'
+      ? '请选择来源节点'
+      : connectionTool.phase === 'selecting-target'
+        ? '请选择目标节点'
+        : undefined
+  const canvasHint = connectionFeedback ?? connectionHint ?? placementHint
+  const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
 
   const cancelDelete = () => {
     setDeleteCandidateId(undefined)
@@ -935,7 +960,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
             const target = event.target
             if (
               target instanceof Element &&
-              target.closest('[data-canvas-node-id]')
+              target.closest(
+                'button, a, input, textarea, select, [role="button"], [contenteditable="true"], .creative-node-actions, .react-flow__handle',
+              )
             ) {
               return
             }
@@ -961,29 +988,19 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           draftOpen={Boolean(pendingPlacement)}
           onToolChange={handleToolChange}
         />
-        {project && isCreatableTool(activeTool) && !pendingPlacement ? (
-          <p className="canvas-placement-hint" role="status">
-            点击画布放置{activeTool === 'text'
-              ? '文本'
-              : activeTool === 'image'
-                ? '图片'
-                : activeTool === 'storyboard'
-                  ? '分镜'
-                  : '视频'}节点
-          </p>
-        ) : null}
-        {connectionTool.phase !== 'idle' || connectionFeedback ? (
+        {canvasHint ? (
           <p
-            className={`canvas-connection-hint${
+            className={`${
+              canvasHintIsConnection
+                ? 'canvas-connection-hint'
+                : 'canvas-placement-hint'
+            }${
               connectionFeedback ? ' canvas-connection-hint--error' : ''
             }`}
             role="status"
             aria-live="polite"
           >
-            {connectionFeedback ??
-              (connectionTool.phase === 'selecting-source'
-                ? '请选择来源节点'
-                : '请选择目标节点')}
+            {canvasHint}
           </p>
         ) : null}
         {project && pendingPlacement ? (

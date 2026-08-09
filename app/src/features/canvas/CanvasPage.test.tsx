@@ -45,6 +45,7 @@ interface FlowPropsFixture {
       isValid: boolean
       fromNode?: { id: string }
       toNode?: { id: string }
+      fromHandle?: { type: 'source' | 'target' }
     },
   ): void
   zoomOnScroll: boolean
@@ -1268,6 +1269,94 @@ describe('creative canvas', () => {
       'true',
     )
     expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('normalizes an invalid drag that starts from a target handle', async () => {
+    let finishSave: (() => void) | undefined
+    const save = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = resolve
+        }),
+    )
+    const originalProject = useProjectStore.getState().activeProject
+    renderCanvas({ repository: { load: async () => undefined, save } })
+
+    act(() => {
+      latestFlowProps?.onConnectEnd?.({}, {
+        isValid: false,
+        fromNode: { id: 'character' },
+        toNode: { id: 'storyboard' },
+        fromHandle: { type: 'target' },
+      })
+    })
+    try {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        '此连接会形成循环依赖',
+      )
+      expect(useProjectStore.getState()).toMatchObject({
+        activeProject: originalProject,
+        past: [],
+        saveStatus: 'saved',
+      })
+      expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
+      expect(save).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await Promise.resolve()
+        finishSave?.()
+        await Promise.resolve()
+      })
+    }
+  })
+
+  test('ignores node action controls while choosing a connection source', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    const regenerate = screen.getByRole('button', { name: '重生成' })
+    await user.click(screen.getByRole('button', { name: '连线' }))
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+
+    await user.click(regenerate)
+    act(() => {
+      latestFlowProps?.onNodeClick?.(
+        { target: regenerate },
+        latestFlowProps.nodes.find(({ id }) => id === 'character')!,
+      )
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(
+      latestFlowProps?.nodes.some(
+        (node) => node.data.connectionSource === true,
+      ),
+    ).toBe(false)
+    expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('prioritizes one connection error over an active placement hint', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '文本' }))
+    expect(screen.getByRole('status')).toHaveTextContent('点击画布放置文本节点')
+
+    act(() => {
+      latestFlowProps?.onConnectEnd?.({}, {
+        isValid: false,
+        fromNode: { id: 'storyboard' },
+        toNode: { id: 'character' },
+        fromHandle: { type: 'source' },
+      })
+    })
+
+    const statuses = screen.getAllByRole('status')
+    expect(statuses).toHaveLength(1)
+    expect(statuses[0]).toHaveTextContent('此连接会形成循环依赖')
+    expect(statuses[0]).toHaveClass('canvas-connection-hint--error')
+    expect(useProjectStore.getState().past).toEqual([])
   })
 
   test('cancels toolbar connection selection from a blank pane without history', async () => {
