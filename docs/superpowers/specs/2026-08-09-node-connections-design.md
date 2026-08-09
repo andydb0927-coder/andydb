@@ -1,7 +1,7 @@
 # 无线画布节点连线设计规格
 
 日期：2026-08-09
-状态：交互设计已批准，待书面规格复核
+状态：已批准
 范围：项目画布中的生成依赖连线
 
 ## 1. 目标
@@ -61,10 +61,12 @@
 
 ## 4. 新连接兼容规则
 
-`preview` 是现有项目中的素材预览节点，本轮在连接规则中按图片素材处理。
+`character`、`scene` 和 `preview` 是现有项目中的素材类节点，本轮在连接规则中按图片素材处理。
 
 | 来源节点 | 允许的目标节点 |
 |---|---|
+| 角色参考 `character` | 分镜 `storyboard`、视频 `video` |
+| 场景设定 `scene` | 分镜 `storyboard`、视频 `video` |
 | 文本 `text` | 分镜 `storyboard`、视频 `video` |
 | 图片 `image` | 分镜 `storyboard`、视频 `video` |
 | 素材预览 `preview` | 分镜 `storyboard`、视频 `video` |
