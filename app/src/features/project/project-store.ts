@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import {
   appendNodeVersion,
+  type CanvasCreation,
   type CanvasNode,
   type DependencyEdge,
   type GenerationJob,
@@ -34,6 +35,7 @@ interface ProjectStore {
   past: Project[]
   future: Project[]
   addNode: (node: CanvasNode) => void
+  createCanvasContent: (creation: CanvasCreation) => void
   updateNode: (nodeId: string, changes: NodeUpdates) => void
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
@@ -237,6 +239,24 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       commit((project) =>
         withUpdatedTimestamp({ ...project, nodes: [...project.nodes, node] }),
       )
+    },
+
+    createCanvasContent: ({ node, asset }) => {
+      commit((project) => {
+        const nodeConflict = project.nodes.some(
+          (candidate) => candidate.id === node.id,
+        )
+        const assetConflict =
+          asset !== undefined &&
+          project.assets.some((candidate) => candidate.id === asset.id)
+        if (nodeConflict || assetConflict) return project
+
+        return withUpdatedTimestamp({
+          ...project,
+          assets: asset ? [...project.assets, asset] : project.assets,
+          nodes: [...project.nodes, node],
+        })
+      })
     },
 
     updateNode: (nodeId, changes) => {

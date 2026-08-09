@@ -5,6 +5,7 @@ import { makeProjectFixture } from '../../test/fixtures'
 import {
   appendNodeVersion,
   createProject,
+  type Asset,
   type CanvasNode,
   type DependencyEdge,
 } from './model'
@@ -135,6 +136,98 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('creates canvas content atomically through undo and redo', () => {
+    const originalProject = useProjectStore.getState().activeProject!
+    const node: CanvasNode = {
+      id: 'image-created',
+      kind: 'image',
+      title: '图片 01',
+      position: { x: 420, y: 300 },
+      versions: [
+        {
+          id: 'version-image-created',
+          createdAt: '2026-08-09T08:00:00.000Z',
+          prompt: '雨夜参考',
+          assetId: 'asset-image-created',
+        },
+      ],
+      activeVersionId: 'version-image-created',
+      sourceChanged: false,
+    }
+    const asset: Asset = {
+      id: 'asset-image-created',
+      kind: 'image',
+      url: 'data:image/png;base64,AA==',
+      mimeType: 'image/png',
+    }
+
+    useProjectStore.getState().createCanvasContent({ node, asset })
+
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toEqual(node)
+    expect(useProjectStore.getState().activeProject?.assets.at(-1)).toEqual(
+      asset,
+    )
+    expect(useProjectStore.getState().past).toEqual([originalProject])
+    expect(useProjectStore.getState().future).toEqual([])
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.some(({ id }) => id === node.id),
+    ).toBe(false)
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.assets.some(({ id }) => id === asset.id),
+    ).toBe(false)
+
+    useProjectStore.getState().redo()
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.some(({ id }) => id === node.id),
+    ).toBe(true)
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.assets.some(({ id }) => id === asset.id),
+    ).toBe(true)
+  })
+
+  test.each([
+    ['node', 'shot-1', 'asset-new'],
+    ['asset', 'node-new', 'asset-shot-river-v1'],
+  ] as const)(
+    'rejects a duplicate canvas %s ID without changing project history',
+    (_conflict, nodeId, assetId) => {
+      const originalProject = useProjectStore.getState().activeProject
+      const node: CanvasNode = {
+        id: nodeId,
+        kind: 'image',
+        title: '冲突图片',
+        position: { x: 420, y: 300 },
+        versions: [],
+        activeVersionId: '',
+        sourceChanged: false,
+      }
+      const asset: Asset = {
+        id: assetId,
+        kind: 'image',
+        url: 'data:image/png;base64,AA==',
+        mimeType: 'image/png',
+      }
+
+      useProjectStore.getState().createCanvasContent({ node, asset })
+
+      expect(useProjectStore.getState().activeProject).toBe(originalProject)
+      expect(useProjectStore.getState().past).toEqual([])
+      expect(useProjectStore.getState().future).toEqual([])
+      expect(useProjectStore.getState().saveStatus).toBe('saved')
+    },
+  )
+
   test('applies add, connect, version, timeline, reorder, and delete as immutable edits', () => {
     const newNode: CanvasNode = {
       id: 'shot-2',
