@@ -29,13 +29,6 @@ export interface CanvasToolbarProps {
   onToolChange(tool: CanvasTool, trigger: HTMLButtonElement): void
 }
 
-const creatableTools = new Set<CanvasTool>([
-  'text',
-  'image',
-  'storyboard',
-  'video',
-])
-
 export function CanvasToolbar({
   activeTool,
   disabled = false,
@@ -45,12 +38,12 @@ export function CanvasToolbar({
   return (
     <FloatingPanel className="canvas-toolbar" role="toolbar" aria-label="创作工具">
       {tools.map(({ id, label, icon: Icon }) => {
-        const unavailable = id === 'connect' || id === 'group'
+        const unavailable = id === 'group'
         const toolDisabled =
-          disabled || unavailable || (draftOpen && creatableTools.has(id))
+          disabled || unavailable || (draftOpen && id !== 'select')
         const title = unavailable
           ? `${label}将在后续版本提供`
-          : draftOpen && creatableTools.has(id)
+          : draftOpen && id !== 'select'
             ? '请先完成或取消当前节点'
             : label
 

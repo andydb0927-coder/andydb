@@ -158,9 +158,16 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
       <article
         className={`creative-node creative-node--${node.kind}${
           selected ? ' creative-node--selected' : ''
-        }${node.sourceChanged ? ' creative-node--changed' : ''}`}
+        }${node.sourceChanged ? ' creative-node--changed' : ''}${
+          data.connectionMode ? ' creative-node--connection-mode' : ''
+        }${data.connectionSource ? ' creative-node--connection-source' : ''}`}
       >
-        <Handle type="target" position={Position.Left} />
+        <Handle
+          id="dependency-target"
+          type="target"
+          position={Position.Left}
+          aria-label={`连接到${node.title}`}
+        />
         <button
           ref={selectRef}
           type="button"
@@ -192,7 +199,12 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
-        <Handle type="source" position={Position.Right} />
+        <Handle
+          id="dependency-source"
+          type="source"
+          position={Position.Right}
+          aria-label={`从${node.title}建立连接`}
+        />
       </article>
       {contextual ? <NodeActions data={data} /> : null}
     </div>
