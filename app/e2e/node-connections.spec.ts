@@ -53,6 +53,113 @@ async function clickBlankCanvas(
   await page.mouse.click(point.x, point.y)
 }
 
+async function readCanvasZoom(page: import('@playwright/test').Page) {
+  return page.locator('.react-flow__viewport').evaluate((viewport) => {
+    const match = viewport.getAttribute('style')?.match(/scale\(([-\d.]+)\)/)
+    return match ? Number(match[1]) : 0
+  })
+}
+
+async function setCanvasZoom(
+  page: import('@playwright/test').Page,
+  targetZoom: number,
+) {
+  const currentZoom = await readCanvasZoom(page)
+  const point = await findBlankCanvasPoint(page)
+  await page.mouse.move(point.x, point.y)
+  await page.mouse.wheel(
+    0,
+    -Math.log2(targetZoom / currentZoom) / 0.002,
+  )
+  await expect.poll(() => readCanvasZoom(page)).toBeCloseTo(targetZoom, 2)
+}
+
+async function measureEdgeHitBand(
+  edge: import('@playwright/test').Locator,
+  expectedEdgeLabel: string,
+) {
+  return edge.locator('.dependency-edge__interaction').evaluate(
+    (element, label) => {
+      const path = element as SVGPathElement
+      const matrix = path.getScreenCTM()
+      const length = path.getTotalLength()
+      if (!matrix || length === 0) {
+        throw new Error('Dependency edge path is not measurable')
+      }
+
+      const edgeAt = (x: number, y: number) =>
+        document
+          .elementFromPoint(x, y)
+          ?.closest('.react-flow__edge')
+          ?.getAttribute('aria-label') ?? null
+      const isBlockedAt = (x: number, y: number) =>
+        Boolean(
+          document
+            .elementFromPoint(x, y)
+            ?.closest(
+              '.react-flow__node, .canvas-toolbar, .director-composer, .react-flow__controls, .dependency-edge__delete',
+            ),
+        )
+      const diagnostics: Array<Record<string, unknown>> = []
+
+      for (let index = 3; index <= 17; index += 1) {
+        const pathLength = (length * index) / 20
+        const pathPoint = path.getPointAtLength(pathLength)
+        const before = path.getPointAtLength(Math.max(0, pathLength - 1))
+        const after = path.getPointAtLength(Math.min(length, pathLength + 1))
+        const screenPoint = new DOMPoint(pathPoint.x, pathPoint.y).matrixTransform(
+          matrix,
+        )
+        const screenBefore = new DOMPoint(before.x, before.y).matrixTransform(
+          matrix,
+        )
+        const screenAfter = new DOMPoint(after.x, after.y).matrixTransform(matrix)
+        const tangentX = screenAfter.x - screenBefore.x
+        const tangentY = screenAfter.y - screenBefore.y
+        const tangentLength = Math.hypot(tangentX, tangentY)
+        if (tangentLength === 0) continue
+        const normalX = -tangentY / tangentLength
+        const normalY = tangentX / tangentLength
+
+        for (const direction of [1, -1]) {
+          const at11 = {
+            x: screenPoint.x + normalX * 11 * direction,
+            y: screenPoint.y + normalY * 11 * direction,
+          }
+          const at13 = {
+            x: screenPoint.x + normalX * 13 * direction,
+            y: screenPoint.y + normalY * 13 * direction,
+          }
+          const centerEdge = edgeAt(screenPoint.x, screenPoint.y)
+          const edge11 = edgeAt(at11.x, at11.y)
+          const edge13 = edgeAt(at13.x, at13.y)
+          const hasAdjacentEdge =
+            (edge11 !== null && edge11 !== label) ||
+            (edge13 !== null && edge13 !== label)
+          if (
+            centerEdge === label &&
+            !hasAdjacentEdge &&
+            !isBlockedAt(at13.x, at13.y)
+          ) {
+            return { at11, at13, edge11, edge13 }
+          }
+          if (diagnostics.length < 10) {
+            diagnostics.push({ centerEdge, edge11, edge13, hasAdjacentEdge })
+          }
+        }
+      }
+
+      throw new Error(
+        `No isolated dependency edge boundary point found: ${JSON.stringify({
+          expectedEdgeLabel: label,
+          diagnostics,
+        })}`,
+      )
+    },
+    expectedEdgeLabel,
+  )
+}
+
 async function dragHandle(
   page: import('@playwright/test').Page,
   source: import('@playwright/test').Locator,
@@ -469,6 +576,39 @@ test('keeps edge hit and delete targets screen-sized at Fit View and minZoom', a
     height: 778,
   })
 })
+
+for (const zoom of [0.35, 1, 1.8]) {
+  test(`keeps the dependency edge hit band at 24px at zoom ${zoom}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1024 })
+    await createCinematicProject(page)
+    await setCanvasZoom(page, zoom)
+    await expect.poll(() => readCanvasZoom(page)).toBeCloseTo(zoom, 2)
+
+    const edgeLabel = '场景设定 → 分镜 01'
+    const edge = page.getByLabel(edgeLabel, { exact: true })
+    const deleteAction = page.getByRole('button', {
+      name: `删除连接：${edgeLabel}`,
+    })
+    const points = await measureEdgeHitBand(edge, edgeLabel)
+
+    expect(points.edge11, '11px must hit the intended edge').toBe(edgeLabel)
+    expect(points.edge13, '13px must not hit this or an adjacent edge').toBeNull()
+
+    await page.mouse.click(points.at11.x, points.at11.y)
+    await expect(deleteAction).toBeVisible()
+    const actionBox = await deleteAction.boundingBox()
+    expect(actionBox).not.toBeNull()
+    expect(actionBox!.width).toBeGreaterThanOrEqual(32)
+    expect(actionBox!.height).toBeGreaterThanOrEqual(32)
+
+    await clickBlankCanvas(page, true)
+    await expect(deleteAction).toBeHidden()
+    await page.mouse.click(points.at13.x, points.at13.y)
+    await expect(page.locator('.dependency-edge__delete')).toHaveCount(0)
+  })
+}
 
 test('cancels active toolbar choices before native handle drags', async ({
   page,

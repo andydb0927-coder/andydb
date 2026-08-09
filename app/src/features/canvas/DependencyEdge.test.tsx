@@ -80,44 +80,54 @@ test('renders the selected edge delete action at the path label point', async ()
   expect(onDelete).toHaveBeenCalledWith('edge-a-b')
 })
 
-test('keeps visible and 24px interaction strokes in screen space', () => {
-  const { container } = render(
-    <DependencyEdge
-      id="edge-a-b"
-      source="a"
-      target="b"
-      sourceX={0}
-      sourceY={0}
-      targetX={100}
-      targetY={100}
-      sourcePosition={Position.Right}
-      targetPosition={Position.Left}
-      selected={false}
-      data={{
-        sourceChanged: false,
-        ariaLabel: '角色参考 → 分镜 01',
-        onDelete: vi.fn(),
-      }}
-    />,
-  )
+test.each([
+  { zoom: 0.35, graphStrokeWidth: 68.57142857142857 },
+  { zoom: 1, graphStrokeWidth: 24 },
+  { zoom: 1.8, graphStrokeWidth: 13.333333333333332 },
+])(
+  'applies a $graphStrokeWidth graph-space interaction stroke at zoom $zoom',
+  ({ zoom, graphStrokeWidth }) => {
+    flowStore.transform = [0, 0, zoom]
+    const { container } = render(
+      <DependencyEdge
+        id="edge-a-b"
+        source="a"
+        target="b"
+        sourceX={0}
+        sourceY={0}
+        targetX={100}
+        targetY={100}
+        sourcePosition={Position.Right}
+        targetPosition={Position.Left}
+        selected={false}
+        data={{
+          sourceChanged: false,
+          ariaLabel: '角色参考 → 分镜 01',
+          onDelete: vi.fn(),
+        }}
+      />,
+    )
 
-  expect(screen.getByTestId('dependency-visible-path')).toHaveAttribute(
-    'vector-effect',
-    'non-scaling-stroke',
-  )
-  expect(screen.getByTestId('dependency-visible-path')).toHaveAttribute(
-    'data-interaction-width',
-    '0',
-  )
-  const interaction = container.querySelector(
-    '.dependency-edge__interaction',
-  )
-  expect(interaction).toHaveAttribute('stroke-width', '24')
-  expect(interaction).toHaveAttribute(
-    'vector-effect',
-    'non-scaling-stroke',
-  )
-})
+    expect(screen.getByTestId('dependency-visible-path')).toHaveAttribute(
+      'vector-effect',
+      'non-scaling-stroke',
+    )
+    expect(screen.getByTestId('dependency-visible-path')).toHaveAttribute(
+      'data-interaction-width',
+      '0',
+    )
+    const interaction = container.querySelector(
+      '.dependency-edge__interaction',
+    )
+    expect(
+      Number(interaction?.getAttribute('stroke-width')),
+    ).toBeCloseTo(graphStrokeWidth, 8)
+    expect(interaction).toHaveAttribute(
+      'vector-effect',
+      'non-scaling-stroke',
+    )
+  },
+)
 
 test('inverse-scales the selected delete action at minZoom', () => {
   flowStore.transform = [100, 80, 0.35]
@@ -137,7 +147,7 @@ test('inverse-scales the selected delete action at minZoom', () => {
   bezierPath.labelX = 500
   bezierPath.labelY = 500
 
-  const { container } = render(
+  render(
     <DependencyEdge
       id="edge-a-b"
       source="a"
@@ -162,13 +172,6 @@ test('inverse-scales the selected delete action at minZoom', () => {
     .style.transform.match(/scale\(([\d.]+)\)/)
   expect(scale).not.toBeNull()
   expect(Number(scale![1])).toBeCloseTo(1 / 0.35, 6)
-  expect(
-    Number(
-      container
-        .querySelector('.dependency-edge__interaction')
-        ?.getAttribute('stroke-width'),
-    ) * 0.35,
-  ).toBeCloseTo(24, 6)
 })
 
 test('does not render the edge delete action until selected', () => {
