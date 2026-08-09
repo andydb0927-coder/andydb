@@ -417,6 +417,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           job,
           selected,
           contextual: node.id === primaryNodeId,
+          connectionMode: false,
+          connectionSource: false,
           focusOnMount: node.id === createdNodeFocusRef.current,
           focusRequestVersion,
           actionsPlacement:

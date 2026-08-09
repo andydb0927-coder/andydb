@@ -1083,6 +1083,18 @@ describe('creative canvas', () => {
     )
   })
 
+  test('supplies inactive connection state to every canvas node', () => {
+    renderCanvas()
+
+    expect(latestFlowProps?.nodes).toHaveLength(5)
+    for (const node of latestFlowProps?.nodes ?? []) {
+      expect(node.data).toMatchObject({
+        connectionMode: false,
+        connectionSource: false,
+      })
+    }
+  })
+
   test('keeps dependency creation out of the timeline and configures real canvas gestures', () => {
     renderCanvas()
 
