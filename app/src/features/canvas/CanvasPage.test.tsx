@@ -407,6 +407,78 @@ describe('creative canvas', () => {
     expect(screen.queryByRole('button', { name: '加入时间线' })).not.toBeInTheDocument()
   })
 
+  test('renders text and image kinds with compatible actions in canvas and node list', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const textNode: Project['nodes'][number] = {
+      id: 'text-created',
+      kind: 'text',
+      title: '文本 01',
+      position: { x: 1600, y: 720 },
+      versions: [
+        {
+          id: 'version-text-created',
+          createdAt: '2026-08-06T08:05:00.000Z',
+          prompt: '雨落在旧车站',
+        },
+      ],
+      activeVersionId: 'version-text-created',
+      sourceChanged: false,
+    }
+    const imageNode: Project['nodes'][number] = {
+      id: 'image-created',
+      kind: 'image',
+      title: '图片 01',
+      position: { x: 1900, y: 720 },
+      versions: [
+        {
+          id: 'version-image-created',
+          createdAt: '2026-08-06T08:06:00.000Z',
+          prompt: '雨夜人物参考',
+          assetId: 'asset-character',
+        },
+      ],
+      activeVersionId: 'version-image-created',
+      sourceChanged: false,
+    }
+    act(() => activate({ ...project, nodes: [...project.nodes, textNode, imageNode] }))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '文本 01' }))
+    expect(screen.getByRole('button', { name: '生成分镜' })).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: '重生成' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '图片 01' }))
+    expect(screen.getByRole('button', { name: '生成视频' })).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: '生成分镜' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+    const nodeList = screen.getByRole('dialog', { name: '节点列表' })
+    expect(
+      within(
+        within(nodeList).getByRole('button', { name: '选择 文本 01' }),
+      ).getByText('文本', { selector: 'span' }),
+    ).toBeVisible()
+    expect(
+      within(
+        within(nodeList).getByRole('button', { name: '选择 图片 01' }),
+      ).getByText('图片', { selector: 'span' }),
+    ).toBeVisible()
+    expect(
+      within(nodeList).queryByRole('button', { name: '重生成 文本 01' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(nodeList).getByRole('button', { name: '生成分镜 文本 01' }),
+    ).toBeVisible()
+    expect(
+      within(nodeList).getByRole('button', { name: '生成视频 图片 01' }),
+    ).toBeVisible()
+  })
+
   test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
     const user = userEvent.setup()
     renderCanvas()

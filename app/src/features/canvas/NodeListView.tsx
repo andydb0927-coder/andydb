@@ -7,12 +7,15 @@ import type {
   TimelineItem,
 } from '../project/model'
 import { selectNodeGenerationJob } from './job-selector'
+import { primaryActionsForNode } from './node-action-policy'
 import type { CreativeNodeAction } from './node-types'
 import { useDialogKeyboard } from './dialog-keyboard'
 
 const kindCopy = {
   character: '角色',
   scene: '场景',
+  text: '文本',
+  image: '图片',
   storyboard: '分镜',
   video: '视频',
   preview: '预览',
@@ -140,6 +143,10 @@ export function NodeListView({
             const isOnTimeline = timeline.some(
               (item) => item.track === 'video' && item.nodeId === node.id,
             )
+            const primaryActions =
+              node.kind === 'text' || node.kind === 'image'
+                ? primaryActionsForNode(node.kind, false)
+                : [{ action: 'regenerate' as const, label: '重生成' }]
             return (
               <li key={node.id}>
                 <button
@@ -153,13 +160,16 @@ export function NodeListView({
                   <span>{status}</span>
                 </button>
                 <div className="node-list-view__actions">
-                  <button
-                    type="button"
-                    aria-label={`重生成 ${node.title}`}
-                    onClick={() => onAction(node.id, 'regenerate')}
-                  >
-                    重生成
-                  </button>
+                  {primaryActions.map(({ action, label }) => (
+                    <button
+                      key={action}
+                      type="button"
+                      aria-label={`${label} ${node.title}`}
+                      onClick={() => onAction(node.id, action)}
+                    >
+                      {label}
+                    </button>
+                  ))}
                   {node.kind === 'video' ? (
                     <button
                       type="button"

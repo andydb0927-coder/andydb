@@ -39,6 +39,8 @@ export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>
 export const nodeTypes = {
   character: AssetNode,
   scene: AssetNode,
+  text: AssetNode,
+  image: AssetNode,
   storyboard: StoryboardNode,
   video: VideoNode,
   preview: PreviewNode,

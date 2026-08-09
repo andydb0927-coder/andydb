@@ -11,16 +11,20 @@ import {
   RefreshCw,
   ScanLine,
   Trash2,
+  Type,
   UserRound,
   X,
 } from 'lucide-react'
 
 import { StatusText } from '../../../ui/StatusText'
+import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 
 const kindCopy = {
   character: '角色',
   scene: '场景',
+  text: '文本',
+  image: '图片',
   storyboard: '分镜',
   video: '视频',
   preview: '预览',
@@ -37,36 +41,45 @@ const statusCopy = {
 const kindIcons = {
   character: UserRound,
   scene: Image,
+  text: Type,
+  image: Image,
   storyboard: Clapperboard,
   video: Film,
   preview: MonitorPlay,
 }
 
 function NodeActions({ data }: { data: CreativeNodeData }) {
+  const actionIcons = {
+    regenerate: RefreshCw,
+    'extend-shot': ScanLine,
+    'generate-video': Film,
+    'add-to-timeline': Clapperboard,
+    'cancel-generation': X,
+    'retry-generation': RefreshCw,
+  } as const
+
   return (
     <div
       className="creative-node-actions nodrag"
       aria-label={`${data.node.title}操作`}
       data-placement={data.actionsPlacement}
     >
-      <button type="button" onClick={() => data.onAction('regenerate')}>
-        <RefreshCw aria-hidden="true" />
-        重生成
-      </button>
-      <button type="button" onClick={() => data.onAction('extend-shot')}>
-        <ScanLine aria-hidden="true" />
-        扩展镜头
-      </button>
-      <button type="button" onClick={() => data.onAction('generate-video')}>
-        <Film aria-hidden="true" />
-        生成视频
-      </button>
-      {data.node.kind === 'video' && data.asset ? (
-        <button type="button" onClick={() => data.onAction('add-to-timeline')}>
-          <Clapperboard aria-hidden="true" />
-          加入时间线
-        </button>
-      ) : null}
+      {primaryActionsForNode(data.node.kind, data.asset !== undefined).map(
+        ({ action, label }) => {
+          const ActionIcon = actionIcons[action]
+
+          return (
+            <button
+              key={action}
+              type="button"
+              onClick={() => data.onAction(action)}
+            >
+              <ActionIcon aria-hidden="true" />
+              {label}
+            </button>
+          )
+        },
+      )}
       {data.job?.status === 'queued' || data.job?.status === 'running' ? (
         <button type="button" onClick={() => data.onAction('cancel-generation')}>
           <X aria-hidden="true" />
