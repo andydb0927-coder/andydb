@@ -1637,14 +1637,6 @@ select {
     transform: none;
   }
 
-  .dependency-edge__delete {
-    transform: translate(-50%, -50%)
-      translate(
-        clamp(64px, var(--dependency-edge-label-x), calc(100vw - 40px)),
-        clamp(40px, var(--dependency-edge-label-y), calc(100vh - 180px))
-      ) !important;
-  }
-
   .canvas-connection-hint {
     right: var(--space-4);
     left: 72px;

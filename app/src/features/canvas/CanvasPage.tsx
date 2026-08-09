@@ -169,6 +169,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   >()
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const nativeConnectionActiveRef = useRef(false)
   const placementTriggerRef = useRef<HTMLButtonElement>(null)
   const connectionTriggerRef = useRef<HTMLButtonElement>(null)
   const createdNodeFocusRef = useRef<string | undefined>(undefined)
@@ -182,6 +183,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   }, [])
 
   useEffect(() => {
+    nativeConnectionActiveRef.current = false
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
@@ -193,6 +195,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     connectionTriggerRef.current = null
 
     return () => {
+      nativeConnectionActiveRef.current = false
       connectionTriggerRef.current = null
     }
   }, [projectId])
@@ -774,6 +777,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
 
   const handleConnectEnd: OnConnectEnd = useCallback(
     (_event, state) => {
+      nativeConnectionActiveRef.current = false
       if (state.isValid || !state.fromNode || !state.toNode) return
       const startsFromTarget = state.fromHandle?.type === 'target'
       attemptConnection(
@@ -784,6 +788,10 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     },
     [attemptConnection],
   )
+
+  const handleConnectStart = useCallback(() => {
+    nativeConnectionActiveRef.current = true
+  }, [])
 
   const cancelPlacement = useCallback((restoreFocus = true) => {
     const trigger = placementTriggerRef.current
@@ -844,7 +852,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         pendingPlacement ||
         nodeListOpen ||
         deleteCandidateId ||
-        connectionTool.phase !== 'idle'
+        connectionTool.phase !== 'idle' ||
+        nativeConnectionActiveRef.current
       ) {
         return
       }
@@ -1069,6 +1078,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           onEdgesChange={handleEdgesChange}
           isValidConnection={isValidConnection}
           onConnect={handleConnect}
+          onConnectStart={handleConnectStart}
           onConnectEnd={handleConnectEnd}
           onPaneClick={handlePaneClick}
           onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}

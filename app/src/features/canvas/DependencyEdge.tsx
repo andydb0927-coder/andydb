@@ -3,15 +3,91 @@ import {
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
+  useStore,
 } from '@xyflow/react'
 import { Trash2 } from 'lucide-react'
-import type { CSSProperties } from 'react'
 
 import type { DependencyFlowEdge } from './edge-types'
 
-interface DependencyEdgeStyle extends CSSProperties {
-  '--dependency-edge-label-x': string
-  '--dependency-edge-label-y': string
+const DELETE_CONTROL_INSET = 24
+const NARROW_BOTTOM_RESERVE = 180
+
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), maximum)
+}
+
+function clampLabelToContainer(
+  labelX: number,
+  labelY: number,
+  viewport: [number, number, number],
+  bounds: { left: number; top: number; right: number; bottom: number },
+) {
+  const [viewportX, viewportY, zoom] = viewport
+  if (zoom <= 0) return [labelX, labelY] as const
+
+  const screenX = bounds.left + viewportX + labelX * zoom
+  const screenY = bounds.top + viewportY + labelY * zoom
+  const minimumX = bounds.left + DELETE_CONTROL_INSET
+  const maximumX = Math.max(
+    minimumX,
+    bounds.right - DELETE_CONTROL_INSET,
+  )
+  const minimumY = bounds.top + DELETE_CONTROL_INSET
+  const narrow = bounds.right - bounds.left <= 800
+  const bottomInset = narrow
+    ? NARROW_BOTTOM_RESERVE
+    : DELETE_CONTROL_INSET
+  const maximumY = Math.max(minimumY, bounds.bottom - bottomInset)
+  const clampedScreenX = clamp(screenX, minimumX, maximumX)
+  const clampedScreenY = clamp(screenY, minimumY, maximumY)
+
+  return [
+    (clampedScreenX - bounds.left - viewportX) / zoom,
+    (clampedScreenY - bounds.top - viewportY) / zoom,
+  ] as const
+}
+
+function DependencyEdgeDeleteAction({
+  id,
+  labelX,
+  labelY,
+  data,
+}: {
+  id: string
+  labelX: number
+  labelY: number
+  data: NonNullable<DependencyFlowEdge['data']>
+}) {
+  const viewport = useStore((state) => state.transform)
+  const domNode = useStore((state) => state.domNode)
+  const viewportWidth = useStore((state) => state.width)
+  const viewportHeight = useStore((state) => state.height)
+  const rect = domNode?.getBoundingClientRect()
+  const bounds = rect
+    ? {
+        left: rect.left,
+        top: rect.top,
+        right: rect.left + (viewportWidth || rect.width),
+        bottom: rect.top + (viewportHeight || rect.height),
+      }
+    : undefined
+  const [deleteX, deleteY] = bounds
+    ? clampLabelToContainer(labelX, labelY, viewport, bounds)
+    : [labelX, labelY]
+
+  return (
+    <button
+      type="button"
+      className="dependency-edge__delete nodrag nopan"
+      aria-label={`删除连接：${data.ariaLabel}`}
+      style={{
+        transform: `translate(-50%, -50%) translate(${deleteX}px, ${deleteY}px)`,
+      }}
+      onClick={() => data.onDelete(id)}
+    >
+      <Trash2 aria-hidden="true" />
+    </button>
+  )
 }
 
 export function DependencyEdge({
@@ -34,11 +110,6 @@ export function DependencyEdge({
     sourcePosition,
     targetPosition,
   })
-  const deleteStyle: DependencyEdgeStyle = {
-    '--dependency-edge-label-x': `${labelX}px`,
-    '--dependency-edge-label-y': `${labelY}px`,
-    transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-  }
 
   return (
     <>
@@ -55,15 +126,12 @@ export function DependencyEdge({
       />
       {selected && data ? (
         <EdgeLabelRenderer>
-          <button
-            type="button"
-            className="dependency-edge__delete nodrag nopan"
-            aria-label={`删除连接：${data.ariaLabel}`}
-            style={deleteStyle}
-            onClick={() => data.onDelete(id)}
-          >
-            <Trash2 aria-hidden="true" />
-          </button>
+          <DependencyEdgeDeleteAction
+            id={id}
+            labelX={labelX}
+            labelY={labelY}
+            data={data}
+          />
         </EdgeLabelRenderer>
       ) : null}
     </>

@@ -80,6 +80,7 @@ async function clickEdgePath(
 }
 
 test('selects and deletes a toolbar-created dependency edge', async ({ page }) => {
+  await page.setViewportSize({ width: 721, height: 778 })
   await createCinematicProject(page)
   const toolbar = page.getByRole('toolbar', { name: '创作工具' })
   await toolbar.getByRole('button', { name: '视频', exact: true }).click()
@@ -97,9 +98,18 @@ test('selects and deletes a toolbar-created dependency edge', async ({ page }) =
   const edge = page.getByLabel('角色参考 → 视频 01')
   await expect(edge).toBeVisible()
   await clickEdgePath(edge, page)
-  await page
-    .getByRole('button', { name: '删除连接：角色参考 → 视频 01' })
-    .click()
+  const deleteAction = page.getByRole('button', {
+    name: '删除连接：角色参考 → 视频 01',
+  })
+  await page.getByRole('button', { name: 'Zoom In' }).click()
+  await page.getByRole('button', { name: 'Zoom In' }).click()
+  const actionBox = await deleteAction.boundingBox()
+  expect(actionBox).not.toBeNull()
+  expect(actionBox!.x).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.y).toBeGreaterThanOrEqual(0)
+  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(721)
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(778)
+  await deleteAction.click()
   await expect(edge).toBeHidden()
   await expect(page.getByRole('button', { name: '角色参考' })).toBeFocused()
 })

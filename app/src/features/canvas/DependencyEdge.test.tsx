@@ -2,16 +2,40 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PropsWithChildren } from 'react'
 import { Position } from '@xyflow/react'
-import { expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 
 import { DependencyEdge } from './DependencyEdge'
+
+const flowStore = vi.hoisted(() => ({
+  transform: [0, 0, 1] as [number, number, number],
+  width: 0,
+  height: 0,
+  domNode: null as { getBoundingClientRect(): DOMRect } | null,
+}))
+
+const bezierPath = vi.hoisted(() => ({ labelX: 50, labelY: 50 }))
 
 vi.mock('@xyflow/react', () => ({
   BaseEdge: () => null,
   EdgeLabelRenderer: ({ children }: PropsWithChildren) => children,
   Position: { Left: 'left', Right: 'right' },
-  getBezierPath: () => ['M0 0L100 100', 50, 50],
+  getBezierPath: () => [
+    'M0 0L100 100',
+    bezierPath.labelX,
+    bezierPath.labelY,
+  ],
+  useStore: (selector: (state: typeof flowStore) => unknown) =>
+    selector(flowStore),
 }))
+
+beforeEach(() => {
+  flowStore.transform = [0, 0, 1]
+  flowStore.width = 0
+  flowStore.height = 0
+  flowStore.domNode = null
+  bezierPath.labelX = 50
+  bezierPath.labelY = 50
+})
 
 test('renders the selected edge delete action at the path label point', async () => {
   const user = userEvent.setup()
@@ -63,4 +87,58 @@ test('does not render the edge delete action until selected', () => {
   )
 
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
+
+test('keeps the full delete control inside a 721 by 778 viewport after pan and zoom', () => {
+  flowStore.transform = [500, 400, 2]
+  flowStore.width = 721
+  flowStore.height = 778
+  flowStore.domNode = {
+    getBoundingClientRect: () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 721,
+        bottom: 778,
+        width: 721,
+        height: 778,
+      }) as DOMRect,
+  }
+  bezierPath.labelX = 200
+  bezierPath.labelY = 200
+
+  render(
+    <DependencyEdge
+      id="edge-a-b"
+      source="a"
+      target="b"
+      sourceX={0}
+      sourceY={0}
+      targetX={100}
+      targetY={100}
+      sourcePosition={Position.Right}
+      targetPosition={Position.Left}
+      selected
+      data={{
+        sourceChanged: false,
+        ariaLabel: '角色参考 → 视频 01',
+        onDelete: vi.fn(),
+      }}
+    />,
+  )
+
+  const control = screen.getByRole('button', {
+    name: '删除连接：角色参考 → 视频 01',
+  })
+  const match = control.style.transform.match(
+    /translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/,
+  )
+  expect(match).not.toBeNull()
+  const screenCenterX = 500 + Number(match![1]) * 2
+  const screenCenterY = 400 + Number(match![2]) * 2
+
+  expect(screenCenterX - 16).toBeGreaterThanOrEqual(0)
+  expect(screenCenterX + 16).toBeLessThanOrEqual(721)
+  expect(screenCenterY - 16).toBeGreaterThanOrEqual(0)
+  expect(screenCenterY + 16).toBeLessThanOrEqual(778)
 })

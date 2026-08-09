@@ -47,6 +47,7 @@ interface FlowPropsFixture {
   onNodesChange(changes: unknown[]): void
   onEdgesChange(changes: unknown[]): void
   onConnect(connection: { source: string; target: string }): void
+  onConnectStart?(event: unknown, params: unknown): void
   isValidConnection(connection: {
     source: string | null
     target: string | null
@@ -1441,6 +1442,26 @@ describe('creative canvas', () => {
     ).toBeVisible()
     expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(useProjectStore.getState().past).toEqual([])
+  })
+
+  test('ignores L throughout an active native handle connection', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    act(() => latestFlowProps?.onConnectStart?.({}, {}))
+    await user.keyboard('l')
+
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText('请选择来源节点')).not.toBeInTheDocument()
+
+    act(() => {
+      latestFlowProps?.onConnectEnd?.({}, { isValid: false })
+    })
+    await user.keyboard('l')
+
+    expect(connect).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
   })
 
   test('selects and deletes an edge with one history entry, restores source focus, and keeps timeline unchanged through undo', async () => {
