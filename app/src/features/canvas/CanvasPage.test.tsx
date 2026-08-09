@@ -39,7 +39,15 @@ interface FlowPropsFixture {
   panActivationKeyCode: string
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
-  onInit?(instance: { fitView(options: unknown): Promise<boolean> }): void
+  onPaneClick?(event: { clientX: number; clientY: number }): void
+  onNodeClick?(event: unknown, node: FlowNodeFixture): void
+  onInit?(instance: {
+    fitView(options: unknown): Promise<boolean>
+    screenToFlowPosition(position: { x: number; y: number }): {
+      x: number
+      y: number
+    }
+  }): void
 }
 
 let latestFlowProps: FlowPropsFixture | undefined
@@ -206,6 +214,19 @@ function SwitchingCanvas({ repository }: ComponentProps<typeof CanvasPage>) {
   )
 }
 
+function initializeFlow(
+  flowPosition = { x: 777, y: 333 },
+) {
+  const fitView = vi.fn().mockResolvedValue(true)
+  const screenToFlowPosition = vi.fn(() => flowPosition)
+  act(() => latestFlowProps?.onInit?.({ fitView, screenToFlowPosition }))
+  return { fitView, screenToFlowPosition }
+}
+
+function clickPane(clientX = 420, clientY = 300) {
+  act(() => latestFlowProps?.onPaneClick?.({ clientX, clientY }))
+}
+
 beforeEach(() => {
   latestFlowProps = undefined
   act(() => activate())
@@ -213,6 +234,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
   act(() => {
     useProjectStore.setState({
       projectsById: {},
@@ -307,7 +329,12 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('link', { name: '返回画布' }))
     expect(await screen.findByRole('region', { name: '项目画布' })).toBeVisible()
-    act(() => latestFlowProps?.onInit?.({ fitView }))
+    act(() =>
+      latestFlowProps?.onInit?.({
+        fitView,
+        screenToFlowPosition: (position) => position,
+      }),
+    )
 
     await waitFor(() => {
       expect(
@@ -331,7 +358,12 @@ describe('creative canvas', () => {
       </MemoryRouter>,
     )
 
-    act(() => latestFlowProps?.onInit?.({ fitView }))
+    act(() =>
+      latestFlowProps?.onInit?.({
+        fitView,
+        screenToFlowPosition: (position) => position,
+      }),
+    )
 
     expect(latestFlowProps?.nodes.every((node) => !node.selected)).toBe(true)
     expect(fitView).not.toHaveBeenCalled()
@@ -1110,6 +1142,168 @@ describe('creative canvas', () => {
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
     ).toEqual(['选择', '文本', '图片', '分镜', '视频', '连线', '分组'])
+  })
+
+  test('creates nodes from the toolbar at the converted pane position', async () => {
+    const user = userEvent.setup()
+    const save = vi.fn().mockResolvedValue(undefined)
+    renderCanvas({ repository: { load: async () => undefined, save } })
+    const { screenToFlowPosition } = initializeFlow()
+    const storyboardTool = screen.getByRole('button', { name: '分镜' })
+
+    await user.click(storyboardTool)
+    expect(storyboardTool).toHaveAttribute('aria-pressed', 'true')
+    clickPane()
+
+    expect(
+      screen.getByRole('dialog', { name: '创建分镜节点' }),
+    ).toBeVisible()
+    expect(screen.getByLabelText('标题')).toHaveValue('分镜 03')
+    expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 420, y: 300 })
+    expect(useProjectStore.getState().past).toEqual([])
+
+    await user.type(screen.getByLabelText('画面提示词'), '远景，雨夜河岸')
+    await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+    const created = useProjectStore
+      .getState()
+      .activeProject?.nodes.find(({ title }) => title === '分镜 03')
+    expect(created).toMatchObject({
+      kind: 'storyboard',
+      position: { x: 777, y: 333 },
+      versions: [{ prompt: '远景，雨夜河岸' }],
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.queryByRole('dialog', { name: '创建分镜节点' })).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '分镜 03' })).toHaveFocus()
+    })
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+    expect(save.mock.calls[0][0].nodes.at(-1)?.id).toBe(created?.id)
+  })
+
+  test.each([
+    ['text', '文本', '文字内容', '旧站台旁的独白'],
+    ['storyboard', '分镜', '画面提示词', '近景，雨滴落在袖口'],
+    ['video', '视频', '视频提示词', '镜头缓慢推向人物'],
+  ] as const)(
+    'creates a %s draft with one initial prompt version',
+    async (kind, toolLabel, fieldLabel, prompt) => {
+      const user = userEvent.setup()
+      renderCanvas()
+      initializeFlow({ x: 100, y: 200 })
+
+      await user.click(screen.getByRole('button', { name: toolLabel }))
+      clickPane(160, 220)
+      await user.type(screen.getByLabelText(fieldLabel), prompt)
+      await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+      const created = useProjectStore.getState().activeProject?.nodes.at(-1)
+      expect(created?.kind).toBe(kind)
+      expect(created?.versions).toHaveLength(1)
+      expect(created?.versions[0].prompt).toBe(prompt)
+      expect(created?.activeVersionId).toBe(created?.versions[0].id)
+    },
+  )
+
+  test('creates an image node and asset from the toolbar', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 240, y: 360 })
+
+    await user.click(screen.getByRole('button', { name: '图片' }))
+    clickPane(240, 360)
+    await user.upload(
+      screen.getByLabelText('本地图片'),
+      new File(['image'], 'reference.png', { type: 'image/png' }),
+    )
+    await user.type(screen.getByLabelText('图片描述（选填）'), '雨夜人物参考')
+    await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+    const active = useProjectStore.getState().activeProject!
+    const created = active.nodes.find(({ kind }) => kind === 'image')!
+    const version = created.versions[0]
+    const asset = active.assets.find(({ id }) => id === version.assetId)
+    expect(created.position).toEqual({ x: 240, y: 360 })
+    expect(asset).toMatchObject({
+      kind: 'image',
+      mimeType: 'image/png',
+      url: expect.stringMatching(/^data:image\/png;base64,/),
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('cancels placement without history and returns focus to its tool', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+    const textTool = screen.getByRole('button', { name: '文本' })
+
+    await user.click(textTool)
+    clickPane()
+    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: '创建文本节点' })).not.toBeInTheDocument()
+    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
+    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(textTool).toHaveFocus()
+  })
+
+  test('ignores node clicks and a second pane click while placing one draft', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+
+    await user.click(screen.getByRole('button', { name: '视频' }))
+    act(() => {
+      latestFlowProps?.onNodeClick?.({}, latestFlowProps.nodes[0])
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    clickPane(420, 300)
+    const firstDialog = screen.getByRole('dialog', { name: '创建视频节点' })
+    clickPane(900, 640)
+    expect(screen.getAllByRole('dialog', { name: '创建视频节点' })).toHaveLength(1)
+    expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBe(firstDialog)
+  })
+
+  test('discards a pending draft when the project route changes', async () => {
+    const user = userEvent.setup()
+    const projectB = {
+      ...makeCanvasProject(),
+      id: 'project-b',
+      title: '第二项目',
+    }
+    render(
+      <MemoryRouter initialEntries={['/project/project-canvas']}>
+        <SwitchingCanvas
+          repository={{
+            load: async (id) => (id === 'project-b' ? projectB : undefined),
+            save: async () => undefined,
+          }}
+        />
+      </MemoryRouter>,
+    )
+    initializeFlow()
+    await user.click(screen.getByRole('button', { name: '文本' }))
+    clickPane()
+    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
+
+    expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
+    expect(screen.queryByRole('dialog', { name: '创建文本节点' })).not.toBeInTheDocument()
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
+    expect(useProjectStore.getState().past).toEqual([])
   })
 
   test('places actions before the rightmost selected node to avoid viewport clipping', async () => {

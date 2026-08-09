@@ -7,7 +7,14 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 
 import { DirectorComposer } from '../director/DirectorComposer'
@@ -17,7 +24,10 @@ import { GenerationQueue } from '../generation/generation-queue'
 import type { Project } from '../project/model'
 import { ProjectRepository } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
-import { CanvasToolbar } from './CanvasToolbar'
+import {
+  CanvasToolbar,
+  type CanvasTool,
+} from './CanvasToolbar'
 import { CanvasTopBar } from './CanvasTopBar'
 import { DependencyImpactDialog } from './DependencyImpactDialog'
 import { edgeTypes, type DependencyFlowEdge } from './edge-types'
@@ -28,6 +38,15 @@ import {
   type CreativeNodeAction,
 } from './node-types'
 import { NodeListView } from './NodeListView'
+import {
+  NodeDraftPanel,
+  type NodeDraftFormValue,
+} from './NodeDraftPanel'
+import {
+  buildCanvasCreation,
+  nextNodeTitle,
+  type CreatableNodeKind,
+} from './node-draft'
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
@@ -44,7 +63,24 @@ interface NodeMeasurementState {
   measurements: Record<string, { width: number; height: number }>
 }
 
+interface PendingPlacement {
+  projectId: string
+  kind: CreatableNodeKind
+  position: CanvasNodePosition
+  anchor: { x: number; y: number }
+  bounds: { width: number; height: number }
+}
+
 const defaultRepository = new ProjectRepository()
+
+function isCreatableTool(tool: CanvasTool): tool is CreatableNodeKind {
+  return (
+    tool === 'text' ||
+    tool === 'image' ||
+    tool === 'storyboard' ||
+    tool === 'video'
+  )
+}
 
 function downstreamConsumers(project: Project, nodeId: string) {
   const consumerIds = new Set<string>()
@@ -83,6 +119,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const redo = useProjectStore((state) => state.redo)
   const persistActive = useProjectStore((state) => state.persistActive)
   const connectNodes = useProjectStore((state) => state.connectNodes)
+  const createCanvasContent = useProjectStore(
+    (state) => state.createCanvasContent,
+  )
   const updateNodePositions = useProjectStore(
     (state) => state.updateNodePositions,
   )
@@ -97,6 +136,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const [nodeMeasurements, setNodeMeasurements] =
     useState<NodeMeasurementState>({ measurements: {} })
   const [nodeListOpen, setNodeListOpen] = useState(false)
+  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [pendingPlacement, setPendingPlacement] =
+    useState<PendingPlacement>()
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
     project ? 'ready' : 'loading',
@@ -106,6 +148,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     ReactFlowInstance<CreativeFlowNode, DependencyFlowEdge>
   >()
   const appliedFocusRef = useRef<string | undefined>(undefined)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const placementTriggerRef = useRef<HTMLButtonElement>(null)
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
   const nodeListSelectionMadeRef = useRef(false)
@@ -114,6 +158,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     setSelectedNodeIds(new Set([nodeId]))
     setPrimaryNodeId(nodeId)
   }, [])
+
+  useEffect(() => {
+    setActiveTool('select')
+    setPendingPlacement(undefined)
+    placementTriggerRef.current = null
+  }, [projectId])
 
   const generationQueue = useMemo(
     () =>
@@ -539,6 +589,105 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     [connectNodes],
   )
 
+  const cancelPlacement = useCallback((restoreFocus = true) => {
+    const trigger = placementTriggerRef.current
+    setPendingPlacement(undefined)
+    setActiveTool('select')
+    placementTriggerRef.current = null
+    if (restoreFocus) queueMicrotask(() => trigger?.focus())
+  }, [])
+
+  const handleToolChange = useCallback(
+    (tool: CanvasTool, trigger: HTMLButtonElement) => {
+      if (!project) return
+      if (tool === 'select') {
+        if (pendingPlacement) cancelPlacement()
+        else setActiveTool('select')
+        return
+      }
+      if (!isCreatableTool(tool) || pendingPlacement) return
+
+      placementTriggerRef.current = trigger
+      setActiveTool(tool)
+    },
+    [cancelPlacement, pendingPlacement, project],
+  )
+
+  const handlePaneClick = useCallback(
+    (event: ReactMouseEvent<Element>) => {
+      if (
+        !project ||
+        !flowInstance ||
+        !isCreatableTool(activeTool) ||
+        pendingPlacement
+      ) {
+        return
+      }
+
+      const viewport = viewportRef.current
+      const rect = viewport?.getBoundingClientRect()
+      const hasMeasuredBounds = Boolean(rect && rect.width > 0 && rect.height > 0)
+      const bounds = hasMeasuredBounds
+        ? { width: rect!.width, height: rect!.height }
+        : {
+            width: window.innerWidth,
+            height: Math.max(0, window.innerHeight - 56),
+          }
+      const offsetLeft = hasMeasuredBounds ? rect!.left : 0
+      const offsetTop = hasMeasuredBounds ? rect!.top : 0
+
+      setPendingPlacement({
+        projectId: project.id,
+        kind: activeTool,
+        position: flowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        }),
+        anchor: {
+          x: event.clientX - offsetLeft,
+          y: event.clientY - offsetTop,
+        },
+        bounds,
+      })
+    },
+    [activeTool, flowInstance, pendingPlacement, project],
+  )
+
+  const submitPlacement = useCallback(
+    (value: NodeDraftFormValue) => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (
+        !pendingPlacement ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        pendingPlacement.projectId !== currentProject.id
+      ) {
+        return
+      }
+
+      const creation = buildCanvasCreation(currentProject, {
+        kind: pendingPlacement.kind,
+        title: value.title,
+        content: value.content,
+        position: pendingPlacement.position,
+        ...(value.image ? { image: value.image } : {}),
+      })
+      createCanvasContent(creation)
+      selectOnlyNode(creation.node.id)
+      setPendingPlacement(undefined)
+      setActiveTool('select')
+      placementTriggerRef.current = null
+      queueMicrotask(() => {
+        document
+          .querySelector<HTMLElement>(
+            `[data-canvas-node-id="${creation.node.id}"]`,
+          )
+          ?.focus()
+      })
+    },
+    [createCanvasContent, pendingPlacement, projectId, selectOnlyNode],
+  )
+
   const openNodeList = useCallback((trigger: HTMLButtonElement) => {
     nodeListTriggerRef.current = trigger
     nodeListSelectionMadeRef.current = false
@@ -605,7 +754,12 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         onOpenNodeList={openNodeList}
       />
       <div
-        className="canvas-page__viewport"
+        ref={viewportRef}
+        className={`canvas-page__viewport${
+          isCreatableTool(activeTool)
+            ? ' canvas-page__viewport--placing'
+            : ''
+        }`}
         role="region"
         aria-label="项目画布"
       >
@@ -617,6 +771,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
           onConnect={handleConnect}
+          onPaneClick={handlePaneClick}
           onNodeClick={(_event, node) => selectOnlyNode(node.id)}
           onInit={setFlowInstance}
           fitView
@@ -632,7 +787,34 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           <Background gap={24} size={1} color="rgba(255,255,255,0.1)" />
           <Controls showInteractive={false} />
         </ReactFlow>
-        <CanvasToolbar />
+        <CanvasToolbar
+          activeTool={activeTool}
+          disabled={!project}
+          draftOpen={Boolean(pendingPlacement)}
+          onToolChange={handleToolChange}
+        />
+        {project && isCreatableTool(activeTool) && !pendingPlacement ? (
+          <p className="canvas-placement-hint" role="status">
+            点击画布放置{activeTool === 'text'
+              ? '文本'
+              : activeTool === 'image'
+                ? '图片'
+                : activeTool === 'storyboard'
+                  ? '分镜'
+                  : '视频'}节点
+          </p>
+        ) : null}
+        {project && pendingPlacement ? (
+          <NodeDraftPanel
+            key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
+            kind={pendingPlacement.kind}
+            initialTitle={nextNodeTitle(project, pendingPlacement.kind)}
+            anchor={pendingPlacement.anchor}
+            bounds={pendingPlacement.bounds}
+            onCancel={cancelPlacement}
+            onSubmit={submitPlacement}
+          />
+        ) : null}
         {project ? (
           <DirectorComposer
             selectedNodeId={primaryNodeId}

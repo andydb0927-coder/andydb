@@ -562,10 +562,36 @@ select {
   background: transparent;
 }
 
-.canvas-toolbar button:hover,
+.canvas-toolbar button:hover:not(:disabled),
 .canvas-toolbar .canvas-toolbar__active {
   color: white;
   background: var(--accent);
+}
+
+.canvas-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.34;
+}
+
+.canvas-page__viewport--placing .react-flow__pane {
+  cursor: crosshair;
+}
+
+.canvas-placement-hint {
+  position: absolute;
+  z-index: 12;
+  top: var(--space-4);
+  left: 50%;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgb(169 162 255 / 28%);
+  border-radius: 999px;
+  color: var(--text-primary);
+  background: rgb(32 34 41 / 92%);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  font-size: 0.75rem;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .node-draft-panel {
