@@ -1,6 +1,8 @@
 export type NodeKind =
   | 'character'
   | 'scene'
+  | 'text'
+  | 'image'
   | 'storyboard'
   | 'video'
   | 'preview'
@@ -43,6 +45,11 @@ export interface CanvasNode {
   versions: NodeVersion[]
   activeVersionId: string
   sourceChanged: boolean
+}
+
+export interface CanvasCreation {
+  node: CanvasNode
+  asset?: Asset
 }
 
 export interface DependencyEdge {
