@@ -43,7 +43,6 @@ async function findBlankCanvasPoint(
     },
     fromBottomRight,
   )
-
 }
 
 async function clickBlankCanvas(
@@ -86,45 +85,223 @@ async function clickEdgePath(
   await page.mouse.click(point.x, point.y)
 }
 
-test('selects and deletes a toolbar-created dependency edge', async ({ page }) => {
-  await page.setViewportSize({ width: 721, height: 778 })
-  await createCinematicProject(page)
-  const toolbar = page.getByRole('toolbar', { name: '创作工具' })
-  await toolbar.getByRole('button', { name: '视频', exact: true }).click()
-  await clickBlankCanvas(page, true)
-  const videoDialog = page.getByRole('dialog', { name: '创建视频节点' })
-  await videoDialog.getByLabel('视频提示词').fill('镜头缓慢推向人物')
-  await videoDialog.getByRole('button', { name: '确认创建' }).click()
-  const videoNode = page.getByRole('button', { name: '视频 01' })
-  await expect(videoNode).toBeVisible()
-
-  const connect = page.getByRole('button', { name: '连线' })
-  await connect.click()
-  await page.getByRole('button', { name: '角色参考' }).click()
-  await videoNode.click()
-  const edge = page.getByLabel('角色参考 → 视频 01')
-  await expect(edge).toBeVisible()
-  await clickEdgePath(edge, page)
-  const deleteAction = page.getByRole('button', {
-    name: '删除连接：角色参考 → 视频 01',
-  })
-  const zoomIn = page.getByRole('button', { name: 'Zoom In' })
-  while (await zoomIn.isEnabled()) await zoomIn.click()
-  const panStart = await findBlankCanvasPoint(page)
-  await page.keyboard.down('Space')
-  await page.mouse.move(panStart.x, panStart.y)
-  await page.mouse.down()
-  await page.mouse.move(710, panStart.y, { steps: 10 })
-  await page.mouse.up()
-  await page.keyboard.up('Space')
+async function expectDeleteActionInsideViewport(
+  page: import('@playwright/test').Page,
+  deleteAction: import('@playwright/test').Locator,
+  viewport: { width: number; height: number },
+) {
   const actionBox = await deleteAction.boundingBox()
+  const composerBox = await page.locator('.director-composer').boundingBox()
   expect(actionBox).not.toBeNull()
+  expect(composerBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
-  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(721)
-  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(778)
-  expect(actionBox!.x + actionBox!.width).toBeGreaterThanOrEqual(700)
-  await deleteAction.click()
-  await expect(edge).toBeHidden()
-  await expect(page.getByRole('button', { name: '角色参考' })).toBeFocused()
+  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height)
+  expect(
+    actionBox!.x < composerBox!.x + composerBox!.width &&
+      actionBox!.x + actionBox!.width > composerBox!.x &&
+      actionBox!.y < composerBox!.y + composerBox!.height &&
+      actionBox!.y + actionBox!.height > composerBox!.y,
+  ).toBe(false)
+  expect(
+    await page.evaluate(
+      ({ x, y }) =>
+        document
+          .elementFromPoint(x, y)
+          ?.closest('button')
+          ?.getAttribute('aria-label'),
+      {
+        x: actionBox!.x + actionBox!.width / 2,
+        y: actionBox!.y + actionBox!.height / 2,
+      },
+    ),
+  ).toBe(await deleteAction.getAttribute('aria-label'))
+}
+
+test('creates, rejects, deletes, undoes, and restores dependency connections', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await createCinematicProject(page)
+  const canvasUrl = page.url()
+  const character = page.getByRole('button', { name: '角色参考' })
+  const scene = page.getByRole('button', { name: '场景设定' })
+  const storyboard = page.getByRole('button', { name: '分镜 01' })
+  const sourceNodeId = await character.getAttribute('data-canvas-node-id')
+  expect(sourceNodeId).not.toBeNull()
+  await expect(
+    page.getByLabel('角色参考 → 分镜 01', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('场景设定 → 分镜 01', { exact: true }),
+  ).toBeVisible()
+
+  await storyboard.click()
+  await page.getByRole('button', { name: '生成视频' }).click()
+  const video = page.getByRole('button', { name: '视频 01' })
+  await expect(video).toBeVisible()
+  await expect(
+    page.getByLabel('分镜 01 → 视频 01', { exact: true }),
+  ).toBeVisible()
+
+  await character.hover()
+  const sourceHandle = page.getByLabel('从角色参考建立连接')
+  const targetHandle = page.getByLabel('连接到视频 01')
+  await sourceHandle.dragTo(targetHandle)
+  const characterVideoEdge = page.getByLabel('角色参考 → 视频 01', {
+    exact: true,
+  })
+  await expect(characterVideoEdge).toHaveCount(1)
+  await expect(characterVideoEdge).toBeVisible()
+
+  const toolbar = page.getByRole('toolbar', { name: '创作工具' })
+  await toolbar.getByRole('button', { name: '文本', exact: true }).click()
+  await clickBlankCanvas(page)
+  const textDialog = page.getByRole('dialog', { name: '创建文本节点' })
+  await textDialog.getByLabel('文字内容').fill('雨夜车站的旁白')
+  await textDialog.getByRole('button', { name: '确认创建' }).click()
+  const text = page.getByRole('button', { name: '文本 01' })
+  await expect(text).toBeVisible()
+
+  const connect = page.getByRole('button', { name: '连线' })
+  await connect.focus()
+  await page.keyboard.press('Enter')
+  await video.focus()
+  await page.keyboard.press('Space')
+  await character.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('status')).toContainText('此连接会形成循环依赖')
+  await page.keyboard.press('Escape')
+  await expect(connect).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  await video.focus()
+  await page.keyboard.press('Space')
+  await text.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('status')).toContainText(
+    '这两种节点不能建立生成依赖',
+  )
+  await page.keyboard.press('Escape')
+  await expect(connect).toBeFocused()
+
+  await text.click()
+  await page.getByRole('button', { name: '删除节点' }).click()
+  await expect(text).toBeHidden()
+
+  await page.getByRole('application', { name: '创作节点图' }).focus()
+  await page.keyboard.press('l')
+  await expect(connect).toHaveAttribute('aria-pressed', 'true')
+  await scene.focus()
+  await page.keyboard.press('Space')
+  await video.focus()
+  await page.keyboard.press('Enter')
+  const sceneVideoEdge = page.getByLabel('场景设定 → 视频 01', {
+    exact: true,
+  })
+  await expect(sceneVideoEdge).toHaveCount(1)
+  await expect(sceneVideoEdge).toBeVisible()
+  await expect(connect).toBeFocused()
+  await expect(
+    page.getByLabel('分镜 01 → 视频 01', { exact: true }),
+  ).toBeVisible()
+  await expect(characterVideoEdge).toBeVisible()
+
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(sceneVideoEdge).toBeHidden()
+  await expect(characterVideoEdge).toBeVisible()
+  await page.getByRole('button', { name: '重做' }).click()
+  await expect(sceneVideoEdge).toBeVisible()
+
+  await clickEdgePath(characterVideoEdge, page)
+  const characterDeleteAction = page.getByRole('button', {
+    name: '删除连接：角色参考 → 视频 01',
+  })
+  await expect(characterDeleteAction).toBeVisible()
+  await characterDeleteAction.click()
+  await expect(characterVideoEdge).toBeHidden()
+  await expect(character).toBeFocused()
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(characterVideoEdge).toBeVisible()
+
+  await clickEdgePath(sceneVideoEdge, page)
+  await sceneVideoEdge.focus()
+  await page.keyboard.press('Delete')
+  await expect(sceneVideoEdge).toBeHidden()
+  await expect(scene).toBeFocused()
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(sceneVideoEdge).toBeVisible()
+
+  await expect(page.getByText('已保存')).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(
+    page.getByLabel('分镜 01 → 视频 01', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('角色参考 → 视频 01', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('场景设定 → 视频 01', { exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '文本 01' })).toBeHidden()
+
+  await page.getByRole('link', { name: '预览' }).click()
+  await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
+  await expect(
+    page.getByRole('list', { name: '主视频轨' }).getByRole('listitem'),
+  ).toHaveCount(0)
+  await expect(page.getByRole('region', { name: '成片播放器' })).toContainText(
+    '时间线为空',
+  )
+
+  await page.goto(`${canvasUrl}?focus=${sourceNodeId}`)
+  const focusedSource = page.getByRole('button', { name: '角色参考' })
+  await expect
+    .poll(() =>
+      focusedSource.evaluate((element) =>
+        element.closest('.react-flow__node')?.classList.contains('selected'),
+      ),
+    )
+    .toBe(true)
+  await focusedSource.focus()
+  await expect(focusedSource).toBeFocused()
+  await page.getByRole('button', { name: 'Fit View' }).click()
+
+  const reloadedSceneVideoEdge = page.getByLabel('场景设定 → 视频 01', {
+    exact: true,
+  })
+  await clickEdgePath(reloadedSceneVideoEdge, page)
+  const sceneDeleteAction = page.getByRole('button', {
+    name: '删除连接：场景设定 → 视频 01',
+  })
+  await expect(sceneDeleteAction).toBeVisible()
+  await expectDeleteActionInsideViewport(page, sceneDeleteAction, {
+    width: 1440,
+    height: 1024,
+  })
+  await page.screenshot({
+    path: '../design-qa-evidence/node-connections-1440x1024.png',
+  })
+
+  await page.setViewportSize({ width: 721, height: 778 })
+  await page.getByRole('button', { name: 'Fit View' }).click()
+  await clickEdgePath(reloadedSceneVideoEdge, page)
+  await expect(sceneDeleteAction).toBeVisible()
+  await expectDeleteActionInsideViewport(page, sceneDeleteAction, {
+    width: 721,
+    height: 778,
+  })
+  await page.screenshot({
+    path: '../design-qa-evidence/node-connections-721x778.png',
+  })
+
+  expect(errors).toEqual([])
 })
