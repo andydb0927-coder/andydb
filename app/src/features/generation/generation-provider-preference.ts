@@ -28,8 +28,9 @@ function readPreference(value: unknown): GenerationProviderPreference {
       videoModelName?: unknown
     }
   }
-  if (preference.provider === 'demo') return demoPreference
-  if (preference.provider !== 'libtv' || !preference.selection) {
+  const provider = normalizeString(preference.provider)
+  if (provider === 'demo') return demoPreference
+  if (provider !== 'libtv' || !preference.selection) {
     return demoPreference
   }
 
