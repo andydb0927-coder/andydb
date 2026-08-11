@@ -1765,6 +1765,135 @@ select {
   min-width: 0;
 }
 
+.platform-page {
+  width: min(1120px, 100%);
+  min-height: 100svh;
+  margin-inline: auto;
+  padding: clamp(var(--space-6), 6vw, 88px) clamp(var(--space-4), 5vw, var(--space-8));
+}
+
+.platform-page__header {
+  max-width: 680px;
+  margin-bottom: var(--space-7);
+}
+
+.platform-page__eyebrow,
+.platform-section__heading p {
+  margin: 0 0 var(--space-2);
+  color: var(--focus-ring);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.platform-page__header h1,
+.platform-section__heading h2,
+.platform-page__empty h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.platform-page__header h1 {
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  letter-spacing: -0.045em;
+}
+
+.platform-page__header > p:last-child,
+.platform-page__empty p,
+.platform-section__empty {
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.platform-page__state,
+.platform-page__empty,
+.platform-section {
+  padding: var(--space-5);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 14px;
+  background: rgb(23 25 30 / 72%);
+}
+
+.platform-page__empty a,
+.platform-record-list a {
+  color: var(--focus-ring);
+}
+
+.platform-page__empty a {
+  display: inline-flex;
+  margin-top: var(--space-4);
+}
+
+.platform-page__body {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.platform-page__project-picker {
+  display: grid;
+  width: min(360px, 100%);
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.platform-page__project-picker select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface-node);
+}
+
+.platform-section__heading,
+.platform-record-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.platform-section__heading > span,
+.platform-record-list li > span {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.platform-record-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-record-list li {
+  padding: var(--space-3) 0;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.platform-record-list li > div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.platform-record-list strong {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.platform-record-list span {
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 880px) {
   .preview-page__workspace {
     flex-direction: column;

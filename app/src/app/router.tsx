@@ -4,11 +4,15 @@ import { ProjectLauncherPage } from '../features/launcher/ProjectLauncherPage'
 import { CanvasPage } from '../features/canvas/CanvasPage'
 import { PreviewPage } from '../features/timeline/PreviewPage'
 import { PlatformShell } from '../features/platform/PlatformShell'
+import { AssetsHistoryPage } from '../features/platform/AssetsHistoryPage'
 
 export const routes: RouteObject[] = [
   {
     element: <PlatformShell />,
-    children: [{ index: true, element: <ProjectLauncherPage /> }],
+    children: [
+      { index: true, element: <ProjectLauncherPage /> },
+      { path: '/assets', element: <AssetsHistoryPage /> },
+    ],
   },
   {
     element: <PlatformShell mode="workspace" />,
