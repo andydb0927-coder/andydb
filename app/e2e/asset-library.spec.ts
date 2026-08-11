@@ -35,9 +35,21 @@ test('imports and reuses a local image through the platform', async ({
   await page
     .getByRole('button', { name: '添加 雨夜参考.png 到项目并打开画布' })
     .click()
-  await expect(
-    page.getByRole('button', { name: '雨夜参考.png', exact: true }),
-  ).toBeVisible()
+  await expect(page).toHaveURL(
+    (url) => (url.searchParams.get('focus') ?? '').length > 0,
+  )
+  const focusedAsset = page.getByRole('button', {
+    name: '雨夜参考.png',
+    exact: true,
+  })
+  await expect(focusedAsset).toBeVisible()
+  await expect
+    .poll(() =>
+      focusedAsset.evaluate((element) =>
+        element.closest('.react-flow__node')?.classList.contains('selected'),
+      ),
+    )
+    .toBe(true)
   await page.getByRole('link', { name: '预览' }).click()
   await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
 
