@@ -9,4 +9,5 @@ it.each([
 ])('renders %s', async (path, heading) => {
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />)
   expect(await screen.findByRole('heading', { name: heading })).toBeVisible()
+  expect(screen.getByRole('navigation', { name: '平台导航' })).toBeVisible()
 })
