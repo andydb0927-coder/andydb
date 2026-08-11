@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { PropsWithChildren } from 'react'
+import { useSyncExternalStore, type PropsWithChildren } from 'react'
 import { Position } from '@xyflow/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
@@ -10,6 +10,7 @@ const flowStore = vi.hoisted(() => ({
   transform: [0, 0, 1] as [number, number, number],
   width: 0,
   height: 0,
+  useStoreCallCount: 0,
   domNode: null as { getBoundingClientRect(): DOMRect } | null,
 }))
 
@@ -39,14 +40,22 @@ vi.mock('@xyflow/react', () => ({
     bezierPath.labelX,
     bezierPath.labelY,
   ],
-  useStore: (selector: (state: typeof flowStore) => unknown) =>
-    selector(flowStore),
+  useStore: (selector: (state: typeof flowStore) => unknown) => {
+    flowStore.useStoreCallCount += 1
+    useSyncExternalStore(
+      () => () => {},
+      () => flowStore,
+      () => flowStore,
+    )
+    return selector(flowStore)
+  },
 }))
 
 beforeEach(() => {
   flowStore.transform = [0, 0, 1]
   flowStore.width = 0
   flowStore.height = 0
+  flowStore.useStoreCallCount = 0
   flowStore.domNode = null
   bezierPath.labelX = 50
   bezierPath.labelY = 50
@@ -224,6 +233,52 @@ test('does not render paths, hit area, or delete action when hidden', () => {
     />,
   )
 
+  expect(container.querySelector('.dependency-edge__paths')).toBeNull()
+  expect(container.querySelector('.dependency-edge__interaction')).toBeNull()
+  expect(
+    screen.queryByRole('button', { name: /删除连接/ }),
+  ).not.toBeInTheDocument()
+})
+
+test('can update from visible to hidden without changing Hook order', () => {
+  const edgeProps = {
+    id: 'edge-a-b',
+    source: 'a',
+    target: 'b',
+    sourceX: 0,
+    sourceY: 0,
+    targetX: 100,
+    targetY: 100,
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+    selected: true,
+  }
+  const { container, rerender } = render(
+    <DependencyEdge
+      {...edgeProps}
+      data={{
+        visible: true,
+        sourceChanged: false,
+        ariaLabel: '角色参考 → 分镜 01',
+        onDelete: vi.fn(),
+      }}
+    />,
+  )
+
+  expect(() =>
+    rerender(
+      <DependencyEdge
+        {...edgeProps}
+        data={{
+          visible: false,
+          sourceChanged: false,
+          ariaLabel: '角色参考 → 分镜 01',
+          onDelete: vi.fn(),
+        }}
+      />,
+    ),
+  ).not.toThrow()
+  expect(flowStore.useStoreCallCount).toBe(6)
   expect(container.querySelector('.dependency-edge__paths')).toBeNull()
   expect(container.querySelector('.dependency-edge__interaction')).toBeNull()
   expect(
