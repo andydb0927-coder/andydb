@@ -327,6 +327,52 @@ async function expectVisibilityToggleInsideViewport(
   expect(centerHit).toBe(await toggle.getAttribute('aria-label'))
 }
 
+test('keeps the visibility toggle fully targetable at the normal layout', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await createCinematicProject(page)
+  const toggle = page.getByRole('button', { name: '隐藏连线' })
+
+  await expectVisibilityToggleInsideViewport(page, toggle, {
+    width: 1440,
+    height: 1024,
+  })
+})
+
+test('toggles connection visibility with focused Enter and Space activation', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await createCinematicProject(page)
+  const edge = page.getByLabel('角色参考 → 分镜 01', { exact: true })
+  const hideToggle = page.getByRole('button', { name: '隐藏连线' })
+
+  await hideToggle.focus()
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByRole('button', { name: '显示连线' }),
+  ).toHaveAttribute('aria-pressed', 'false')
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(0)
+  await expect(page.getByText('连线已隐藏，端口仍可使用')).toBeVisible()
+
+  const showToggle = page.getByRole('button', { name: '显示连线' })
+  await showToggle.focus()
+  await page.keyboard.press('Space')
+  await expect(
+    page.getByRole('button', { name: '隐藏连线' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(1)
+  await expect(page.getByText('连线已显示')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 test('hides and restores dependency visuals without changing connection data', async ({
   page,
 }) => {
