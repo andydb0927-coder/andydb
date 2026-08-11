@@ -230,11 +230,14 @@ for (const width of [721, 720]) {
     expect(nodeBox!.y).toBeGreaterThanOrEqual(0)
     expect(nodeBox!.x + nodeBox!.width).toBeLessThanOrEqual(width)
     expect(nodeBox!.y + nodeBox!.height).toBeLessThanOrEqual(778)
-    expect(
+    const overlapsDirector =
       nodeBox!.x < composerBox!.x + composerBox!.width &&
-        nodeBox!.x + nodeBox!.width > composerBox!.x &&
-        nodeBox!.y < composerBox!.y + composerBox!.height &&
-        nodeBox!.y + nodeBox!.height > composerBox!.y,
+      nodeBox!.x + nodeBox!.width > composerBox!.x &&
+      nodeBox!.y < composerBox!.y + composerBox!.height &&
+      nodeBox!.y + nodeBox!.height > composerBox!.y
+    expect(
+      overlapsDirector,
+      `generated node=${JSON.stringify(nodeBox)}, director=${JSON.stringify(composerBox)}`,
     ).toBe(false)
     expect(actionBox!.x).toBeGreaterThanOrEqual(0)
     expect(actionBox!.y).toBeGreaterThanOrEqual(0)

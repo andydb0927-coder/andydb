@@ -7,11 +7,11 @@ export type PlatformShellMode = 'standard' | 'workspace'
 
 export const platformNavigation = [
   { to: '/', label: '项目空间', icon: PanelsTopLeft, end: true },
-  { to: '/assets', label: '素材与历史', icon: FolderOpen },
-  { to: '/workflows', label: '工作流与模板', icon: Sparkles },
-  { to: '/discover', label: '发现与作品', icon: Compass },
-  { to: '/models', label: '模型能力', icon: Cpu },
-  { to: '/account', label: '本地工作区', icon: UserRound },
+  { to: '/assets', label: '素材与历史', icon: FolderOpen, end: false },
+  { to: '/workflows', label: '工作流与模板', icon: Sparkles, end: false },
+  { to: '/discover', label: '发现与作品', icon: Compass, end: false },
+  { to: '/models', label: '模型能力', icon: Cpu, end: false },
+  { to: '/account', label: '本地工作区', icon: UserRound, end: false },
 ] as const
 
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {

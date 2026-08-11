@@ -1077,10 +1077,10 @@ select {
   position: absolute;
   z-index: 14;
   display: grid;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
   place-items: center;
   padding: 0;
   border: 1px solid rgb(255 180 193 / 55%);
@@ -1659,6 +1659,14 @@ select {
   --platform-rail-width: 56px;
 }
 
+.platform-shell--workspace .canvas-top-bar {
+  left: var(--platform-rail-width);
+}
+
+.platform-shell--workspace .canvas-page__viewport {
+  left: var(--platform-rail-width);
+}
+
 .platform-shell__rail {
   position: sticky;
   top: 0;
@@ -2211,5 +2219,11 @@ select {
 
   .director-composer__meta {
     display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .platform-shell--workspace .director-composer {
+    width: 236px;
   }
 }

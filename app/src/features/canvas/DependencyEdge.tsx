@@ -9,7 +9,7 @@ import { Trash2 } from 'lucide-react'
 
 import type { DependencyFlowEdge } from './edge-types'
 
-const DELETE_CONTROL_HALF_SIZE = 16
+const DELETE_CONTROL_HALF_SIZE = 17
 const DELETE_CONTROL_GUTTER = 8
 const NARROW_BOTTOM_RESERVE = 180
 const INTERACTION_WIDTH = 24
