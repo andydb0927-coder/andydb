@@ -33,13 +33,16 @@ export function deriveLibraryRecord(
   project: Project,
   asset: Asset,
 ): LibraryAssetRecord {
-  const version = project.nodes
-    .flatMap((node) => node.versions)
-    .find((candidate) => candidate.assetId === asset.id)
+  const owningNode = project.nodes.find((node) =>
+    node.versions.some((version) => version.assetId === asset.id),
+  )
+  const version = owningNode?.versions.find(
+    (candidate) => candidate.assetId === asset.id,
+  )
 
   return {
     ...asset,
-    name: version?.prompt ?? asset.id,
+    name: owningNode?.title.trim() || asset.id,
     createdAt: version?.createdAt ?? project.createdAt,
     source: asset.url.includes('/demo/')
       ? 'built-in'

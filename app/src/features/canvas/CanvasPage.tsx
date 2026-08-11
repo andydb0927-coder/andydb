@@ -18,7 +18,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { DirectorComposer } from '../director/DirectorComposer'
 import type { DirectorCommand } from '../director/director-command'
@@ -148,8 +148,16 @@ export function CanvasPage({
   generationAdapter = defaultGenerationAdapter,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const focusNodeId = searchParams.get('focus')
+  const locationState = location.state as {
+    assetAttachSuccessMessage?: unknown
+  } | null
+  const assetAttachSuccessMessage =
+    typeof locationState?.assetAttachSuccessMessage === 'string'
+      ? locationState.assetAttachSuccessMessage
+      : undefined
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
@@ -1206,6 +1214,15 @@ export function CanvasPage({
         aria-label="项目画布"
         tabIndex={-1}
       >
+        {assetAttachSuccessMessage ? (
+          <p
+            className="canvas-asset-attach-feedback"
+            role="status"
+            aria-live="polite"
+          >
+            {assetAttachSuccessMessage}
+          </p>
+        ) : null}
         <ReactFlow<CreativeFlowNode, DependencyFlowEdge>
           aria-label="创作节点图"
           nodes={flowNodes}

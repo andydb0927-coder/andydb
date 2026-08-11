@@ -23,7 +23,7 @@ type LoadState =
 
 type LibraryLoadState =
   | { status: 'loading' }
-  | { status: 'loaded'; records: LibraryAssetRecord[] }
+  | { status: 'loaded'; records: LibraryAssetRecord[]; warning?: string }
   | { status: 'error' }
 
 type ImportState =
@@ -68,6 +68,39 @@ function readableAssetKind(kind: LibraryAssetRecord['kind']) {
     video: '视频',
     audio: '音频',
   }[kind]
+}
+
+function readableAssetSource(source: LibraryAssetRecord['source']) {
+  return {
+    upload: '本地上传',
+    generated: '生成结果',
+    project: '项目补录',
+    'built-in': '内置素材',
+  }[source]
+}
+
+function readableCreatedAt(createdAt: string) {
+  const utcMatch = createdAt.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})[^Z]*Z$/)
+  return utcMatch ? `${utcMatch[1]} ${utcMatch[2]} UTC` : createdAt
+}
+
+function readableByteSize(byteSize: number | undefined) {
+  if (byteSize === undefined) return '未记录'
+  if (byteSize < 1024) return `${byteSize} B`
+  const units = ['KiB', 'MiB', 'GiB']
+  let value = byteSize / 1024
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${Number.isInteger(value) ? value : value.toFixed(1)} ${units[unitIndex]}`
+}
+
+function recordDimensions(record: LibraryAssetRecord) {
+  if (record.width && record.height) return `${record.width} × ${record.height}`
+  if (record.durationSeconds) return `${record.durationSeconds} 秒`
+  return '未记录'
 }
 
 function mergeLibraryRecords(
@@ -143,7 +176,12 @@ export function AssetsHistoryPage({
       .catch(() => {
         if (!active) return
         setLibraryLoadState((current) =>
-          current.status === 'loading' ? { status: 'error' } : current,
+          current.status === 'loading'
+            ? { status: 'error' }
+            : {
+                ...current,
+                warning: '目录可能未完整加载，已导入的素材仍然可用。',
+              },
         )
       })
     return () => {
@@ -172,6 +210,10 @@ export function AssetsHistoryPage({
   )
   const libraryRecords =
     libraryLoadState.status === 'loaded' ? libraryLoadState.records : []
+  const libraryRecordsById = useMemo(
+    () => new Map(libraryRecords.map((record) => [record.id, record])),
+    [libraryRecords],
+  )
   const visibleLibraryRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase()
     return libraryRecords.filter((record) => {
@@ -225,7 +267,11 @@ export function AssetsHistoryPage({
         .hydrate(pending.projectId, repository)
       if (!hydrated) throw new Error('Project hydration failed')
       setPendingCanvasOpen(undefined)
-      navigate(`/project/${pending.projectId}?focus=${pending.nodeId}`)
+      navigate(`/project/${pending.projectId}?focus=${pending.nodeId}`, {
+        state: {
+          assetAttachSuccessMessage: `已将 ${pending.recordName} 添加到项目并打开画布`,
+        },
+      })
     } catch {
       setAttachError('素材已添加，但暂时无法打开画布')
       setAttachingAssetId(undefined)
@@ -285,6 +331,7 @@ export function AssetsHistoryPage({
               <span>上传本地素材</span>
               <input
                 type="file"
+                accept="image/*,video/*,audio/*"
                 aria-label="上传本地素材"
                 aria-busy={importState.status === 'busy'}
                 disabled={importState.status === 'busy'}
@@ -351,6 +398,11 @@ export function AssetsHistoryPage({
               {attachError}
             </p>
           ) : null}
+          {libraryLoadState.status === 'loaded' && libraryLoadState.warning ? (
+            <p className="platform-library__feedback platform-library__feedback--warning" role="status">
+              {libraryLoadState.warning}
+            </p>
+          ) : null}
           {libraryLoadState.status === 'loading' ? (
             <p className="platform-section__empty" aria-live="polite">正在读取本地素材库</p>
           ) : null}
@@ -374,6 +426,12 @@ export function AssetsHistoryPage({
                   <div className="platform-library__card-copy">
                     <strong>{record.name}</strong>
                     <span>{readableAssetKind(record.kind)} · {record.mimeType}</span>
+                    <span>来源：{readableAssetSource(record.source)}</span>
+                    <span>创建时间：{readableCreatedAt(record.createdAt)}</span>
+                    <span>文件大小：{readableByteSize(record.byteSize)}</span>
+                    {record.width && record.height ? (
+                      <span>尺寸：{recordDimensions(record)}</span>
+                    ) : null}
                   </div>
                   {record.kind === 'audio' ? (
                     <p>将在专业剪辑阶段使用</p>
@@ -447,21 +505,41 @@ export function AssetsHistoryPage({
               </div>
               {project.assets.length ? (
                 <ul className="platform-record-list">
-                  {project.assets.map((asset) => (
-                    <li key={asset.id}>
-                      <div>
-                        <strong>{asset.id}</strong>
-                        <span>{asset.kind} · {asset.mimeType}</span>
-                      </div>
-                      <span>
-                        {asset.width && asset.height
-                          ? `${asset.width} × ${asset.height}`
-                          : asset.durationSeconds
-                            ? `${asset.durationSeconds} 秒`
-                            : '未记录尺寸'}
-                      </span>
-                    </li>
-                  ))}
+                  {project.assets.map((asset) => {
+                    const record = libraryRecordsById.get(asset.id)
+                    return (
+                      <li key={asset.id}>
+                        <div>
+                          <strong>{record?.name ?? asset.id}</strong>
+                          <span>
+                            {record
+                              ? `${readableAssetKind(record.kind)} · ${record.mimeType}`
+                              : `项目快照 · ${asset.mimeType}`}
+                          </span>
+                          {record ? (
+                            <>
+                              <span>来源：{readableAssetSource(record.source)}</span>
+                              <span>创建时间：{readableCreatedAt(record.createdAt)}</span>
+                              <span>文件大小：{readableByteSize(record.byteSize)}</span>
+                            </>
+                          ) : (
+                            <span>目录记录不可用，已保留项目快照</span>
+                          )}
+                        </div>
+                        <span>
+                          {record
+                            ? record.width && record.height
+                              ? `尺寸：${recordDimensions(record)}`
+                              : recordDimensions(record)
+                            : asset.width && asset.height
+                              ? `${asset.width} × ${asset.height}`
+                              : asset.durationSeconds
+                                ? `${asset.durationSeconds} 秒`
+                                : '未记录尺寸'}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : (
                 <p className="platform-section__empty">此项目尚未引用素材。</p>

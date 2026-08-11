@@ -164,7 +164,7 @@ describe('attaching a library asset to a project', () => {
         {
           id: 'attached-video-version',
           createdAt: '2026-08-11T09:00:00.000Z',
-          prompt: '河岸镜头',
+          prompt: '来自素材库：河岸镜头',
           assetId: videoRecord.id,
         },
       ],

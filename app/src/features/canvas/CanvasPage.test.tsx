@@ -294,6 +294,30 @@ afterEach(() => {
 })
 
 describe('creative canvas', () => {
+  test('announces a persisted asset attach success from route state', () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/project/project-canvas',
+            search: '?focus=video',
+            state: {
+              assetAttachSuccessMessage: '已将 雨夜参考 添加到项目并打开画布',
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/project/:projectId" element={<CanvasPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '已将 雨夜参考 添加到项目并打开画布',
+    )
+  })
+
   test('keeps legacy cyclic dependency data in stable creation order', () => {
     const project = makeCanvasProject()
     const nodes = project.nodes.slice(0, 3)

@@ -4,7 +4,9 @@
 
 **Goal:** Add a durable local asset library with upload, search, filtering, and image/video reuse across projects while making the canvas generation adapter injectable.
 
-**Architecture:** Dexie version 2 adds a canonical `libraryAssets` table while existing projects retain embedded `Asset[]` snapshots. A dedicated repository owns import and lookup, a pure attach function creates project nodes, the existing `/assets` page coordinates the two repositories, and `CanvasPage` receives an optional `GenerationAdapter` without changing production runtime behavior.
+**Architecture:** Dexie version 3 is the final schema and adds a canonical `libraryAssets` table with a unique fingerprint index while existing projects retain embedded `Asset[]` snapshots. Version 2 was an intermediate state in this same unpublished phase, not a deployable target. A dedicated repository owns import and lookup, a pure attach function creates project nodes, the existing `/assets` page coordinates the two repositories, and `CanvasPage` receives an optional `GenerationAdapter` without changing production runtime behavior.
+
+**Schema migration note:** If version 2 had ever been deployed, duplicate fingerprints would have to be deduplicated before upgrading to the version 3 unique index. This phase confirms version 2 was not published, so that blocking migration is not required here.
 
 **Tech Stack:** React 19, TypeScript 6, React Router 7, Dexie 4, Zustand, Vitest, Testing Library, Playwright.
 
@@ -33,7 +35,7 @@
 
 **Interfaces:**
 - Produces `LibraryAssetSource`, `LibraryAssetRecord`, `libraryRecordToAsset(record)`, `deriveLibraryRecord(project, asset)`, and `AssetLibraryRepository` with `list`, `load`, `save`, and `findByFingerprint`.
-- Extends `WirelessCanvasDatabase` with `libraryAssets!: Table<LibraryAssetRecord, string>` and Dexie schema version 2.
+- Extends `WirelessCanvasDatabase` with `libraryAssets!: Table<LibraryAssetRecord, string>` and the final Dexie schema version 3; version 2 remains documented only as an unpublished intermediate schema.
 - `ProjectRepository.save(project)` preserves existing asset-library metadata and inserts only missing derived records.
 
 - [x] **Step 1: Write the failing repository tests**
@@ -87,7 +89,7 @@ export interface LibraryAssetRecord {
 }
 ```
 
-Add `this.version(2).stores({ projects: 'id, updatedAt', libraryAssets: 'id, createdAt, kind, source, name, fingerprint' })`. In `ProjectRepository.save`, run one Dexie read-write transaction, load existing library records by asset id, insert only records that are missing, then put the project. Derive names from the node version referencing the asset, derive generated source from `job.assetId`, and treat `/demo/` URLs as built-in.
+Keep the version 2 declaration only as the same-phase intermediate upgrade step, and make version 3 the final schema with `this.version(3).stores({ projects: 'id, updatedAt', libraryAssets: 'id, createdAt, kind, source, name, &fingerprint' })`. If version 2 had shipped, deduplicate fingerprints before this unique-index upgrade; it did not ship in this phase. In `ProjectRepository.save`, run one Dexie read-write transaction, load existing library records by asset id, insert only records that are missing, then put the project. Derive names from the title of the node whose version references the asset (falling back stably to the asset id), derive generated source from `job.assetId`, and treat `/demo/` URLs as built-in.
 
 - [x] **Step 4: Run GREEN and self-check**
 

@@ -77,7 +77,7 @@ export function attachLibraryAssetToProject(
       {
         id: versionId,
         createdAt,
-        prompt: record.name,
+        prompt: `来自素材库：${record.name}`,
         assetId: record.id,
       },
     ],

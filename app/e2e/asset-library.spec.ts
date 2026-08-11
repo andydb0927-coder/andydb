@@ -38,6 +38,9 @@ test('imports and reuses a local image through the platform', async ({
   await expect(page).toHaveURL(
     (url) => (url.searchParams.get('focus') ?? '').length > 0,
   )
+  await expect(page.getByRole('status')).toHaveText(
+    '已将 雨夜参考.png 添加到项目并打开画布',
+  )
   const focusedAsset = page.getByRole('button', {
     name: '雨夜参考.png',
     exact: true,
@@ -55,3 +58,55 @@ test('imports and reuses a local image through the platform', async ({
 
   expect(browserErrors).toEqual([])
 })
+
+for (const width of [721, 780]) {
+  test(`keeps asset controls inside and operable at ${width}px`, async ({
+    page,
+  }) => {
+    const height = 900
+    await page.setViewportSize({ width, height })
+    await createCinematicProject(page)
+    await page.getByRole('link', { name: '素材与历史' }).click()
+
+    const controlContainer = page.locator('.platform-library__controls')
+    await controlContainer.scrollIntoViewIfNeeded()
+    await expect(controlContainer).toBeVisible()
+    expect(
+      await controlContainer.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true)
+
+    const controls = [
+      page.getByLabel('搜索素材'),
+      page.getByLabel('目标项目'),
+    ]
+
+    for (const control of controls) {
+      await control.scrollIntoViewIfNeeded()
+      await expect(control).toBeVisible()
+      const box = await control.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      expect(box!.y).toBeGreaterThanOrEqual(0)
+      expect(box!.y + box!.height).toBeLessThanOrEqual(height)
+    }
+
+    for (const label of ['全部', '图片', '视频', '音频']) {
+      const filter = controlContainer.getByText(label, { exact: true })
+      const box = await filter.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+    }
+
+    await page.getByLabel('搜索素材').fill('雨夜')
+    await page.getByRole('radio', { name: '图片' }).check()
+    const targetProject = page.getByLabel('目标项目')
+    const selectedProjectId = await targetProject.inputValue()
+    expect(selectedProjectId.length).toBeGreaterThan(0)
+    await targetProject.selectOption(selectedProjectId)
+    await expect(targetProject).toHaveValue(selectedProjectId)
+  })
+}

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -22,6 +22,8 @@ const imageRecord: LibraryAssetRecord = {
   source: 'upload',
   fingerprint: 'sha256:rain',
   byteSize: 4,
+  width: 1920,
+  height: 1080,
 }
 
 const audioRecord: LibraryAssetRecord = {
@@ -110,6 +112,27 @@ afterEach(() => {
 })
 
 describe('assets and history page', () => {
+  test('advertises the supported media families to the file chooser', async () => {
+    renderAssetsPage()
+
+    await screen.findByRole('heading', { name: '素材与历史' })
+
+    expect(screen.getByLabelText('上传本地素材')).toHaveAttribute(
+      'accept',
+      'image/*,video/*,audio/*',
+    )
+  })
+
+  test('shows source, creation time, file size, and dimensions on a rich asset card', async () => {
+    renderAssetsPage({ libraryRepository: libraryRepositoryWith(imageRecord) })
+
+    const card = await screen.findByRole('article', { name: '雨夜参考' })
+    expect(within(card).getByText('来源：本地上传')).toBeVisible()
+    expect(within(card).getByText('创建时间：2026-08-10 08:00 UTC')).toBeVisible()
+    expect(within(card).getByText('文件大小：4 B')).toBeVisible()
+    expect(within(card).getByText('尺寸：1920 × 1080')).toBeVisible()
+  })
+
   test('uploads, searches, and filters real library records', async () => {
     const user = userEvent.setup()
     const uploadedRecord = { ...imageRecord, name: '雨夜.png' }
@@ -177,6 +200,9 @@ describe('assets and history page', () => {
     await act(async () => initialList.reject(new Error('offline')))
 
     expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
+    expect(screen.getByText('目录可能未完整加载，已导入的素材仍然可用。')).toBeVisible()
+    expect(screen.getByText('已导入 雨夜.png').closest('[role="status"]')).not.toBeNull()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   test('saves a selected asset into the target project before navigating', async () => {
@@ -218,7 +244,6 @@ describe('assets and history page', () => {
   })
 
   test('shows unsupported upload errors while keeping history visible', async () => {
-    const user = userEvent.setup()
     const project = makeProjectFixture()
     const libraryRepository = libraryRepositoryWith()
     vi.mocked(libraryRepository.importFile).mockRejectedValue(
@@ -229,10 +254,11 @@ describe('assets and history page', () => {
       libraryRepository,
     })
 
-    await user.upload(
-      screen.getByLabelText('上传本地素材'),
-      new File(['notes'], 'notes.txt', { type: 'text/plain' }),
-    )
+    fireEvent.change(screen.getByLabelText('上传本地素材'), {
+      target: {
+        files: [new File(['notes'], 'notes.txt', { type: 'text/plain' })],
+      },
+    })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('仅支持图片、视频或音频文件')
     expect(screen.getByRole('heading', { name: project.title })).toBeVisible()
@@ -333,6 +359,45 @@ describe('assets and history page', () => {
     expect(
       screen.getByRole('link', { name: '在画布中查看 河岸寻人' }),
     ).toHaveAttribute('href', '/project/project-frost-river?focus=shot-1')
+  })
+
+  test('resolves project asset references to rich catalog metadata and falls back to snapshots', async () => {
+    const project = makeProjectFixture()
+    const richRecord: LibraryAssetRecord = {
+      id: 'asset-shot-river-v1',
+      name: '河岸原片',
+      kind: 'image',
+      mimeType: 'image/tiff',
+      url: 'blob:wireless-canvas/catalog-river',
+      createdAt: '2026-08-09T10:30:00.000Z',
+      source: 'generated',
+      byteSize: 2 * 1024,
+      width: 4096,
+      height: 2160,
+    }
+    renderAssetsPage({
+      repository: createProjectRepository(project).repository,
+      libraryRepository: libraryRepositoryWith(richRecord),
+    })
+
+    const projectHeading = await screen.findByRole('heading', { name: project.title })
+    const projectAssets = projectHeading.closest('section')
+    expect(projectAssets).not.toBeNull()
+    const history = within(projectAssets!)
+
+    const richItem = history.getByText('河岸原片').closest('li')
+    expect(richItem).not.toBeNull()
+    expect(within(richItem!).getByText('图片 · image/tiff')).toBeVisible()
+    expect(within(richItem!).getByText('来源：生成结果')).toBeVisible()
+    expect(within(richItem!).getByText('创建时间：2026-08-09 10:30 UTC')).toBeVisible()
+    expect(within(richItem!).getByText('文件大小：2 KiB')).toBeVisible()
+    expect(within(richItem!).getByText('尺寸：4096 × 2160')).toBeVisible()
+
+    const fallbackItem = history.getByText('asset-rain-audio').closest('li')
+    expect(fallbackItem).not.toBeNull()
+    expect(within(fallbackItem!).getByText('项目快照 · audio/mpeg')).toBeVisible()
+    expect(within(fallbackItem!).getByText('目录记录不可用，已保留项目快照')).toBeVisible()
+    expect(within(fallbackItem!).getByText('12 秒')).toBeVisible()
   })
 
   test('offers the project space when no local project exists', async () => {

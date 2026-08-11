@@ -540,6 +540,24 @@ select {
   cursor: pointer;
 }
 
+.canvas-asset-attach-feedback {
+  position: absolute;
+  z-index: 12;
+  top: var(--space-4);
+  right: var(--space-4);
+  max-width: min(420px, calc(100% - 112px));
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgb(104 211 145 / 38%);
+  border-radius: 8px;
+  color: var(--status-success);
+  background: rgb(23 38 30 / 94%);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
 .canvas-toolbar {
   position: absolute;
   z-index: 10;
@@ -1940,7 +1958,10 @@ select {
 
 .platform-library__controls {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(280px, 1.4fr) minmax(180px, 1fr);
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 220px), 1fr)
+  );
   gap: var(--space-4);
   margin-top: var(--space-5);
 }
@@ -2014,6 +2035,10 @@ select {
 
 .platform-library__feedback--error {
   color: var(--status-error);
+}
+
+.platform-library__feedback--warning {
+  color: #efc97b;
 }
 
 .platform-library__grid {

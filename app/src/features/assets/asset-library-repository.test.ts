@@ -95,4 +95,29 @@ describe('asset library repository', () => {
 
     expect((await library.list()).some(({ id }) => id === 'asset-shot-river-v1')).toBe(true)
   })
+
+  test('uses the owning node title for legacy assets and a stable asset id fallback', async () => {
+    const { library, projects } = createRepositories()
+    const fixture = makeProjectFixture()
+    const orphanAsset = {
+      id: 'asset-orphan-reference',
+      kind: 'image' as const,
+      mimeType: 'image/png',
+      url: 'blob:wireless-canvas/orphan-reference',
+    }
+
+    await projects.save({
+      ...fixture,
+      assets: [...fixture.assets, orphanAsset],
+    })
+
+    expect(await library.load('asset-shot-river-v1')).toMatchObject({
+      name: '河岸寻人',
+      createdAt: '2026-08-06T08:00:00.000Z',
+    })
+    expect(await library.load(orphanAsset.id)).toMatchObject({
+      name: 'asset-orphan-reference',
+      createdAt: fixture.createdAt,
+    })
+  })
 })

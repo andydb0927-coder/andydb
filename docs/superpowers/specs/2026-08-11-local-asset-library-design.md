@@ -39,11 +39,13 @@
 
 ## 4. 数据模型与持久化
 
-Dexie 数据库升级到版本 2，保留 `projects: 'id, updatedAt'`，新增：
+Dexie 数据库的最终 schema 为版本 3，保留 `projects: 'id, updatedAt'`，新增带唯一指纹索引的素材表：
 
 ```ts
-libraryAssets: 'id, createdAt, kind, source, name, fingerprint'
+libraryAssets: 'id, createdAt, kind, source, name, &fingerprint'
 ```
+
+版本 2 中的非唯一 `fingerprint` 索引只是同一未发布开发阶段的中间状态，不是可部署的最终 schema。如果版本 2 曾经对外部署，升级版本 3 前必须先按指纹去重，再建立唯一索引；本阶段已确认版本 2 未发布，因此无需为历史重复数据设置阻断性迁移。
 
 素材库记录定义为：
 
@@ -143,7 +145,7 @@ generationAdapter?: GenerationAdapter
 
 所有生产行为必须先有失败测试，并确认失败原因为目标行为缺失。
 
-1. `AssetLibraryRepository`：Dexie v1 到 v2 兼容、导入、指纹去重、项目保存补录和元数据不降级。
+1. `AssetLibraryRepository`：Dexie v1 到最终 v3 兼容、唯一指纹去重、导入、项目保存补录和元数据不降级。
 2. `asset-import`：允许类型、拒绝类型、20 MiB 边界与稳定 SHA-256。
 3. `attachLibraryAssetToProject`：图片/视频节点、资产去重、位置冲突和音频拒绝。
 4. `AssetsHistoryPage`：上传、搜索、筛选、重复反馈、目标项目选择、跨项目使用和错误状态。
