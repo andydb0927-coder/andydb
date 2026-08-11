@@ -73,6 +73,7 @@ export function CanvasToolbar({
         className="canvas-toolbar__visibility-toggle"
         aria-label={connectionsVisible ? '隐藏连线' : '显示连线'}
         aria-pressed={connectionsVisible}
+        disabled={disabled}
         title={connectionsVisible ? '隐藏连线' : '显示连线'}
         onClick={onToggleConnections}
       >

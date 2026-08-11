@@ -56,3 +56,35 @@ test('exposes a pressed visibility toggle without changing the active tool', asy
   expect(onToggleConnections).toHaveBeenCalledOnce()
   expect(onToolChange).not.toHaveBeenCalled()
 })
+
+test('disables the visibility toggle with the rest of the toolbar', async () => {
+  const user = userEvent.setup()
+  const onToggleConnections = vi.fn()
+  const { rerender } = render(
+    <CanvasToolbar
+      activeTool="select"
+      connectionsVisible
+      disabled
+      draftOpen={false}
+      onToolChange={vi.fn()}
+      onToggleConnections={onToggleConnections}
+    />,
+  )
+
+  const disabledToggle = screen.getByRole('button', { name: '隐藏连线' })
+  expect(disabledToggle).toBeDisabled()
+  await user.click(disabledToggle)
+  expect(onToggleConnections).not.toHaveBeenCalled()
+
+  rerender(
+    <CanvasToolbar
+      activeTool="select"
+      connectionsVisible
+      draftOpen={false}
+      onToolChange={vi.fn()}
+      onToggleConnections={onToggleConnections}
+    />,
+  )
+
+  expect(screen.getByRole('button', { name: '隐藏连线' })).toBeEnabled()
+})

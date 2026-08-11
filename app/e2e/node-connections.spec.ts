@@ -392,10 +392,11 @@ test('hides and restores dependency visuals without changing connection data', a
     'aria-pressed',
     'false',
   )
-  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(0)
+  await expect(edge).toHaveCount(0)
   await expect(page.getByText('连线已隐藏，端口仍可使用')).toBeVisible()
 
   await page.getByRole('button', { name: '显示连线' }).click()
+  await expect(edge).toHaveCount(1)
   await expect(edge.locator('.dependency-edge__paths')).toHaveCount(1)
   expect(errors).toEqual([])
 })
@@ -449,11 +450,11 @@ test('preserves hidden connection data for H and the real L handle flow', async 
   await page.keyboard.press('Enter')
 
   const newEdge = page.getByLabel('角色参考 → 视频 01', { exact: true })
-  await expect(newEdge).toHaveCount(1)
-  await expect(newEdge.locator('.dependency-edge__paths')).toHaveCount(0)
+  await expect(newEdge).toHaveCount(0)
 
   await page.getByRole('button', { name: '显示连线' }).click()
   await expect(originalEdge.locator('.dependency-edge__paths')).toHaveCount(1)
+  await expect(newEdge).toHaveCount(1)
   await expect(newEdge.locator('.dependency-edge__paths')).toHaveCount(1)
   expect(errors).toEqual([])
 })

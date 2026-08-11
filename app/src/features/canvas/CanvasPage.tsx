@@ -688,7 +688,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           target: edge.targetNodeId,
           type: 'dependency',
           selected: edge.id === selectedEdgeId,
-          focusable: true,
+          hidden: !connectionsVisible,
+          focusable: connectionsVisible,
+          selectable: connectionsVisible,
           ariaLabel,
           markerEnd: { type: MarkerType.ArrowClosed },
           data: {

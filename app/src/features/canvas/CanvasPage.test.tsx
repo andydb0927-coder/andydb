@@ -36,6 +36,9 @@ interface FlowPropsFixture {
     source: string
     target: string
     selected?: boolean
+    hidden?: boolean
+    focusable?: boolean
+    selectable?: boolean
     ariaLabel?: string
     data?: {
       visible: boolean
@@ -1710,6 +1713,11 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '隐藏连线' }))
 
     expect(latestFlowProps?.edges[0].data?.visible).toBe(false)
+    expect(latestFlowProps?.edges[0]).toMatchObject({
+      hidden: true,
+      focusable: false,
+      selectable: false,
+    })
     expect(latestFlowProps?.edges[0].selected).toBe(false)
     expect(screen.getByRole('button', { name: '显示连线' })).toHaveAttribute(
       'aria-pressed',
@@ -1722,6 +1730,47 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject).toBe(beforeProject)
     expect(useProjectStore.getState().past).toBe(beforePast)
     expect(useProjectStore.getState().saveStatus).toBe(beforeSaveStatus)
+
+    await user.click(screen.getByRole('button', { name: '显示连线' }))
+    expect(latestFlowProps?.edges[0]).toMatchObject({
+      hidden: false,
+      focusable: true,
+      selectable: true,
+    })
+  })
+
+  test('disables connection visibility while loading and enables it visible by default when the project loads', async () => {
+    const user = userEvent.setup()
+    let resolveLoad: ((project: Project) => void) | undefined
+    const load = vi.fn(
+      () =>
+        new Promise<Project>((resolve) => {
+          resolveLoad = resolve
+        }),
+    )
+    act(() => {
+      useProjectStore.setState({
+        projectsById: {},
+        activeProjectId: undefined,
+        activeProject: undefined,
+        saveStatus: 'saved',
+        past: [],
+        future: [],
+      })
+    })
+
+    renderCanvas({ repository: { load, save: async () => undefined } })
+
+    expect(screen.getByRole('button', { name: '隐藏连线' })).toBeDisabled()
+
+    await act(async () => resolveLoad?.(makeCanvasProject()))
+
+    expect(await screen.findByRole('heading', { name: '雨夜追寻' })).toBeVisible()
+    const toggle = screen.getByRole('button', { name: '隐藏连线' })
+    expect(toggle).toBeEnabled()
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await user.click(toggle)
+    expect(screen.getByRole('button', { name: '显示连线' })).toBeEnabled()
   })
 
   test('toggles connections with the H shortcut while preserving Connect port state', async () => {
