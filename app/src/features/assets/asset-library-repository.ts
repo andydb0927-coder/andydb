@@ -1,5 +1,10 @@
 import type { WirelessCanvasDatabase } from '../project/project-repository'
 import type { LibraryAssetRecord } from './library-model'
+import {
+  fingerprintAssetFile,
+  readAssetFileAsDataUrl,
+  validateAssetFile,
+} from './asset-import'
 
 export class AssetLibraryRepository {
   private readonly database: WirelessCanvasDatabase
@@ -18,6 +23,33 @@ export class AssetLibraryRepository {
 
   async save(record: LibraryAssetRecord): Promise<void> {
     await this.database.libraryAssets.put(record)
+  }
+
+  async importFile(
+    file: File,
+  ): Promise<{ status: 'created' | 'existing'; record: LibraryAssetRecord }> {
+    validateAssetFile(file)
+
+    const fingerprint = await fingerprintAssetFile(file)
+    const existing = await this.findByFingerprint(fingerprint)
+    if (existing) {
+      return { status: 'existing', record: existing }
+    }
+
+    const record: LibraryAssetRecord = {
+      id: crypto.randomUUID(),
+      name: file.name,
+      kind: file.type.split('/')[0] as LibraryAssetRecord['kind'],
+      mimeType: file.type,
+      url: await readAssetFileAsDataUrl(file),
+      createdAt: new Date().toISOString(),
+      source: 'upload',
+      fingerprint,
+      byteSize: file.size,
+    }
+
+    await this.save(record)
+    return { status: 'created', record }
   }
 
   async findByFingerprint(

@@ -24,6 +24,15 @@ afterEach(async () => {
 })
 
 describe('asset library repository', () => {
+  test('returns the existing record for identical file bytes', async () => {
+    const { library: repository } = createRepositories()
+    const file = new File(['same-media'], 'first.png', { type: 'image/png' })
+
+    expect((await repository.importFile(file)).status).toBe('created')
+    expect((await repository.importFile(new File(['same-media'], 'renamed.png', { type: 'image/png' }))).status).toBe('existing')
+    expect(await repository.list()).toHaveLength(1)
+  })
+
   test('indexes project assets without replacing richer library metadata', async () => {
     const { library, projects } = createRepositories()
     const uploadRecord: LibraryAssetRecord = {
