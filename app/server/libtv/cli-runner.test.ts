@@ -8,6 +8,7 @@ import { createCliRunner } from './cli-runner.js'
 type FakeChild = EventEmitter & {
   stdout: PassThrough
   stderr: PassThrough
+  kill: ReturnType<typeof vi.fn<(signal?: NodeJS.Signals | number) => boolean>>
 }
 
 type FakeSpawn = (
@@ -20,6 +21,7 @@ function child(): FakeChild {
   return Object.assign(new EventEmitter(), {
     stdout: new PassThrough(),
     stderr: new PassThrough(),
+    kill: vi.fn(() => true),
   })
 }
 
@@ -65,14 +67,16 @@ describe('LibTV CLI runner', () => {
   })
 
   test('redacts the missing CLI path from ENOENT failures', async () => {
+    let process: FakeChild | undefined
     const spawn: FakeSpawn = () => {
-      const process = child()
+      process = child()
       queueMicrotask(() => {
         const error = Object.assign(
           new Error('spawn /Users/example/.libtv/libtv ENOENT PRIVATE_TOKEN=secret'),
           { code: 'ENOENT' },
         )
-        process.emit('error', error)
+        process?.emit('error', error)
+        process?.emit('close', 0)
       })
       return process
     }
@@ -81,11 +85,16 @@ describe('LibTV CLI runner', () => {
       spawn,
     })
 
-    await expect(runner.run(['account', 'info'])).rejects.toThrow('LibTV CLI is not installed')
-    await runner.run(['account', 'info']).catch((error: unknown) => {
-      expect(String(error)).not.toContain('/Users/example/.libtv/libtv')
-      expect(String(error)).not.toContain('PRIVATE_TOKEN')
-    })
+    const error = await runner.run(['account', 'info']).catch((reason: unknown) => reason)
+
+    expect(error).toEqual(expect.any(Error))
+    expect(String(error)).toContain('LibTV CLI is not installed')
+    expect(String(error)).not.toContain('/Users/example/.libtv/libtv')
+    expect(String(error)).not.toContain('PRIVATE_TOKEN')
+    expect(process?.listenerCount('error')).toBe(0)
+    expect(process?.listenerCount('close')).toBe(0)
+    expect(process?.stdout.destroyed).toBe(true)
+    expect(process?.stderr.destroyed).toBe(true)
   })
 
   test('redacts command and environment details from nonzero exits', async () => {
@@ -111,11 +120,12 @@ describe('LibTV CLI runner', () => {
   })
 
   test('rejects output beyond two MiB', async () => {
+    let process: FakeChild | undefined
     const spawn: FakeSpawn = () => {
-      const process = child()
+      process = child()
       queueMicrotask(() => {
-        process.stdout.end(Buffer.alloc(2 * 1024 * 1024 + 1, 'x'))
-        process.emit('close', 0)
+        process?.stdout.end(Buffer.alloc(2 * 1024 * 1024 + 1, 'x'))
+        process?.emit('close', 0)
       })
       return process
     }
@@ -125,5 +135,41 @@ describe('LibTV CLI runner', () => {
     })
 
     await expect(runner.run(['--version'])).rejects.toThrow('LibTV CLI output exceeds 2 MiB')
+    expect(process?.kill).toHaveBeenCalledTimes(1)
+    expect(process?.kill).toHaveBeenCalledWith('SIGKILL')
+    expect(process?.stdout.listenerCount('data')).toBe(0)
+    expect(process?.stderr.listenerCount('data')).toBe(0)
+    expect(process?.listenerCount('error')).toBe(0)
+    expect(process?.listenerCount('close')).toBe(0)
+    expect(process?.stdout.destroyed).toBe(true)
+    expect(process?.stderr.destroyed).toBe(true)
+  })
+
+  test('settles overflow once when kill races error and close', async () => {
+    const process = child()
+    let hadTerminalListenersWhenKilled = false
+    process.kill.mockImplementation(() => {
+      hadTerminalListenersWhenKilled =
+        process.listenerCount('error') === 1 && process.listenerCount('close') === 1
+      process.emit('error', Object.assign(new Error('kill race'), { code: 'EIO' }))
+      process.emit('close', 1)
+      return true
+    })
+    const spawn: FakeSpawn = () => {
+      queueMicrotask(() => {
+        process.stdout.end(Buffer.alloc(2 * 1024 * 1024 + 1, 'x'))
+      })
+      return process
+    }
+    const runner = createCliRunner({
+      binary: '/Users/example/.libtv/libtv',
+      spawn,
+    })
+
+    await expect(runner.run(['--version'])).rejects.toThrow('LibTV CLI output exceeds 2 MiB')
+    expect(hadTerminalListenersWhenKilled).toBe(true)
+    expect(process.kill).toHaveBeenCalledTimes(1)
+    expect(process.listenerCount('error')).toBe(0)
+    expect(process.listenerCount('close')).toBe(0)
   })
 })

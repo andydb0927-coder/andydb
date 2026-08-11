@@ -6,51 +6,77 @@ import type {
 
 import type { CliRunner } from './types.js'
 
+const SEMVER_PATTERN =
+  /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
+
+class CatalogResponseError extends Error {}
+
 export async function loadLibTvCatalog(
   runner: CliRunner,
   writesEnabled: boolean,
 ): Promise<LibTvCatalog> {
-  let cliVersion: string
+  let versionStdout: string
   try {
-    const version = await runner.run(['--version'])
-    cliVersion = version.stdout.trim()
-    if (!cliVersion) {
-      throw new Error('empty version')
-    }
+    versionStdout = (await runner.run(['--version'])).stdout
   } catch {
-    return unavailableCatalog(writesEnabled, false)
+    return failedCatalog(writesEnabled, false, undefined, 'LibTV CLI is unavailable')
+  }
+
+  const cliVersion = parseCliVersion(versionStdout)
+  if (!cliVersion) {
+    return failedCatalog(
+      writesEnabled,
+      true,
+      undefined,
+      'LibTV CLI version response is invalid',
+    )
   }
 
   try {
-    const account = parseJson((await runner.run(['account', 'info'])).stdout)
+    const account = await runJson(runner, ['account', 'info'], 'LibTV account response is invalid')
     const projects = parseProjects(
-      parseJson((await runner.run(['project', 'list', '-p', '1', '-s', '50'])).stdout),
+      await runJson(
+        runner,
+        ['project', 'list', '-p', '1', '-s', '50'],
+        'LibTV project response is invalid',
+      ),
     )
     const imageModels = parseModels(
-      parseJson((await runner.run(['model', 'search', '--type', 'image'])).stdout),
+      await runJson(
+        runner,
+        ['model', 'search', '--type', 'image'],
+        'LibTV image model response is invalid',
+      ),
+      'LibTV image model response is invalid',
     )
     const videoModels = parseModels(
-      parseJson((await runner.run(['model', 'search', '--type', 'video'])).stdout),
+      await runJson(
+        runner,
+        ['model', 'search', '--type', 'video'],
+        'LibTV video model response is invalid',
+      ),
+      'LibTV video model response is invalid',
     )
 
     return {
       cliInstalled: true,
       cliVersion,
-      authenticated: readBoolean(account, 'authenticated'),
+      authenticated: parseAuthenticated(account),
       writesEnabled,
       projects,
       imageModels,
       videoModels,
     }
-  } catch {
-    return unavailableCatalog(writesEnabled, true, cliVersion)
+  } catch (error) {
+    return failedCatalog(writesEnabled, true, cliVersion, safeCatalogError(error))
   }
 }
 
-function unavailableCatalog(
+function failedCatalog(
   writesEnabled: boolean,
   cliInstalled: boolean,
-  cliVersion?: string,
+  cliVersion: string | undefined,
+  error: string,
 ): LibTvCatalog {
   return {
     cliInstalled,
@@ -60,24 +86,54 @@ function unavailableCatalog(
     projects: [],
     imageModels: [],
     videoModels: [],
-    error: 'LibTV CLI is unavailable',
+    error,
   }
 }
 
-function parseJson(stdout: string): unknown {
-  return JSON.parse(stdout) as unknown
+function parseCliVersion(stdout: string): string | undefined {
+  const candidate = stdout.trim()
+  if (!SEMVER_PATTERN.test(candidate)) {
+    return undefined
+  }
+  return candidate.startsWith('v') ? candidate.slice(1) : candidate
+}
+
+async function runJson(
+  runner: CliRunner,
+  args: readonly string[],
+  invalidResponseError: string,
+): Promise<unknown> {
+  const { stdout } = await runner.run(args)
+  try {
+    return JSON.parse(stdout) as unknown
+  } catch {
+    throw new CatalogResponseError(invalidResponseError)
+  }
+}
+
+function parseAuthenticated(payload: unknown): boolean {
+  if (
+    !isRecord(payload) ||
+    !('user' in payload) ||
+    (payload.user !== null && !isRecord(payload.user))
+  ) {
+    throw new CatalogResponseError('LibTV account response is invalid')
+  }
+  return payload.user !== null
 }
 
 function parseProjects(payload: unknown): LibTvCatalogProject[] {
-  return readArray(payload, 'projects').flatMap((project) => {
-    const uuid = readString(project, 'uuid')
-    const name = readString(project, 'name')
-    return uuid && name ? [{ uuid, name }] : []
-  })
+  return requiredArray(payload, 'projectMetaList', 'LibTV project response is invalid').flatMap(
+    (project) => {
+      const uuid = readString(project, 'uuid')
+      const name = readString(project, 'name')
+      return uuid && name ? [{ uuid, name }] : []
+    },
+  )
 }
 
-function parseModels(payload: unknown): LibTvModelSummary[] {
-  return readArray(payload, 'models').flatMap((model) => {
+function parseModels(payload: unknown, invalidResponseError: string): LibTvModelSummary[] {
+  return requiredArray(payload, 'matches', invalidResponseError).flatMap((model) => {
     const modelKey = readString(model, 'modelKey')
     const modelName = readString(model, 'modelName')
     if (!modelKey || !modelName) {
@@ -96,12 +152,11 @@ function parseModels(payload: unknown): LibTvModelSummary[] {
   })
 }
 
-function readArray(payload: unknown, key: string): unknown[] {
-  if (!isRecord(payload)) {
-    return []
+function requiredArray(payload: unknown, key: string, error: string): unknown[] {
+  if (!isRecord(payload) || !Array.isArray(payload[key])) {
+    throw new CatalogResponseError(error)
   }
-  const value = payload[key]
-  return Array.isArray(value) ? value : []
+  return payload[key]
 }
 
 function readString(payload: unknown, key: string): string | undefined {
@@ -110,10 +165,6 @@ function readString(payload: unknown, key: string): string | undefined {
   }
   const value = payload[key]
   return typeof value === 'string' ? value : undefined
-}
-
-function readBoolean(payload: unknown, key: string): boolean {
-  return isRecord(payload) && payload[key] === true
 }
 
 function optionalString(payload: unknown, key: string): Record<string, string> {
@@ -126,6 +177,12 @@ function optionalBoolean(payload: unknown, key: string): Record<string, boolean>
     return {}
   }
   return { [key]: payload[key] }
+}
+
+function safeCatalogError(error: unknown): string {
+  return error instanceof CatalogResponseError
+    ? error.message
+    : 'LibTV CLI is unavailable'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

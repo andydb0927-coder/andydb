@@ -44,11 +44,28 @@ class SpawnCliRunner implements CliRunner {
       let outputBytes = 0
       let settled = false
 
-      const finish = (callback: () => void) => {
+      const cleanup = () => {
+        process.stdout.removeListener('data', onStdoutData)
+        process.stderr.removeListener('data', onStderrData)
+        process.removeListener('error', onError)
+        process.removeListener('close', onClose)
+        process.stdout.destroy()
+        process.stderr.destroy()
+      }
+
+      const finish = (callback: () => void, kill: boolean) => {
         if (settled) {
           return
         }
         settled = true
+        if (kill) {
+          try {
+            process.kill('SIGKILL')
+          } catch {
+            // The process may already have exited between overflow detection and cleanup.
+          }
+        }
+        cleanup()
         callback()
       }
 
@@ -56,18 +73,18 @@ class SpawnCliRunner implements CliRunner {
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
         outputBytes += buffer.byteLength
         if (outputBytes > MAX_OUTPUT_BYTES) {
-          finish(() => reject(new Error('LibTV CLI output exceeds 2 MiB')))
+          finish(() => reject(new Error('LibTV CLI output exceeds 2 MiB')), true)
           return
         }
         chunks.push(buffer)
       }
 
-      process.stdout.on('data', (chunk: string | Buffer) => capture(stdoutChunks, chunk))
-      process.stderr.on('data', (chunk: string | Buffer) => capture(stderrChunks, chunk))
-      process.once('error', (error) => finish(() => reject(startError(error))))
-      process.once('close', (code) => {
+      const onStdoutData = (chunk: string | Buffer) => capture(stdoutChunks, chunk)
+      const onStderrData = (chunk: string | Buffer) => capture(stderrChunks, chunk)
+      const onError = (error: Error) => finish(() => reject(startError(error)), false)
+      const onClose = (code: number | null) => {
         if (code !== 0) {
-          finish(() => reject(new Error('LibTV CLI failed')))
+          finish(() => reject(new Error('LibTV CLI failed')), false)
           return
         }
         finish(() =>
@@ -75,8 +92,14 @@ class SpawnCliRunner implements CliRunner {
             stdout: Buffer.concat(stdoutChunks).toString('utf8'),
             stderr: Buffer.concat(stderrChunks).toString('utf8'),
           }),
+          false,
         )
-      })
+      }
+
+      process.stdout.on('data', onStdoutData)
+      process.stderr.on('data', onStderrData)
+      process.once('error', onError)
+      process.once('close', onClose)
     })
   }
 }

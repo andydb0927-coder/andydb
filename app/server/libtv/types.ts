@@ -14,6 +14,12 @@ export interface CliProcess {
   readonly stderr: Readable
   once(event: 'error', listener: (error: Error) => void): unknown
   once(event: 'close', listener: (code: number | null, signal: NodeJS.Signals | null) => void): unknown
+  removeListener(event: 'error', listener: (error: Error) => void): unknown
+  removeListener(
+    event: 'close',
+    listener: (code: number | null, signal: NodeJS.Signals | null) => void,
+  ): unknown
+  kill(signal?: NodeJS.Signals | number): boolean
 }
 
 export interface CliSpawnOptions {
