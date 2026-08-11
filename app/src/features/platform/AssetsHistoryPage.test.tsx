@@ -156,6 +156,29 @@ describe('assets and history page', () => {
     expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
   })
 
+  test('keeps an uploaded record when the initial library request rejects later', async () => {
+    const user = userEvent.setup()
+    const initialList = createDeferred<LibraryAssetRecord[]>()
+    const uploadedRecord = { ...imageRecord, name: '雨夜.png' }
+    const libraryRepository = libraryRepositoryWith()
+    vi.mocked(libraryRepository.list).mockReturnValue(initialList.promise)
+    vi.mocked(libraryRepository.importFile).mockResolvedValue({
+      status: 'created',
+      record: uploadedRecord,
+    })
+    renderAssetsPage({ libraryRepository })
+
+    await user.upload(
+      screen.getByLabelText('上传本地素材'),
+      new File(['rain'], '雨夜.png', { type: 'image/png' }),
+    )
+    expect(await screen.findByRole('article', { name: '雨夜.png' })).toBeVisible()
+
+    await act(async () => initialList.reject(new Error('offline')))
+
+    expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
+  })
+
   test('saves a selected asset into the target project before navigating', async () => {
     const user = userEvent.setup()
     const project = makeProjectFixture()

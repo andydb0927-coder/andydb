@@ -141,7 +141,10 @@ export function AssetsHistoryPage({
         }))
       })
       .catch(() => {
-        if (active) setLibraryLoadState({ status: 'error' })
+        if (!active) return
+        setLibraryLoadState((current) =>
+          current.status === 'loading' ? { status: 'error' } : current,
+        )
       })
     return () => {
       active = false
