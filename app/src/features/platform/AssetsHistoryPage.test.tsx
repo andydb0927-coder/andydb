@@ -258,7 +258,7 @@ describe('assets and history page', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('无法读取本地素材库')
-    expect(screen.getByRole('heading', { name: project.title })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: project.title })).toBeVisible()
   })
 
   test('stays on the assets page when saving the target project fails', async () => {

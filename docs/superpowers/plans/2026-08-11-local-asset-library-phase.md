@@ -36,7 +36,7 @@
 - Extends `WirelessCanvasDatabase` with `libraryAssets!: Table<LibraryAssetRecord, string>` and Dexie schema version 2.
 - `ProjectRepository.save(project)` preserves existing asset-library metadata and inserts only missing derived records.
 
-- [ ] **Step 1: Write the failing repository tests**
+- [x] **Step 1: Write the failing repository tests**
 
 ```ts
 test('opens a version 1 project database after adding the library table', async () => {
@@ -56,7 +56,7 @@ test('indexes project assets without replacing richer library metadata', async (
 })
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -66,7 +66,7 @@ cd app && npm run test:run -- src/features/assets/asset-library-repository.test.
 
 Expected: FAIL because the asset model, repository, and `libraryAssets` table do not exist.
 
-- [ ] **Step 3: Implement the schema and synchronization**
+- [x] **Step 3: Implement the schema and synchronization**
 
 Define the record exactly as approved:
 
@@ -89,7 +89,7 @@ export interface LibraryAssetRecord {
 
 Add `this.version(2).stores({ projects: 'id, updatedAt', libraryAssets: 'id, createdAt, kind, source, name, fingerprint' })`. In `ProjectRepository.save`, run one Dexie read-write transaction, load existing library records by asset id, insert only records that are missing, then put the project. Derive names from the node version referencing the asset, derive generated source from `job.assetId`, and treat `/demo/` URLs as built-in.
 
-- [ ] **Step 4: Run GREEN and self-check**
+- [x] **Step 4: Run GREEN and self-check**
 
 Run:
 
@@ -101,7 +101,7 @@ git diff --name-only
 
 Expected: both files pass; changed paths are limited to the five Task 1 files.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add app/src/features/assets/library-model.ts app/src/features/assets/asset-library-repository.ts app/src/features/assets/asset-library-repository.test.ts app/src/features/project/project-repository.ts app/src/features/project/project-store.test.ts
@@ -120,7 +120,7 @@ git commit -m "feat: add durable asset catalog"
 - Produces `MAX_ASSET_FILE_BYTES`, `AssetImportError`, `validateAssetFile(file)`, `fingerprintAssetFile(file)`, and `readAssetFileAsDataUrl(file)`.
 - Adds `AssetLibraryRepository.importFile(file): Promise<{ status: 'created' | 'existing'; record: LibraryAssetRecord }>`.
 
-- [ ] **Step 1: Write failing import tests**
+- [x] **Step 1: Write failing import tests**
 
 ```ts
 test('rejects unsupported and oversized files before reading them', () => {
@@ -138,7 +138,7 @@ test('returns the existing record for identical file bytes', async () => {
 })
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 cd app && npm run test:run -- src/features/assets/asset-import.test.ts src/features/assets/asset-library-repository.test.ts
@@ -146,11 +146,11 @@ cd app && npm run test:run -- src/features/assets/asset-import.test.ts src/featu
 
 Expected: FAIL because import validation and repository import do not exist.
 
-- [ ] **Step 3: Implement minimal browser import**
+- [x] **Step 3: Implement minimal browser import**
 
 Use `file.arrayBuffer()` with `crypto.subtle.digest('SHA-256', bytes)` and encode the content with `FileReader.readAsDataURL(file)`. Check `findByFingerprint` before reading the data URL. New records use `crypto.randomUUID()`, `file.name`, the MIME prefix as kind, `file.size`, current ISO time, and source `upload`.
 
-- [ ] **Step 4: Run GREEN and self-check**
+- [x] **Step 4: Run GREEN and self-check**
 
 ```bash
 cd app && npm run test:run -- src/features/assets/asset-import.test.ts src/features/assets/asset-library-repository.test.ts
@@ -160,7 +160,7 @@ git diff --name-only
 
 Expected: import and repository suites pass with no unrelated changes.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add app/src/features/assets/asset-import.ts app/src/features/assets/asset-import.test.ts app/src/features/assets/asset-library-repository.ts app/src/features/assets/asset-library-repository.test.ts
@@ -184,7 +184,7 @@ interface AttachAssetEnvironment {
 }
 ```
 
-- [ ] **Step 1: Write failing domain tests**
+- [x] **Step 1: Write failing domain tests**
 
 ```ts
 test('creates an image node while reusing one project asset snapshot', () => {
@@ -202,7 +202,7 @@ test('rejects audio without changing the project', () => {
 })
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 cd app && npm run test:run -- src/features/assets/attach-library-asset.test.ts
@@ -210,11 +210,11 @@ cd app && npm run test:run -- src/features/assets/attach-library-asset.test.ts
 
 Expected: FAIL because the attach module does not exist.
 
-- [ ] **Step 3: Implement the pure attach function**
+- [x] **Step 3: Implement the pure attach function**
 
 Copy the library record into project `Asset` fields, generate collision-free node and version ids, and use the approved 340px horizontal / 220px vertical placement. Return a new project with updated `updatedAt`; never mutate the input.
 
-- [ ] **Step 4: Run GREEN and self-check**
+- [x] **Step 4: Run GREEN and self-check**
 
 ```bash
 cd app && npm run test:run -- src/features/assets/attach-library-asset.test.ts
@@ -224,7 +224,7 @@ git diff --name-only
 
 Expected: all attach tests pass and only the two Task 3 files changed.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 ```bash
 git add app/src/features/assets/attach-library-asset.ts app/src/features/assets/attach-library-asset.test.ts
@@ -243,7 +243,7 @@ git commit -m "feat: reuse assets across projects"
 - `AssetsHistoryPageProps.libraryRepository` consumes `list` and `importFile`.
 - The page exposes labels `上传本地素材`, `搜索素材`, `素材类型`, and `目标项目`.
 
-- [ ] **Step 1: Write failing page tests**
+- [x] **Step 1: Write failing page tests**
 
 ```tsx
 test('uploads, searches, and filters real library records', async () => {
@@ -299,7 +299,7 @@ test('stays on the assets page when saving the target project fails', async () =
 })
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 cd app && npm run test:run -- src/features/platform/AssetsHistoryPage.test.tsx
@@ -307,11 +307,11 @@ cd app && npm run test:run -- src/features/platform/AssetsHistoryPage.test.tsx
 
 Expected: FAIL because upload, library filters, and attach actions are absent.
 
-- [ ] **Step 3: Implement page behavior**
+- [x] **Step 3: Implement page behavior**
 
 Load project history and library records independently. Keep existing history markup and add the upload/search/filter/library section before it. On attach, reload the selected project, call `attachLibraryAssetToProject`, save, hydrate through the real project store, then navigate to the focus URL. Keep action-specific `aria-busy`, alert, and status states.
 
-- [ ] **Step 4: Run focused GREEN and self-check**
+- [x] **Step 4: Run focused GREEN and self-check**
 
 ```bash
 cd app && npm run test:run -- src/features/platform/AssetsHistoryPage.test.tsx src/features/assets src/features/project/project-store.test.ts
@@ -321,7 +321,7 @@ git diff --name-only
 
 Expected: focused asset, platform, and project persistence tests pass; exact changes are the three Task 4 files.
 
-- [ ] **Step 5: Commit Task 4**
+- [x] **Step 5: Commit Task 4**
 
 ```bash
 git add app/src/features/platform/AssetsHistoryPage.tsx app/src/features/platform/AssetsHistoryPage.test.tsx app/src/styles/global.css
@@ -341,7 +341,7 @@ git commit -m "feat: make local assets reusable"
 - Extends `CanvasPageProps` with `generationAdapter?: GenerationAdapter`.
 - Uses one module-level default `DemoGenerationAdapter` while preserving queue disposal and resume behavior.
 
-- [ ] **Step 1: Write the failing injection test**
+- [x] **Step 1: Write the failing injection test**
 
 ```tsx
 test('uses an injected generation adapter for canvas results', async () => {
@@ -356,7 +356,7 @@ test('uses an injected generation adapter for canvas results', async () => {
 
 Update the model page expectation to include “真实提供方未配置”.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 cd app && npm run test:run -- src/features/canvas/CanvasPage.test.tsx src/features/platform/ModelsPage.test.tsx
@@ -364,11 +364,11 @@ cd app && npm run test:run -- src/features/canvas/CanvasPage.test.tsx src/featur
 
 Expected: FAIL because `CanvasPage` ignores the injected adapter and the explicit provider-boundary copy is absent.
 
-- [ ] **Step 3: Implement injection and truthful copy**
+- [x] **Step 3: Implement injection and truthful copy**
 
 Use the injected adapter when building `GenerationQueue`; default to the existing demo adapter. Add no provider selector or remote configuration control.
 
-- [ ] **Step 4: Run GREEN and self-check**
+- [x] **Step 4: Run GREEN and self-check**
 
 ```bash
 cd app && npm run test:run -- src/features/canvas/CanvasPage.test.tsx src/features/generation src/features/platform/ModelsPage.test.tsx
@@ -378,7 +378,7 @@ git diff --name-only
 
 Expected: canvas, queue, and models tests pass; changes remain within the four Task 5 files.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 ```bash
 git add app/src/features/canvas/CanvasPage.tsx app/src/features/canvas/CanvasPage.test.tsx app/src/features/platform/model-capabilities.ts app/src/features/platform/ModelsPage.tsx app/src/features/platform/ModelsPage.test.tsx
@@ -394,7 +394,7 @@ git commit -m "refactor: inject canvas generation provider"
 **Interfaces:**
 - Browser path creates a project, uploads a real 1×1 PNG buffer, filters to images, attaches it, verifies the focused canvas node, and opens preview.
 
-- [ ] **Step 1: Write the failing browser path**
+- [x] **Step 1: Write the failing browser path**
 
 ```ts
 test('imports and reuses a local image through the platform', async ({ page }) => {
@@ -415,7 +415,7 @@ test('imports and reuses a local image through the platform', async ({ page }) =
 
 Track console errors and page errors and assert the collection is empty.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 cd app && npx playwright test e2e/asset-library.spec.ts
@@ -423,11 +423,11 @@ cd app && npx playwright test e2e/asset-library.spec.ts
 
 Expected: FAIL before the complete production route supports upload and attach.
 
-- [ ] **Step 3: Make only integration corrections revealed by the browser test**
+- [x] **Step 3: Make only integration corrections revealed by the browser test**
 
 For every observed bug, add a focused failing component or domain regression test first, implement the minimal correction, and rerun both focused Vitest and this Playwright file.
 
-- [ ] **Step 4: Run full phase verification**
+- [x] **Step 4: Run full phase verification**
 
 ```bash
 cd app && npm run test:run
@@ -440,7 +440,7 @@ git status --short --untracked-files=no
 
 Expected: all commands exit zero; build may retain the existing non-failing chunk-size warning; only intended Task 6 paths remain uncommitted.
 
-- [ ] **Step 5: Mark the plan complete, self-review, and commit**
+- [x] **Step 5: Mark the plan complete, self-review, and commit**
 
 Mark every completed checkbox `[x]`, confirm no placeholder token or unchecked implementation step remains, and commit exact paths:
 
