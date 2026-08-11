@@ -8,6 +8,8 @@ export interface ModelCapability {
   description: string
 }
 
+export const modelProviderStatus = '真实提供方未配置'
+
 export const modelCapabilities: ModelCapability[] = [
   {
     id: 'demo-image-draft',

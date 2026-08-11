@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 
 import {
   modelCapabilities,
+  modelProviderStatus,
   type ModelCapabilityKind,
 } from './model-capabilities'
 
@@ -30,6 +31,7 @@ export function ModelsPage() {
         <h1>模型能力</h1>
         <p>
           当前应用使用<strong>本地演示适配器</strong>，用于验证画布内的生成与版本流转；尚未连接远程模型服务。
+          <strong>{modelProviderStatus}</strong>。
         </p>
       </header>
 

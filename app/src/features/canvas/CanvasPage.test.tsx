@@ -10,6 +10,10 @@ import {
 } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
+import type {
+  GenerationAdapter,
+  GenerationResult,
+} from '../generation/generation-adapter'
 import type { Project } from '../project/model'
 import {
   ProjectRepository,
@@ -604,6 +608,41 @@ describe('creative canvas', () => {
     )
     expect(latestFlowProps?.nodes.find((node) => node.id === video.id)?.selected).toBe(
       true,
+    )
+  })
+
+  test('uses an injected generation adapter for canvas results', async () => {
+    const user = userEvent.setup()
+    const injectedResult: GenerationResult = {
+      asset: {
+        id: 'asset-injected-video',
+        kind: 'image',
+        url: '/injected/video-thumbnail.png',
+        mimeType: 'image/png',
+      },
+      version: {
+        id: 'version-injected-video',
+        createdAt: '2026-08-11T08:00:00.000Z',
+        prompt: 'injected generation result',
+        assetId: 'asset-injected-video',
+      },
+    }
+    const adapter: GenerationAdapter = {
+      start: async () => injectedResult,
+    }
+
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: adapter,
+    })
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: '生成视频' }))
+
+    expect(
+      await screen.findByRole('button', { name: '视频 01' }),
+    ).toBeVisible()
+    expect(useProjectStore.getState().activeProject?.assets).toContainEqual(
+      injectedResult.asset,
     )
   })
 

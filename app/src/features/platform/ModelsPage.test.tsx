@@ -13,4 +13,5 @@ test('filters local demonstration capabilities by kind', async () => {
   expect(screen.getByText('演示视频草稿')).toBeVisible()
   expect(screen.queryByText('演示图像草稿')).not.toBeInTheDocument()
   expect(screen.getByText('本地演示适配器')).toBeVisible()
+  expect(screen.getByText('真实提供方未配置')).toBeVisible()
 })

@@ -23,6 +23,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { DirectorComposer } from '../director/DirectorComposer'
 import type { DirectorCommand } from '../director/director-command'
 import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
+import type { GenerationAdapter } from '../generation/generation-adapter'
 import { GenerationQueue } from '../generation/generation-queue'
 import type { Project } from '../project/model'
 import {
@@ -85,6 +86,7 @@ interface PendingPlacement {
 }
 
 const defaultRepository = new ProjectRepository()
+const defaultGenerationAdapter = new DemoGenerationAdapter()
 
 function isCreatableTool(tool: CanvasTool): tool is CreatableNodeKind {
   return (
@@ -138,9 +140,13 @@ function findCanvasNodeControl(
 
 export interface CanvasPageProps {
   repository?: CanvasRepository
+  generationAdapter?: GenerationAdapter
 }
 
-export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) {
+export function CanvasPage({
+  repository = defaultRepository,
+  generationAdapter = defaultGenerationAdapter,
+}: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const [searchParams] = useSearchParams()
   const focusNodeId = searchParams.get('focus')
@@ -238,7 +244,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
   const generationQueue = useMemo(
     () =>
       new GenerationQueue({
-        adapter: new DemoGenerationAdapter(),
+        adapter: generationAdapter,
         getLatestSequence(queueProjectId) {
           const jobs =
             useProjectStore.getState().projectsById[queueProjectId]?.jobs ?? []
@@ -276,7 +282,7 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           if (generatedNode) selectOnlyNode(generatedNode.id)
         },
       }),
-    [projectId, selectOnlyNode],
+    [generationAdapter, projectId, selectOnlyNode],
   )
 
   useEffect(() => {
