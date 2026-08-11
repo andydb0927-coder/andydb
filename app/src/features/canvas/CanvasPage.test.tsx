@@ -38,6 +38,7 @@ interface FlowPropsFixture {
     selected?: boolean
     ariaLabel?: string
     data?: {
+      visible: boolean
       sourceChanged: boolean
       ariaLabel: string
       onDelete(edgeId: string): void
@@ -1695,6 +1696,143 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toEqual([])
   })
 
+  test('hides selected connections through local visibility state without changing the active project', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const edge = latestFlowProps!.edges[0]
+    const beforeProject = useProjectStore.getState().activeProject
+    const beforePast = useProjectStore.getState().past
+    const beforeSaveStatus = useProjectStore.getState().saveStatus
+
+    act(() => latestFlowProps?.onEdgeClick?.({}, edge))
+    expect(latestFlowProps?.edges[0].selected).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: '隐藏连线' }))
+
+    expect(latestFlowProps?.edges[0].data?.visible).toBe(false)
+    expect(latestFlowProps?.edges[0].selected).toBe(false)
+    expect(screen.getByRole('button', { name: '显示连线' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '连线已隐藏，端口仍可使用',
+    )
+    expect(screen.getByRole('status')).toHaveClass('canvas-visibility-hint')
+    expect(useProjectStore.getState().activeProject).toBe(beforeProject)
+    expect(useProjectStore.getState().past).toBe(beforePast)
+    expect(useProjectStore.getState().saveStatus).toBe(beforeSaveStatus)
+  })
+
+  test('toggles connections with the H shortcut while preserving Connect port state', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const connect = screen.getByRole('button', { name: '连线' })
+
+    await user.click(connect)
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
+    ).toMatchObject({ connectionMode: true, connectionSource: true })
+
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
+
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === false)).toBe(
+      true,
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
+    expect(connect).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
+    ).toMatchObject({ connectionMode: true, connectionSource: true })
+  })
+
+  test('ignores the H shortcut in editable contexts and for modified or repeated key events', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const directorInput = screen.getByLabelText('告诉我下一步要做什么')
+
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'h', ctrlKey: true }),
+      )
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', repeat: true }))
+    })
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
+      true,
+    )
+
+    await user.click(directorInput)
+    await user.keyboard('h')
+    expect(directorInput).toHaveValue('h')
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
+      true,
+    )
+  })
+
+  test('ignores the H shortcut while canvas dialogs are open', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+
+    await user.click(screen.getByRole('button', { name: '视频' }))
+    clickPane()
+    expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBeVisible()
+
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
+      true,
+    )
+
+    await user.click(screen.getByRole('button', { name: '取消' }))
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
+      true,
+    )
+
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: '删除节点' }))
+    expect(screen.getByRole('dialog', { name: '删除“角色参考”？' })).toBeVisible()
+
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
+      true,
+    )
+  })
+
+  test('resets connection visibility when the active project changes', async () => {
+    const user = userEvent.setup()
+    const projectB = {
+      ...makeCanvasProject(),
+      id: 'project-b',
+      title: '第二项目',
+    }
+    render(
+      <MemoryRouter initialEntries={['/project/project-canvas']}>
+        <SwitchingCanvas
+          repository={{
+            load: async (id) => (id === 'project-b' ? projectB : undefined),
+            save: async () => undefined,
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '隐藏连线' }))
+    expect(latestFlowProps?.edges[0].data?.visible).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
+
+    expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
+    expect(latestFlowProps?.edges[0].data?.visible).toBe(true)
+    expect(screen.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
   test('switches from connection selection to a creation tool without stealing focus', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -1898,7 +2036,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
-  test('offers exactly seven floating creation tools', () => {
+  test('offers canvas tools and the connection visibility control', () => {
     renderCanvas()
 
     const toolbar = screen.getByRole('toolbar', { name: '创作工具' })
@@ -1906,7 +2044,16 @@ describe('creative canvas', () => {
       within(toolbar)
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
-    ).toEqual(['选择', '文本', '图片', '分镜', '视频', '连线', '分组'])
+    ).toEqual([
+      '选择',
+      '文本',
+      '图片',
+      '分镜',
+      '视频',
+      '连线',
+      '分组',
+      '隐藏连线',
+    ])
   })
 
   test('creates nodes from the toolbar at the converted pane position', async () => {

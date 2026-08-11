@@ -178,6 +178,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     phase: 'idle',
   })
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
+  const [connectionsVisible, setConnectionsVisible] = useState(true)
+  const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
@@ -209,6 +211,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
+    setConnectionsVisible(true)
+    setVisibilityFeedback(undefined)
     setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
     createdNodeFocusRef.current = undefined
@@ -221,6 +225,15 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       connectionTriggerRef.current = null
     }
   }, [projectId])
+
+  const toggleConnectionsVisibility = useCallback(() => {
+    const nextConnectionsVisible = !connectionsVisible
+    if (!nextConnectionsVisible) setSelectedEdgeId(undefined)
+    setConnectionsVisible(nextConnectionsVisible)
+    setVisibilityFeedback(
+      nextConnectionsVisible ? '连线已显示' : '连线已隐藏，端口仍可使用',
+    )
+  }, [connectionsVisible])
 
   const generationQueue = useMemo(
     () =>
@@ -679,13 +692,14 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
           ariaLabel,
           markerEnd: { type: MarkerType.ArrowClosed },
           data: {
+            visible: connectionsVisible,
             sourceChanged: edge.sourceChanged ?? false,
             ariaLabel,
             onDelete: disconnectEdge,
           },
         }
       }),
-    [disconnectEdge, project, selectedEdgeId],
+    [connectionsVisible, disconnectEdge, project, selectedEdgeId],
   )
 
   const handleEdgesChange = useCallback(
@@ -960,6 +974,53 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
     project,
   ])
 
+  useEffect(() => {
+    const handleVisibilityShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.repeat ||
+        event.key.toLowerCase() !== 'h' ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !project ||
+        pendingPlacement ||
+        nodeListOpen ||
+        deleteCandidateId ||
+        nativeConnectionActiveRef.current ||
+        document.querySelector('[role="dialog"]')
+      ) {
+        return
+      }
+
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          Boolean(
+            target.closest(
+              'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+            ),
+          ))
+      ) {
+        return
+      }
+
+      event.preventDefault()
+      toggleConnectionsVisibility()
+    }
+
+    window.addEventListener('keydown', handleVisibilityShortcut)
+    return () => window.removeEventListener('keydown', handleVisibilityShortcut)
+  }, [
+    deleteCandidateId,
+    nodeListOpen,
+    pendingPlacement,
+    project,
+    toggleConnectionsVisibility,
+  ])
+
   const handlePaneClick = useCallback(
     (event: ReactMouseEvent<Element>) => {
       setSelectedEdgeId(undefined)
@@ -1097,7 +1158,8 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
       : connectionTool.phase === 'selecting-target'
         ? '请选择目标节点'
         : undefined
-  const canvasHint = connectionFeedback ?? connectionHint ?? placementHint
+  const canvasHint =
+    connectionFeedback ?? connectionHint ?? visibilityFeedback ?? placementHint
   const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
 
   const cancelDelete = () => {
@@ -1181,8 +1243,10 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
         </ReactFlow>
         <CanvasToolbar
           activeTool={activeTool}
+          connectionsVisible={connectionsVisible}
           disabled={!project}
           draftOpen={Boolean(pendingPlacement)}
+          onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
         />
         {canvasHint ? (
@@ -1190,7 +1254,9 @@ export function CanvasPage({ repository = defaultRepository }: CanvasPageProps) 
             className={`${
               canvasHintIsConnection
                 ? 'canvas-connection-hint'
-                : 'canvas-placement-hint'
+                : visibilityFeedback && canvasHint === visibilityFeedback
+                  ? 'canvas-visibility-hint'
+                  : 'canvas-placement-hint'
             }${
               connectionFeedback ? ' canvas-connection-hint--error' : ''
             }`}
