@@ -8,6 +8,23 @@ export interface LibTvProviderSelection {
   videoModelName: string
 }
 
+export interface LibTvGenerateBody {
+  confirmed: true
+  selection: LibTvProviderSelection
+  request: {
+    projectId: string
+    nodeId: string
+    operation: 'regenerate' | 'extend-shot' | 'generate-video'
+    targetKind: 'image' | 'video'
+    prompt: string
+    referenceAssets: Array<{
+      dataUrl: string
+      kind: 'image' | 'video' | 'audio'
+      mimeType: string
+    }>
+  }
+}
+
 export interface LibTvCatalogProject {
   uuid: string
   name: string

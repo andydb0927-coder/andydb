@@ -37,3 +37,13 @@ export interface CliRunnerOptions {
   binary: string
   spawn: CliSpawn
 }
+
+export interface LibTvGeneratedAsset {
+  kind: 'image' | 'video'
+  url: string
+  mimeType: string
+  poster?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+}
