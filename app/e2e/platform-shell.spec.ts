@@ -18,7 +18,9 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
 
   await page.getByRole('link', { name: '素材与历史' }).click()
   await expect(page.getByRole('heading', { name: '素材与历史' })).toBeVisible()
-  await expect(page.getByText('asset-character-reference')).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: '电影感叙事' }).getByText('角色参考', { exact: true }),
+  ).toBeVisible()
   await page.getByRole('link', { name: '在画布中查看 角色参考' }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
   await page.getByRole('link', { name: '预览' }).click()
