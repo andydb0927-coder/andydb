@@ -1,5 +1,7 @@
 import {
   Clapperboard,
+  Eye,
+  EyeOff,
   Film,
   Group,
   Image,
@@ -24,15 +26,19 @@ export type CanvasTool = (typeof tools)[number]['id']
 
 export interface CanvasToolbarProps {
   activeTool: CanvasTool
+  connectionsVisible: boolean
   disabled?: boolean
   draftOpen: boolean
+  onToggleConnections(): void
   onToolChange(tool: CanvasTool, trigger: HTMLButtonElement): void
 }
 
 export function CanvasToolbar({
   activeTool,
+  connectionsVisible,
   disabled = false,
   draftOpen,
+  onToggleConnections,
   onToolChange,
 }: CanvasToolbarProps) {
   return (
@@ -62,6 +68,17 @@ export function CanvasToolbar({
           </button>
         )
       })}
+      <button
+        type="button"
+        className="canvas-toolbar__visibility-toggle"
+        aria-label={connectionsVisible ? '隐藏连线' : '显示连线'}
+        aria-pressed={connectionsVisible}
+        disabled={disabled}
+        title={connectionsVisible ? '隐藏连线' : '显示连线'}
+        onClick={onToggleConnections}
+      >
+        {connectionsVisible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
+      </button>
     </FloatingPanel>
   )
 }

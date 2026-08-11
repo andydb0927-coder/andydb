@@ -573,12 +573,30 @@ select {
   opacity: 0.34;
 }
 
+.canvas-toolbar .canvas-toolbar__visibility-toggle {
+  margin-top: var(--space-1);
+  border-top-color: rgb(255 255 255 / 16%);
+}
+
+.canvas-toolbar .canvas-toolbar__visibility-toggle:hover:not(:disabled),
+.canvas-toolbar .canvas-toolbar__visibility-toggle:focus-visible,
+.canvas-toolbar .canvas-toolbar__visibility-toggle[aria-pressed='false'] {
+  color: white;
+  background: rgb(114 104 240 / 24%);
+}
+
+.canvas-toolbar .canvas-toolbar__visibility-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .canvas-page__viewport--placing .react-flow__pane {
   cursor: crosshair;
 }
 
 .canvas-placement-hint,
-.canvas-connection-hint {
+.canvas-connection-hint,
+.canvas-visibility-hint {
   position: absolute;
   z-index: 12;
   top: var(--space-4);
@@ -1648,7 +1666,8 @@ select {
     transform: none;
   }
 
-  .canvas-connection-hint {
+  .canvas-connection-hint,
+  .canvas-visibility-hint {
     right: var(--space-4);
     left: 72px;
     max-width: calc(100vw - 88px);
