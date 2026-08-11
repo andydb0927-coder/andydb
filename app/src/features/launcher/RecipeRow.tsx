@@ -1,7 +1,6 @@
-export type RecipeId =
-  | 'cinematic-story'
-  | 'brand-atmosphere'
-  | 'character-teaser'
+import type { RecipeId } from '../project/recipe-catalog'
+
+export type { RecipeId } from '../project/recipe-catalog'
 
 export interface RecipeRowProps {
   id: RecipeId

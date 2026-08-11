@@ -3,6 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
 import { ProjectRepository } from '../project/project-repository'
+import {
+  buildExampleProject,
+  buildRecipeProject,
+  exampleProject,
+} from '../project/example-project'
+import { recipeDefinitions } from '../project/recipe-catalog'
 import { useProjectStore } from '../project/project-store'
 import { Button } from '../../ui/Button'
 import { StatusText } from '../../ui/StatusText'
@@ -42,49 +48,6 @@ interface LauncherOperation {
   abortController: AbortController
 }
 
-interface RecipeDefinition {
-  id: RecipeId
-  title: string
-  description: string
-  characterPrompt: string
-  scenePrompt: string
-  storyboardPrompt: string
-}
-
-const recipes: RecipeDefinition[] = [
-  {
-    id: 'cinematic-story',
-    title: '电影感叙事',
-    description: '从角色动机出发，建立场景与首个叙事镜头',
-    characterPrompt: '主角人物参考，克制的电影光影，清晰面部特征',
-    scenePrompt: '核心场景设定，真实空间层次与氛围光',
-    storyboardPrompt: '首个叙事分镜，宽银幕构图，建立人物与环境关系',
-  },
-  {
-    id: 'brand-atmosphere',
-    title: '品牌氛围片',
-    description: '围绕品牌气质建立主角、环境与开场视觉',
-    characterPrompt: '品牌主角人物参考，精致造型与统一视觉气质',
-    scenePrompt: '品牌世界观场景，材质细节与氛围光线',
-    storyboardPrompt: '品牌氛围片开场分镜，视觉焦点明确，节奏舒展',
-  },
-  {
-    id: 'character-teaser',
-    title: '角色概念预告',
-    description: '先定义角色形象，再生成其世界与亮相镜头',
-    characterPrompt: '角色概念参考，全身造型，鲜明轮廓与身份细节',
-    scenePrompt: '角色所属世界的核心场景，环境叙事清晰',
-    storyboardPrompt: '角色首次亮相分镜，强烈剪影与戏剧性光线',
-  },
-]
-
-const exampleProject = {
-  id: 'project-frost-river',
-  title: '霜河渡',
-  intent: '雨夜河岸，一名女子寻找失踪的弟弟',
-  nodeCount: 3,
-}
-
 const defaultRepository = new ProjectRepository()
 
 function defaultParseRecipe(
@@ -106,115 +69,6 @@ function defaultParseRecipe(
     if (signal.aborted) cancel()
     else signal.addEventListener('abort', cancel, { once: true })
   })
-}
-
-function buildRecipeProject(
-  intent: string,
-  recipe: RecipeDefinition,
-): Project {
-  const project = createProject(recipe.title, intent)
-  const createdAt = project.createdAt
-
-  return {
-    ...project,
-    assets: [
-      {
-        id: 'asset-character-reference',
-        kind: 'image',
-        url: '/demo/character-lin-yuan.png',
-        mimeType: 'image/png',
-        width: 960,
-        height: 1200,
-      },
-      {
-        id: 'asset-scene-reference',
-        kind: 'image',
-        url: '/demo/scene-rain-street.png',
-        mimeType: 'image/png',
-        width: 1600,
-        height: 900,
-      },
-      {
-        id: 'asset-storyboard-01',
-        kind: 'image',
-        url: '/demo/shot-river.png',
-        mimeType: 'image/png',
-        width: 1600,
-        height: 900,
-      },
-    ],
-    nodes: [
-      {
-        id: 'character-reference',
-        kind: 'character',
-        title: '角色参考',
-        position: { x: 80, y: 80 },
-        versions: [
-          {
-            id: 'version-character-reference',
-            createdAt,
-            prompt: `${recipe.characterPrompt}。创作意图：${intent}`,
-            assetId: 'asset-character-reference',
-          },
-        ],
-        activeVersionId: 'version-character-reference',
-        sourceChanged: false,
-      },
-      {
-        id: 'scene-reference',
-        kind: 'scene',
-        title: '场景设定',
-        position: { x: 390, y: 210 },
-        versions: [
-          {
-            id: 'version-scene-reference',
-            createdAt,
-            prompt: `${recipe.scenePrompt}。创作意图：${intent}`,
-            assetId: 'asset-scene-reference',
-          },
-        ],
-        activeVersionId: 'version-scene-reference',
-        sourceChanged: false,
-      },
-      {
-        id: 'storyboard-01',
-        kind: 'storyboard',
-        title: '分镜 01',
-        position: { x: 720, y: 350 },
-        versions: [
-          {
-            id: 'version-storyboard-01',
-            createdAt,
-            prompt: `${recipe.storyboardPrompt}。创作意图：${intent}`,
-            assetId: 'asset-storyboard-01',
-          },
-        ],
-        activeVersionId: 'version-storyboard-01',
-        sourceChanged: false,
-      },
-    ],
-    edges: [
-      {
-        id: 'edge-character-storyboard-01',
-        sourceNodeId: 'character-reference',
-        targetNodeId: 'storyboard-01',
-      },
-      {
-        id: 'edge-scene-storyboard-01',
-        sourceNodeId: 'scene-reference',
-        targetNodeId: 'storyboard-01',
-      },
-    ],
-  }
-}
-
-function buildExampleProject(): Project {
-  const project = buildRecipeProject(exampleProject.intent, recipes[0])
-  return {
-    ...project,
-    id: exampleProject.id,
-    title: exampleProject.title,
-  }
 }
 
 function readableError(error: unknown): string {
@@ -362,7 +216,7 @@ export function ProjectLauncherPage({
       if (!isCurrentOperation(operation)) return
 
       setLauncherState({ status: 'creating' })
-      const recipe = recipes.find(({ id }) => id === selectedRecipeId)!
+      const recipe = recipeDefinitions.find(({ id }) => id === selectedRecipeId)!
       await persistAndOpen(buildRecipeProject(trimmedIntent, recipe), operation)
     } catch (error) {
       if (!isCurrentOperation(operation)) return
@@ -516,7 +370,7 @@ export function ProjectLauncherPage({
           <fieldset className="launcher-recipes" disabled={isBusy}>
             <legend>选择创作配方</legend>
             <div className="launcher-recipes__grid">
-              {recipes.map((recipe) => (
+              {recipeDefinitions.map((recipe) => (
                 <RecipeRow
                   key={recipe.id}
                   {...recipe}
