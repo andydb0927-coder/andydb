@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
 import { ProjectRepository } from '../project/project-repository'
@@ -8,7 +8,11 @@ import {
   buildRecipeProject,
   exampleProject,
 } from '../project/example-project'
-import { recipeDefinitions } from '../project/recipe-catalog'
+import {
+  findRecipe,
+  RECIPE_QUERY_PARAM,
+  recipeDefinitions,
+} from '../project/recipe-catalog'
 import { useProjectStore } from '../project/project-store'
 import { Button } from '../../ui/Button'
 import { StatusText } from '../../ui/StatusText'
@@ -87,9 +91,13 @@ export function ProjectLauncherPage({
   parseRecipe = defaultParseRecipe,
 }: ProjectLauncherPageProps) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [intent, setIntent] = useState('')
+  const requestedRecipeId = findRecipe(
+    searchParams.get(RECIPE_QUERY_PARAM),
+  )?.id
   const [selectedRecipeId, setSelectedRecipeId] =
-    useState<RecipeId>('cinematic-story')
+    useState<RecipeId>(() => requestedRecipeId ?? 'cinematic-story')
   const [launcherState, setLauncherState] = useState<LauncherState>({
     status: 'idle',
   })
@@ -113,6 +121,10 @@ export function ProjectLauncherPage({
       activeOperationRef.current = undefined
     }
   }, [])
+
+  useEffect(() => {
+    setSelectedRecipeId(requestedRecipeId ?? 'cinematic-story')
+  }, [requestedRecipeId])
 
   const loadRecentProjects = useCallback(async () => {
     if (recentListInFlightRef.current) return

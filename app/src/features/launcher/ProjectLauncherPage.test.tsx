@@ -43,10 +43,12 @@ function renderLauncher({
   repository = makeRepository(),
   parseRecipe = vi.fn<RecipeParser>().mockResolvedValue(undefined),
   strictMode = false,
+  initialEntry = '/',
 }: {
   repository?: ReturnType<typeof makeRepository>
   parseRecipe?: RecipeParser
   strictMode?: boolean
+  initialEntry?: string
 } = {}) {
   const routes: RouteObject[] = [
     {
@@ -68,7 +70,7 @@ function renderLauncher({
     },
   ]
 
-  const router = createMemoryRouter(routes, { initialEntries: ['/'] })
+  const router = createMemoryRouter(routes, { initialEntries: [initialEntry] })
   const routerProvider = (
     <RouterProvider
       router={router}
@@ -94,6 +96,17 @@ afterEach(() => {
 })
 
 describe('project launcher', () => {
+  test('preselects a workflow from the URL without creating a project', async () => {
+    const { repository } = renderLauncher({
+      initialEntry: '/?recipe=brand-atmosphere',
+    })
+
+    expect(
+      await screen.findByRole('radio', { name: /品牌氛围片/ }),
+    ).toBeChecked()
+    expect(repository.save).not.toHaveBeenCalled()
+  })
+
   test('creates a recipe project with independently referenced starter nodes and opens its canvas', async () => {
     const user = userEvent.setup()
     const { repository } = renderLauncher()
