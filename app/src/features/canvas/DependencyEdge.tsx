@@ -106,6 +106,9 @@ export function DependencyEdge({
   selected,
   data,
 }: EdgeProps<DependencyFlowEdge>) {
+  const visible = data?.visible ?? true
+  if (visible === false) return null
+
   const viewportZoom = useStore((state) => state.transform[2])
   const interactionStrokeWidth =
     INTERACTION_WIDTH / (viewportZoom > 0 ? viewportZoom : 1)

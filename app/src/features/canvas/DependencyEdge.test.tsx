@@ -68,6 +68,7 @@ test('renders the selected edge delete action at the path label point', async ()
       targetPosition={Position.Left}
       selected
       data={{
+        visible: true,
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete,
@@ -101,6 +102,7 @@ test.each([
         targetPosition={Position.Left}
         selected={false}
         data={{
+          visible: true,
           sourceChanged: false,
           ariaLabel: '角色参考 → 分镜 01',
           onDelete: vi.fn(),
@@ -160,6 +162,7 @@ test('inverse-scales the selected delete action at minZoom', () => {
       targetPosition={Position.Left}
       selected
       data={{
+        visible: true,
         sourceChanged: false,
         ariaLabel: '角色参考 → 视频 01',
         onDelete: vi.fn(),
@@ -188,6 +191,7 @@ test('does not render the edge delete action until selected', () => {
       targetPosition={Position.Left}
       selected={false}
       data={{
+        visible: true,
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete: vi.fn(),
@@ -196,6 +200,35 @@ test('does not render the edge delete action until selected', () => {
   )
 
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
+
+test('does not render paths, hit area, or delete action when hidden', () => {
+  const { container } = render(
+    <DependencyEdge
+      id="edge-a-b"
+      source="a"
+      target="b"
+      sourceX={0}
+      sourceY={0}
+      targetX={100}
+      targetY={100}
+      sourcePosition={Position.Right}
+      targetPosition={Position.Left}
+      selected
+      data={{
+        visible: false,
+        sourceChanged: false,
+        ariaLabel: '角色参考 → 分镜 01',
+        onDelete: vi.fn(),
+      }}
+    />,
+  )
+
+  expect(container.querySelector('.dependency-edge__paths')).toBeNull()
+  expect(container.querySelector('.dependency-edge__interaction')).toBeNull()
+  expect(
+    screen.queryByRole('button', { name: /删除连接/ }),
+  ).not.toBeInTheDocument()
 })
 
 test('keeps the full delete control inside a 721 by 778 viewport after pan and zoom', () => {
@@ -229,6 +262,7 @@ test('keeps the full delete control inside a 721 by 778 viewport after pan and z
       targetPosition={Position.Left}
       selected
       data={{
+        visible: true,
         sourceChanged: false,
         ariaLabel: '角色参考 → 视频 01',
         onDelete: vi.fn(),
