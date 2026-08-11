@@ -2029,6 +2029,95 @@ select {
   font-size: 0.8125rem;
 }
 
+.platform-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: 0;
+}
+
+.platform-filter-group legend {
+  width: 100%;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.platform-filter-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.platform-filter-group label:has(input:checked) {
+  border-color: var(--focus-ring);
+  color: var(--text-primary);
+  background: rgb(169 162 255 / 12%);
+}
+
+.platform-filter-group input {
+  accent-color: var(--accent);
+}
+
+.platform-card__status {
+  display: inline-flex;
+  width: max-content;
+  margin-top: auto;
+  padding-top: var(--space-4);
+  color: var(--status-success);
+  font-size: 0.8125rem;
+}
+
+.platform-workspace-summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid rgb(169 162 255 / 28%);
+  border-radius: 14px;
+  background: radial-gradient(circle at top right, rgb(114 104 240 / 20%), transparent 42%), var(--surface-node);
+}
+
+.platform-workspace-summary p {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.platform-workspace-summary h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.platform-workspace-summary a {
+  color: var(--focus-ring);
+}
+
+.platform-availability-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-availability-list li {
+  padding: var(--space-3) 0;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 880px) {
   .preview-page__workspace {
     flex-direction: column;
