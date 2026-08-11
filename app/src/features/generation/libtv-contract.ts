@@ -9,12 +9,26 @@ export interface LibTvProviderSelection {
 }
 
 export interface LibTvCatalogProject {
-  projectUuid: string
-  projectName: string
-  imageModelNames: string[]
-  videoModelNames: string[]
+  uuid: string
+  name: string
+}
+
+export interface LibTvModelSummary {
+  modelKey: string
+  modelName: string
+  description?: string
+  estimatedTime?: string
+  pricingRule?: string
+  vip?: boolean
 }
 
 export interface LibTvCatalog {
+  cliInstalled: boolean
+  cliVersion?: string
+  authenticated: boolean
+  writesEnabled: boolean
   projects: LibTvCatalogProject[]
+  imageModels: LibTvModelSummary[]
+  videoModels: LibTvModelSummary[]
+  error?: string
 }
