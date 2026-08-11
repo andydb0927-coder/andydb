@@ -4,12 +4,19 @@ import type {
   NodeVersion,
 } from '../project/model'
 
+export interface GenerationReference {
+  url: string
+  kind: 'image' | 'video' | 'audio'
+  mimeType: string
+}
+
 export interface GenerationRequest {
   projectId: string
   nodeId: string
   operation: GenerationOperation
+  targetKind: 'image' | 'video'
   prompt: string
-  referenceAssetUrls: string[]
+  referenceAssets: GenerationReference[]
 }
 
 export interface GenerationResult {

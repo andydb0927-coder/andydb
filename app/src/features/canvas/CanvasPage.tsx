@@ -399,8 +399,20 @@ export function CanvasPage({
             projectId: currentProject.id,
             nodeId: job.nodeId,
             operation: job.operation,
+            targetKind:
+              job.operation === 'generate-video' || node.kind === 'video'
+                ? 'video'
+                : 'image',
             prompt: job.prompt,
-            referenceAssetUrls: asset ? [asset.url] : [],
+            referenceAssets: asset
+              ? [
+                  {
+                    url: asset.url,
+                    kind: asset.kind,
+                    mimeType: asset.mimeType,
+                  },
+                ]
+              : [],
           })
         }
         return
@@ -421,8 +433,20 @@ export function CanvasPage({
         projectId: currentProject.id,
         nodeId,
         operation: action,
+        targetKind:
+          action === 'generate-video' || node.kind === 'video'
+            ? 'video'
+            : 'image',
         prompt: activeVersion?.prompt ?? currentProject.intent,
-        referenceAssetUrls: asset ? [asset.url] : [],
+        referenceAssets: asset
+          ? [
+              {
+                url: asset.url,
+                kind: asset.kind,
+                mimeType: asset.mimeType,
+              },
+            ]
+          : [],
       })
     },
     [generationQueue, projectId],

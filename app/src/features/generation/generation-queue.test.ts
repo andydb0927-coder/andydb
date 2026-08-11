@@ -94,8 +94,15 @@ const regenerateRequest: GenerationRequest = {
   projectId: 'project-frost-river',
   nodeId: 'shot-1',
   operation: 'regenerate',
+  targetKind: 'image',
   prompt: '近景，人物望向河面',
-  referenceAssetUrls: ['/demo/shot-river.png'],
+  referenceAssets: [
+    {
+      url: '/demo/shot-river.png',
+      kind: 'image',
+      mimeType: 'image/png',
+    },
+  ],
 }
 
 beforeEach(() => {

@@ -24,7 +24,7 @@ export class DemoGenerationAdapter implements GenerationAdapter {
           asset: {
             id: assetId,
             kind: 'image',
-            url: request.referenceAssetUrls[0] ?? DEMO_THUMBNAIL_URL,
+            url: request.referenceAssets[0]?.url ?? DEMO_THUMBNAIL_URL,
             mimeType: 'image/png',
             width: 1920,
             height: 1080,
