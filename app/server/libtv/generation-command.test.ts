@@ -1,11 +1,15 @@
-import { mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { LibTvCatalog, LibTvGenerateBody } from '../../src/features/generation/libtv-contract.js'
-import { executeLibTvGeneration } from './generation-command.js'
+import {
+  createLibTvGenerationExecutor,
+  executeLibTvGeneration,
+  hasExpectedReferenceSignature,
+} from './generation-command.js'
 import type { CliRunner } from './types.js'
 
 const remoteProjectUuid = '11111111-2222-3333-4444-555555555555'
@@ -23,6 +27,17 @@ const catalog: LibTvCatalog = {
 const pngDataUrl = 'data:image/png;base64,iVBORw0KGgo='
 const jpegDataUrl = 'data:image/jpeg;base64,/9j/'
 const mp4DataUrl = 'data:video/mp4;base64,AAAAHGZ0eXBpc29t'
+const validReferenceFixtures = [
+  ['PNG', 'image/png', 'image', '89504e470d0a1a0a', 'png'],
+  ['JPEG', 'image/jpeg', 'image', 'ffd8ffe0', 'jpg'],
+  ['WebP', 'image/webp', 'image', '524946460000000057454250', 'webp'],
+  ['MP4', 'video/mp4', 'video', '000000186674797069736f6d', 'mp4'],
+  ['WebM', 'video/webm', 'video', '1a45dfa3', 'webm'],
+  ['MP3 with ID3', 'audio/mpeg', 'audio', '494433040000', 'mp3'],
+  ['MP3 frame', 'audio/mpeg', 'audio', 'fffb9064', 'mp3'],
+  ['WAV', 'audio/wav', 'audio', '524946460000000057415645', 'wav'],
+  ['Ogg', 'audio/ogg', 'audio', '4f67675300', 'ogg'],
+] as const
 
 let workspace: string
 
@@ -90,9 +105,46 @@ async function expectRejectedWithoutRunnerCall(input: unknown): Promise<void> {
     executeLibTvGeneration(input, catalog, runner, workspace),
   ).rejects.toThrow('LibTV generation request is invalid')
   expect(runner.run).not.toHaveBeenCalled()
+  await expect(readdir(workspace)).resolves.toEqual([])
+}
+
+function referenceBody(
+  mimeType: string,
+  kind: 'image' | 'video' | 'audio',
+  bytes: Buffer,
+): LibTvGenerateBody {
+  return body({
+    request: {
+      ...body().request,
+      targetKind: kind === 'video' ? 'video' : 'image',
+      referenceAssets: [
+        {
+          dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}`,
+          kind,
+          mimeType,
+        },
+      ],
+    },
+  })
 }
 
 describe('LibTV generation preflight', () => {
+  test.each(validReferenceFixtures)(
+    'recognizes the valid %s content signature for %s',
+    (_format, mimeType, _kind, hex) => {
+      expect(hasExpectedReferenceSignature(Buffer.from(hex, 'hex'), mimeType)).toBe(true)
+    },
+  )
+
+  test.each(validReferenceFixtures)(
+    'does not recognize arbitrary bytes as the %s content signature for %s',
+    (_format, mimeType) => {
+      expect(
+        hasExpectedReferenceSignature(Buffer.from('not the declared format'), mimeType),
+      ).toBe(false)
+    },
+  )
+
   test('rejects a remote project UUID not present in the live catalog before any CLI call', async () => {
     await expectRejectedWithoutRunnerCall(
       body({ selection: { ...body().selection, projectUuid: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' } }),
@@ -164,6 +216,15 @@ describe('LibTV generation preflight', () => {
     )
   })
 
+  test.each(validReferenceFixtures)(
+    'rejects %s content whose decoded signature contradicts %s before any write',
+    async (_format, mimeType, kind) => {
+      await expectRejectedWithoutRunnerCall(
+        referenceBody(mimeType, kind, Buffer.from('declared mime does not match bytes')),
+      )
+    },
+  )
+
   test.each<[string, LibTvGenerateBody['request']['referenceAssets']]>([
     [
       'two image references',
@@ -194,6 +255,34 @@ describe('LibTV generation preflight', () => {
 })
 
 describe('LibTV generation commands and temporary files', () => {
+  test.each(validReferenceFixtures.filter(([, , kind]) => kind !== 'audio'))(
+    'keeps accepting a valid %s signature and uses its safe extension',
+    async (_format, mimeType, kind, hex, extension) => {
+      const { runner, calls } = runnerWithOutput(kind === 'video' ? videoOutput() : imageOutput())
+
+      await expect(
+        executeLibTvGeneration(
+          referenceBody(mimeType, kind, Buffer.from(hex, 'hex')),
+          catalog,
+          runner,
+          workspace,
+        ),
+      ).resolves.toMatchObject({ kind })
+
+      expect(calls[0]).toEqual([
+        'upload',
+        expect.any(String),
+        '-p',
+        remoteProjectUuid,
+        '-f',
+        expect.stringMatching(new RegExp(`\\.${extension}$`)),
+        '-t',
+        kind,
+      ])
+      await expect(readdir(workspace)).resolves.toEqual([])
+    },
+  )
+
   test('uploads a PNG sequentially then creates an image node with the official argument order', async () => {
     const calls: string[][] = []
     const runner: CliRunner = {
@@ -327,6 +416,61 @@ describe('LibTV generation commands and temporary files', () => {
     expect(error).not.toContain(fullPrompt)
     expect(error).not.toContain('PRIVATE_TOKEN')
     await expect(readdir(workspace)).resolves.toEqual([])
+  })
+
+  test('retries one transient cleanup failure and removes the same exact directory', async () => {
+    const controlledRm = vi.fn<typeof rm>()
+      .mockRejectedValueOnce(new Error(`transient cleanup failure at ${workspace}`))
+      .mockImplementation(rm)
+    const executeWithControlledFileSystem = createLibTvGenerationExecutor({
+      mkdtemp,
+      writeFile,
+      rm: controlledRm,
+    })
+    const { runner } = runnerWithOutput()
+    const input = body({
+      request: {
+        ...body().request,
+        referenceAssets: [{ dataUrl: pngDataUrl, kind: 'image', mimeType: 'image/png' }],
+      },
+    })
+
+    await expect(
+      executeWithControlledFileSystem(input, catalog, runner, workspace),
+    ).resolves.toMatchObject({ kind: 'image' })
+
+    expect(controlledRm).toHaveBeenCalledTimes(2)
+    expect(controlledRm.mock.calls[1]).toEqual(controlledRm.mock.calls[0])
+    await expect(readdir(workspace)).resolves.toEqual([])
+  })
+
+  test('bounds persistent cleanup failure and returns only a fixed redacted error', async () => {
+    const rawCleanupError = `EACCES ${workspace}/libtv-generation-private ${fullPrompt} PRIVATE_TOKEN=secret`
+    const controlledRm = vi.fn<typeof rm>().mockRejectedValue(new Error(rawCleanupError))
+    const executeWithControlledFileSystem = createLibTvGenerationExecutor({
+      mkdtemp,
+      writeFile,
+      rm: controlledRm,
+    })
+    const { runner } = runnerWithOutput()
+    const input = body({
+      request: {
+        ...body().request,
+        referenceAssets: [{ dataUrl: pngDataUrl, kind: 'image', mimeType: 'image/png' }],
+      },
+    })
+
+    const error = await executeWithControlledFileSystem(input, catalog, runner, workspace).catch(
+      (reason: unknown) => String(reason),
+    )
+
+    expect(error).toContain('LibTV temporary file cleanup failed')
+    expect(error).not.toContain(workspace)
+    expect(error).not.toContain(fullPrompt)
+    expect(error).not.toContain('PRIVATE_TOKEN')
+    expect(error).not.toContain('EACCES')
+    expect(controlledRm).toHaveBeenCalledTimes(2)
+    expect(controlledRm.mock.calls[1]).toEqual(controlledRm.mock.calls[0])
   })
 })
 

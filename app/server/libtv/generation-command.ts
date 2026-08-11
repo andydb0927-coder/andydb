@@ -40,11 +40,35 @@ interface ValidGeneration {
   videoMode?: 'text2video' | 'singleImage2video' | 'video2video'
 }
 
-export async function executeLibTvGeneration(
+interface GenerationFileSystem {
+  mkdtemp: typeof mkdtemp
+  writeFile: typeof writeFile
+  rm: typeof rm
+}
+
+type ExecuteLibTvGeneration = (
   input: unknown,
   catalog: LibTvCatalog,
   runner: CliRunner,
   fileWorkspace: string,
+) => Promise<LibTvGeneratedAsset>
+
+export const executeLibTvGeneration: ExecuteLibTvGeneration =
+  createLibTvGenerationExecutor({ mkdtemp, writeFile, rm })
+
+export function createLibTvGenerationExecutor(
+  fileSystem: GenerationFileSystem,
+): ExecuteLibTvGeneration {
+  return (input, catalog, runner, fileWorkspace) =>
+    executeLibTvGenerationWithFileSystem(input, catalog, runner, fileWorkspace, fileSystem)
+}
+
+async function executeLibTvGenerationWithFileSystem(
+  input: unknown,
+  catalog: LibTvCatalog,
+  runner: CliRunner,
+  fileWorkspace: string,
+  fileSystem: GenerationFileSystem,
 ): Promise<LibTvGeneratedAsset> {
   const generation = preflight(input, catalog)
   let temporaryDirectory: string | undefined
@@ -53,11 +77,11 @@ export async function executeLibTvGeneration(
   try {
     const referenceNames: string[] = []
     if (generation.references.length > 0) {
-      temporaryDirectory = await mkdtemp(join(fileWorkspace, 'libtv-generation-'))
+      temporaryDirectory = await fileSystem.mkdtemp(join(fileWorkspace, 'libtv-generation-'))
       for (const [index, reference] of generation.references.entries()) {
         const referenceName = `generation-reference-${index + 1}`
         const filePath = join(temporaryDirectory, `${referenceName}.${reference.extension}`)
-        await writeFile(filePath, reference.bytes)
+        await fileSystem.writeFile(filePath, reference.bytes)
         await runner.run([
           'upload',
           referenceName,
@@ -78,11 +102,29 @@ export async function executeLibTvGeneration(
     throw new Error('LibTV generation failed')
   } finally {
     if (temporaryDirectory) {
-      await rm(temporaryDirectory, { recursive: true, force: true })
+      await removeTemporaryDirectory(fileSystem, temporaryDirectory)
     }
   }
 
   return parseGeneratedAsset(nodeStdout, generation.targetKind)
+}
+
+async function removeTemporaryDirectory(
+  fileSystem: GenerationFileSystem,
+  temporaryDirectory: string,
+): Promise<void> {
+  try {
+    await fileSystem.rm(temporaryDirectory, { recursive: true, force: true })
+    return
+  } catch {
+    // One immediate retry covers transient file-handle races without an unbounded loop.
+  }
+
+  try {
+    await fileSystem.rm(temporaryDirectory, { recursive: true, force: true })
+  } catch {
+    throw new Error('LibTV temporary file cleanup failed')
+  }
 }
 
 function preflight(input: unknown, catalog: LibTvCatalog): ValidGeneration {
@@ -169,10 +211,51 @@ function parseReference(value: unknown): ValidReference {
   }
 
   const bytes = Buffer.from(encoded, 'base64')
-  if (bytes.byteLength > MAX_REFERENCE_BYTES) {
+  if (
+    bytes.byteLength > MAX_REFERENCE_BYTES ||
+    !hasExpectedReferenceSignature(bytes, value.mimeType)
+  ) {
     invalidRequest()
   }
   return { bytes, extension, kind: value.kind }
+}
+
+export function hasExpectedReferenceSignature(bytes: Buffer, mimeType: string): boolean {
+  switch (mimeType) {
+    case 'image/png':
+      return startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    case 'image/jpeg':
+      return startsWithBytes(bytes, [0xff, 0xd8, 0xff])
+    case 'image/webp':
+      return startsWithAscii(bytes, 'RIFF') && hasAsciiAt(bytes, 'WEBP', 8)
+    case 'video/mp4':
+      return hasAsciiAt(bytes, 'ftyp', 4)
+    case 'video/webm':
+      return startsWithBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3])
+    case 'audio/mpeg':
+      return (
+        startsWithAscii(bytes, 'ID3') ||
+        (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)
+      )
+    case 'audio/wav':
+      return startsWithAscii(bytes, 'RIFF') && hasAsciiAt(bytes, 'WAVE', 8)
+    case 'audio/ogg':
+      return startsWithAscii(bytes, 'OggS')
+    default:
+      return false
+  }
+}
+
+function startsWithBytes(bytes: Buffer, signature: readonly number[]): boolean {
+  return signature.every((value, index) => bytes[index] === value)
+}
+
+function startsWithAscii(bytes: Buffer, signature: string): boolean {
+  return hasAsciiAt(bytes, signature, 0)
+}
+
+function hasAsciiAt(bytes: Buffer, signature: string, offset: number): boolean {
+  return bytes.length >= offset + signature.length && bytes.toString('ascii', offset, offset + signature.length) === signature
 }
 
 function validateReferenceCombination(
