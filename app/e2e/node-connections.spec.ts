@@ -304,6 +304,153 @@ async function expectDeleteActionInsideViewport(
   )
 }
 
+async function expectVisibilityToggleInsideViewport(
+  page: import('@playwright/test').Page,
+  toggle: import('@playwright/test').Locator,
+  viewport: { width: number; height: number },
+) {
+  const box = await toggle.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.y).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width)
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
+
+  const centerHit = await page.evaluate(
+    ({ x, y }) =>
+      document
+        .elementFromPoint(x, y)
+        ?.closest('button')
+        ?.getAttribute('aria-label'),
+    { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+  )
+  expect(centerHit).toBe(await toggle.getAttribute('aria-label'))
+}
+
+test('hides and restores dependency visuals without changing connection data', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await createCinematicProject(page)
+  const edge = page.getByLabel('角色参考 → 分镜 01', { exact: true })
+  const toggle = page.getByRole('button', { name: '隐藏连线' })
+
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(1)
+  await toggle.click()
+  await expect(page.getByRole('button', { name: '显示连线' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(0)
+  await expect(page.getByText('连线已隐藏，端口仍可使用')).toBeVisible()
+
+  await page.getByRole('button', { name: '显示连线' }).click()
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(1)
+  expect(errors).toEqual([])
+})
+
+test('preserves hidden connection data for H and the real L handle flow', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await createCinematicProject(page)
+  const originalEdge = page.getByLabel('角色参考 → 分镜 01', { exact: true })
+  const directorInput = page.getByLabel('告诉我下一步要做什么')
+  const canvas = page.getByRole('region', { name: '项目画布' })
+
+  await directorInput.focus()
+  await page.keyboard.press('h')
+  await expect(directorInput).toHaveValue('h')
+  await expect(page.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  await canvas.focus()
+  await page.keyboard.press('h')
+  await expect(page.getByRole('button', { name: '显示连线' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  await expect(originalEdge.locator('.dependency-edge__paths')).toHaveCount(0)
+
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await page.getByRole('button', { name: '生成视频' }).click()
+  const video = page.getByRole('button', { name: '视频 01', exact: true })
+  await expect(video).toBeVisible()
+
+  await canvas.focus()
+  await page.keyboard.press('l')
+  await expect(
+    page.getByRole('button', { name: '连线', exact: true }),
+  ).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.getByRole('button', { name: '从角色参考建立连接' }).focus()
+  await page.keyboard.press('Space')
+  await page.getByRole('button', { name: '连接到视频 01' }).focus()
+  await page.keyboard.press('Enter')
+
+  const newEdge = page.getByLabel('角色参考 → 视频 01', { exact: true })
+  await expect(newEdge).toHaveCount(1)
+  await expect(newEdge.locator('.dependency-edge__paths')).toHaveCount(0)
+
+  await page.getByRole('button', { name: '显示连线' }).click()
+  await expect(originalEdge.locator('.dependency-edge__paths')).toHaveCount(1)
+  await expect(newEdge.locator('.dependency-edge__paths')).toHaveCount(1)
+  expect(errors).toEqual([])
+})
+
+test('keeps the visibility control reachable at 721 by 778 and reloads visible', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await page.setViewportSize({ width: 721, height: 778 })
+  await createCinematicProject(page)
+  const edge = page.getByLabel('角色参考 → 分镜 01', { exact: true })
+  const toggle = page.getByRole('button', { name: '隐藏连线' })
+
+  await expectVisibilityToggleInsideViewport(page, toggle, {
+    width: 721,
+    height: 778,
+  })
+  const separatorAlpha = await toggle.evaluate((button) => {
+    const color = getComputedStyle(button).borderTopColor
+    const match = color.match(/rgba?\(([^)]+)\)/)
+    if (!match) return 0
+    const channels = match[1].split(',').map(Number)
+    return channels.length === 4 ? channels[3] : 1
+  })
+  expect(separatorAlpha).toBeGreaterThan(0)
+
+  await toggle.click()
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(edge.locator('.dependency-edge__paths')).toHaveCount(1)
+  expect(errors).toEqual([])
+})
+
 test('creates, rejects, deletes, undoes, and restores dependency connections', async ({
   page,
 }) => {
@@ -358,7 +505,7 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   const text = page.getByRole('button', { name: '文本 01', exact: true })
   await expect(text).toBeVisible()
 
-  const connect = page.getByRole('button', { name: '连线' })
+  const connect = page.getByRole('button', { name: '连线', exact: true })
   await connect.focus()
   await page.keyboard.press('Enter')
   await video.focus()
@@ -527,7 +674,9 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
   await expect(
     page.getByLabel('角色参考 → 视频 01', { exact: true }),
   ).toHaveCount(1)
-  await expect(page.getByRole('button', { name: '连线' })).toHaveAttribute(
+  await expect(
+    page.getByRole('button', { name: '连线', exact: true }),
+  ).toHaveAttribute(
     'aria-pressed',
     'false',
   )
@@ -621,7 +770,7 @@ test('cancels active toolbar choices before native handle drags', async ({
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
 
-  const connect = page.getByRole('button', { name: '连线' })
+  const connect = page.getByRole('button', { name: '连线', exact: true })
   const select = page.getByRole('button', { name: '选择' })
   const videoTarget = page.getByRole('button', { name: '连接到视频 01' })
   const characterVideo = page.getByLabel('角色参考 → 视频 01', {

@@ -95,6 +95,13 @@ No open P0, P1, or P2 defect remains in the approved desktop direction or the 72
 - Post-core observation: a LibTV-style hide/show-connections toggle remains a deliberate enhancement outside Task 6. The existing final-review Minor about escaping the focus-query selector remains for reviewer triage; this evidence task does not change production code.
 - final result: pending — actual 200% user verification required.
 
+### 2026-08-11 — Canvas connection visibility
+
+- Chromium at the normal layout confirms the seeded `角色参考 → 分镜 01` path disappears on 隐藏连线 while its data remains intact, then returns on 显示连线. The control exposes the correct pressed state and the status reads `连线已隐藏，端口仍可使用`.
+- The `H` shortcut hides paths only when the canvas region is focused. Entering `h` in the AI Director textarea leaves connections visible and types the character into the input. While hidden, the existing `L` plus source/target-handle keyboard path creates a genuine `角色参考 → 视频 01` connection; both the seeded and new paths render after showing connections again. Visibility is local UI state and does not mutate the project Store connection data.
+- At 721×778, the compact toolbar keeps the visibility button fully in the viewport; its center hit test resolves to the named toggle. After hiding and reload, the project opens with connections visible again. All three focused Chromium flows collected `console=[]` and no page errors.
+- Actual 200% status remains **pending user handoff, not claimed**. This focused evidence validates the exact 721×778 responsive layout only and does not change the existing actual-browser-zoom conclusion.
+
 ## Acceptance
 
 final result: pending — node connections actual 200% user verification required
