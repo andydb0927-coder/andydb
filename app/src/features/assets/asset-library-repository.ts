@@ -48,8 +48,17 @@ export class AssetLibraryRepository {
       byteSize: file.size,
     }
 
-    await this.save(record)
-    return { status: 'created', record }
+    try {
+      await this.database.libraryAssets.add(record)
+      return { status: 'created', record }
+    } catch (error) {
+      const concurrentRecord = await this.findByFingerprint(fingerprint)
+      if (concurrentRecord) {
+        return { status: 'existing', record: concurrentRecord }
+      }
+
+      throw error
+    }
   }
 
   async findByFingerprint(

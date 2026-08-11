@@ -17,6 +17,10 @@ export class WirelessCanvasDatabase extends Dexie {
       projects: 'id, updatedAt',
       libraryAssets: 'id, createdAt, kind, source, name, fingerprint',
     })
+    this.version(3).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
+    })
   }
 }
 

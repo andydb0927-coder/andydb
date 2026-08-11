@@ -33,6 +33,18 @@ describe('asset library repository', () => {
     expect(await repository.list()).toHaveLength(1)
   })
 
+  test('deduplicates identical file bytes imported concurrently', async () => {
+    const { library: repository } = createRepositories()
+    const [first, second] = await Promise.all([
+      repository.importFile(new File(['same-media'], 'first.png', { type: 'image/png' })),
+      repository.importFile(new File(['same-media'], 'renamed.png', { type: 'image/png' })),
+    ])
+
+    expect([first.status, second.status].sort()).toEqual(['created', 'existing'])
+    expect(first.record.id).toBe(second.record.id)
+    expect(await repository.list()).toHaveLength(1)
+  })
+
   test('indexes project assets without replacing richer library metadata', async () => {
     const { library, projects } = createRepositories()
     const uploadRecord: LibraryAssetRecord = {
