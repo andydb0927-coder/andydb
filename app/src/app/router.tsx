@@ -5,6 +5,8 @@ import { CanvasPage } from '../features/canvas/CanvasPage'
 import { PreviewPage } from '../features/timeline/PreviewPage'
 import { PlatformShell } from '../features/platform/PlatformShell'
 import { AssetsHistoryPage } from '../features/platform/AssetsHistoryPage'
+import { WorkflowsPage } from '../features/platform/WorkflowsPage'
+import { DiscoverPage } from '../features/platform/DiscoverPage'
 
 export const routes: RouteObject[] = [
   {
@@ -12,6 +14,8 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <ProjectLauncherPage /> },
       { path: '/assets', element: <AssetsHistoryPage /> },
+      { path: '/workflows', element: <WorkflowsPage /> },
+      { path: '/discover', element: <DiscoverPage /> },
     ],
   },
   {
