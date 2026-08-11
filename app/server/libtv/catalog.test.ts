@@ -185,6 +185,26 @@ describe('LibTV live catalog', () => {
     expect(catalog.cliVersion).toBe('1.1.1')
   })
 
+  test.each([
+    ['LF', '1.1.1\n\n'],
+    ['CRLF', '1.1.1\r\n\r\n'],
+  ])('rejects an extra physical %s version line', async (_lineEnding, versionStdout) => {
+    const catalog = await loadLibTvCatalog(
+      runnerWithCatalogResponses({ '--version': versionStdout }),
+      false,
+    )
+
+    expect(catalog).toEqual({
+      cliInstalled: true,
+      authenticated: false,
+      writesEnabled: false,
+      projects: [],
+      imageModels: [],
+      videoModels: [],
+      error: 'LibTV CLI version response is invalid',
+    })
+  })
+
   test('rejects multiline version output without reflecting it', async () => {
     const catalog = await loadLibTvCatalog(
       runnerWithCatalogResponses({ '--version': '1.1.1\nPRIVATE_TOKEN=version-secret\n' }),

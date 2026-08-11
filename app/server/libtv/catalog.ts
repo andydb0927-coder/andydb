@@ -91,7 +91,14 @@ function failedCatalog(
 }
 
 function parseCliVersion(stdout: string): string | undefined {
-  const candidate = stdout.trim()
+  const candidate = stdout.endsWith('\r\n')
+    ? stdout.slice(0, -2)
+    : stdout.endsWith('\n')
+      ? stdout.slice(0, -1)
+      : stdout
+  if (candidate.includes('\r') || candidate.includes('\n')) {
+    return undefined
+  }
   if (!SEMVER_PATTERN.test(candidate)) {
     return undefined
   }
