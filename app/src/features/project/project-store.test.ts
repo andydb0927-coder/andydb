@@ -13,9 +13,21 @@ import {
   WirelessCanvasDatabase,
   ProjectRepository,
 } from './project-repository'
+import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { useProjectStore } from './project-store'
 
 const databaseNames: string[] = []
+
+async function createVersionOneDatabase(project: ReturnType<typeof makeProjectFixture>) {
+  const databaseName = `wireless-canvas-v1-${crypto.randomUUID()}`
+  databaseNames.push(databaseName)
+  const legacy = new Dexie(databaseName)
+  legacy.version(1).stores({ projects: 'id, updatedAt' })
+  await legacy.open()
+  await legacy.table('projects').put(project)
+
+  return { databaseName, legacy }
+}
 
 function createRepository() {
   const name = `wireless-canvas-test-${crypto.randomUUID()}`
@@ -95,6 +107,16 @@ describe('project domain', () => {
 })
 
 describe('project repository', () => {
+  test('opens a version 1 project database after adding the library table', async () => {
+    const project = makeProjectFixture()
+    const { databaseName, legacy } = await createVersionOneDatabase(project)
+    legacy.close()
+    const database = new WirelessCanvasDatabase(databaseName)
+
+    expect(await new ProjectRepository(database).load(project.id)).toEqual(project)
+    expect(await new AssetLibraryRepository(database).list()).toEqual([])
+  })
+
   test('round-trips the complete project graph through IndexedDB', async () => {
     const repository = createRepository()
     const project = makeProjectFixture()

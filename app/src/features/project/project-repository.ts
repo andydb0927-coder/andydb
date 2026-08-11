@@ -1,13 +1,22 @@
 import Dexie, { type Table } from 'dexie'
 
 import type { Project } from './model'
+import {
+  deriveLibraryRecord,
+  type LibraryAssetRecord,
+} from '../assets/library-model'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
+  libraryAssets!: Table<LibraryAssetRecord, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
     this.version(1).stores({ projects: 'id, updatedAt' })
+    this.version(2).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, fingerprint',
+    })
   }
 }
 
@@ -19,7 +28,25 @@ export class ProjectRepository {
   }
 
   async save(project: Project): Promise<void> {
-    await this.database.projects.put(project)
+    await this.database.transaction(
+      'rw',
+      this.database.libraryAssets,
+      this.database.projects,
+      async () => {
+        const existing = await this.database.libraryAssets.bulkGet(
+          project.assets.map(({ id }) => id),
+        )
+        const missing = project.assets.filter((_, index) => !existing[index])
+
+        if (missing.length > 0) {
+          await this.database.libraryAssets.bulkPut(
+            missing.map((asset) => deriveLibraryRecord(project, asset)),
+          )
+        }
+
+        await this.database.projects.put(project)
+      },
+    )
   }
 
   async load(projectId: string): Promise<Project | undefined> {
