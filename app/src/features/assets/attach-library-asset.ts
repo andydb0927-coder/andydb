@@ -27,7 +27,9 @@ const defaultEnvironment: AttachAssetEnvironment = {
 }
 
 function nextPlacement(project: Project): CanvasNode['position'] {
-  const x = Math.max(0, ...project.nodes.map((node) => node.position.x)) + 340
+  const x = project.nodes.length === 0
+    ? 340
+    : Math.max(...project.nodes.map((node) => node.position.x)) + 340
   let y = 80
 
   while (project.nodes.some((node) => node.position.x === x && node.position.y === y)) {

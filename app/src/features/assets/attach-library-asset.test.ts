@@ -124,6 +124,25 @@ describe('attaching a library asset to a project', () => {
     expect(result.node.position).toEqual({ x: 1840, y: 80 })
   })
 
+  test('uses a negative rightmost position when every node is left of the origin', () => {
+    const fixture = makeProjectFixture()
+    const project = {
+      ...fixture,
+      nodes: fixture.nodes.map((node, index) => ({
+        ...node,
+        position: { x: index === 0 ? -440 : -100, y: 80 },
+      })),
+    }
+
+    const result = attachLibraryAssetToProject(
+      imageRecord,
+      project,
+      fixedEnvironment(['negative-x-node', 'negative-x-version']),
+    )
+
+    expect(result.node.position).toEqual({ x: 240, y: 80 })
+  })
+
   test('creates a video node with collision-free node and version ids', () => {
     const project = makeProjectFixture()
     const result = attachLibraryAssetToProject(
