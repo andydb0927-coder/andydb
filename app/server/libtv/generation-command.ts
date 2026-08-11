@@ -223,27 +223,112 @@ function parseReference(value: unknown): ValidReference {
 export function hasExpectedReferenceSignature(bytes: Buffer, mimeType: string): boolean {
   switch (mimeType) {
     case 'image/png':
-      return startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      return startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) && bytes.length >= 33 && bytes.readUInt32BE(8) === 13 && hasAsciiAt(bytes, 'IHDR', 12) && bytes.readUInt32BE(16) > 0 && bytes.readUInt32BE(20) > 0
     case 'image/jpeg':
-      return startsWithBytes(bytes, [0xff, 0xd8, 0xff])
+      return hasJpegStructure(bytes)
     case 'image/webp':
-      return startsWithAscii(bytes, 'RIFF') && hasAsciiAt(bytes, 'WEBP', 8)
+      return hasWebpStructure(bytes)
     case 'video/mp4':
-      return hasAsciiAt(bytes, 'ftyp', 4)
+      return bytes.length >= 16 && bytes.readUInt32BE(0) >= 16 && bytes.readUInt32BE(0) <= bytes.length && hasAsciiAt(bytes, 'ftyp', 4) && /^[\x20-\x7e]{4}$/.test(bytes.toString('ascii', 8, 12))
     case 'video/webm':
-      return startsWithBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3])
+      return hasWebmStructure(bytes)
     case 'audio/mpeg':
-      return (
-        startsWithAscii(bytes, 'ID3') ||
-        (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)
-      )
+      return hasId3Structure(bytes) || hasMpegFrame(bytes)
     case 'audio/wav':
-      return startsWithAscii(bytes, 'RIFF') && hasAsciiAt(bytes, 'WAVE', 8)
+      return hasWavStructure(bytes)
     case 'audio/ogg':
-      return startsWithAscii(bytes, 'OggS')
+      return hasOggStructure(bytes)
     default:
       return false
   }
+}
+
+function hasJpegStructure(bytes: Buffer): boolean {
+  if (!startsWithBytes(bytes, [0xff, 0xd8]) || bytes.length < 6) return false
+  let offset = 2
+  while (offset + 1 < bytes.length) {
+    if (bytes[offset] !== 0xff) return false
+    const marker = bytes[offset + 1]
+    if (marker === 0xd9) return offset + 2 === bytes.length
+    if (marker === 0x00 || marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7) || offset + 4 > bytes.length) return false
+    const length = bytes.readUInt16BE(offset + 2)
+    if (length < 2 || offset + 2 + length > bytes.length) return false
+    offset += 2 + length
+  }
+  return false
+}
+
+function hasWebpStructure(bytes: Buffer): boolean {
+  if (!startsWithAscii(bytes, 'RIFF') || !hasAsciiAt(bytes, 'WEBP', 8) || bytes.length < 20 || bytes.readUInt32LE(4) !== bytes.length - 8) return false
+  const chunk = bytes.toString('ascii', 12, 16)
+  const size = bytes.readUInt32LE(16)
+  return ['VP8 ', 'VP8L', 'VP8X'].includes(chunk) && 20 + size + (size % 2) === bytes.length
+}
+
+function hasWebmStructure(bytes: Buffer): boolean {
+  if (!startsWithBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return false
+  const headerSize = readVint(bytes, 4)
+  if (!headerSize || 4 + headerSize.length + headerSize.value > bytes.length) return false
+  const end = 4 + headerSize.length + headerSize.value
+  for (let offset = 4 + headerSize.length; offset + 3 <= end; offset += 1) {
+    if (bytes[offset] !== 0x42 || bytes[offset + 1] !== 0x82) continue
+    const size = readVint(bytes, offset + 2)
+    if (size && offset + 2 + size.length + size.value <= end && bytes.toString('ascii', offset + 2 + size.length, offset + 2 + size.length + size.value) === 'webm') return true
+  }
+  return false
+}
+
+function readVint(bytes: Buffer, offset: number): { length: number; value: number } | undefined {
+  const first = bytes[offset]
+  if (first === undefined || first === 0) return undefined
+  let length = 1
+  while (length <= 8 && (first & (0x80 >> (length - 1))) === 0) length += 1
+  if (length > 8 || offset + length > bytes.length) return undefined
+  let value = first & (0x7f >> (length - 1))
+  for (let index = 1; index < length; index += 1) value = value * 256 + bytes[offset + index]
+  return { length, value }
+}
+
+function hasId3Structure(bytes: Buffer): boolean {
+  if (!startsWithAscii(bytes, 'ID3') || bytes.length < 10 || bytes[3] < 2 || bytes[3] > 4) return false
+  const sizeBytes = bytes.subarray(6, 10)
+  return [...sizeBytes].every((value) => (value & 0x80) === 0) && 10 + ((sizeBytes[0] << 21) | (sizeBytes[1] << 14) | (sizeBytes[2] << 7) | sizeBytes[3]) <= bytes.length
+}
+
+function hasMpegFrame(bytes: Buffer): boolean {
+  if (bytes.length < 4 || bytes[0] !== 0xff || (bytes[1] & 0xfe) !== 0xfa) return false
+  const bitrateIndex = bytes[2] >> 4
+  const sampleIndex = (bytes[2] >> 2) & 3
+  const bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
+  const samples = [44100, 48000, 32000]
+  if (bitrateIndex === 0 || bitrateIndex === 15 || sampleIndex === 3) return false
+  return Math.floor((144 * bitrates[bitrateIndex] * 1000) / samples[sampleIndex]) + ((bytes[2] >> 1) & 1) <= bytes.length
+}
+
+function hasWavStructure(bytes: Buffer): boolean {
+  if (!startsWithAscii(bytes, 'RIFF') || !hasAsciiAt(bytes, 'WAVE', 8) || bytes.length < 20 || bytes.readUInt32LE(4) !== bytes.length - 8) return false
+  let offset = 12
+  let fmt = false
+  let data = false
+  while (offset + 8 <= bytes.length) {
+    const size = bytes.readUInt32LE(offset + 4)
+    if (offset + 8 + size > bytes.length) return false
+    if (hasAsciiAt(bytes, 'fmt ', offset) && size >= 16) fmt = true
+    if (hasAsciiAt(bytes, 'data', offset)) data = true
+    offset += 8 + size + (size % 2)
+  }
+  return offset === bytes.length && fmt && data
+}
+
+function hasOggStructure(bytes: Buffer): boolean {
+  if (!startsWithAscii(bytes, 'OggS') || bytes.length < 28 || bytes[4] !== 0) return false
+  const segments = bytes[26]
+  const header = 27 + segments
+  if (header > bytes.length) return false
+  const packetSize = [...bytes.subarray(27, header)].reduce((sum, value) => sum + value, 0)
+  if (header + packetSize > bytes.length) return false
+  const packet = bytes.subarray(header, header + packetSize)
+  return startsWithAscii(packet, 'OpusHead') || startsWithBytes(packet, [1, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73])
 }
 
 function startsWithBytes(bytes: Buffer, signature: readonly number[]): boolean {

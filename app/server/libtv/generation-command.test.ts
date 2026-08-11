@@ -24,19 +24,22 @@ const catalog: LibTvCatalog = {
   videoModels: [{ modelKey: 'video-key', modelName: 'Video Model' }],
 }
 
-const pngDataUrl = 'data:image/png;base64,iVBORw0KGgo='
-const jpegDataUrl = 'data:image/jpeg;base64,/9j/'
-const mp4DataUrl = 'data:video/mp4;base64,AAAAHGZ0eXBpc29t'
+const pngBytes = Buffer.from('89504e470d0a1a0a0000000d494844520000000100000001080200000000000000', 'hex')
+const jpegBytes = Buffer.from('ffd8ffe00002ffd9', 'hex')
+const mp4Bytes = Buffer.from('000000106674797069736f6d00000000', 'hex')
+const pngDataUrl = `data:image/png;base64,${pngBytes.toString('base64')}`
+const jpegDataUrl = `data:image/jpeg;base64,${jpegBytes.toString('base64')}`
+const mp4DataUrl = `data:video/mp4;base64,${mp4Bytes.toString('base64')}`
 const validReferenceFixtures = [
-  ['PNG', 'image/png', 'image', '89504e470d0a1a0a', 'png'],
-  ['JPEG', 'image/jpeg', 'image', 'ffd8ffe0', 'jpg'],
-  ['WebP', 'image/webp', 'image', '524946460000000057454250', 'webp'],
-  ['MP4', 'video/mp4', 'video', '000000186674797069736f6d', 'mp4'],
-  ['WebM', 'video/webm', 'video', '1a45dfa3', 'webm'],
-  ['MP3 with ID3', 'audio/mpeg', 'audio', '494433040000', 'mp3'],
-  ['MP3 frame', 'audio/mpeg', 'audio', 'fffb9064', 'mp3'],
-  ['WAV', 'audio/wav', 'audio', '524946460000000057415645', 'wav'],
-  ['Ogg', 'audio/ogg', 'audio', '4f67675300', 'ogg'],
+  ['PNG', 'image/png', 'image', pngBytes.toString('hex'), 'png'],
+  ['JPEG', 'image/jpeg', 'image', jpegBytes.toString('hex'), 'jpg'],
+  ['WebP', 'image/webp', 'image', '524946461600000057454250565038580a00000000000000000000000000', 'webp'],
+  ['MP4', 'video/mp4', 'video', mp4Bytes.toString('hex'), 'mp4'],
+  ['WebM', 'video/webm', 'video', '1a45dfa38a4282847765626dec8100', 'webm'],
+  ['MP3 with ID3', 'audio/mpeg', 'audio', '49443304000000000000', 'mp3'],
+  ['MP3 frame', 'audio/mpeg', 'audio', `${'fffb9064'}${'00'.repeat(413)}`, 'mp3'],
+  ['WAV', 'audio/wav', 'audio', '524946462400000057415645666d7420100000000100010044ac000088580100020010006461746100000000', 'wav'],
+  ['Ogg', 'audio/ogg', 'audio', `4f676753${'00'.repeat(22)}01084f70757348656164`, 'ogg'],
 ] as const
 
 let workspace: string
@@ -135,6 +138,20 @@ describe('LibTV generation preflight', () => {
       expect(hasExpectedReferenceSignature(Buffer.from(hex, 'hex'), mimeType)).toBe(true)
     },
   )
+
+  test.each([
+    ['truncated PNG IHDR', 'image/png', '89504e470d0a1a0a0000000d49484452'],
+    ['JPEG without EOI', 'image/jpeg', 'ffd8ffe00002'],
+    ['WebP with mismatched RIFF size', 'image/webp', '524946460000000057454250'],
+    ['truncated MP4 ftyp', 'video/mp4', '000000106674797069736f6d'],
+    ['WebM without webm doctype', 'video/webm', '1a45dfa38100'],
+    ['truncated ID3 header', 'audio/mpeg', '494433040000'],
+    ['truncated MPEG frame', 'audio/mpeg', 'fffb9064'],
+    ['WAV without complete fmt/data chunks', 'audio/wav', '524946460000000057415645'],
+    ['Ogg without a complete laced codec packet', 'audio/ogg', '4f676753000000000000000000000000000000000000000001084f7075'],
+  ])('rejects %s', (_caseName, mimeType, hex) => {
+    expect(hasExpectedReferenceSignature(Buffer.from(hex, 'hex'), mimeType)).toBe(false)
+  })
 
   test.each(validReferenceFixtures)(
     'does not recognize arbitrary bytes as the %s content signature for %s',
