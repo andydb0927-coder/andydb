@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -61,6 +61,17 @@ function libraryRepositoryWith(...records: LibraryAssetRecord[]) {
   } satisfies PageLibraryRepository
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, resolve, reject }
+}
+
 function renderAssetsPage({
   repository = createProjectRepository(makeProjectFixture()).repository,
   libraryRepository = libraryRepositoryWith(),
@@ -119,6 +130,30 @@ describe('assets and history page', () => {
     await user.click(screen.getByRole('radio', { name: '图片' }))
     expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
     expect(screen.queryByRole('article', { name: '环境声.wav' })).not.toBeInTheDocument()
+  })
+
+  test('keeps an uploaded record when the initial library snapshot resolves later', async () => {
+    const user = userEvent.setup()
+    const initialList = createDeferred<LibraryAssetRecord[]>()
+    const uploadedRecord = { ...imageRecord, name: '雨夜.png' }
+    const libraryRepository = libraryRepositoryWith()
+    vi.mocked(libraryRepository.list).mockReturnValue(initialList.promise)
+    vi.mocked(libraryRepository.importFile).mockResolvedValue({
+      status: 'created',
+      record: uploadedRecord,
+    })
+    renderAssetsPage({ libraryRepository })
+
+    await user.upload(
+      screen.getByLabelText('上传本地素材'),
+      new File(['rain'], '雨夜.png', { type: 'image/png' }),
+    )
+    expect(await screen.findByRole('article', { name: '雨夜.png' })).toBeVisible()
+
+    await act(async () => initialList.resolve([audioRecord]))
+
+    expect(await screen.findByRole('article', { name: '环境声.wav' })).toBeVisible()
+    expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
   })
 
   test('saves a selected asset into the target project before navigating', async () => {
@@ -221,6 +256,47 @@ describe('assets and history page', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('无法添加素材到项目')
     expect(screen.getByRole('heading', { name: '素材与历史' })).toBeVisible()
+  })
+
+  test('retries opening without saving a duplicate after hydration fails', async () => {
+    const user = userEvent.setup()
+    const project = makeProjectFixture()
+    const projectRepository = createProjectRepository(project)
+    let loadCount = 0
+    vi.mocked(projectRepository.repository.load).mockImplementation(async () => {
+      loadCount += 1
+      if (loadCount === 2) return undefined
+      return projectRepository.getSavedProject() ?? project
+    })
+    renderAssetsPage({
+      repository: projectRepository.repository,
+      libraryRepository: libraryRepositoryWith(imageRecord),
+    })
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: '添加 雨夜参考 到项目并打开画布',
+      }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '素材已添加，但暂时无法打开画布',
+    )
+    expect(screen.queryByText('无法添加素材到项目')).not.toBeInTheDocument()
+    expect(projectRepository.repository.save).toHaveBeenCalledTimes(1)
+    expect(projectRepository.getSavedProject()?.nodes).toHaveLength(
+      project.nodes.length + 1,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: '重试打开 雨夜参考 的画布' }),
+    )
+
+    expect(await screen.findByRole('heading', { name: '项目画布' })).toBeVisible()
+    expect(projectRepository.repository.save).toHaveBeenCalledTimes(1)
+    expect(projectRepository.getSavedProject()?.nodes).toHaveLength(
+      project.nodes.length + 1,
+    )
   })
 
   test('shows persisted assets and links an active version back to its source node', async () => {

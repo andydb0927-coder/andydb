@@ -34,6 +34,13 @@ type ImportState =
 
 type AssetKindFilter = 'all' | LibraryAssetRecord['kind']
 
+interface PendingCanvasOpen {
+  recordId: string
+  recordName: string
+  projectId: string
+  nodeId: string
+}
+
 const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
@@ -63,6 +70,17 @@ function readableAssetKind(kind: LibraryAssetRecord['kind']) {
   }[kind]
 }
 
+function mergeLibraryRecords(
+  current: LibraryAssetRecord[],
+  incoming: LibraryAssetRecord[],
+) {
+  const currentIds = new Set(current.map((record) => record.id))
+  return [
+    ...current,
+    ...incoming.filter((record) => !currentIds.has(record.id)),
+  ]
+}
+
 function LibraryPreview({ record }: { record: LibraryAssetRecord }) {
   if (record.kind === 'image') {
     return <img src={record.url} alt="" />
@@ -89,6 +107,7 @@ export function AssetsHistoryPage({
   const [importState, setImportState] = useState<ImportState>({ status: 'idle' })
   const [attachingAssetId, setAttachingAssetId] = useState<string>()
   const [attachError, setAttachError] = useState<string>()
+  const [pendingCanvasOpen, setPendingCanvasOpen] = useState<PendingCanvasOpen>()
 
   useEffect(() => {
     let active = true
@@ -112,7 +131,14 @@ export function AssetsHistoryPage({
     void libraryRepository
       .list()
       .then((records) => {
-        if (active) setLibraryLoadState({ status: 'loaded', records })
+        if (!active) return
+        setLibraryLoadState((current) => ({
+          status: 'loaded',
+          records:
+            current.status === 'loaded'
+              ? mergeLibraryRecords(current.records, records)
+              : records,
+        }))
       })
       .catch(() => {
         if (active) setLibraryLoadState({ status: 'error' })
@@ -187,25 +213,54 @@ export function AssetsHistoryPage({
     }
   }
 
+  const openSavedAsset = async (pending: PendingCanvasOpen) => {
+    setAttachError(undefined)
+    setAttachingAssetId(pending.recordId)
+    try {
+      const hydrated = await useProjectStore
+        .getState()
+        .hydrate(pending.projectId, repository)
+      if (!hydrated) throw new Error('Project hydration failed')
+      setPendingCanvasOpen(undefined)
+      navigate(`/project/${pending.projectId}?focus=${pending.nodeId}`)
+    } catch {
+      setAttachError('素材已添加，但暂时无法打开画布')
+      setAttachingAssetId(undefined)
+    }
+  }
+
   const attachAsset = async (record: LibraryAssetRecord) => {
+    const pending = pendingCanvasOpen?.recordId === record.id
+      ? pendingCanvasOpen
+      : undefined
+    if (pending) {
+      await openSavedAsset(pending)
+      return
+    }
     if (!selectedProjectId) return
 
     setAttachError(undefined)
     setAttachingAssetId(record.id)
+    let saved: PendingCanvasOpen
     try {
       const latestProject = await repository.load(selectedProjectId)
       if (!latestProject) throw new Error('Project not found')
       const attached = attachLibraryAssetToProject(record, latestProject)
       await repository.save(attached.project)
-      const hydrated = await useProjectStore
-        .getState()
-        .hydrate(latestProject.id, repository)
-      if (!hydrated) throw new Error('Project hydration failed')
-      navigate(`/project/${latestProject.id}?focus=${attached.node.id}`)
+      saved = {
+        recordId: record.id,
+        recordName: record.name,
+        projectId: latestProject.id,
+        nodeId: attached.node.id,
+      }
+      setPendingCanvasOpen(saved)
     } catch {
       setAttachError('无法添加素材到项目')
       setAttachingAssetId(undefined)
+      return
     }
+
+    await openSavedAsset(saved)
   }
 
   return (
@@ -323,10 +378,16 @@ export function AssetsHistoryPage({
                     <button
                       type="button"
                       aria-busy={attachingAssetId === record.id}
-                      disabled={attachingAssetId !== undefined}
+                      disabled={
+                        attachingAssetId !== undefined ||
+                        (pendingCanvasOpen !== undefined &&
+                          pendingCanvasOpen.recordId !== record.id)
+                      }
                       onClick={() => void attachAsset(record)}
                     >
-                      添加 {record.name} 到项目并打开画布
+                      {pendingCanvasOpen?.recordId === record.id
+                        ? `重试打开 ${pendingCanvasOpen.recordName} 的画布`
+                        : `添加 ${record.name} 到项目并打开画布`}
                     </button>
                   ) : (
                     <p>创建项目后可添加到画布</p>
