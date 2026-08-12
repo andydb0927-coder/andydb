@@ -261,7 +261,9 @@ describe('assets and history page', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('仅支持图片、视频或音频文件')
-    expect(screen.getByRole('heading', { name: project.title })).toBeVisible()
+    expect(
+      await screen.findByRole('heading', { name: project.title }),
+    ).toBeVisible()
   })
 
   test('keeps audio browseable without offering a canvas action', async () => {

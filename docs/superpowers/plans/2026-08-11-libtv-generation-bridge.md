@@ -75,7 +75,7 @@
 - Produces `GenerationReference`, the extended `GenerationRequest`, shared `LibTvCatalog`/`LibTvProviderSelection` contracts, `GenerationProviderPreference`, `GenerationProviderPreferenceStore`, and `RuntimeGenerationAdapter`.
 - Later tasks must import these exact types rather than duplicate provider state.
 
-- [ ] **Step 1: Write failing request and preference tests**
+- [x] **Step 1: Write failing request and preference tests**
 
 Add the exact request shape to queue fixtures and test strict preference handling:
 
@@ -116,7 +116,7 @@ test('accepts only a complete LibTV selection', () => {
 
 Test runtime dispatch with two in-memory adapters. Assert Demo is called only for Demo, LibTV only for LibTV, and a LibTV error is returned rather than falling back.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -127,7 +127,7 @@ npm run test:run -- src/features/generation/generation-queue.test.ts src/feature
 
 Expected: fail because structured references, the preference store, and runtime adapter do not exist.
 
-- [ ] **Step 3: Implement minimal strict contracts**
+- [x] **Step 3: Implement minimal strict contracts**
 
 Implement:
 
@@ -178,13 +178,13 @@ referenceAssets: asset
 
 The later confirmation task reuses this shape but does not perform a second request-contract migration.
 
-- [ ] **Step 4: Run GREEN and typecheck**
+- [x] **Step 4: Run GREEN and typecheck**
 
 Run the Step 2 command, then `npm run typecheck`.
 
 Expected: all focused tests and typecheck pass.
 
-- [ ] **Step 5: Self-review and commit**
+- [x] **Step 5: Self-review and commit**
 
 Check exact changed paths, `git diff --check`, then commit:
 
@@ -208,7 +208,7 @@ git commit -m "refactor: select generation providers at runtime"
 - Produces `CliRunner.run(args: readonly string[]): Promise<CliResult>` and `loadLibTvCatalog(runner, writesEnabled): Promise<LibTvCatalog>`.
 - Catalog fields are the only account/project/model data later exposed to the browser.
 
-- [ ] **Step 1: Write failing runner security tests**
+- [x] **Step 1: Write failing runner security tests**
 
 Use an injected spawn implementation and assert:
 
@@ -222,7 +222,7 @@ expect(spawn).toHaveBeenCalledWith(
 
 Cover stdout/stderr separation, ENOENT, nonzero exit, and a 2 MiB output limit. The error object may contain a sanitized stderr summary but never the environment or command string.
 
-- [ ] **Step 2: Write failing catalog redaction tests**
+- [x] **Step 2: Write failing catalog redaction tests**
 
 Fake CLI JSON containing names, ids, tokens, emails, and extra fields. Assert the result is exactly:
 
@@ -240,7 +240,7 @@ Fake CLI JSON containing names, ids, tokens, emails, and extra fields. Assert th
 
 Assert user name, email, ownerId, token, icon, prefix, and arbitrary response fields are absent.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run:
 
@@ -251,7 +251,7 @@ npm run test:run -- server/libtv/cli-runner.test.ts server/libtv/catalog.test.ts
 
 Expected: fail because server modules do not exist.
 
-- [ ] **Step 4: Implement runner and catalog**
+- [x] **Step 4: Implement runner and catalog**
 
 Define:
 
@@ -279,13 +279,13 @@ Runner uses `spawn(binary, [...args], { shell: false, stdio: ['ignore', 'pipe', 
 
 Extend `tsconfig.node.json` to include `server/**/*.ts` and types `node`, `vitest/globals`.
 
-- [ ] **Step 5: Run GREEN and typecheck**
+- [x] **Step 5: Run GREEN and typecheck**
 
 Run Step 3, then `npm run typecheck`.
 
 Expected: focused tests and both TS project references pass.
 
-- [ ] **Step 6: Self-review and commit**
+- [x] **Step 6: Self-review and commit**
 
 Run `git diff --check`, verify only Task 2 paths, then commit:
 
@@ -307,7 +307,7 @@ git commit -m "feat: discover libtv generation catalogs"
 - Consumes the Task 2 `CliRunner` and allowlisted `LibTvCatalog`.
 - Produces `executeLibTvGeneration(input, catalog, runner, fileWorkspace): Promise<LibTvGeneratedAsset>`.
 
-- [ ] **Step 1: Write failing preflight tests**
+- [x] **Step 1: Write failing preflight tests**
 
 Before any runner call, reject:
 
@@ -322,7 +322,7 @@ Before any runner call, reject:
 
 Use `expect(runner.run).not.toHaveBeenCalled()` for every preflight error.
 
-- [ ] **Step 2: Write failing exact-command tests**
+- [x] **Step 2: Write failing exact-command tests**
 
 For one PNG Data URL followed by image generation, assert sequential calls:
 
@@ -348,11 +348,11 @@ expect(calls[1]).toEqual([
 
 Add video cases for no reference (`modeType=text2video`), one image (`singleImage2video`), and one video (`video2video`). Assert temp files exist while upload runs and are absent after success and failure.
 
-- [ ] **Step 3: Write failing output parser tests**
+- [x] **Step 3: Write failing output parser tests**
 
 Accept only JSON containing an `http(s)` URL in `data.url`. Map image/video kind, optional poster/width/height/duration. Reject non-JSON, empty arrays, Data URLs, mismatched kinds, and CLI nonzero errors. Assert returned errors omit args, temp paths, full prompt, and raw output.
 
-- [ ] **Step 4: Run RED**
+- [x] **Step 4: Run RED**
 
 Run:
 
@@ -363,7 +363,7 @@ npm run test:run -- server/libtv/generation-command.test.ts
 
 Expected: fail because the executor does not exist.
 
-- [ ] **Step 5: Implement validation, temp upload, command execution, and parsing**
+- [x] **Step 5: Implement validation, temp upload, command execution, and parsing**
 
 Define the browser-to-server body in the shared type-only `libtv-contract.ts`; server modules import it with `import type`:
 
@@ -398,11 +398,11 @@ export interface LibTvGeneratedAsset {
 }
 ```
 
-- [ ] **Step 6: Run GREEN and typecheck**
+- [x] **Step 6: Run GREEN and typecheck**
 
 Run Step 4, Task 2 focused tests, and `npm run typecheck`.
 
-- [ ] **Step 7: Self-review and commit**
+- [x] **Step 7: Self-review and commit**
 
 Verify no shell interpolation, no real `libtv` runner in tests, no temp residue, then commit:
 
@@ -425,7 +425,7 @@ git commit -m "feat: execute gated libtv generation commands"
 - Consumes Tasks 2-3 catalog and generation functions.
 - Produces `createLibTvHttpHandler(options): (request: Request) => Promise<Response>` and `libTvGenerationBridgePlugin(options?)`.
 
-- [ ] **Step 1: Write failing HTTP contract tests**
+- [x] **Step 1: Write failing HTTP contract tests**
 
 Assert:
 
@@ -437,11 +437,11 @@ Assert:
 - success returns the allowlisted generated asset only;
 - unknown paths return `undefined`/delegate rather than serving an app response.
 
-- [ ] **Step 2: Write failing Vite middleware tests**
+- [x] **Step 2: Write failing Vite middleware tests**
 
 Use request/response doubles to prove dev and preview hooks install the same middleware, `/api/libtv/*` is handled, non-API requests call `next()`, and no CORS wildcard is written.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run:
 
@@ -452,7 +452,7 @@ npm run test:run -- server/libtv/http-handler.test.ts server/libtv/vite-plugin.t
 
 Expected: fail because bridge modules do not exist.
 
-- [ ] **Step 4: Implement Web handler and plugin adapter**
+- [x] **Step 4: Implement Web handler and plugin adapter**
 
 Create dependencies once:
 
@@ -475,11 +475,11 @@ Update `vite.config.ts`:
 plugins: [react(), libTvGenerationBridgePlugin()],
 ```
 
-- [ ] **Step 5: Run GREEN, typecheck, and build**
+- [x] **Step 5: Run GREEN, typecheck, and build**
 
 Run Step 3, `npm run typecheck`, and `npm run build`.
 
-- [ ] **Step 6: Self-review and commit**
+- [x] **Step 6: Self-review and commit**
 
 Verify production bundle contains no server module or credential value, run `git diff --check`, then commit:
 
@@ -503,7 +503,7 @@ git commit -m "feat: expose the local libtv bridge"
 - Consumes Tasks 1 and 4 contracts.
 - Produces `fetchLibTvCatalog`, `LibTvGenerationAdapter`, and a Models page that persists only validated selections.
 
-- [ ] **Step 1: Write failing adapter tests**
+- [x] **Step 1: Write failing adapter tests**
 
 Test:
 
@@ -515,7 +515,7 @@ Test:
 - non-2xx structured errors remain actionable and do not fall back to Demo;
 - valid bridge output becomes a fresh Asset/NodeVersion pair with the original prompt and matching asset reference.
 
-- [ ] **Step 2: Write failing Models page tests**
+- [x] **Step 2: Write failing Models page tests**
 
 Inject catalog and preference dependencies. Cover loading, read failure + retry, writes-disabled, unauthenticated, complete selections, and switching back to Demo. Assert exact controls:
 
@@ -529,7 +529,7 @@ screen.getByRole('button', { name: '启用 LibTV 实际生成' })
 
 Assert the button is disabled until authenticated, writes enabled, and all three values are catalog members. Show pricing rules only when present; otherwise show `费用以 LibTV 提交时为准`.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run:
 
@@ -540,13 +540,13 @@ npm run test:run -- src/features/generation/libtv-generation-adapter.test.ts src
 
 Expected: fail because the adapter and live provider UI do not exist.
 
-- [ ] **Step 4: Implement adapter and Models page**
+- [x] **Step 4: Implement adapter and Models page**
 
 `LibTvGenerationAdapter.start()` reads the current complete LibTV preference, prepares references, POSTs `{ confirmed: true, selection, request }`, validates the generated asset, and creates fresh local ids/timestamps. The server remains the authoritative write gate.
 
 Models page loads catalog once, supports explicit retry, keeps existing image/video filtering, and presents live model summaries without exposing account data. Provider changes are saved only on the explicit action button. Add responsive styles using existing platform tokens.
 
-- [ ] **Step 5: Run GREEN, expanded focused suite, and typecheck**
+- [x] **Step 5: Run GREEN, expanded focused suite, and typecheck**
 
 Run Step 3 plus:
 
@@ -555,7 +555,7 @@ npm run test:run -- src/features/generation/generation-queue.test.ts src/feature
 npm run typecheck
 ```
 
-- [ ] **Step 6: Self-review and commit**
+- [x] **Step 6: Self-review and commit**
 
 Verify no token/account field can enter storage or render output, then commit:
 
@@ -578,11 +578,11 @@ git commit -m "feat: configure live libtv generation"
 - Consumes the Task 1 preference store and extended request.
 - Preserves the existing `generationAdapter` test injection; production default becomes one module-level `RuntimeGenerationAdapter`.
 
-- [ ] **Step 1: Write failing dialog accessibility tests**
+- [x] **Step 1: Write failing dialog accessibility tests**
 
 Render the dialog and assert visible title, remote canvas, model, operation, reference count, quota warning, initial Cancel focus, Escape close, confirm callback once, and focus return.
 
-- [ ] **Step 2: Write failing Canvas behavior tests**
+- [x] **Step 2: Write failing Canvas behavior tests**
 
 Cover:
 
@@ -594,7 +594,7 @@ Cover:
 - local cancel copy says the LibTV task may still run remotely;
 - existing injected-adapter, queue lifecycle, focus, persistence, and keyboard tests remain green.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run:
 
@@ -605,7 +605,7 @@ npm run test:run -- src/features/generation/GenerationConfirmationDialog.test.ts
 
 Expected: fail because LibTV actions are not gated and request references are not structured.
 
-- [ ] **Step 4: Implement the minimal confirmation state machine**
+- [x] **Step 4: Implement the minimal confirmation state machine**
 
 Use one pending union:
 
@@ -627,11 +627,11 @@ const defaultGenerationAdapter = new RuntimeGenerationAdapter(
 )
 ```
 
-- [ ] **Step 5: Run GREEN, full Canvas focused tests, and typecheck**
+- [x] **Step 5: Run GREEN, full Canvas focused tests, and typecheck**
 
 Run Step 3, then all generation tests and `npm run typecheck`.
 
-- [ ] **Step 6: Self-review and commit**
+- [x] **Step 6: Self-review and commit**
 
 Check double-submit, retry cost confirmation, focus return, stale route state, and Demo regression. Commit:
 
@@ -652,7 +652,7 @@ git commit -m "feat: confirm billable libtv generation"
 - Consumes all prior tasks.
 - Produces no external LibTV writes; all `/api/libtv/*` responses are intercepted in Chromium.
 
-- [ ] **Step 1: Write the browser test**
+- [x] **Step 1: Write the browser test**
 
 Intercept catalog with authenticated/writes-enabled fixtures and generation with one image asset. Track POST calls in memory. The path must:
 
@@ -666,7 +666,7 @@ Intercept catalog with authenticated/writes-enabled fixtures and generation with
 8. assert console/page error arrays are empty;
 9. cover Escape and keyboard focus return.
 
-- [ ] **Step 2: Run focused Chromium**
+- [x] **Step 2: Run focused Chromium**
 
 Run:
 
@@ -677,7 +677,7 @@ npx playwright test e2e/libtv-generation.spec.ts
 
 Expected: pass without any CLI remote write. If local port binding is sandbox-blocked, rerun with controlled permission and do not count the first environment denial as a product failure.
 
-- [ ] **Step 3: Run fresh full verification**
+- [x] **Step 3: Run fresh full verification**
 
 Run in order:
 
@@ -694,15 +694,15 @@ git status --short --untracked-files=no
 
 Expected: all gates pass. Record exact file/test counts and any existing Vite chunk advisory.
 
-- [ ] **Step 4: Independent whole-phase code review**
+- [x] **Step 4: Independent whole-phase code review**
 
 Review from the design commit base through current HEAD. Reject any Critical/Important issue involving credential leakage, bypassable write gates, shell injection, remote side effects in tests, cost confirmation, result integrity, queue lifecycle, or accessibility. Fix findings with RED/GREEN evidence and run one scoped re-review.
 
-- [ ] **Step 5: Confirm protected and external boundaries**
+- [x] **Step 5: Confirm protected and external boundaries**
 
 Prove the phase commit range contains no `audit-2026-08-06/` paths. Report the read-only CLI checks separately from automated fake-runner/browser evidence. State explicitly that no paid LibTV generation was executed and live output quality remains unverified.
 
-- [ ] **Step 6: Commit browser evidence and completed plan**
+- [x] **Step 6: Commit browser evidence and completed plan**
 
 Stage only exact Task 7 paths and any reviewed focused fix, then commit:
 

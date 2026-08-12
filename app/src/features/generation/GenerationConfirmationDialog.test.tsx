@@ -48,6 +48,8 @@ describe('GenerationConfirmationDialog', () => {
     expect(dialog).toHaveTextContent('Image Model')
     expect(dialog).toHaveTextContent('重生成')
     expect(dialog).toHaveTextContent('1 个参考素材')
+    expect(dialog).toHaveTextContent('会在远程画布创建生成节点')
+    expect(dialog).toHaveTextContent('1 个参考素材会先上传到 LibTV')
     expect(dialog).toHaveTextContent('可能消耗 LibTV 积分')
     expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
   })

@@ -49,7 +49,7 @@ export function GenerationConfirmationDialog({
     <div className="generation-confirmation" role="presentation">
       <section
         aria-labelledby="generation-confirmation-title"
-        aria-describedby="generation-confirmation-warning"
+        aria-describedby="generation-confirmation-impact generation-confirmation-warning"
         aria-modal="true"
         className="generation-confirmation__dialog"
         role="dialog"
@@ -72,6 +72,15 @@ export function GenerationConfirmationDialog({
             <dd>{request.referenceAssets.length} 个参考素材</dd>
           </div>
         </dl>
+        <p
+          id="generation-confirmation-impact"
+          className="generation-confirmation__impact"
+        >
+          确认后会在远程画布创建生成节点；
+          {request.referenceAssets.length > 0
+            ? `${request.referenceAssets.length} 个参考素材会先上传到 LibTV。`
+            : '本次没有参考素材需要上传。'}
+        </p>
         <p id="generation-confirmation-warning" className="generation-confirmation__warning">
           此操作可能消耗 LibTV 积分，费用与耗时以 LibTV 提交时为准。
         </p>

@@ -662,6 +662,7 @@ select {
 .generation-confirmation__dialog h2,
 .generation-confirmation__dialog dl,
 .generation-confirmation__dialog dd,
+.generation-confirmation__impact,
 .generation-confirmation__warning {
   margin: 0;
 }
@@ -705,6 +706,13 @@ select {
 .generation-confirmation__warning {
   margin-top: var(--space-4);
   color: #ffe0a6;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.generation-confirmation__impact {
+  margin-top: var(--space-4);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   line-height: 1.55;
 }

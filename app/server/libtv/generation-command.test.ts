@@ -271,6 +271,25 @@ describe('LibTV generation preflight', () => {
     )
   })
 
+  test('rejects a remote project display name that does not match the live catalog', async () => {
+    await expectRejectedWithoutRunnerCall(
+      body({ selection: { ...body().selection, projectName: 'Spoofed canvas name' } }),
+    )
+  })
+
+  test.each([
+    ['missing project id', 'projectId', undefined],
+    ['blank project id', 'projectId', '   '],
+    ['missing node id', 'nodeId', undefined],
+    ['blank node id', 'nodeId', '\n'],
+    ['unknown operation', 'operation', 'delete-project'],
+  ])('rejects a request with %s before any CLI call', async (_caseName, field, value) => {
+    const request = { ...body().request } as Record<string, unknown>
+    if (value === undefined) delete request[field]
+    else request[field] = value
+    await expectRejectedWithoutRunnerCall({ ...body(), request })
+  })
+
   test.each(['', '   ', '\n\t'])('rejects a blank prompt before any CLI call', async (prompt) => {
     await expectRejectedWithoutRunnerCall(body({ request: { ...body().request, prompt } }))
   })

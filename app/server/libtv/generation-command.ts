@@ -11,6 +11,7 @@ import type { CliRunner, LibTvGeneratedAsset } from './types.js'
 const MAX_PROMPT_LENGTH = 8_000
 const MAX_REFERENCES = 3
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024
+const MAX_LOCAL_ID_LENGTH = 512
 
 const MIME_EXTENSIONS = {
   'image/png': 'png',
@@ -133,9 +134,13 @@ function preflight(input: unknown, catalog: LibTvCatalog): ValidGeneration {
   }
 
   const selection = parseSelection(input.selection)
+  const selectedProject = catalog.projects.find(
+    (project) => project.uuid === selection.projectUuid,
+  )
   if (
     !LIBTV_PROJECT_UUID_PATTERN.test(selection.projectUuid) ||
-    !catalog.projects.some((project) => project.uuid === selection.projectUuid) ||
+    !selectedProject ||
+    selectedProject.name !== selection.projectName ||
     !catalog.imageModels.some((model) => model.modelName === selection.imageModelName) ||
     !catalog.videoModels.some((model) => model.modelName === selection.videoModelName)
   ) {
@@ -143,7 +148,14 @@ function preflight(input: unknown, catalog: LibTvCatalog): ValidGeneration {
   }
 
   const request = input.request
-  if (!isRecord(request) || !isTargetKind(request.targetKind) || typeof request.prompt !== 'string') {
+  if (
+    !isRecord(request) ||
+    !isBoundedLocalId(request.projectId) ||
+    !isBoundedLocalId(request.nodeId) ||
+    !isGenerationOperation(request.operation) ||
+    !isTargetKind(request.targetKind) ||
+    typeof request.prompt !== 'string'
+  ) {
     invalidRequest()
   }
   if (request.prompt.trim().length === 0 || request.prompt.length > MAX_PROMPT_LENGTH) {
@@ -689,6 +701,24 @@ function isReferenceKind(value: unknown): value is ReferenceKind {
 
 function isTargetKind(value: unknown): value is TargetKind {
   return value === 'image' || value === 'video'
+}
+
+function isGenerationOperation(
+  value: unknown,
+): value is 'regenerate' | 'extend-shot' | 'generate-video' {
+  return (
+    value === 'regenerate' ||
+    value === 'extend-shot' ||
+    value === 'generate-video'
+  )
+}
+
+function isBoundedLocalId(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.trim().length > 0 &&
+    value.length <= MAX_LOCAL_ID_LENGTH
+  )
 }
 
 function invalidRequest(): never {
