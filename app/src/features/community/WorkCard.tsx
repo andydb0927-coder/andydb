@@ -1,0 +1,35 @@
+import { Bookmark, Eye, Heart } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+import type { PublishedWork } from './community-model'
+
+function readableDuration(seconds: number) {
+  const rounded = Math.round(seconds)
+  if (rounded < 60) return `${rounded} 秒`
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`
+}
+
+export function WorkCard({ work }: { work: PublishedWork }) {
+  return (
+    <article className="community-card" aria-label={work.title}>
+      <Link className="community-card__cover focus-visible" aria-label={`查看作品 ${work.title}`} to={`/discover/${work.id}`}>
+        <img src={work.coverUrl} alt={work.title} />
+        <span>{readableDuration(work.durationSeconds)}</span>
+      </Link>
+      <div className="community-card__body">
+        <div className="community-card__title">
+          <h2>{work.title}</h2>
+          <span>{work.author}</span>
+        </div>
+        <ul className="community-tags" aria-label={`${work.title} 标签`}>
+          {work.tags.map((tag) => <li key={tag}>{tag}</li>)}
+        </ul>
+        <div className="community-metrics">
+          <span aria-label={`${work.metrics.views} 次浏览`}><Eye aria-hidden="true" />{work.metrics.views}</span>
+          <span aria-label={`${work.metrics.likes} 次点赞`}><Heart aria-hidden="true" />{work.metrics.likes}</span>
+          <span aria-label={`${work.metrics.favorites} 次收藏`}><Bookmark aria-hidden="true" />{work.metrics.favorites}</span>
+        </div>
+      </div>
+    </article>
+  )
+}

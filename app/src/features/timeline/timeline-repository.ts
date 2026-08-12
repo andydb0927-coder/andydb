@@ -20,4 +20,8 @@ export class TimelineRepository implements TimelineProjectRepository {
   async save(timeline: TimelineProject): Promise<void> {
     await this.database.timelineProjects.put(timeline)
   }
+
+  async list(): Promise<TimelineProject[]> {
+    return this.database.timelineProjects.orderBy('updatedAt').reverse().toArray()
+  }
 }

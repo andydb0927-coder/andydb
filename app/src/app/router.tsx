@@ -9,6 +9,8 @@ import { WorkflowsPage } from '../features/platform/WorkflowsPage'
 import { DiscoverPage } from '../features/platform/DiscoverPage'
 import { ModelsPage } from '../features/platform/ModelsPage'
 import { AccountPage } from '../features/platform/AccountPage'
+import { MyWorksPage } from '../features/community/MyWorksPage'
+import { WorkDetailPage } from '../features/community/WorkDetailPage'
 
 export const routes: RouteObject[] = [
   {
@@ -18,6 +20,8 @@ export const routes: RouteObject[] = [
       { path: '/assets', element: <AssetsHistoryPage /> },
       { path: '/workflows', element: <WorkflowsPage /> },
       { path: '/discover', element: <DiscoverPage /> },
+      { path: '/discover/mine', element: <MyWorksPage /> },
+      { path: '/discover/:workId', element: <WorkDetailPage /> },
       { path: '/models', element: <ModelsPage /> },
       { path: '/account', element: <AccountPage /> },
     ],

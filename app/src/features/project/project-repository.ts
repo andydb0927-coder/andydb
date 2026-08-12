@@ -7,12 +7,14 @@ import {
 } from '../assets/library-model'
 import type { WorkflowRun } from '../workflow/workflow-model'
 import type { TimelineProject } from '../timeline/timeline-project'
+import type { PublishedWork } from '../community/community-model'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
   libraryAssets!: Table<LibraryAssetRecord, string>
   workflowRuns!: Table<WorkflowRun, string>
   timelineProjects!: Table<TimelineProject, string>
+  publishedWorks!: Table<PublishedWork, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -35,6 +37,13 @@ export class WirelessCanvasDatabase extends Dexie {
       libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
       workflowRuns: 'id, projectId, updatedAt, status',
       timelineProjects: 'id, projectId, updatedAt',
+    })
+    this.version(6).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
+      workflowRuns: 'id, projectId, updatedAt, status',
+      timelineProjects: 'id, projectId, updatedAt',
+      publishedWorks: 'id, &projectId, status, publishedAt, updatedAt',
     })
   }
 }
