@@ -1,4 +1,5 @@
 import type { NodeKind } from '../project/model'
+import { isCreativeCardKind } from '../project/creative-card'
 import type { CreativeNodeAction } from './node-types'
 
 export interface NodeActionSpec {
@@ -16,6 +17,9 @@ export function primaryActionsForNode(
   kind: NodeKind,
   hasAsset: boolean,
 ): NodeActionSpec[] {
+  if (isCreativeCardKind(kind)) {
+    return [{ action: 'edit-card', label: '编辑卡片' }]
+  }
   if (kind === 'text') {
     return [{ action: 'extend-shot', label: '生成分镜' }]
   }

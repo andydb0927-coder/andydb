@@ -7,18 +7,22 @@ import type {
   TimelineItem,
 } from '../project/model'
 import { selectNodeGenerationJob } from './job-selector'
+import { isCreativeCardKind } from '../project/creative-card'
 import { primaryActionsForNode } from './node-action-policy'
 import type { CreativeNodeAction } from './node-types'
 import { useDialogKeyboard } from './dialog-keyboard'
 
 const kindCopy = {
   character: '角色',
+  'character-card': '角色卡',
   scene: '场景',
+  script: '剧本卡',
   text: '文本',
   image: '图片',
   storyboard: '分镜',
   video: '视频',
   preview: '预览',
+  worldview: '世界观卡',
 } as const
 
 const jobCopy = {
@@ -144,7 +148,9 @@ export function NodeListView({
               (item) => item.track === 'video' && item.nodeId === node.id,
             )
             const primaryActions =
-              node.kind === 'text' || node.kind === 'image'
+              isCreativeCardKind(node.kind) ||
+              node.kind === 'text' ||
+              node.kind === 'image'
                 ? primaryActionsForNode(node.kind, false)
                 : [{ action: 'regenerate' as const, label: '重生成' }]
             return (

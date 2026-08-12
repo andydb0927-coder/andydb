@@ -8,12 +8,15 @@ import {
 
 const kinds: NodeKind[] = [
   'character',
+  'character-card',
   'scene',
+  'script',
   'text',
   'image',
   'storyboard',
   'video',
   'preview',
+  'worldview',
 ]
 const allowed = new Set([
   'character:storyboard',
@@ -27,6 +30,21 @@ const allowed = new Set([
   'preview:storyboard',
   'preview:video',
   'storyboard:video',
+  'script:script',
+  'script:character-card',
+  'script:worldview',
+  'script:storyboard',
+  'script:video',
+  'character-card:script',
+  'character-card:character-card',
+  'character-card:worldview',
+  'character-card:storyboard',
+  'character-card:video',
+  'worldview:script',
+  'worldview:character-card',
+  'worldview:worldview',
+  'worldview:storyboard',
+  'worldview:video',
 ])
 
 function node(id: string, kind: NodeKind): CanvasNode {
@@ -99,5 +117,26 @@ describe('dependency connection policy', () => {
       reason: 'cycle',
     })
     expect(connectionFailureMessage('cycle')).toBe('此连接会形成循环依赖')
+  })
+
+  test('prioritizes a cycle over an otherwise incompatible source type', () => {
+    const base = project('video', 'character')
+    const downstreamPath = {
+      ...base,
+      edges: [
+        {
+          id: 'character-to-video',
+          sourceNodeId: 'target',
+          targetNodeId: 'source',
+        },
+      ],
+    }
+
+    expect(
+      validateDependencyConnection(downstreamPath, 'source', 'target'),
+    ).toEqual({
+      ok: false,
+      reason: 'cycle',
+    })
   })
 })

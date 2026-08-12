@@ -1,9 +1,12 @@
 import {
+  BookOpenText,
   Clapperboard,
+  Contact,
   Eye,
   EyeOff,
   Film,
   Group,
+  Globe2,
   Image,
   MousePointer2,
   Type,
@@ -14,6 +17,9 @@ import { FloatingPanel } from '../../ui/FloatingPanel'
 
 const tools = [
   { id: 'select', label: '选择', icon: MousePointer2 },
+  { id: 'script', label: '剧本卡', icon: BookOpenText },
+  { id: 'character-card', label: '角色卡', icon: Contact },
+  { id: 'worldview', label: '世界观卡', icon: Globe2 },
   { id: 'text', label: '文本', icon: Type },
   { id: 'image', label: '图片', icon: Image },
   { id: 'storyboard', label: '分镜', icon: Clapperboard },

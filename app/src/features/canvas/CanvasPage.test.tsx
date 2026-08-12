@@ -15,6 +15,7 @@ import type {
   GenerationResult,
 } from '../generation/generation-adapter'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
+import type { LibraryAssetRecord } from '../assets/library-model'
 import type { Project } from '../project/model'
 import {
   ProjectRepository,
@@ -2343,6 +2344,9 @@ describe('creative canvas', () => {
         .map((button) => button.getAttribute('aria-label')),
     ).toEqual([
       '选择',
+      '剧本卡',
+      '角色卡',
+      '世界观卡',
       '文本',
       '图片',
       '分镜',
@@ -2351,6 +2355,151 @@ describe('creative canvas', () => {
       '分组',
       '隐藏连线',
     ])
+  })
+
+  test.each([
+    [
+      '剧本卡',
+      '创建剧本卡',
+      [['分场', '场一：雨夜河岸'], ['对白', '林渊：你终于来了。'], ['镜头备注', '远景缓慢推近']],
+      'script',
+    ],
+    [
+      '角色卡',
+      '创建角色卡',
+      [['姓名', '林渊'], ['外貌锚点', '短发，右眼下有小痣'], ['服化道', '深灰长风衣'], ['关系', '林舟的姐姐']],
+      'character-card',
+    ],
+    [
+      '世界观卡',
+      '创建世界观卡',
+      [['背景', '雨季淹城三天'], ['美术风格', '低饱和蓝绿胶片'], ['规则', '铜铃后不直呼失踪者姓名']],
+      'worldview',
+    ],
+  ] as const)(
+    'creates a structured %s with exact persisted fields',
+    async (toolLabel, dialogName, fields, kind) => {
+      const user = userEvent.setup()
+      renderCanvas({
+        repository: noOpCanvasRepository,
+        libraryRepository: { list: vi.fn().mockResolvedValue([]) },
+      })
+      initializeFlow({ x: 360, y: 280 })
+
+      await user.click(screen.getByRole('button', { name: toolLabel }))
+      clickPane(360, 280)
+      expect(screen.getByRole('dialog', { name: dialogName })).toBeVisible()
+      for (const [label, value] of fields) {
+        await user.type(screen.getByLabelText(label), value)
+      }
+      await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+      const created = useProjectStore.getState().activeProject?.nodes.at(-1)
+      expect(created).toMatchObject({ kind, position: { x: 360, y: 280 } })
+      expect(created?.card).toBeDefined()
+      expect(created?.versions).toHaveLength(1)
+      expect(useProjectStore.getState().past).toHaveLength(1)
+    },
+  )
+
+  test('references one library image, edits from the node, and restores focus with undo and redo', async () => {
+    const user = userEvent.setup()
+    const imageRecord: LibraryAssetRecord = {
+      id: 'library-card-image',
+      name: '潮汐城参考.png',
+      kind: 'image',
+      mimeType: 'image/png',
+      url: 'data:image/png;base64,AA==',
+      createdAt: '2026-08-13T08:00:00.000Z',
+      source: 'upload',
+    }
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      libraryRepository: { list: vi.fn().mockResolvedValue([imageRecord]) },
+    })
+    initializeFlow({ x: 480, y: 320 })
+
+    await user.click(screen.getByRole('button', { name: '世界观卡' }))
+    clickPane(480, 320)
+    await user.clear(screen.getByLabelText('标题'))
+    await user.type(screen.getByLabelText('标题'), '潮汐城世界观')
+    await user.type(screen.getByLabelText('背景'), '雨季淹城三天')
+    await user.type(screen.getByLabelText('美术风格'), '低饱和蓝绿胶片')
+    await user.selectOptions(screen.getByLabelText('引用图片素材'), imageRecord.id)
+    await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+    const created = useProjectStore.getState().activeProject?.nodes.at(-1)
+    expect(created?.card).toMatchObject({
+      kind: 'worldview',
+      imageAssetId: imageRecord.id,
+    })
+    expect(
+      useProjectStore.getState().activeProject?.assets.filter(
+        ({ id }) => id === imageRecord.id,
+      ),
+    ).toHaveLength(1)
+
+    const cardButton = await screen.findByRole('button', {
+      name: '潮汐城世界观',
+    })
+    await user.click(cardButton)
+    const editTrigger = screen.getByRole('button', { name: '编辑卡片' })
+    await user.click(editTrigger)
+    expect(screen.getByRole('dialog', { name: '编辑世界观卡' })).toBeVisible()
+    await user.clear(screen.getByLabelText('规则'))
+    await user.type(screen.getByLabelText('规则'), '铜铃后不得直呼失踪者姓名')
+    await user.click(screen.getByRole('button', { name: '确认保存' }))
+
+    const edited = useProjectStore.getState().activeProject?.nodes.at(-1)
+    expect(edited?.card).toMatchObject({
+      rules: '铜铃后不得直呼失踪者姓名',
+      imageAssetId: imageRecord.id,
+    })
+    expect(edited?.versions).toHaveLength(2)
+    expect(
+      useProjectStore.getState().activeProject?.assets.filter(
+        ({ id }) => id === imageRecord.id,
+      ),
+    ).toHaveLength(1)
+    await waitFor(() => expect(editTrigger).toHaveFocus())
+
+    act(() => useProjectStore.getState().undo())
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.versions).toHaveLength(1)
+    act(() => useProjectStore.getState().redo())
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.versions).toHaveLength(2)
+  })
+
+  test('edits a card from the node list and falls back to the canvas node for focus', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes.push({
+      id: 'script-card',
+      kind: 'script',
+      title: '雨夜剧本',
+      position: { x: 1600, y: 720 },
+      versions: [{
+        id: 'script-version',
+        createdAt: project.createdAt,
+        prompt: '分场：场一',
+      }],
+      activeVersionId: 'script-version',
+      sourceChanged: false,
+      card: { kind: 'script', scenes: '场一', dialogue: '', shotNotes: '' },
+    })
+    activate(project)
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      libraryRepository: { list: vi.fn().mockResolvedValue([]) },
+    })
+
+    await user.click(screen.getByRole('button', { name: '节点列表' }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片 雨夜剧本' }))
+    expect(screen.queryByRole('dialog', { name: '节点列表' })).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('对白'), '林渊：你来了。')
+    await user.click(screen.getByRole('button', { name: '确认保存' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '雨夜剧本' })).toHaveFocus(),
+    )
   })
 
   test('creates nodes from the toolbar at the converted pane position', async () => {

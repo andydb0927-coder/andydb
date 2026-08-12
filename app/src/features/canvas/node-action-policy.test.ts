@@ -23,6 +23,19 @@ describe('canvas node action policy', () => {
   })
 
   test.each([
+    'script',
+    'character-card',
+    'worldview',
+  ] satisfies NodeKind[])(
+    'offers %s nodes only the structured card editor action',
+    (kind) => {
+      expect(primaryActionsForNode(kind, false)).toEqual([
+        { action: 'edit-card', label: '编辑卡片' },
+      ])
+    },
+  )
+
+  test.each([
     'character',
     'scene',
     'storyboard',

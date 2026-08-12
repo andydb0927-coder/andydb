@@ -5,10 +5,14 @@ import {
 } from '@xyflow/react'
 import { useEffect, useRef } from 'react'
 import {
+  BookOpenText,
   Clapperboard,
+  Contact,
   Film,
+  Globe2,
   Image,
   MonitorPlay,
+  Pencil,
   RefreshCw,
   ScanLine,
   Trash2,
@@ -16,6 +20,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { StatusText } from '../../../ui/StatusText'
 import { primaryActionsForNode } from '../node-action-policy'
@@ -23,12 +28,15 @@ import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 
 const kindCopy = {
   character: '角色',
+  'character-card': '角色卡',
   scene: '场景',
+  script: '剧本卡',
   text: '文本',
   image: '图片',
   storyboard: '分镜',
   video: '视频',
   preview: '预览',
+  worldview: '世界观卡',
 } as const
 
 const statusCopy = {
@@ -41,16 +49,20 @@ const statusCopy = {
 
 const kindIcons = {
   character: UserRound,
+  'character-card': Contact,
   scene: Image,
+  script: BookOpenText,
   text: Type,
   image: Image,
   storyboard: Clapperboard,
   video: Film,
   preview: MonitorPlay,
+  worldview: Globe2,
 }
 
 function NodeActions({ data }: { data: CreativeNodeData }) {
   const actionIcons = {
+    'edit-card': Pencil,
     regenerate: RefreshCw,
     'extend-shot': ScanLine,
     'generate-video': Film,
@@ -73,7 +85,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
             <button
               key={action}
               type="button"
-              onClick={() => data.onAction(action)}
+              onClick={(event) => data.onAction(action, event.currentTarget)}
             >
               <ActionIcon aria-hidden="true" />
               {label}
@@ -82,13 +94,21 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
         },
       )}
       {data.job?.status === 'queued' || data.job?.status === 'running' ? (
-        <button type="button" onClick={() => data.onAction('cancel-generation')}>
+        <button
+          type="button"
+          onClick={(event) =>
+            data.onAction('cancel-generation', event.currentTarget)
+          }
+        >
           <X aria-hidden="true" />
           取消生成
         </button>
       ) : null}
       {data.job?.status === 'failed' || data.job?.status === 'cancelled' ? (
-        <button type="button" onClick={() => data.onAction('retry-generation')}>
+        <button
+          type="button"
+          onClick={(event) => data.onAction('retry-generation', event.currentTarget)}
+        >
           <RefreshCw aria-hidden="true" />
           重试生成
         </button>
@@ -106,7 +126,15 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
   )
 }
 
-export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
+export function CreativeNodeShell({
+  data,
+  preview,
+  hidePrompt = false,
+}: {
+  data: CreativeNodeData
+  preview?: ReactNode
+  hidePrompt?: boolean
+}) {
   const {
     node,
     asset,
@@ -191,12 +219,15 @@ export function CreativeNodeShell({ data }: { data: CreativeNodeData }) {
             </span>
             <strong>{node.title}</strong>
           </span>
-          {asset ? (
-            <img src={asset.url} alt="" className="creative-node__media" />
+          {preview ??
+            (asset ? (
+              <img src={asset.url} alt="" className="creative-node__media" />
+            ) : null)}
+          {!hidePrompt ? (
+            <span className="creative-node__prompt">
+              {activeVersion?.prompt ?? '尚未生成内容'}
+            </span>
           ) : null}
-          <span className="creative-node__prompt">
-            {activeVersion?.prompt ?? '尚未生成内容'}
-          </span>
           {node.sourceChanged ? (
             <StatusText status="offline">上游来源已变更</StatusText>
           ) : job ? (

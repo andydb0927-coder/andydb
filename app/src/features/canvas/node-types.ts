@@ -7,11 +7,13 @@ import type {
   NodeKind,
 } from '../project/model'
 import { AssetNode } from './nodes/AssetNode'
+import { CreativeCardNode } from './nodes/CreativeCardNode'
 import { PreviewNode } from './nodes/PreviewNode'
 import { StoryboardNode } from './nodes/StoryboardNode'
 import { VideoNode } from './nodes/VideoNode'
 
 export type CreativeNodeAction =
+  | 'edit-card'
   | 'regenerate'
   | 'extend-shot'
   | 'generate-video'
@@ -23,7 +25,7 @@ export interface CreativeNodeProps {
   node: CanvasNode
   selected: boolean
   job?: GenerationJob
-  onAction(action: CreativeNodeAction): void
+  onAction(action: CreativeNodeAction, trigger?: HTMLButtonElement): void
 }
 
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
@@ -44,10 +46,13 @@ export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>
 
 export const nodeTypes = {
   character: AssetNode,
+  'character-card': CreativeCardNode,
   scene: AssetNode,
+  script: CreativeCardNode,
   text: AssetNode,
   image: AssetNode,
   storyboard: StoryboardNode,
   video: VideoNode,
   preview: PreviewNode,
+  worldview: CreativeCardNode,
 }

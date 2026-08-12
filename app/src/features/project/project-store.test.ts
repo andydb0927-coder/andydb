@@ -14,6 +14,7 @@ import {
   ProjectRepository,
 } from './project-repository'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
+import { buildCreativeCardCreation } from './creative-card'
 import { useProjectStore } from './project-store'
 
 const databaseNames: string[] = []
@@ -158,6 +159,96 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('edits a creative card atomically, invalidates downstream nodes, and supports undo', () => {
+    const base = useProjectStore.getState().activeProject!
+    const upstreamCreation = buildCreativeCardCreation(
+      base,
+      {
+        kind: 'worldview',
+        title: '世界观卡 01',
+        background: '潮汐城',
+        artStyle: '低饱和蓝绿',
+        rules: '',
+      },
+      { x: 0, y: 80 },
+      {
+        now: () => '2026-08-13T08:00:00.000Z',
+        randomId: (() => {
+          const ids = ['worldview-card', 'worldview-version-1']
+          return () => ids.shift()!
+        })(),
+      },
+    )
+    const creation = buildCreativeCardCreation(
+      base,
+      {
+        kind: 'script',
+        title: '剧本卡 01',
+        scenes: '场一：河岸',
+        dialogue: '',
+        shotNotes: '',
+      },
+      { x: 40, y: 80 },
+      {
+        now: () => '2026-08-13T08:00:00.000Z',
+        randomId: (() => {
+          const ids = ['script-card', 'script-version-1']
+          return () => ids.shift()!
+        })(),
+      },
+    )
+    const project = {
+      ...base,
+      nodes: [creation.node, upstreamCreation.node, ...base.nodes],
+      edges: [
+        ...base.edges,
+        {
+          id: 'worldview-to-script',
+          sourceNodeId: upstreamCreation.node.id,
+          targetNodeId: creation.node.id,
+          sourceChanged: true,
+        },
+        {
+          id: 'script-to-shot',
+          sourceNodeId: creation.node.id,
+          targetNodeId: 'shot-1',
+        },
+      ],
+    }
+    useProjectStore.setState({
+      projectsById: { [project.id]: project },
+      activeProjectId: project.id,
+      activeProject: project,
+      saveStatus: 'saved',
+      past: [],
+      future: [],
+    })
+
+    useProjectStore.getState().updateCreativeCard('script-card', {
+      kind: 'script',
+      title: '剧本卡 01',
+      scenes: '场一：河岸\n场二：桥下',
+      dialogue: '林渊：等我。',
+      shotNotes: '横移跟拍。',
+    })
+
+    const edited = useProjectStore.getState().activeProject!
+    expect(edited.nodes[0].versions).toHaveLength(2)
+    expect(
+      edited.edges.find(({ id }) => id === 'worldview-to-script')?.sourceChanged,
+    ).toBe(false)
+    expect(edited.nodes.find(({ id }) => id === 'shot-1')?.sourceChanged).toBe(true)
+    expect(useProjectStore.getState().past).toEqual([project])
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(project)
+    useProjectStore.getState().redo()
+    expect(
+      useProjectStore.getState().activeProject?.nodes[0].versions,
+    ).toHaveLength(2)
+  })
+
   test('creates canvas content atomically through undo and redo', () => {
     const originalProject = useProjectStore.getState().activeProject!
     const node: CanvasNode = {

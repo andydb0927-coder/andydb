@@ -1,11 +1,44 @@
 export type NodeKind =
   | 'character'
+  | 'character-card'
   | 'scene'
+  | 'script'
   | 'text'
   | 'image'
   | 'storyboard'
   | 'video'
   | 'preview'
+  | 'worldview'
+
+export type CreativeCardKind = 'script' | 'character-card' | 'worldview'
+
+interface CreativeCardBase {
+  imageAssetId?: string
+}
+
+export interface ScriptCard extends CreativeCardBase {
+  kind: 'script'
+  scenes: string
+  dialogue: string
+  shotNotes: string
+}
+
+export interface CharacterCard extends CreativeCardBase {
+  kind: 'character-card'
+  name: string
+  appearance: string
+  wardrobe: string
+  relationships: string
+}
+
+export interface WorldviewCard extends CreativeCardBase {
+  kind: 'worldview'
+  background: string
+  artStyle: string
+  rules: string
+}
+
+export type CreativeCard = ScriptCard | CharacterCard | WorldviewCard
 
 export type JobStatus =
   | 'queued'
@@ -45,6 +78,7 @@ export interface CanvasNode {
   versions: NodeVersion[]
   activeVersionId: string
   sourceChanged: boolean
+  card?: CreativeCard
 }
 
 export interface CanvasCreation {

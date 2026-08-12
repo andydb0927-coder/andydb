@@ -4,6 +4,31 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasToolbar } from './CanvasToolbar'
 
+test('exposes all three structured card tools as usable actions', async () => {
+  const user = userEvent.setup()
+  const onToolChange = vi.fn()
+  render(
+    <CanvasToolbar
+      activeTool="select"
+      draftOpen={false}
+      connectionsVisible
+      onToolChange={onToolChange}
+      onToggleConnections={vi.fn()}
+    />,
+  )
+
+  for (const label of ['剧本卡', '角色卡', '世界观卡']) {
+    const tool = screen.getByRole('button', { name: label })
+    expect(tool).toBeEnabled()
+    await user.click(tool)
+    expect(onToolChange).toHaveBeenLastCalledWith(label === '剧本卡'
+      ? 'script'
+      : label === '角色卡'
+        ? 'character-card'
+        : 'worldview', tool)
+  }
+})
+
 test('enables Connect, keeps Group unavailable, and blocks Connect behind a draft', () => {
   const onToolChange = vi.fn()
   const { rerender } = render(

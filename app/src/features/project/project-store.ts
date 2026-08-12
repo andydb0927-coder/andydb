@@ -17,6 +17,10 @@ import {
 import { ProjectRepository } from './project-repository'
 import type { GenerationResult } from '../generation/generation-adapter'
 import { reorderTimeline as reorderTimelineItems } from '../timeline/timeline-model'
+import {
+  updateCreativeCardProject,
+  type CreativeCardDraft,
+} from './creative-card'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -41,6 +45,7 @@ interface ProjectStore {
   addNode: (node: CanvasNode) => void
   createCanvasContent: (creation: CanvasCreation) => void
   updateNode: (nodeId: string, changes: NodeUpdates) => void
+  updateCreativeCard: (nodeId: string, draft: CreativeCardDraft) => void
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
@@ -285,6 +290,33 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
               : node,
           ),
         })
+      })
+    },
+
+    updateCreativeCard: (nodeId, draft) => {
+      commit((project) => {
+        let updated: Project
+        try {
+          updated = updateCreativeCardProject(project, nodeId, draft)
+        } catch {
+          return project
+        }
+        const downstream = findDownstream(updated, nodeId)
+        return {
+          ...updated,
+          nodes: updated.nodes.map((node) =>
+            downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node,
+          ),
+          edges: updated.edges.map((edge) =>
+            edge.targetNodeId === nodeId
+              ? { ...edge, sourceChanged: false }
+              : downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
+        }
       })
     },
 

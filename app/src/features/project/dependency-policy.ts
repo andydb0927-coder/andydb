@@ -15,12 +15,33 @@ const targets = (...kinds: NodeKind[]) => new Set<NodeKind>(kinds)
 
 const allowedTargets: Record<NodeKind, ReadonlySet<NodeKind>> = {
   character: targets('storyboard', 'video'),
+  'character-card': targets(
+    'script',
+    'character-card',
+    'worldview',
+    'storyboard',
+    'video',
+  ),
   scene: targets('storyboard', 'video'),
+  script: targets(
+    'script',
+    'character-card',
+    'worldview',
+    'storyboard',
+    'video',
+  ),
   text: targets('storyboard', 'video'),
   image: targets('storyboard', 'video'),
   preview: targets('storyboard', 'video'),
   storyboard: targets('video'),
   video: targets(),
+  worldview: targets(
+    'script',
+    'character-card',
+    'worldview',
+    'storyboard',
+    'video',
+  ),
 }
 
 function hasPath(edges: DependencyEdge[], start: string, target: string) {

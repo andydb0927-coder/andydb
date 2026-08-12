@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const port = process.env.PLAYWRIGHT_PORT ?? '4174'
-const baseURL = `http://127.0.0.1:${port}`
+const offlineDist = process.env.PLAYWRIGHT_OFFLINE_DIST
+const baseURL = offlineDist
+  ? 'http://wireless-canvas.local'
+  : `http://127.0.0.1:${port}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,9 +20,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: true,
-  },
+  webServer: offlineDist
+    ? undefined
+    : {
+        command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
+        url: baseURL,
+        reuseExistingServer: true,
+      },
 })

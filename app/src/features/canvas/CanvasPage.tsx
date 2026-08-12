@@ -21,6 +21,8 @@ import {
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { DirectorComposer } from '../director/DirectorComposer'
+import { AssetLibraryRepository } from '../assets/asset-library-repository'
+import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
 import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
 import type {
@@ -36,18 +38,32 @@ import {
 import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
 import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
-import type { GenerationJob, Project } from '../project/model'
+import type {
+  CreativeCardKind,
+  GenerationJob,
+  Project,
+} from '../project/model'
+import {
+  buildCreativeCardCreation,
+  isCreativeCardKind,
+  nextCreativeCardTitle,
+  type CreativeCardDraft,
+} from '../project/creative-card'
 import {
   connectionFailureMessage,
   validateDependencyConnection,
 } from '../project/dependency-policy'
-import { ProjectRepository } from '../project/project-repository'
+import {
+  ProjectRepository,
+  WirelessCanvasDatabase,
+} from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import {
   CanvasToolbar,
   type CanvasTool,
 } from './CanvasToolbar'
 import { CanvasTopBar } from './CanvasTopBar'
+import { CreativeCardEditor } from './CreativeCardEditor'
 import { DependencyImpactDialog } from './DependencyImpactDialog'
 import { edgeTypes, type DependencyFlowEdge } from './edge-types'
 import { selectNodeGenerationJob } from './job-selector'
@@ -90,10 +106,18 @@ interface NodeMeasurementState {
 
 interface PendingPlacement {
   projectId: string
-  kind: CreatableNodeKind
+  kind: CreatableNodeKind | CreativeCardKind
   position: CanvasNodePosition
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
+}
+
+interface EditingCard {
+  projectId: string
+  nodeId: string
+  anchor: { x: number; y: number }
+  bounds: { width: number; height: number }
+  returnFocusTo?: HTMLElement
 }
 
 type PendingRemoteGeneration =
@@ -111,7 +135,9 @@ type PendingRemoteGeneration =
       returnFocusTo: HTMLElement
     }
 
-const defaultRepository = new ProjectRepository()
+const defaultDatabase = new WirelessCanvasDatabase()
+const defaultRepository = new ProjectRepository(defaultDatabase)
+const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
@@ -179,8 +205,11 @@ function buildGenerationRequest(
   }
 }
 
-function isCreatableTool(tool: CanvasTool): tool is CreatableNodeKind {
+function isCreatableTool(
+  tool: CanvasTool,
+): tool is CreatableNodeKind | CreativeCardKind {
   return (
+    isCreativeCardKind(tool) ||
     tool === 'text' ||
     tool === 'image' ||
     tool === 'storyboard' ||
@@ -231,12 +260,14 @@ function findCanvasNodeControl(
 
 export interface CanvasPageProps {
   repository?: CanvasRepository
+  libraryRepository?: Pick<AssetLibraryRepository, 'list'>
   generationAdapter?: GenerationAdapter
   generationPreferenceStore?: GenerationProviderPreferenceStore
 }
 
 export function CanvasPage({
   repository = defaultRepository,
+  libraryRepository = defaultLibraryRepository,
   generationAdapter = defaultGenerationAdapter,
   generationPreferenceStore = browserGenerationPreferenceStore,
 }: CanvasPageProps) {
@@ -265,6 +296,9 @@ export function CanvasPage({
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
   )
+  const updateCreativeCard = useProjectStore(
+    (state) => state.updateCreativeCard,
+  )
   const updateNodePositions = useProjectStore(
     (state) => state.updateNodePositions,
   )
@@ -292,6 +326,7 @@ export function CanvasPage({
     useState<PendingRemoteGeneration>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
+  const [editingCard, setEditingCard] = useState<EditingCard>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
@@ -327,6 +362,7 @@ export function CanvasPage({
     setPendingRemoteGeneration(undefined)
     setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
+    setEditingCard(undefined)
     createdNodeFocusRef.current = undefined
     setFocusRequestVersion((version) => version + 1)
     placementTriggerRef.current = null
@@ -489,6 +525,47 @@ export function CanvasPage({
       )
 
       const job = selectNodeGenerationJob(node, currentProject.jobs)
+
+      if (action === 'edit-card') {
+        if (!isCreativeCardKind(node.kind) || !node.card) return
+        const viewportRect = viewportRef.current?.getBoundingClientRect()
+        const triggerRect = explicitFocusTarget?.getBoundingClientRect()
+        const hasViewportBounds = Boolean(
+          viewportRect && viewportRect.width > 0 && viewportRect.height > 0,
+        )
+        const bounds = hasViewportBounds
+          ? { width: viewportRect!.width, height: viewportRect!.height }
+          : {
+              width: window.innerWidth,
+              height: Math.max(0, window.innerHeight - 56),
+            }
+        const activeElement = document.activeElement
+        setEditingCard({
+          projectId: currentProject.id,
+          nodeId,
+          bounds,
+          anchor:
+            triggerRect && hasViewportBounds
+              ? {
+                  x:
+                    triggerRect.left +
+                    triggerRect.width / 2 -
+                    viewportRect!.left,
+                  y:
+                    triggerRect.top +
+                    triggerRect.height / 2 -
+                    viewportRect!.top,
+                }
+              : { x: bounds.width / 2, y: bounds.height / 2 },
+          returnFocusTo:
+            explicitFocusTarget ??
+            (activeElement instanceof HTMLElement ? activeElement : undefined),
+        })
+        setNodeListOpen(false)
+        setActiveTool('select')
+        setPendingPlacement(undefined)
+        return
+      }
 
       if (action === 'cancel-generation') {
         if (job) {
@@ -792,7 +869,7 @@ export function CanvasPage({
             setFocusRequestVersion((version) => version + 1)
           },
           onDelete: (trigger) => requestDelete(node.id, trigger),
-          onAction: (action) => handleAction(node.id, action),
+          onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
     })
@@ -1065,6 +1142,29 @@ export function CanvasPage({
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }, [])
 
+  const finishCardEditing = useCallback(
+    (editor: EditingCard, restoreFocus = true) => {
+      setEditingCard(undefined)
+      if (!restoreFocus) return
+      queueMicrotask(() => {
+        const canvasNode = findCanvasNodeControl(
+          viewportRef.current,
+          editor.nodeId,
+        )
+        if (editor.returnFocusTo?.isConnected) {
+          editor.returnFocusTo.focus()
+        } else {
+          ;(canvasNode ?? viewportRef.current)?.focus()
+        }
+      })
+    },
+    [],
+  )
+
+  const cancelCardEditing = useCallback(() => {
+    if (editingCard) finishCardEditing(editingCard)
+  }, [editingCard, finishCardEditing])
+
   const handleToolChange = useCallback(
     (tool: CanvasTool, trigger: HTMLButtonElement) => {
       if (!project) return
@@ -1084,7 +1184,8 @@ export function CanvasPage({
 
       if (connectionTool.phase !== 'idle') cancelConnection(false)
       if (tool === 'select') {
-        if (pendingPlacement) cancelPlacement()
+        if (editingCard) cancelCardEditing()
+        else if (pendingPlacement) cancelPlacement()
         else setActiveTool('select')
         return
       }
@@ -1095,8 +1196,10 @@ export function CanvasPage({
     },
     [
       cancelConnection,
+      cancelCardEditing,
       cancelPlacement,
       connectionTool.phase,
+      editingCard,
       pendingPlacement,
       project,
     ],
@@ -1114,6 +1217,7 @@ export function CanvasPage({
         event.shiftKey ||
         !project ||
         pendingPlacement ||
+        editingCard ||
         nodeListOpen ||
         deleteCandidateId ||
         connectionTool.phase !== 'idle' ||
@@ -1148,6 +1252,7 @@ export function CanvasPage({
   }, [
     connectionTool.phase,
     deleteCandidateId,
+    editingCard,
     handleToolChange,
     nodeListOpen,
     pendingPlacement,
@@ -1212,7 +1317,8 @@ export function CanvasPage({
         !project ||
         !flowInstance ||
         !isCreatableTool(activeTool) ||
-        pendingPlacement
+        pendingPlacement ||
+        editingCard
       ) {
         return
       }
@@ -1248,6 +1354,7 @@ export function CanvasPage({
       cancelConnection,
       connectionTool.phase,
       flowInstance,
+      editingCard,
       pendingPlacement,
       project,
     ],
@@ -1264,6 +1371,7 @@ export function CanvasPage({
       ) {
         return
       }
+      if (isCreativeCardKind(pendingPlacement.kind)) return
 
       const creation = buildCanvasCreation(currentProject, {
         kind: pendingPlacement.kind,
@@ -1281,6 +1389,56 @@ export function CanvasPage({
       placementTriggerRef.current = null
     },
     [createCanvasContent, pendingPlacement, projectId, selectOnlyNode],
+  )
+
+  const submitCardPlacement = useCallback(
+    (draft: CreativeCardDraft) => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (
+        !pendingPlacement ||
+        !isCreativeCardKind(pendingPlacement.kind) ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        pendingPlacement.projectId !== currentProject.id ||
+        pendingPlacement.kind !== draft.kind
+      ) {
+        return
+      }
+      const creation = buildCreativeCardCreation(
+        currentProject,
+        draft,
+        pendingPlacement.position,
+      )
+      createdNodeFocusRef.current = creation.node.id
+      setFocusRequestVersion((version) => version + 1)
+      createCanvasContent(creation)
+      selectOnlyNode(creation.node.id)
+      setPendingPlacement(undefined)
+      setActiveTool('select')
+      placementTriggerRef.current = null
+    },
+    [createCanvasContent, pendingPlacement, projectId, selectOnlyNode],
+  )
+
+  const submitCardEdit = useCallback(
+    (draft: CreativeCardDraft) => {
+      const editor = editingCard
+      const currentProject = useProjectStore.getState().activeProject
+      const node = currentProject?.nodes.find(({ id }) => id === editor?.nodeId)
+      if (
+        !editor ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        editor.projectId !== currentProject.id ||
+        !node ||
+        node.kind !== draft.kind
+      ) {
+        return
+      }
+      updateCreativeCard(editor.nodeId, draft)
+      finishCardEditing(editor)
+    },
+    [editingCard, finishCardEditing, projectId, updateCreativeCard],
   )
 
   const openNodeList = useCallback((trigger: HTMLButtonElement) => {
@@ -1323,13 +1481,19 @@ export function CanvasPage({
   const placementHint =
     project && isCreatableTool(activeTool) && !pendingPlacement
       ? `点击画布放置${
-          activeTool === 'text'
-            ? '文本'
-            : activeTool === 'image'
-              ? '图片'
-              : activeTool === 'storyboard'
-                ? '分镜'
-                : '视频'
+          activeTool === 'script'
+            ? '剧本卡'
+            : activeTool === 'character-card'
+              ? '角色卡'
+              : activeTool === 'worldview'
+                ? '世界观卡'
+                : activeTool === 'text'
+                  ? '文本'
+                  : activeTool === 'image'
+                    ? '图片'
+                    : activeTool === 'storyboard'
+                      ? '分镜'
+                      : '视频'
         }节点`
       : undefined
   const connectionHint =
@@ -1435,7 +1599,7 @@ export function CanvasPage({
           activeTool={activeTool}
           connectionsVisible={connectionsVisible}
           disabled={!project}
-          draftOpen={Boolean(pendingPlacement)}
+          draftOpen={Boolean(pendingPlacement || editingCard)}
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
         />
@@ -1458,7 +1622,7 @@ export function CanvasPage({
             {canvasHint}
           </p>
         ) : null}
-        {project && pendingPlacement ? (
+        {project && pendingPlacement && !isCreativeCardKind(pendingPlacement.kind) ? (
           <NodeDraftPanel
             key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
             kind={pendingPlacement.kind}
@@ -1469,6 +1633,39 @@ export function CanvasPage({
             onSubmit={submitPlacement}
           />
         ) : null}
+        {project && pendingPlacement && isCreativeCardKind(pendingPlacement.kind) ? (
+          <CreativeCardEditor
+            key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
+            kind={pendingPlacement.kind}
+            initialTitle={nextCreativeCardTitle(project, pendingPlacement.kind)}
+            anchor={pendingPlacement.anchor}
+            bounds={pendingPlacement.bounds}
+            libraryRepository={libraryRepository}
+            onCancel={cancelPlacement}
+            onSubmit={submitCardPlacement}
+          />
+        ) : null}
+        {project && editingCard ? (() => {
+          const node = project.nodes.find(({ id }) => id === editingCard.nodeId)
+          if (!node || !isCreativeCardKind(node.kind) || !node.card) return null
+          const asset = node.card.imageAssetId
+            ? project.assets.find(({ id }) => id === node.card?.imageAssetId)
+            : undefined
+          return (
+            <CreativeCardEditor
+              key={`${editingCard.projectId}:${editingCard.nodeId}`}
+              kind={node.kind}
+              initialTitle={node.title}
+              initialCard={node.card}
+              initialImage={asset ? deriveLibraryRecord(project, asset) : undefined}
+              anchor={editingCard.anchor}
+              bounds={editingCard.bounds}
+              libraryRepository={libraryRepository}
+              onCancel={cancelCardEditing}
+              onSubmit={submitCardEdit}
+            />
+          )
+        })() : null}
         {project ? (
           <DirectorComposer
             selectedNodeId={primaryNodeId}

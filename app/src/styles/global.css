@@ -608,6 +608,19 @@ select {
   outline-offset: 2px;
 }
 
+@media (max-width: 800px), (max-height: 520px) {
+  .canvas-toolbar {
+    left: var(--space-2);
+    display: grid;
+    width: 88px;
+    grid-template-columns: repeat(2, 32px);
+  }
+
+  .canvas-toolbar .canvas-toolbar__visibility-toggle {
+    margin-top: 0;
+  }
+}
+
 .canvas-page__viewport--placing .react-flow__pane {
   cursor: crosshair;
 }
@@ -806,6 +819,7 @@ select {
 
 .node-draft-panel input:not([type='file']),
 .node-draft-panel textarea,
+.node-draft-panel select,
 .node-draft-panel input[type='file'] {
   width: 100%;
   border: 1px solid rgb(255 255 255 / 12%);
@@ -815,6 +829,7 @@ select {
 }
 
 .node-draft-panel input:not([type='file']),
+.node-draft-panel select,
 .node-draft-panel input[type='file'] {
   min-height: 38px;
   padding: 0 var(--space-3);
@@ -828,11 +843,13 @@ select {
 }
 
 .node-draft-panel input[aria-invalid='true'],
+.node-draft-panel select[aria-invalid='true'],
 .node-draft-panel textarea[aria-invalid='true'] {
   border-color: var(--status-error);
 }
 
 .node-draft-panel input:focus-visible,
+.node-draft-panel select:focus-visible,
 .node-draft-panel textarea:focus-visible,
 .node-draft-panel button:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -879,6 +896,55 @@ select {
 .node-draft-panel__actions button:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+.creative-card-editor__field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.creative-card-node__content,
+.creative-card-node__fields,
+.creative-card-node__field {
+  display: grid;
+}
+
+.creative-card-node__content {
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.creative-card-node__image {
+  width: 100%;
+  height: 108px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.creative-card-node__fields {
+  gap: var(--space-2);
+}
+
+.creative-card-node__field {
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.creative-card-node__field > span,
+.creative-card-node__unavailable {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.creative-card-node__field strong {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .director-composer {
