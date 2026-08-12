@@ -8,7 +8,7 @@ export interface ModelCapability {
   description: string
 }
 
-export const modelProviderStatus = '真实提供方未配置'
+export const modelProviderStatus = 'LibTV 状态由本地实时目录决定'
 
 export const modelCapabilities: ModelCapability[] = [
   {

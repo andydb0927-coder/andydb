@@ -24,22 +24,97 @@ const catalog: LibTvCatalog = {
   videoModels: [{ modelKey: 'video-key', modelName: 'Video Model' }],
 }
 
-const pngBytes = Buffer.from('89504e470d0a1a0a0000000d494844520000000100000001080200000000000000', 'hex')
-const jpegBytes = Buffer.from('ffd8ffe00002ffd9', 'hex')
-const mp4Bytes = Buffer.from('000000106674797069736f6d00000000', 'hex')
+// Genuine 2 x 2 media encoded by the installed Playwright Chromium Canvas on
+// 2026-08-11. Keeping the bytes inline makes the tests deterministic and avoids
+// launching a browser at test runtime.
+const pngBytes = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAF0lEQVR4AWLKT/7/H4SZGIBgwhwGBgAAAAD//zchSWwAAAAGSURBVAMATgAG0WonAaQAAAAASUVORK5CYII=',
+  'base64',
+)
+const jpegBytes = Buffer.from(
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAACAAIDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAcEAACAgMBAQAAAAAAAAAAAAABAgADBAUGESH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBv/EABcRAQADAAAAAAAAAAAAAAAAAAABAzL/2gAMAwEAAhEDEQA/AL/y3PaW/mNRbdqNdZa+HSzu+MhLEoCST59MRErrNSN//9k=',
+  'base64',
+)
+const webpBytes = Buffer.from(
+  'UklGRioCAABXRUJQVlA4WAoAAAAgAAAAAQAAAQAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggPAAAALABAJ0BKgIAAgABQCYloAJ0AQ72oiAA/vm76/l/ZgfT/shHe2X4CpQN7sSC/+rQ//5aH//LQ/c3xiAAAA==',
+  'base64',
+)
+
+// Genuine 16 x 16 H.264 MP4 produced by macOS AVAssetWriter using
+// /private/tmp/libtv-fixture.swift. file(1): ISO Media, MP4 v2.
+// SHA-256: 0ece66d67fc00b61809889aa36247c6cdb5edc2c6bc03e768fee5aa64c1e0e55
+const mp4Bytes = Buffer.from(
+  'AAAAHGZ0eXBtcDQyAAAAAWlzb21tcDQxbXA0MgAAAAFtZGF0AAAAAAAAAIUAAAA7BgUyR1ZK3FxMQz+U78URPNFDqAEAAAMAAQMAAAMAAQIAAeYACwAAAwAAAwAAAwBkDAOJJAEN/////4AAAAAyJbggH94I5Uz/gsnnm1JEAFF77diPegoZHua5g6fVtrMN82GsqGNvqOenAAA2gBXDPRgAAAKnbW9vdgAAAGxtdmhkAAAAAOagsr3moLK9AAACWAAAACgAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAjN0cmFrAAAAXHRraGQAAAAB5qCyveagsr0AAAABAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAAoAAAAAAABAAAAAAGrbWRpYQAAACBtZGhkAAAAAOagsr3moLK9AAACWAAAAChVxAAAAAAAMWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABDb3JlIE1lZGlhIFZpZGVvAAAAAVJtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAESc3RibAAAAKFzdHNkAAAAAAAAAAEAAACRYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAQABAASAAAAEgAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAACdhdmNDAWQAC//hAAwnZAALrFZQw3gWYKUBAAQo7jyw/fj4AAAAAApmaWVsAQAAAAAKY2hybQAAAAAAGHN0dHMAAAAAAAAAAQAAAAEAAAAoAAAADXNkdHAAAAAAIAAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAB1AAAAAQAAABRzdGNvAAAAAAAAAAEAAAAs',
+  'base64',
+)
+
+// Genuine 2 x 2 Chromium WebM fixture. file(1): WebM.
+// SHA-256: 8799f4049682a1380cdb7a3c5ca3d325cad68ed6c069bff45f3e52e6a1dff0c9
+const webmBytes = Buffer.from(
+  'GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwEAAAAAAAF7EU2bdLlNu4tTq4QVSalmU6yBbk27i1OrhBZUrmtTrIGTTbuLU6uEH0O2dVOsgcFNu4xTq4QcU7trU6yCAWnsrgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmoCrXsYMPQkBEiYRDdIuFTYCGQ2hyb21lV0GGQ2hyb21lFlSua6mup9eBAXPFh0mO8s+MwzuDgQFV7oEBhoVWX1ZQOOCKsIECuoECU8CBAR9DtnUBAAAAAAAAnOeBAKDMoaKBAAAAEAIAnQEqAgACAASHCIWFiJmEiBgCAAwNYAD+9LgAdaGlpqPugQGlnhACAJ0BKgIAAgAEhwiFhYiZhIgYAgAMDWAA/valAKDJoamBAPQAEQIAEhDwABgJ1qgIMv/zTMD/gP7paR6+AKeqP/maP0m+k3cwAHWhmKaW7oEBpZGxAQASEPAAGAAYWC/0AAgAAPuBABxTu2uNu4uzgQC3hveBAfGBwQ==',
+  'base64',
+)
 const pngDataUrl = `data:image/png;base64,${pngBytes.toString('base64')}`
 const jpegDataUrl = `data:image/jpeg;base64,${jpegBytes.toString('base64')}`
 const mp4DataUrl = `data:video/mp4;base64,${mp4Bytes.toString('base64')}`
 const validReferenceFixtures = [
-  ['PNG', 'image/png', 'image', pngBytes.toString('hex'), 'png'],
-  ['JPEG', 'image/jpeg', 'image', jpegBytes.toString('hex'), 'jpg'],
-  ['WebP', 'image/webp', 'image', '524946461600000057454250565038580a00000000000000000000000000', 'webp'],
-  ['MP4', 'video/mp4', 'video', mp4Bytes.toString('hex'), 'mp4'],
-  ['WebM', 'video/webm', 'video', '1a45dfa38a4282847765626dec8100', 'webm'],
-  ['MP3 with ID3', 'audio/mpeg', 'audio', '49443304000000000000', 'mp3'],
-  ['MP3 frame', 'audio/mpeg', 'audio', `${'fffb9064'}${'00'.repeat(413)}`, 'mp3'],
-  ['WAV', 'audio/wav', 'audio', '524946462400000057415645666d7420100000000100010044ac000088580100020010006461746100000000', 'wav'],
-  ['Ogg', 'audio/ogg', 'audio', `4f676753${'00'.repeat(22)}01084f70757348656164`, 'ogg'],
+  ['PNG', 'image/png', 'image', pngBytes, 'png'],
+  ['JPEG', 'image/jpeg', 'image', jpegBytes, 'jpg'],
+  ['WebP', 'image/webp', 'image', webpBytes, 'webp'],
+  ['MP4', 'video/mp4', 'video', mp4Bytes, 'mp4'],
+  ['WebM', 'video/webm', 'video', webmBytes, 'webm'],
+] as const
+
+const rejectedSupportedReferenceFixtures = [
+  ['PNG truncated before IEND', 'image/png', 'image', pngBytes.subarray(0, -12)],
+  ['PNG header-only spoof', 'image/png', 'image', Buffer.from('89504e470d0a1a0a0000000d494844520000000100000001080200000000000000', 'hex')],
+  ['JPEG truncated before EOI', 'image/jpeg', 'image', jpegBytes.subarray(0, -2)],
+  ['JPEG marker-only spoof', 'image/jpeg', 'image', Buffer.from('ffd8ffe00002ffd9', 'hex')],
+  ['WebP truncated payload', 'image/webp', 'image', webpBytes.subarray(0, -8)],
+  ['WebP VP8X-only spoof', 'image/webp', 'image', Buffer.from('524946461600000057454250565038580a00000000000000000000000000', 'hex')],
+  ['MP4 truncated before moov', 'video/mp4', 'video', mp4Bytes.subarray(0, 128)],
+  ['MP4 ftyp-only spoof', 'video/mp4', 'video', Buffer.from('000000106674797069736f6d00000000', 'hex')],
+  ['WebM truncated before media data', 'video/webm', 'video', webmBytes.subarray(0, 180)],
+  ['WebM header-only spoof', 'video/webm', 'video', Buffer.from('1a45dfa38a4282847765626dec8100', 'hex')],
+] as const
+
+const unsupportedAudioFixtures = [
+  ['MP3 with ID3', 'audio/mpeg', Buffer.from('49443304000000000000', 'hex')],
+  ['WAV', 'audio/wav', Buffer.from('524946462400000057415645666d7420100000000100010044ac000088580100020010006461746100000000', 'hex')],
+  ['Ogg', 'audio/ogg', Buffer.from(`4f676753${'00'.repeat(22)}01084f70757348656164`, 'hex')],
+] as const
+
+const boundedStructureFixtures = [
+  [
+    'JPEG entropy with FF00 stuffing and a restart marker',
+    'image/jpeg',
+    Buffer.from(
+      'ffd8ffc0000b080002000201011100ffda0008010100003f0011ff0022ffd033ffd9',
+      'hex',
+    ),
+  ],
+  [
+    'odd-sized lossless WebP chunk with padding',
+    'image/webp',
+    Buffer.from('5249464612000000574542505650384c050000002f0000000000', 'hex'),
+  ],
+  [
+    'extended WebP followed by an animation frame chunk',
+    'image/webp',
+    Buffer.from(
+      '524946464000000057454250565038580a00000002000000010000010000414e4d462200000000000000000001000001000000000000565038200a0000000000009d012a02000200',
+      'hex',
+    ),
+  ],
+  [
+    'WebM segment with an unknown size bounded by the input',
+    'video/webm',
+    Buffer.concat([
+      webmBytes.subarray(0, 40),
+      Buffer.from('01ffffffffffffff', 'hex'),
+      webmBytes.subarray(48),
+    ]),
+  ],
 ] as const
 
 let workspace: string
@@ -131,27 +206,35 @@ function referenceBody(
   })
 }
 
+async function expectReferenceRejectedWithoutSideEffects(
+  mimeType: string,
+  kind: 'image' | 'video' | 'audio',
+  bytes: Buffer,
+): Promise<void> {
+  await expectRejectedWithoutRunnerCall(referenceBody(mimeType, kind, bytes))
+}
+
 describe('LibTV generation preflight', () => {
   test.each(validReferenceFixtures)(
     'recognizes the valid %s content signature for %s',
-    (_format, mimeType, _kind, hex) => {
-      expect(hasExpectedReferenceSignature(Buffer.from(hex, 'hex'), mimeType)).toBe(true)
+    (_format, mimeType, _kind, bytes) => {
+      expect(hasExpectedReferenceSignature(bytes, mimeType)).toBe(true)
     },
   )
 
-  test.each([
-    ['truncated PNG IHDR', 'image/png', '89504e470d0a1a0a0000000d49484452'],
-    ['JPEG without EOI', 'image/jpeg', 'ffd8ffe00002'],
-    ['WebP with mismatched RIFF size', 'image/webp', '524946460000000057454250'],
-    ['truncated MP4 ftyp', 'video/mp4', '000000106674797069736f6d'],
-    ['WebM without webm doctype', 'video/webm', '1a45dfa38100'],
-    ['truncated ID3 header', 'audio/mpeg', '494433040000'],
-    ['truncated MPEG frame', 'audio/mpeg', 'fffb9064'],
-    ['WAV without complete fmt/data chunks', 'audio/wav', '524946460000000057415645'],
-    ['Ogg without a complete laced codec packet', 'audio/ogg', '4f676753000000000000000000000000000000000000000001084f7075'],
-  ])('rejects %s', (_caseName, mimeType, hex) => {
-    expect(hasExpectedReferenceSignature(Buffer.from(hex, 'hex'), mimeType)).toBe(false)
-  })
+  test.each(boundedStructureFixtures)(
+    'accepts %s',
+    (_caseName, mimeType, bytes) => {
+      expect(hasExpectedReferenceSignature(bytes, mimeType)).toBe(true)
+    },
+  )
+
+  test.each(rejectedSupportedReferenceFixtures)(
+    'rejects %s through the executor before any runner call or workspace write',
+    async (_caseName, mimeType, kind, bytes) => {
+      await expectReferenceRejectedWithoutSideEffects(mimeType, kind, bytes)
+    },
+  )
 
   test.each(validReferenceFixtures)(
     'does not recognize arbitrary bytes as the %s content signature for %s',
@@ -159,6 +242,20 @@ describe('LibTV generation preflight', () => {
       expect(
         hasExpectedReferenceSignature(Buffer.from('not the declared format'), mimeType),
       ).toBe(false)
+    },
+  )
+
+  test.each(unsupportedAudioFixtures)(
+    'does not advertise %s as a Task 3 reference signature',
+    (_format, mimeType, bytes) => {
+      expect(hasExpectedReferenceSignature(bytes, mimeType)).toBe(false)
+    },
+  )
+
+  test.each(unsupportedAudioFixtures)(
+    'rejects %s through the executor before any runner call or workspace write',
+    async (_format, mimeType, bytes) => {
+      await expectReferenceRejectedWithoutSideEffects(mimeType, 'audio', bytes)
     },
   )
 
@@ -272,14 +369,14 @@ describe('LibTV generation preflight', () => {
 })
 
 describe('LibTV generation commands and temporary files', () => {
-  test.each(validReferenceFixtures.filter(([, , kind]) => kind !== 'audio'))(
+  test.each(validReferenceFixtures)(
     'keeps accepting a valid %s signature and uses its safe extension',
-    async (_format, mimeType, kind, hex, extension) => {
+    async (_format, mimeType, kind, bytes, extension) => {
       const { runner, calls } = runnerWithOutput(kind === 'video' ? videoOutput() : imageOutput())
 
       await expect(
         executeLibTvGeneration(
-          referenceBody(mimeType, kind, Buffer.from(hex, 'hex')),
+          referenceBody(mimeType, kind, bytes),
           catalog,
           runner,
           workspace,

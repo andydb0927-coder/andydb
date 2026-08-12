@@ -18,9 +18,6 @@ const MIME_EXTENSIONS = {
   'image/webp': 'webp',
   'video/mp4': 'mp4',
   'video/webm': 'webm',
-  'audio/mpeg': 'mp3',
-  'audio/wav': 'wav',
-  'audio/ogg': 'ogg',
 } as const
 
 type ReferenceKind = 'image' | 'video' | 'audio'
@@ -223,112 +220,331 @@ function parseReference(value: unknown): ValidReference {
 export function hasExpectedReferenceSignature(bytes: Buffer, mimeType: string): boolean {
   switch (mimeType) {
     case 'image/png':
-      return startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) && bytes.length >= 33 && bytes.readUInt32BE(8) === 13 && hasAsciiAt(bytes, 'IHDR', 12) && bytes.readUInt32BE(16) > 0 && bytes.readUInt32BE(20) > 0
+      return hasPngStructure(bytes)
     case 'image/jpeg':
       return hasJpegStructure(bytes)
     case 'image/webp':
       return hasWebpStructure(bytes)
     case 'video/mp4':
-      return bytes.length >= 16 && bytes.readUInt32BE(0) >= 16 && bytes.readUInt32BE(0) <= bytes.length && hasAsciiAt(bytes, 'ftyp', 4) && /^[\x20-\x7e]{4}$/.test(bytes.toString('ascii', 8, 12))
+      return hasMp4Structure(bytes)
     case 'video/webm':
       return hasWebmStructure(bytes)
-    case 'audio/mpeg':
-      return hasId3Structure(bytes) || hasMpegFrame(bytes)
-    case 'audio/wav':
-      return hasWavStructure(bytes)
-    case 'audio/ogg':
-      return hasOggStructure(bytes)
     default:
       return false
   }
 }
 
-function hasJpegStructure(bytes: Buffer): boolean {
-  if (!startsWithBytes(bytes, [0xff, 0xd8]) || bytes.length < 6) return false
-  let offset = 2
-  while (offset + 1 < bytes.length) {
-    if (bytes[offset] !== 0xff) return false
-    const marker = bytes[offset + 1]
-    if (marker === 0xd9) return offset + 2 === bytes.length
-    if (marker === 0x00 || marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7) || offset + 4 > bytes.length) return false
-    const length = bytes.readUInt16BE(offset + 2)
-    if (length < 2 || offset + 2 + length > bytes.length) return false
-    offset += 2 + length
+function hasPngStructure(bytes: Buffer): boolean {
+  if (!startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return false
+  }
+
+  let offset = 8
+  let chunkIndex = 0
+  let hasImageData = false
+  while (offset + 12 <= bytes.length) {
+    const dataLength = bytes.readUInt32BE(offset)
+    const dataStart = offset + 8
+    const dataEnd = dataStart + dataLength
+    const chunkEnd = dataEnd + 4
+    if (!Number.isSafeInteger(chunkEnd) || chunkEnd > bytes.length) return false
+
+    const chunkType = bytes.toString('ascii', offset + 4, offset + 8)
+    if (chunkIndex === 0) {
+      if (
+        chunkType !== 'IHDR' ||
+        dataLength !== 13 ||
+        bytes.readUInt32BE(dataStart) === 0 ||
+        bytes.readUInt32BE(dataStart + 4) === 0
+      ) {
+        return false
+      }
+    } else if (chunkType === 'IHDR') {
+      return false
+    }
+
+    if (chunkType === 'IDAT') {
+      if (dataLength === 0) return false
+      hasImageData = true
+    }
+    if (chunkType === 'IEND') {
+      return dataLength === 0 && hasImageData && chunkEnd === bytes.length
+    }
+
+    offset = chunkEnd
+    chunkIndex += 1
   }
   return false
+}
+
+function hasJpegStructure(bytes: Buffer): boolean {
+  if (!startsWithBytes(bytes, [0xff, 0xd8]) || bytes.length < 10) return false
+  let offset = 2
+  let hasStartOfFrame = false
+  let hasStartOfScan = false
+
+  while (offset < bytes.length) {
+    if (bytes[offset] !== 0xff) return false
+    while (offset < bytes.length && bytes[offset] === 0xff) offset += 1
+    if (offset >= bytes.length) return false
+    const marker = bytes[offset]
+    offset += 1
+
+    if (marker === 0x00 || marker === 0xd8 || marker === 0x01) return false
+    if (marker === 0xd9) {
+      return hasStartOfFrame && hasStartOfScan && offset === bytes.length
+    }
+    if (marker >= 0xd0 && marker <= 0xd7) return false
+    if (offset + 2 > bytes.length) return false
+
+    const segmentLength = bytes.readUInt16BE(offset)
+    const dataStart = offset + 2
+    const segmentEnd = offset + segmentLength
+    if (segmentLength < 2 || segmentEnd > bytes.length) return false
+
+    if (isJpegStartOfFrame(marker)) {
+      if (
+        segmentLength < 8 ||
+        bytes.readUInt16BE(dataStart + 1) === 0 ||
+        bytes.readUInt16BE(dataStart + 3) === 0
+      ) {
+        return false
+      }
+      hasStartOfFrame = true
+    }
+
+    offset = segmentEnd
+    if (marker !== 0xda) continue
+    if (!hasStartOfFrame || segmentLength < 6) return false
+    hasStartOfScan = true
+
+    let foundNextMarker = false
+    while (offset < bytes.length) {
+      if (bytes[offset] !== 0xff) {
+        offset += 1
+        continue
+      }
+
+      const entropyMarkerStart = offset
+      while (offset < bytes.length && bytes[offset] === 0xff) offset += 1
+      if (offset >= bytes.length) return false
+      const entropyMarker = bytes[offset]
+      offset += 1
+      if (entropyMarker === 0x00 || (entropyMarker >= 0xd0 && entropyMarker <= 0xd7)) {
+        continue
+      }
+
+      offset = entropyMarkerStart
+      foundNextMarker = true
+      break
+    }
+    if (!foundNextMarker) return false
+  }
+  return false
+}
+
+function isJpegStartOfFrame(marker: number): boolean {
+  return (
+    marker >= 0xc0 &&
+    marker <= 0xcf &&
+    ![0xc4, 0xc8, 0xcc].includes(marker)
+  )
 }
 
 function hasWebpStructure(bytes: Buffer): boolean {
-  if (!startsWithAscii(bytes, 'RIFF') || !hasAsciiAt(bytes, 'WEBP', 8) || bytes.length < 20 || bytes.readUInt32LE(4) !== bytes.length - 8) return false
-  const chunk = bytes.toString('ascii', 12, 16)
-  const size = bytes.readUInt32LE(16)
-  return ['VP8 ', 'VP8L', 'VP8X'].includes(chunk) && 20 + size + (size % 2) === bytes.length
+  if (
+    !startsWithAscii(bytes, 'RIFF') ||
+    !hasAsciiAt(bytes, 'WEBP', 8) ||
+    bytes.length < 20 ||
+    bytes.readUInt32LE(4) !== bytes.length - 8
+  ) {
+    return false
+  }
+
+  let offset = 12
+  let chunkIndex = 0
+  let hasExtendedHeader = false
+  let hasImagePayload = false
+  while (offset + 8 <= bytes.length) {
+    const chunkType = bytes.toString('ascii', offset, offset + 4)
+    const dataLength = bytes.readUInt32LE(offset + 4)
+    const dataStart = offset + 8
+    const dataEnd = dataStart + dataLength
+    const chunkEnd = dataEnd + (dataLength % 2)
+    if (!Number.isSafeInteger(chunkEnd) || chunkEnd > bytes.length) return false
+
+    if (chunkType === 'VP8X') {
+      if (chunkIndex !== 0 || dataLength !== 10) return false
+      hasExtendedHeader = true
+    } else if (chunkType === 'VP8 ' || chunkType === 'VP8L') {
+      if (dataLength === 0 || hasImagePayload) return false
+      if (!hasExtendedHeader && chunkIndex !== 0) return false
+      hasImagePayload = true
+    } else if (chunkType === 'ANMF') {
+      if (!hasExtendedHeader || dataLength < 16) return false
+      hasImagePayload = true
+    } else if (!hasExtendedHeader) {
+      return false
+    }
+
+    offset = chunkEnd
+    chunkIndex += 1
+  }
+  return offset === bytes.length && hasImagePayload
+}
+
+function hasMp4Structure(bytes: Buffer): boolean {
+  let offset = 0
+  let hasFileType = false
+  let hasMovie = false
+  let hasMediaData = false
+
+  while (offset + 8 <= bytes.length) {
+    const size32 = bytes.readUInt32BE(offset)
+    const boxType = bytes.toString('ascii', offset + 4, offset + 8)
+    let headerLength = 8
+    let boxLength = size32
+    if (size32 === 1) {
+      if (offset + 16 > bytes.length) return false
+      const largeSize = bytes.readBigUInt64BE(offset + 8)
+      if (largeSize > BigInt(Number.MAX_SAFE_INTEGER)) return false
+      headerLength = 16
+      boxLength = Number(largeSize)
+    } else if (size32 === 0) {
+      boxLength = bytes.length - offset
+    }
+
+    const boxEnd = offset + boxLength
+    if (boxLength < headerLength || !Number.isSafeInteger(boxEnd) || boxEnd > bytes.length) {
+      return false
+    }
+
+    const payloadLength = boxLength - headerLength
+    if (boxType === 'ftyp') {
+      if (
+        offset !== 0 ||
+        payloadLength < 8 ||
+        !/^[\x20-\x7e]{4}$/.test(
+          bytes.toString('ascii', offset + headerLength, offset + headerLength + 4),
+        )
+      ) {
+        return false
+      }
+      hasFileType = true
+    } else if (boxType === 'moov') {
+      if (payloadLength === 0) return false
+      hasMovie = true
+    } else if (boxType === 'mdat') {
+      if (payloadLength === 0) return false
+      hasMediaData = true
+    }
+
+    offset = boxEnd
+  }
+
+  return offset === bytes.length && hasFileType && hasMovie && hasMediaData
+}
+
+interface EbmlElement {
+  id: number
+  dataStart: number
+  end: number
 }
 
 function hasWebmStructure(bytes: Buffer): boolean {
-  if (!startsWithBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return false
-  const headerSize = readVint(bytes, 4)
-  if (!headerSize || 4 + headerSize.length + headerSize.value > bytes.length) return false
-  const end = 4 + headerSize.length + headerSize.value
-  for (let offset = 4 + headerSize.length; offset + 3 <= end; offset += 1) {
-    if (bytes[offset] !== 0x42 || bytes[offset + 1] !== 0x82) continue
-    const size = readVint(bytes, offset + 2)
-    if (size && offset + 2 + size.length + size.value <= end && bytes.toString('ascii', offset + 2 + size.length, offset + 2 + size.length + size.value) === 'webm') return true
+  const header = readEbmlElement(bytes, 0, bytes.length)
+  if (!header || header.id !== 0x1a45dfa3) return false
+  const docType = findEbmlChild(bytes, header.dataStart, header.end, 0x4282)
+  if (
+    !docType ||
+    bytes.toString('ascii', docType.dataStart, docType.end) !== 'webm'
+  ) {
+    return false
   }
-  return false
+
+  const segment = readEbmlElement(bytes, header.end, bytes.length)
+  if (
+    !segment ||
+    segment.id !== 0x18538067 ||
+    segment.end !== bytes.length
+  ) {
+    return false
+  }
+
+  const tracks = findEbmlChild(bytes, segment.dataStart, segment.end, 0x1654ae6b)
+  const cluster = findEbmlChild(bytes, segment.dataStart, segment.end, 0x1f43b675)
+  if (!tracks || !cluster) return false
+
+  return (
+    Boolean(findEbmlChild(bytes, tracks.dataStart, tracks.end, 0xae)) &&
+    Boolean(
+      findEbmlChild(bytes, cluster.dataStart, cluster.end, 0xa3) ??
+      findEbmlChild(bytes, cluster.dataStart, cluster.end, 0xa0),
+    )
+  )
 }
 
-function readVint(bytes: Buffer, offset: number): { length: number; value: number } | undefined {
+function readEbmlElement(
+  bytes: Buffer,
+  offset: number,
+  limit: number,
+): EbmlElement | undefined {
+  const id = readEbmlVint(bytes, offset, 4, true)
+  if (!id) return undefined
+  const size = readEbmlVint(bytes, offset + id.length, 8, false)
+  if (!size) return undefined
+  const dataStart = offset + id.length + size.length
+  const end = size.unknown ? limit : dataStart + size.value
+  if (!Number.isSafeInteger(end) || dataStart > limit || end > limit) return undefined
+  return { id: id.value, dataStart, end }
+}
+
+function findEbmlChild(
+  bytes: Buffer,
+  start: number,
+  end: number,
+  targetId: number,
+): EbmlElement | undefined {
+  let offset = start
+  while (offset < end) {
+    const child = readEbmlElement(bytes, offset, end)
+    if (!child || child.end <= offset) return undefined
+    if (child.id === targetId) return child
+    offset = child.end
+  }
+  return undefined
+}
+
+function readEbmlVint(
+  bytes: Buffer,
+  offset: number,
+  maximumLength: number,
+  keepMarker: boolean,
+): { length: number; value: number; unknown: boolean } | undefined {
   const first = bytes[offset]
   if (first === undefined || first === 0) return undefined
   let length = 1
-  while (length <= 8 && (first & (0x80 >> (length - 1))) === 0) length += 1
-  if (length > 8 || offset + length > bytes.length) return undefined
-  let value = first & (0x7f >> (length - 1))
-  for (let index = 1; index < length; index += 1) value = value * 256 + bytes[offset + index]
-  return { length, value }
-}
-
-function hasId3Structure(bytes: Buffer): boolean {
-  if (!startsWithAscii(bytes, 'ID3') || bytes.length < 10 || bytes[3] < 2 || bytes[3] > 4) return false
-  const sizeBytes = bytes.subarray(6, 10)
-  return [...sizeBytes].every((value) => (value & 0x80) === 0) && 10 + ((sizeBytes[0] << 21) | (sizeBytes[1] << 14) | (sizeBytes[2] << 7) | sizeBytes[3]) <= bytes.length
-}
-
-function hasMpegFrame(bytes: Buffer): boolean {
-  if (bytes.length < 4 || bytes[0] !== 0xff || (bytes[1] & 0xfe) !== 0xfa) return false
-  const bitrateIndex = bytes[2] >> 4
-  const sampleIndex = (bytes[2] >> 2) & 3
-  const bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
-  const samples = [44100, 48000, 32000]
-  if (bitrateIndex === 0 || bitrateIndex === 15 || sampleIndex === 3) return false
-  return Math.floor((144 * bitrates[bitrateIndex] * 1000) / samples[sampleIndex]) + ((bytes[2] >> 1) & 1) <= bytes.length
-}
-
-function hasWavStructure(bytes: Buffer): boolean {
-  if (!startsWithAscii(bytes, 'RIFF') || !hasAsciiAt(bytes, 'WAVE', 8) || bytes.length < 20 || bytes.readUInt32LE(4) !== bytes.length - 8) return false
-  let offset = 12
-  let fmt = false
-  let data = false
-  while (offset + 8 <= bytes.length) {
-    const size = bytes.readUInt32LE(offset + 4)
-    if (offset + 8 + size > bytes.length) return false
-    if (hasAsciiAt(bytes, 'fmt ', offset) && size >= 16) fmt = true
-    if (hasAsciiAt(bytes, 'data', offset)) data = true
-    offset += 8 + size + (size % 2)
+  while (
+    length <= maximumLength &&
+    (first & (0x80 >> (length - 1))) === 0
+  ) {
+    length += 1
   }
-  return offset === bytes.length && fmt && data
-}
+  if (length > maximumLength || offset + length > bytes.length) return undefined
 
-function hasOggStructure(bytes: Buffer): boolean {
-  if (!startsWithAscii(bytes, 'OggS') || bytes.length < 28 || bytes[4] !== 0) return false
-  const segments = bytes[26]
-  const header = 27 + segments
-  if (header > bytes.length) return false
-  const packetSize = [...bytes.subarray(27, header)].reduce((sum, value) => sum + value, 0)
-  if (header + packetSize > bytes.length) return false
-  const packet = bytes.subarray(header, header + packetSize)
-  return startsWithAscii(packet, 'OpusHead') || startsWithBytes(packet, [1, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73])
+  const markerMask = 0x80 >> (length - 1)
+  const unknown =
+    !keepMarker &&
+    (first & (markerMask - 1)) === markerMask - 1 &&
+    bytes.subarray(offset + 1, offset + length).every((value) => value === 0xff)
+  if (unknown) return { length, value: 0, unknown: true }
+
+  let value = keepMarker ? first : first & (markerMask - 1)
+  for (let index = 1; index < length; index += 1) {
+    value = value * 256 + bytes[offset + index]
+    if (!Number.isSafeInteger(value)) return undefined
+  }
+  return { length, value, unknown: false }
 }
 
 function startsWithBytes(bytes: Buffer, signature: readonly number[]): boolean {
