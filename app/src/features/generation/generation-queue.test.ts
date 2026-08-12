@@ -757,7 +757,7 @@ describe('generation result mutations', () => {
     ).toEqual(['视频 01', '视频 02'])
   })
 
-  test('adds only asset-backed video nodes to the timeline and ignores duplicates', () => {
+  test('adds asset-backed storyboard and video nodes to the timeline and ignores duplicates', () => {
     const base = makeProjectFixture()
     const videoNode = {
       ...base.nodes[0],
@@ -790,7 +790,12 @@ describe('generation result mutations', () => {
     })
 
     expect(useProjectStore.getState().activeProject?.timeline).toEqual([
-      expect.objectContaining({ id: 'video-first', nodeId: 'video-1', order: 0 }),
+      expect.objectContaining({
+        id: 'invalid-storyboard',
+        nodeId: 'shot-1',
+        order: 0,
+      }),
+      expect.objectContaining({ id: 'video-first', nodeId: 'video-1', order: 1 }),
     ])
   })
 })

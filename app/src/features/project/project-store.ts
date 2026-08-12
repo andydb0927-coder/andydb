@@ -744,7 +744,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           (candidate) => candidate.id === activeVersion?.assetId,
         )
         if (
-          node?.kind !== 'video' ||
+          (node?.kind !== 'video' && node?.kind !== 'storyboard') ||
           !asset ||
           (asset.kind !== 'video' && asset.kind !== 'image') ||
           item.track !== 'video' ||
@@ -757,7 +757,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         }
         return withUpdatedTimestamp({
           ...project,
-          timeline: [...project.timeline, item],
+          timeline: [
+            ...project.timeline,
+            { ...item, order: project.timeline.length },
+          ],
         })
       })
     },

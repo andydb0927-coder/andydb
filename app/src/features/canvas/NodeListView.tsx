@@ -176,7 +176,7 @@ export function NodeListView({
                       {label}
                     </button>
                   ))}
-                  {node.kind === 'video' ? (
+                  {node.kind === 'video' || node.kind === 'storyboard' ? (
                     <button
                       type="button"
                       aria-label={`加入时间线 ${node.title}`}

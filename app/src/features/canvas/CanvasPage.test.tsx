@@ -658,7 +658,7 @@ describe('creative canvas', () => {
     for (const action of ['重生成', '扩展镜头', '生成视频']) {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
-    expect(screen.queryByRole('button', { name: '加入时间线' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '加入时间线' })).toBeVisible()
   })
 
   test('renders text and image kinds with compatible actions in canvas and node list', async () => {
@@ -1156,7 +1156,19 @@ describe('creative canvas', () => {
     )
   })
 
-  test.each(['角色参考', '场景设定', '分镜 02', '成片预览'])(
+  test('reuses the contextual action to add a generated storyboard still to the timeline', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+
+    await user.click(screen.getByRole('button', { name: '加入时间线' }))
+
+    expect(useProjectStore.getState().activeProject?.timeline).toContainEqual(
+      expect.objectContaining({ nodeId: 'storyboard', track: 'video', order: 0 }),
+    )
+  })
+
+  test.each(['角色参考', '场景设定', '成片预览'])(
     'hides timeline insertion for ineligible %s nodes',
     async (title) => {
       const user = userEvent.setup()

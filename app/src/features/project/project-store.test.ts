@@ -390,6 +390,38 @@ describe('project store history and persistence', () => {
     expect(active?.timeline.some((item) => item.nodeId === 'shot-2')).toBe(false)
   })
 
+  test('adds an image-backed storyboard once through the shared timeline entry', () => {
+    const project = useProjectStore.getState().activeProject!
+    const withoutShot = {
+      ...project,
+      timeline: project.timeline.filter(({ nodeId }) => nodeId !== 'shot-1'),
+    }
+    useProjectStore.setState({
+      activeProject: withoutShot,
+      projectsById: { [withoutShot.id]: withoutShot },
+    })
+    useProjectStore.getState().addToTimeline({
+      id: 'timeline-storyboard',
+      nodeId: 'shot-1',
+      order: 2,
+      durationSeconds: 5,
+      track: 'video',
+    })
+    useProjectStore.getState().addToTimeline({
+      id: 'timeline-storyboard-duplicate',
+      nodeId: 'shot-1',
+      order: 3,
+      durationSeconds: 5,
+      track: 'video',
+    })
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.timeline.filter(({ nodeId }) => nodeId === 'shot-1'),
+    ).toHaveLength(1)
+  })
+
   test('connects and disconnects one dependency per history entry', () => {
     const original = useProjectStore.getState().activeProject!
     const text = {

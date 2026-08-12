@@ -38,7 +38,6 @@ describe('canvas node action policy', () => {
   test.each([
     'character',
     'scene',
-    'storyboard',
     'preview',
   ] satisfies NodeKind[])(
     'preserves the existing primary actions for %s nodes',
@@ -47,7 +46,12 @@ describe('canvas node action policy', () => {
     },
   )
 
-  test('keeps timeline eligibility gated by a video asset', () => {
+  test('keeps timeline eligibility gated by a storyboard or video asset', () => {
+    expect(primaryActionsForNode('storyboard', false)).toEqual(existingActions)
+    expect(primaryActionsForNode('storyboard', true)).toEqual([
+      ...existingActions,
+      { action: 'add-to-timeline', label: '加入时间线' },
+    ])
     expect(primaryActionsForNode('video', false)).toEqual(existingActions)
     expect(primaryActionsForNode('video', true)).toEqual([
       ...existingActions,

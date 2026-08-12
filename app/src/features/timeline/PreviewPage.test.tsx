@@ -2,15 +2,17 @@ import Dexie from 'dexie'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
+import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import {
   ProjectRepository,
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { PreviewPage, type PreviewPageProps } from './PreviewPage'
+import { TimelineRepository } from './timeline-repository'
 
 const databases: WirelessCanvasDatabase[] = []
 
@@ -166,6 +168,19 @@ function renderPreview(repository?: PreviewPageProps['repository']) {
   )
 }
 
+function renderPreviewWithProps(props: PreviewPageProps) {
+  return render(
+    <MemoryRouter initialEntries={['/project/project-preview/preview']}>
+      <Routes>
+        <Route
+          path="/project/:projectId/preview"
+          element={<PreviewPage {...props} />}
+        />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
 beforeEach(() => act(() => activate()))
 
 afterEach(async () => {
@@ -189,6 +204,67 @@ afterEach(async () => {
 })
 
 describe('preview journey', () => {
+  test('plays, pauses, and seeks the controlled professional playhead', async () => {
+    vi.useFakeTimers()
+    renderPreview()
+
+    act(() => screen.getByRole('button', { name: '播放' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(125))
+    const playingTime = Number(
+      screen.getByLabelText('当前播放时间').getAttribute('data-seconds'),
+    )
+    expect(playingTime).toBeGreaterThan(0)
+
+    act(() => screen.getByRole('button', { name: '暂停' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(125))
+    expect(screen.getByLabelText('当前播放时间')).toHaveAttribute(
+      'data-seconds',
+      String(playingTime),
+    )
+    vi.useRealTimers()
+  })
+
+  test('loads library sources into the editor and persists added clips in Dexie', async () => {
+    const database = new WirelessCanvasDatabase(
+      `wireless-canvas-professional-preview-${crypto.randomUUID()}`,
+    )
+    databases.push(database)
+    const projectRepository = new ProjectRepository(database)
+    const timelineRepository = new TimelineRepository(database)
+    const libraryRepository = new AssetLibraryRepository(database)
+    await libraryRepository.save({
+      id: 'library-spare-video',
+      name: '备用镜头',
+      kind: 'video',
+      mimeType: 'video/mp4',
+      url: '/demo/spare.mp4',
+      durationSeconds: 4,
+      createdAt: '2026-08-13T10:00:00.000Z',
+      source: 'upload',
+    })
+    renderPreviewWithProps({
+      repository: projectRepository,
+      timelineRepository,
+      libraryRepository,
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: '将备用镜头加入视频轨道',
+      }),
+    )
+
+    await waitFor(async () => {
+      expect(
+        (await timelineRepository.load('project-preview'))?.tracks
+          .find(({ kind }) => kind === 'video')
+          ?.clips.some(({ source }) => source.assetId === 'library-spare-video'),
+      ).toBe(true)
+    })
+    expect(screen.getByRole('button', { name: '选择视频 04' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '下载时间线 JSON' })).toBeVisible()
+  })
+
   test('catches frame controls moving by anything other than exactly 1/24 second', async () => {
     const user = userEvent.setup()
     renderPreview()

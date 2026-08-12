@@ -78,8 +78,8 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(
     page.getByRole('list', { name: '主视频轨' }).getByRole('listitem').first(),
   ).toContainText('视频 02')
-  await page.getByRole('button', { name: '导出影片' }).click()
-  await expect(page.getByText('演示导出已完成')).toBeVisible()
+  await page.getByRole('button', { name: '下载时间线 JSON' }).click()
+  await expect(page.getByText('JSON 已开始下载')).toBeVisible()
 })
 
 test('keyboard and list view preserve core actions in a strict small layout', async ({
