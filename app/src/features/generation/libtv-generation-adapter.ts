@@ -64,6 +64,8 @@ interface GeneratedAssetWire {
   durationSeconds?: number
 }
 
+class ReferenceTooLargeError extends Error {}
+
 export async function fetchLibTvCatalog(
   options: FetchLibTvCatalogOptions = {},
 ): Promise<LibTvCatalog> {
@@ -327,18 +329,23 @@ async function fetchReference(
   const contentLength = response.headers.get('content-length')
   if (contentLength && /^\d+$/.test(contentLength) &&
     Number(contentLength) > MAX_REFERENCE_BYTES) {
+    try {
+      await response.body?.cancel()
+    } catch {
+      // The size decision is final even if the transport cannot be cancelled.
+    }
     throw new Error('LibTV 单个参考素材不能超过 20 MiB。')
   }
 
   let bytes: Uint8Array
   try {
-    bytes = new Uint8Array(await response.arrayBuffer())
+    bytes = await readBoundedReferenceBody(response, signal)
   } catch (error) {
     preserveAbort(error)
+    if (error instanceof ReferenceTooLargeError) {
+      throw new Error('LibTV 单个参考素材不能超过 20 MiB。')
+    }
     throw new Error('无法读取 LibTV 参考素材，请确认素材仍可访问。')
-  }
-  if (bytes.byteLength > MAX_REFERENCE_BYTES) {
-    throw new Error('LibTV 单个参考素材不能超过 20 MiB。')
   }
   signal.throwIfAborted()
   return {
@@ -368,7 +375,14 @@ async function postGeneration(
       body: JSON.stringify({
         confirmed: true,
         selection,
-        request: { ...request, referenceAssets },
+        request: {
+          projectId: request.projectId,
+          nodeId: request.nodeId,
+          operation: request.operation,
+          targetKind: request.targetKind,
+          prompt: request.prompt,
+          referenceAssets,
+        },
       }),
       signal,
     })
@@ -377,7 +391,7 @@ async function postGeneration(
     throw new Error('LibTV 生成请求失败，请检查本地桥接状态后重试。')
   }
   if (!response.ok) {
-    throw new Error(await bridgeErrorMessage(response))
+    throw new Error(await bridgeErrorMessage(response, signal))
   }
   try {
     const body = await response.json() as unknown
@@ -389,14 +403,20 @@ async function postGeneration(
   }
 }
 
-async function bridgeErrorMessage(response: Response): Promise<string> {
+async function bridgeErrorMessage(
+  response: Response,
+  signal: AbortSignal,
+): Promise<string> {
   let code: string | undefined
   try {
     const body = await response.json() as unknown
+    signal.throwIfAborted()
     if (isRecord(body) && isRecord(body.error) && typeof body.error.code === 'string') {
       code = body.error.code
     }
-  } catch {
+  } catch (error) {
+    preserveAbort(error)
+    signal.throwIfAborted()
     // Only fixed messages are returned for malformed error bodies.
   }
   if (code === 'WRITES_DISABLED') {
@@ -420,7 +440,7 @@ function parseGeneratedAsset(
     value.kind !== targetKind ||
     !validHttpUrl(value.url) ||
     typeof value.mimeType !== 'string' ||
-    !supportedMime(value.mimeType.toLowerCase(), value.kind) ||
+    !supportedGeneratedMime(value.mimeType.toLowerCase(), value.kind) ||
     !optionalPositiveNumber(value.width) ||
     !optionalPositiveNumber(value.height) ||
     !optionalPositiveNumber(value.durationSeconds)) {
@@ -435,6 +455,48 @@ function parseGeneratedAsset(
     ...(value.durationSeconds === undefined
       ? {}
       : { durationSeconds: value.durationSeconds }),
+  }
+}
+
+async function readBoundedReferenceBody(
+  response: Response,
+  signal: AbortSignal,
+): Promise<Uint8Array> {
+  if (!response.body) return new Uint8Array()
+
+  const reader = response.body.getReader()
+  let buffer = new Uint8Array(64 * 1024)
+  let length = 0
+  try {
+    while (true) {
+      signal.throwIfAborted()
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value.byteLength === 0) continue
+      if (length + value.byteLength > MAX_REFERENCE_BYTES) {
+        try {
+          await reader.cancel()
+        } catch {
+          // The size decision is final even if cancellation fails.
+        }
+        throw new ReferenceTooLargeError()
+      }
+      if (length + value.byteLength > buffer.byteLength) {
+        let capacity = buffer.byteLength
+        while (capacity < length + value.byteLength) {
+          capacity = Math.min(MAX_REFERENCE_BYTES, capacity * 2)
+        }
+        const next = new Uint8Array(capacity)
+        next.set(buffer.subarray(0, length))
+        buffer = next
+      }
+      buffer.set(value, length)
+      length += value.byteLength
+    }
+    signal.throwIfAborted()
+    return buffer.slice(0, length)
+  } finally {
+    reader.releaseLock()
   }
 }
 
@@ -465,6 +527,13 @@ function supportedMime(
   kind: GenerationReference['kind'] | 'image' | 'video',
 ): mimeType is SupportedMimeType {
   return mimeType in MIME_KINDS && MIME_KINDS[mimeType as SupportedMimeType] === kind
+}
+
+function supportedGeneratedMime(
+  mimeType: string,
+  kind: 'image' | 'video',
+): boolean {
+  return mimeType === `${kind}/*` || supportedMime(mimeType, kind)
 }
 
 function validHttpUrl(value: unknown): value is string {

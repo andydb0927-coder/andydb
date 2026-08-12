@@ -404,6 +404,50 @@ describe('LibTvGenerationAdapter', () => {
     ).rejects.toBe(abortError)
   })
 
+  test('stops reading a reference stream once its actual bytes exceed 20 MiB', async () => {
+    let pulls = 0
+    let cancelled = false
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1
+        if (pulls > 330) {
+          controller.close()
+          return
+        }
+        controller.enqueue(new Uint8Array(64 * 1024))
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'content-length': '1',
+        },
+      }),
+    )
+    const adapter = new LibTvGenerationAdapter(adapterOptions(fetchImpl))
+
+    await expect(
+      adapter.start(
+        {
+          ...imageRequest,
+          referenceAssets: [
+            { url: '/lying-size.png', kind: 'image', mimeType: 'image/png' },
+          ],
+        },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow('LibTV 单个参考素材不能超过 20 MiB。')
+    expect(cancelled).toBe(true)
+    // The stream may prefetch one chunk, but the adapter retains at most 20 MiB.
+    expect(pulls).toBeLessThanOrEqual(322)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+
   test('maps a structured non-2xx bridge response to a fixed actionable error', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
@@ -427,6 +471,71 @@ describe('LibTvGenerationAdapter', () => {
         expect(String(error)).not.toContain('PRIVATE_TOKEN')
         expect(String(error)).not.toContain('/private/path')
       })
+  })
+
+  test('preserves AbortError identity while reading a non-2xx bridge body', async () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError')
+    const body = new ReadableStream<Uint8Array>({
+      pull() {
+        throw abortError
+      },
+    })
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(body, {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    const adapter = new LibTvGenerationAdapter(adapterOptions(fetchImpl))
+
+    await expect(
+      adapter.start(imageRequest, new AbortController().signal),
+    ).rejects.toBe(abortError)
+  })
+
+  test.each([
+    ['image', 'image/*', imageRequest],
+    [
+      'video',
+      'video/*',
+      {
+        ...imageRequest,
+        operation: 'generate-video' as const,
+        targetKind: 'video' as const,
+      },
+    ],
+  ])('accepts the real bridge %s wildcard MIME contract', async (kind, mimeType, request) => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      generatedResponse({
+        kind,
+        url: `https://assets.example.test/generated.${kind === 'image' ? 'png' : 'mp4'}`,
+        mimeType,
+      }),
+    )
+    const adapter = new LibTvGenerationAdapter(adapterOptions(fetchImpl))
+
+    await expect(
+      adapter.start(request, new AbortController().signal),
+    ).resolves.toMatchObject({ asset: { kind, mimeType } })
+  })
+
+  test('allowlists request fields before serializing the generation POST', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(generatedResponse())
+    const adapter = new LibTvGenerationAdapter(adapterOptions(fetchImpl))
+    const request = {
+      ...imageRequest,
+      privateToken: 'PRIVATE_TOKEN',
+      accountEmail: 'private@example.test',
+    } as GenerationRequest
+
+    await adapter.start(request, new AbortController().signal)
+
+    const postBody = JSON.parse(
+      String((fetchImpl.mock.calls[0]?.[1] as RequestInit | undefined)?.body),
+    )
+    expect(postBody.request).toEqual(imageRequest)
+    expect(JSON.stringify(postBody)).not.toContain('PRIVATE_TOKEN')
+    expect(JSON.stringify(postBody)).not.toContain('private@example.test')
   })
 
   test.each([
