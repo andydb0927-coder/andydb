@@ -170,28 +170,37 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     .getByLabel('角色参考操作')
     .getByRole('button', { name: '生成视频' })
   const actionBox = await primaryAction.boundingBox()
+  const workflowPanelBox = await page
+    .getByRole('complementary', { name: '工作流运行面板' })
+    .boundingBox()
   const viewport = await page.evaluate(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
   }))
   expect(actionBox).not.toBeNull()
+  expect(workflowPanelBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height)
+  const actionHitTarget = await page.evaluate(
+    ({ x, y }) => {
+      const target = document.elementFromPoint(x, y)
+      return {
+        blockedByWorkflowPanel: Boolean(target?.closest('.workflow-run-panel')),
+        buttonText: target?.closest('button')?.textContent?.trim(),
+      }
+    },
+    {
+      x: actionBox!.x + actionBox!.width / 2,
+      y: actionBox!.y + actionBox!.height / 2,
+    },
+  )
   expect(
-    await page.evaluate(
-      ({ x, y }) =>
-        document
-          .elementFromPoint(x, y)
-          ?.closest('button')
-          ?.textContent?.trim(),
-      {
-        x: actionBox!.x + actionBox!.width / 2,
-        y: actionBox!.y + actionBox!.height / 2,
-      },
-    ),
-  ).toContain('生成视频')
+    actionHitTarget.blockedByWorkflowPanel,
+    `primary action=${JSON.stringify(actionBox)}, workflow panel=${JSON.stringify(workflowPanelBox)}`,
+  ).toBe(false)
+  expect(actionHitTarget.buttonText).toContain('生成视频')
   await primaryAction.click()
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),

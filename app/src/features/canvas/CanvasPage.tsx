@@ -58,6 +58,15 @@ import {
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
+import { WorkflowRunPanel } from '../workflow/WorkflowRunPanel'
+import {
+  buildWorkflowRun,
+  executableWorkflowNodes,
+  type WorkflowExecutionMode,
+  type WorkflowRun,
+} from '../workflow/workflow-model'
+import { WorkflowRepository } from '../workflow/workflow-repository'
+import { WorkflowRunner } from '../workflow/workflow-runner'
 import {
   CanvasToolbar,
   type CanvasTool,
@@ -91,6 +100,10 @@ import {
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
+type CanvasWorkflowRepository = Pick<
+  WorkflowRepository,
+  'listByProject' | 'save'
+>
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 type CanvasNodePosition = Project['nodes'][number]['position']
 
@@ -138,6 +151,8 @@ type PendingRemoteGeneration =
 const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
+const defaultWorkflowRepository = new WorkflowRepository(defaultDatabase)
+const defaultWorkflowGenerationAdapter = new DemoGenerationAdapter()
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
@@ -263,6 +278,8 @@ export interface CanvasPageProps {
   libraryRepository?: Pick<AssetLibraryRepository, 'list'>
   generationAdapter?: GenerationAdapter
   generationPreferenceStore?: GenerationProviderPreferenceStore
+  workflowRepository?: CanvasWorkflowRepository
+  workflowGenerationAdapter?: GenerationAdapter
 }
 
 export function CanvasPage({
@@ -270,6 +287,8 @@ export function CanvasPage({
   libraryRepository = defaultLibraryRepository,
   generationAdapter = defaultGenerationAdapter,
   generationPreferenceStore = browserGenerationPreferenceStore,
+  workflowRepository = defaultWorkflowRepository,
+  workflowGenerationAdapter = defaultWorkflowGenerationAdapter,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -308,6 +327,7 @@ export function CanvasPage({
   )
   const [primaryNodeId, setPrimaryNodeId] = useState<string>()
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>()
+  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([])
   const [dragPreview, setDragPreview] = useState<DragPreviewState>({
     positions: {},
   })
@@ -427,6 +447,40 @@ export function CanvasPage({
     [generationAdapter, projectId, selectOnlyNode],
   )
 
+  const workflowRunner = useMemo(
+    () =>
+      new WorkflowRunner({
+        adapter: workflowGenerationAdapter,
+        onRunChange(run) {
+          if (run.projectId !== projectId) return
+          setWorkflowRuns((current) =>
+            current.some(({ id }) => id === run.id)
+              ? current.map((candidate) =>
+                  candidate.id === run.id ? run : candidate,
+                )
+              : [run, ...current],
+          )
+        },
+        persistRun: (run) => workflowRepository.save(run),
+        async onNodeSuccess(nodeRun, result) {
+          if (nodeRun.request.projectId !== projectId) {
+            throw new Error('Workflow callback route mismatch')
+          }
+          const state = useProjectStore.getState()
+          if (state.activeProjectId !== nodeRun.request.projectId) {
+            throw new Error('Workflow active project mismatch')
+          }
+          state.applyWorkflowGenerationSuccess(
+            nodeRun.request.projectId,
+            nodeRun,
+            result,
+          )
+          await useProjectStore.getState().persistActive(repository)
+        },
+      }),
+    [projectId, repository, workflowGenerationAdapter, workflowRepository],
+  )
+
   useEffect(() => {
     generationQueue.resume()
     return () => {
@@ -440,6 +494,35 @@ export function CanvasPage({
       }
     }
   }, [generationQueue, projectId, repository])
+
+  useEffect(() => () => workflowRunner.dispose(), [workflowRunner])
+
+  useEffect(() => {
+    const activeProjectId = project?.id
+    if (!activeProjectId || activeProjectId !== projectId) return
+    let active = true
+    setWorkflowRuns([])
+
+    const hydrateWorkflowRuns = async () => {
+      try {
+        const runs = await workflowRepository.listByProject(activeProjectId)
+        if (!active) return
+        setWorkflowRuns(runs)
+        for (const run of runs) {
+          if (run.status === 'pending' || run.status === 'running') {
+            void workflowRunner.resume(run)
+          }
+        }
+      } catch {
+        if (active) setWorkflowRuns([])
+      }
+    }
+    void hydrateWorkflowRuns()
+
+    return () => {
+      active = false
+    }
+  }, [project?.id, projectId, workflowRepository, workflowRunner])
 
   useEffect(() => {
     if (!project || saveStatus !== 'dirty') return
@@ -712,6 +795,43 @@ export function CanvasPage({
       }
     },
     [handleAction, requestDelete],
+  )
+
+  const workflowSelectedCount = useMemo(
+    () =>
+      project
+        ? executableWorkflowNodes(project, selectedNodeIds).length
+        : 0,
+    [project, selectedNodeIds],
+  )
+
+  const createWorkflowRun = useCallback(
+    (mode: WorkflowExecutionMode) => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (!currentProject || currentProject.id !== projectId) return
+      try {
+        const run = buildWorkflowRun(currentProject, selectedNodeIds, mode)
+        void workflowRunner.execute(run)
+      } catch {
+        return
+      }
+    },
+    [projectId, selectedNodeIds, workflowRunner],
+  )
+
+  const cancelWorkflowRun = useCallback(
+    (runId: string) => {
+      void workflowRunner.cancel(runId)
+    },
+    [workflowRunner],
+  )
+
+  const retryWorkflowNode = useCallback(
+    (runId: string, nodeRunId: string) => {
+      const run = workflowRuns.find(({ id }) => id === runId)
+      if (run) void workflowRunner.retryNode(run, nodeRunId)
+    },
+    [workflowRunner, workflowRuns],
   )
 
   const cancelConnection = useCallback((restoreFocus = true) => {
@@ -1670,6 +1790,15 @@ export function CanvasPage({
           <DirectorComposer
             selectedNodeId={primaryNodeId}
             onExecute={handleDirectorCommand}
+          />
+        ) : null}
+        {project ? (
+          <WorkflowRunPanel
+            selectedCount={workflowSelectedCount}
+            runs={workflowRuns}
+            onCreate={createWorkflowRun}
+            onCancel={cancelWorkflowRun}
+            onRetryNode={retryWorkflowNode}
           />
         ) : null}
         {!project ? (
