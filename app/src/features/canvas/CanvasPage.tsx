@@ -23,9 +23,20 @@ import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { DirectorComposer } from '../director/DirectorComposer'
 import type { DirectorCommand } from '../director/director-command'
 import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
-import type { GenerationAdapter } from '../generation/generation-adapter'
+import type {
+  GenerationAdapter,
+  GenerationRequest,
+} from '../generation/generation-adapter'
+import { GenerationConfirmationDialog } from '../generation/GenerationConfirmationDialog'
 import { GenerationQueue } from '../generation/generation-queue'
-import type { Project } from '../project/model'
+import {
+  createGenerationProviderPreferenceStore,
+  type GenerationProviderPreferenceStore,
+} from '../generation/generation-provider-preference'
+import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
+import type { LibTvProviderSelection } from '../generation/libtv-contract'
+import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
+import type { GenerationJob, Project } from '../project/model'
 import {
   connectionFailureMessage,
   validateDependencyConnection,
@@ -85,8 +96,88 @@ interface PendingPlacement {
   bounds: { width: number; height: number }
 }
 
+type PendingRemoteGeneration =
+  | {
+      kind: 'enqueue'
+      request: GenerationRequest
+      selection: LibTvProviderSelection
+      returnFocusTo: HTMLElement
+    }
+  | {
+      kind: 'retry'
+      job: GenerationJob
+      request: GenerationRequest
+      selection: LibTvProviderSelection
+      returnFocusTo: HTMLElement
+    }
+
 const defaultRepository = new ProjectRepository()
-const defaultGenerationAdapter = new DemoGenerationAdapter()
+const browserGenerationPreferenceStore =
+  createGenerationProviderPreferenceStore()
+const defaultGenerationAdapter = new RuntimeGenerationAdapter(
+  browserGenerationPreferenceStore,
+  new DemoGenerationAdapter(),
+  new LibTvGenerationAdapter({
+    preferenceStore: browserGenerationPreferenceStore,
+  }),
+)
+
+function currentLibTvSelection(
+  store: GenerationProviderPreferenceStore,
+): LibTvProviderSelection | undefined {
+  try {
+    const preference = store.read()
+    return preference.provider === 'libtv' ? preference.selection : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function sameSelection(
+  left: LibTvProviderSelection,
+  right: LibTvProviderSelection,
+) {
+  return (
+    left.projectUuid === right.projectUuid &&
+    left.projectName === right.projectName &&
+    left.imageModelName === right.imageModelName &&
+    left.videoModelName === right.videoModelName
+  )
+}
+
+function buildGenerationRequest(
+  project: Project,
+  node: Project['nodes'][number],
+  operation: GenerationRequest['operation'],
+  prompt: string,
+): GenerationRequest {
+  const activeVersion = node.versions.find(
+    (version) => version.id === node.activeVersionId,
+  )
+  const asset = project.assets.find(
+    (candidate) => candidate.id === activeVersion?.assetId,
+  )
+
+  return {
+    projectId: project.id,
+    nodeId: node.id,
+    operation,
+    targetKind:
+      operation === 'generate-video' || node.kind === 'video'
+        ? 'video'
+        : 'image',
+    prompt,
+    referenceAssets: asset
+      ? [
+          {
+            url: asset.url,
+            kind: asset.kind,
+            mimeType: asset.mimeType,
+          },
+        ]
+      : [],
+  }
+}
 
 function isCreatableTool(tool: CanvasTool): tool is CreatableNodeKind {
   return (
@@ -141,11 +232,13 @@ function findCanvasNodeControl(
 export interface CanvasPageProps {
   repository?: CanvasRepository
   generationAdapter?: GenerationAdapter
+  generationPreferenceStore?: GenerationProviderPreferenceStore
 }
 
 export function CanvasPage({
   repository = defaultRepository,
   generationAdapter = defaultGenerationAdapter,
+  generationPreferenceStore = browserGenerationPreferenceStore,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -194,6 +287,9 @@ export function CanvasPage({
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
   const [connectionsVisible, setConnectionsVisible] = useState(true)
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
+  const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const [pendingRemoteGeneration, setPendingRemoteGeneration] =
+    useState<PendingRemoteGeneration>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
@@ -227,6 +323,8 @@ export function CanvasPage({
     setConnectionFeedback(undefined)
     setConnectionsVisible(true)
     setVisibilityFeedback(undefined)
+    setGenerationFeedback(undefined)
+    setPendingRemoteGeneration(undefined)
     setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
     createdNodeFocusRef.current = undefined
@@ -372,7 +470,11 @@ export function CanvasPage({
   }, [loadAttempt, projectId, repository])
 
   const handleAction = useCallback(
-    (nodeId: string, action: CreativeNodeAction) => {
+    (
+      nodeId: string,
+      action: CreativeNodeAction,
+      explicitFocusTarget?: HTMLElement,
+    ) => {
       const currentProject = useProjectStore.getState().activeProject
       const node = currentProject?.nodes.find(
         (candidate) => candidate.id === nodeId,
@@ -389,31 +491,43 @@ export function CanvasPage({
       const job = selectNodeGenerationJob(node, currentProject.jobs)
 
       if (action === 'cancel-generation') {
-        if (job) generationQueue.cancel(job.id)
+        if (job) {
+          generationQueue.cancel(job.id)
+          if (currentLibTvSelection(generationPreferenceStore)) {
+            setGenerationFeedback(
+              '已停止在本地应用结果；LibTV 任务可能仍在远程运行。',
+            )
+          }
+        }
         return
       }
 
       if (action === 'retry-generation') {
         if (job?.operation) {
-          generationQueue.retry(job, {
-            projectId: currentProject.id,
-            nodeId: job.nodeId,
-            operation: job.operation,
-            targetKind:
-              job.operation === 'generate-video' || node.kind === 'video'
-                ? 'video'
-                : 'image',
-            prompt: job.prompt,
-            referenceAssets: asset
-              ? [
-                  {
-                    url: asset.url,
-                    kind: asset.kind,
-                    mimeType: asset.mimeType,
-                  },
-                ]
-              : [],
-          })
+          const request = buildGenerationRequest(
+            currentProject,
+            node,
+            job.operation,
+            job.prompt,
+          )
+          const selection = currentLibTvSelection(generationPreferenceStore)
+          if (selection) {
+            const activeElement = document.activeElement
+            setPendingRemoteGeneration({
+              kind: 'retry',
+              job,
+              request,
+              selection,
+              returnFocusTo:
+                explicitFocusTarget ??
+                (activeElement instanceof HTMLElement
+                  ? activeElement
+                  : document.body),
+            })
+            setGenerationFeedback(undefined)
+          } else {
+            generationQueue.retry(job, request)
+          }
         }
         return
       }
@@ -429,28 +543,54 @@ export function CanvasPage({
         return
       }
 
-      generationQueue.enqueue({
-        projectId: currentProject.id,
-        nodeId,
-        operation: action,
-        targetKind:
-          action === 'generate-video' || node.kind === 'video'
-            ? 'video'
-            : 'image',
-        prompt: activeVersion?.prompt ?? currentProject.intent,
-        referenceAssets: asset
-          ? [
-              {
-                url: asset.url,
-                kind: asset.kind,
-                mimeType: asset.mimeType,
-              },
-            ]
-          : [],
-      })
+      const request = buildGenerationRequest(
+        currentProject,
+        node,
+        action,
+        activeVersion?.prompt ?? currentProject.intent,
+      )
+      const selection = currentLibTvSelection(generationPreferenceStore)
+      if (selection) {
+        const activeElement = document.activeElement
+        setPendingRemoteGeneration({
+          kind: 'enqueue',
+          request,
+          selection,
+          returnFocusTo:
+            explicitFocusTarget ??
+            (activeElement instanceof HTMLElement
+              ? activeElement
+              : document.body),
+        })
+        setGenerationFeedback(undefined)
+      } else {
+        generationQueue.enqueue(request)
+      }
     },
-    [generationQueue, projectId],
+    [generationPreferenceStore, generationQueue, projectId],
   )
+
+  const confirmRemoteGeneration = useCallback(() => {
+    const pending = pendingRemoteGeneration
+    if (!pending) return
+    setPendingRemoteGeneration(undefined)
+    const currentSelection = currentLibTvSelection(generationPreferenceStore)
+    if (
+      !currentSelection ||
+      !sameSelection(currentSelection, pending.selection)
+    ) {
+      setGenerationFeedback(
+        'LibTV 配置已变更，请重新发起生成。',
+      )
+      return
+    }
+    setGenerationFeedback(undefined)
+    if (pending.kind === 'retry') {
+      generationQueue.retry(pending.job, pending.request)
+    } else {
+      generationQueue.enqueue(pending.request)
+    }
+  }, [generationPreferenceStore, generationQueue, pendingRemoteGeneration])
 
   const requestDelete = useCallback(
     (nodeId: string, focusReturnTarget: HTMLElement) => {
@@ -474,16 +614,16 @@ export function CanvasPage({
     ) => {
       switch (command.type) {
         case 'regenerate':
-          handleAction(command.nodeId, 'regenerate')
+          handleAction(command.nodeId, 'regenerate', focusReturnTarget)
           return
         case 'replace-node':
-          handleAction(command.nodeId, 'regenerate')
+          handleAction(command.nodeId, 'regenerate', focusReturnTarget)
           return
         case 'extend-shot':
-          handleAction(command.sourceNodeId, 'extend-shot')
+          handleAction(command.sourceNodeId, 'extend-shot', focusReturnTarget)
           return
         case 'generate-video':
-          handleAction(command.sourceNodeId, 'generate-video')
+          handleAction(command.sourceNodeId, 'generate-video', focusReturnTarget)
           return
         case 'add-to-timeline':
           handleAction(command.nodeId, 'add-to-timeline')
@@ -1199,7 +1339,8 @@ export function CanvasPage({
         ? '请选择目标节点'
         : undefined
   const canvasHint =
-    connectionFeedback ?? connectionHint ?? visibilityFeedback ?? placementHint
+    connectionFeedback ?? connectionHint ?? generationFeedback ??
+    visibilityFeedback ?? placementHint
   const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
 
   const cancelDelete = () => {
@@ -1305,6 +1446,8 @@ export function CanvasPage({
                 ? 'canvas-connection-hint'
                 : visibilityFeedback && canvasHint === visibilityFeedback
                   ? 'canvas-visibility-hint'
+                  : generationFeedback && canvasHint === generationFeedback
+                    ? 'canvas-generation-hint'
                   : 'canvas-placement-hint'
             }${
               connectionFeedback ? ' canvas-connection-hint--error' : ''
@@ -1373,6 +1516,15 @@ export function CanvasPage({
           consumers={consumers}
           onCancel={cancelDelete}
           onConfirm={confirmDelete}
+        />
+      ) : null}
+      {pendingRemoteGeneration ? (
+        <GenerationConfirmationDialog
+          request={pendingRemoteGeneration.request}
+          selection={pendingRemoteGeneration.selection}
+          returnFocusTo={pendingRemoteGeneration.returnFocusTo}
+          onCancel={() => setPendingRemoteGeneration(undefined)}
+          onConfirm={confirmRemoteGeneration}
         />
       ) : null}
     </main>

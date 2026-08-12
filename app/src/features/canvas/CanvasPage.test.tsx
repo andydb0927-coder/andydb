@@ -14,6 +14,7 @@ import type {
   GenerationAdapter,
   GenerationResult,
 } from '../generation/generation-adapter'
+import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import type { Project } from '../project/model'
 import {
   ProjectRepository,
@@ -229,6 +230,19 @@ const noOpCanvasRepository = {
   save: async () => undefined,
 }
 
+const libtvPreferenceStore: GenerationProviderPreferenceStore = {
+  read: () => ({
+    provider: 'libtv',
+    selection: {
+      projectUuid: '11111111-2222-3333-4444-555555555555',
+      projectName: '低成本验收画布',
+      imageModelName: 'Image Model',
+      videoModelName: 'Video Model',
+    },
+  }),
+  write: vi.fn(),
+}
+
 function renderCanvas(
   props: ComponentProps<typeof CanvasPage> = {
     repository: noOpCanvasRepository,
@@ -243,7 +257,8 @@ function renderCanvas(
   )
 }
 
-function SwitchingCanvas({ repository }: ComponentProps<typeof CanvasPage>) {
+function SwitchingCanvas(props: ComponentProps<typeof CanvasPage>) {
+  const { repository, ...canvasProps } = props
   const navigate = useNavigate()
   return (
     <>
@@ -253,7 +268,7 @@ function SwitchingCanvas({ repository }: ComponentProps<typeof CanvasPage>) {
       <Routes>
         <Route
           path="/project/:projectId"
-          element={<CanvasPage repository={repository} />}
+          element={<CanvasPage repository={repository} {...canvasProps} />}
         />
       </Routes>
     </>
@@ -667,6 +682,176 @@ describe('creative canvas', () => {
     ).toBeVisible()
     expect(useProjectStore.getState().activeProject?.assets).toContainEqual(
       injectedResult.asset,
+    )
+  })
+
+  test('requires explicit LibTV confirmation and Cancel creates no job', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>()
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: libtvPreferenceStore,
+    })
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+
+    expect(screen.getByRole('dialog', { name: '确认 LibTV 实际生成' })).toBeVisible()
+    expect(start).not.toHaveBeenCalled()
+    const beforeJobs = useProjectStore.getState().activeProject?.jobs.length
+    await user.click(screen.getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('dialog', { name: '确认 LibTV 实际生成' })).not.toBeInTheDocument()
+    expect(start).not.toHaveBeenCalled()
+    expect(useProjectStore.getState().activeProject?.jobs).toHaveLength(beforeJobs ?? 0)
+  })
+
+  test('submits one exact structured LibTV request only after confirmation', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: libtvPreferenceStore,
+    })
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+    expect(start).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
+
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1))
+    expect(start.mock.calls[0]?.[0]).toEqual({
+      projectId: 'project-canvas',
+      nodeId: 'storyboard',
+      operation: 'regenerate',
+      targetKind: 'image',
+      prompt: '分镜 02创作描述',
+      referenceAssets: [
+        {
+          url: '/demo/shot-rooftop.png',
+          kind: 'image',
+          mimeType: 'image/png',
+        },
+      ],
+    })
+  })
+
+  test('rejects confirmation when the selected LibTV configuration changed', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>()
+    let provider: ReturnType<GenerationProviderPreferenceStore['read']> =
+      libtvPreferenceStore.read()
+    const preferenceStore: GenerationProviderPreferenceStore = {
+      read: () => provider,
+      write: vi.fn(),
+    }
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: preferenceStore,
+    })
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+    provider = { provider: 'demo' }
+    await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
+
+    expect(start).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'LibTV 配置已变更，请重新发起生成',
+    )
+  })
+
+  test('requires a fresh confirmation before incrementing a LibTV retry attempt', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.jobs.push({
+      id: 'job-cancelled-libtv',
+      projectId: project.id,
+      nodeId: 'storyboard',
+      operation: 'regenerate',
+      attempt: 1,
+      sequence: 1,
+      status: 'cancelled',
+      prompt: '分镜 02创作描述',
+      createdAt: project.createdAt,
+      updatedAt: '2026-08-07T08:00:00.000Z',
+    })
+    act(() => activate(project))
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: libtvPreferenceStore,
+    })
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重试生成' }))
+    await user.click(screen.getByRole('button', { name: '取消' }))
+    expect(project.jobs.at(-1)?.attempt).toBe(1)
+    expect(start).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '重试生成' }))
+    await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1))
+    expect(
+      useProjectStore.getState().activeProject?.jobs.find(
+        (job) => job.id === 'job-cancelled-libtv',
+      )?.attempt,
+    ).toBe(2)
+  })
+
+  test('discards a pending LibTV confirmation when the project route changes', async () => {
+    const user = userEvent.setup()
+    const projectB = { ...makeCanvasProject(), id: 'project-b', title: '项目 B' }
+    const start = vi.fn<GenerationAdapter['start']>()
+    render(
+      <MemoryRouter initialEntries={['/project/project-canvas']}>
+        <SwitchingCanvas
+          repository={{ load: async () => projectB, save: async () => undefined }}
+          generationAdapter={{ start }}
+          generationPreferenceStore={libtvPreferenceStore}
+        />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+    expect(screen.getByRole('dialog', { name: '确认 LibTV 实际生成' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '确认 LibTV 实际生成' })).not.toBeInTheDocument()
+    })
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('explains that local cancellation may not stop a remote LibTV task', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      (_request, signal) => new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          reject(new DOMException('cancelled', 'AbortError'))
+        }, { once: true })
+      }),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: libtvPreferenceStore,
+    })
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+    await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1))
+
+    await user.click(screen.getByRole('button', { name: '取消生成' }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '已停止在本地应用结果；LibTV 任务可能仍在远程运行',
     )
   })
 
