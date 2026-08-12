@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp, ListChecks, Play, RefreshCw, Square } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+import { canUseFeature, type MembershipPlanId } from '../membership/membership-model'
 
 import {
   workflowProgress,
@@ -22,6 +25,7 @@ export interface WorkflowRunPanelProps {
   onCreate(mode: WorkflowExecutionMode): void
   onCancel(runId: string): void
   onRetryNode(runId: string, nodeRunId: string): void
+  membershipPlan?: MembershipPlanId
 }
 
 export function WorkflowRunPanel({
@@ -30,6 +34,7 @@ export function WorkflowRunPanel({
   onCreate,
   onCancel,
   onRetryNode,
+  membershipPlan = 'professional',
 }: WorkflowRunPanelProps) {
   const [mode, setMode] = useState<WorkflowExecutionMode>('serial')
   const [collapsed, setCollapsed] = useState(
@@ -47,6 +52,8 @@ export function WorkflowRunPanel({
       right.createdAt.localeCompare(left.createdAt) ||
       right.id.localeCompare(left.id),
   )
+  const batchRequested = selectedCount > 1 || mode === 'parallel'
+  const upgradeRequired = batchRequested && !canUseFeature(membershipPlan, 'batch-workflow')
 
   return (
     <aside
@@ -95,13 +102,18 @@ export function WorkflowRunPanel({
         </label>
         <button
           type="button"
-          disabled={selectedCount === 0}
+          disabled={selectedCount === 0 || upgradeRequired}
           onClick={() => onCreate(mode)}
         >
           <Play aria-hidden="true" />
           创建运行
         </button>
       </div>
+      {upgradeRequired ? (
+        <p className="membership-gate">
+          批量或并行工作流需要专业版。<Link to="/account">升级到专业版</Link>
+        </p>
+      ) : null}
 
       <div className="workflow-run-panel__runs" aria-live="polite">
         {orderedRuns.length === 0 ? (

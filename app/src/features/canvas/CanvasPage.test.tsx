@@ -250,10 +250,19 @@ function renderCanvas(
     repository: noOpCanvasRepository,
   },
 ) {
+  const membershipStore = props.membershipStore ?? {
+    get: async () => ({
+      id: 'local-membership' as const,
+      plan: 'professional' as const,
+      status: 'active' as const,
+      startedAt: '2026-08-13T08:00:00.000Z',
+      updatedAt: '2026-08-13T08:00:00.000Z',
+    }),
+  }
   return render(
     <MemoryRouter initialEntries={['/project/project-canvas']}>
       <Routes>
-        <Route path="/project/:projectId" element={<CanvasPage {...props} />} />
+        <Route path="/project/:projectId" element={<CanvasPage {...props} membershipStore={membershipStore} />} />
       </Routes>
     </MemoryRouter>,
   )

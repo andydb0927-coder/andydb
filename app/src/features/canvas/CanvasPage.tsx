@@ -21,6 +21,8 @@ import {
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { DirectorComposer } from '../director/DirectorComposer'
+import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
+import { CollaborationRepository } from '../collaboration/collaboration-repository'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
@@ -38,6 +40,8 @@ import {
 import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
 import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
+import type { MembershipPlanId } from '../membership/membership-model'
+import { MembershipRepository } from '../membership/membership-repository'
 import type {
   CreativeCardKind,
   GenerationJob,
@@ -152,6 +156,8 @@ const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const defaultWorkflowRepository = new WorkflowRepository(defaultDatabase)
+const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
+const defaultMembershipRepository = new MembershipRepository(defaultDatabase)
 const defaultWorkflowGenerationAdapter = new DemoGenerationAdapter()
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
@@ -280,6 +286,8 @@ export interface CanvasPageProps {
   generationPreferenceStore?: GenerationProviderPreferenceStore
   workflowRepository?: CanvasWorkflowRepository
   workflowGenerationAdapter?: GenerationAdapter
+  collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
+  membershipStore?: Pick<MembershipRepository, 'get'>
 }
 
 export function CanvasPage({
@@ -289,6 +297,8 @@ export function CanvasPage({
   generationPreferenceStore = browserGenerationPreferenceStore,
   workflowRepository = defaultWorkflowRepository,
   workflowGenerationAdapter = defaultWorkflowGenerationAdapter,
+  collaborationRepository = defaultCollaborationRepository,
+  membershipStore = defaultMembershipRepository,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -328,6 +338,7 @@ export function CanvasPage({
   const [primaryNodeId, setPrimaryNodeId] = useState<string>()
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>()
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([])
+  const [membershipPlan, setMembershipPlan] = useState<MembershipPlanId>('free')
   const [dragPreview, setDragPreview] = useState<DragPreviewState>({
     positions: {},
   })
@@ -393,6 +404,15 @@ export function CanvasPage({
       connectionTriggerRef.current = null
     }
   }, [projectId])
+
+  useEffect(() => {
+    let active = true
+    void membershipStore.get().then(
+      (subscription) => { if (active) setMembershipPlan(subscription.plan) },
+      () => { if (active) setMembershipPlan('free') },
+    )
+    return () => { active = false }
+  }, [membershipStore])
 
   const toggleConnectionsVisibility = useCallback(() => {
     const nextConnectionsVisible = !connectionsVisible
@@ -1639,6 +1659,7 @@ export function CanvasPage({
     removeSelectedNode(deleteCandidate.id)
     queueMicrotask(() => deleteTriggerRef.current?.focus())
   }
+  const commentNode = project?.nodes.find(({ id }) => id === primaryNodeId)
 
   return (
     <main className="canvas-page">
@@ -1799,6 +1820,17 @@ export function CanvasPage({
             onCreate={createWorkflowRun}
             onCancel={cancelWorkflowRun}
             onRetryNode={retryWorkflowNode}
+            membershipPlan={membershipPlan}
+          />
+        ) : null}
+        {project && commentNode ? (
+          <CollaborationCommentsPanel
+            projectId={project.id}
+            targetType="node"
+            targetId={commentNode.id}
+            targetLabel={commentNode.title}
+            repository={collaborationRepository}
+            variant="floating"
           />
         ) : null}
         {!project ? (

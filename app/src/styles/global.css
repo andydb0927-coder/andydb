@@ -3563,6 +3563,243 @@ select {
   font-size: 0.875rem;
 }
 
+.account-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.account-page .platform-page__header,
+.account-page .platform-section {
+  margin: 0;
+}
+
+.account-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.account-summary > div {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: var(--surface-node);
+}
+
+.account-summary span,
+.account-boundary-note,
+.collaboration-comments__target {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.membership-matrix {
+  width: 100%;
+  margin-top: var(--space-5);
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.membership-matrix th,
+.membership-matrix td {
+  padding: var(--space-3);
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  text-align: center;
+}
+
+.membership-matrix th:first-child {
+  text-align: left;
+}
+
+.membership-actions,
+.account-backup-actions,
+.collaborator-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.membership-actions button,
+.account-backup-actions button,
+.collaborator-form button,
+.collaborator-list button,
+.account-import {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(169 162 255 / 32%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(114 104 240 / 14%);
+  cursor: pointer;
+}
+
+.membership-actions button:disabled,
+.account-backup-actions button:disabled,
+.collaborator-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.account-project-picker,
+.collaborator-form label {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.account-project-picker select,
+.collaborator-form input,
+.collaborator-form select,
+.collaborator-list select {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface-node);
+}
+
+.collaborator-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collaborator-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.collaborator-list li strong { margin-right: auto; }
+.collaborator-list li span { color: var(--text-muted); }
+
+.account-import {
+  display: inline-flex;
+  align-items: center;
+}
+
+.account-import input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.account-feedback {
+  position: sticky;
+  bottom: var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgb(169 162 255 / 35%);
+  border-radius: 10px;
+  background: var(--surface-node);
+}
+
+.membership-gate {
+  margin: var(--space-3) 0 0;
+  color: var(--status-error);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.membership-gate a { color: var(--focus-ring); }
+
+.collaboration-comments {
+  z-index: 30;
+  padding: var(--space-4);
+  border: 1px solid rgb(169 162 255 / 24%);
+  border-radius: 12px;
+  background: rgb(25 27 33 / 96%);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 30%);
+}
+
+.collaboration-comments--inline {
+  width: min(1120px, calc(100% - 2 * var(--space-5)));
+  margin: var(--space-5) auto;
+}
+
+.collaboration-comments--floating {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: min(300px, calc(100vw - 96px));
+  max-height: 44vh;
+  overflow: auto;
+}
+
+.collaboration-comments--collapsed {
+  width: min(220px, calc(100vw - 96px));
+  padding: var(--space-2) var(--space-3);
+}
+
+.collaboration-comments--collapsed > *:not(header) {
+  display: none;
+}
+
+.collaboration-comments__header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.collaboration-comments__toggle {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: rgb(255 255 255 / 6%);
+  cursor: pointer;
+}
+
+.collaboration-comments__toggle:hover {
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 10%);
+}
+
+.collaboration-comments header,
+.collaboration-comments header span,
+.collaboration-comments li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.collaboration-comments header svg { width: 16px; }
+.collaboration-comments header > span:last-child { color: var(--focus-ring); font-size: 0.75rem; }
+.collaboration-comments ol { display: grid; gap: var(--space-2); margin: var(--space-3) 0; padding: 0; list-style: none; }
+.collaboration-comments li { padding: var(--space-2); border-radius: 8px; background: rgb(255 255 255 / 5%); font-size: 0.8125rem; }
+.collaboration-comments li[data-status='resolved'] { color: var(--text-muted); }
+.collaboration-comments label { display: grid; gap: var(--space-2); color: var(--text-muted); font-size: 0.75rem; }
+.collaboration-comments textarea { min-height: 64px; resize: vertical; padding: var(--space-2); border: 1px solid rgb(255 255 255 / 12%); border-radius: 8px; color: var(--text-primary); background: var(--surface-node); }
+.collaboration-comments button { min-height: 32px; padding: 0 var(--space-3); border: 1px solid rgb(169 162 255 / 28%); border-radius: 7px; color: var(--text-primary); background: rgb(114 104 240 / 14%); cursor: pointer; }
+.collaboration-comments > button { margin-top: var(--space-2); }
+.collaboration-comments button:disabled { opacity: .48; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+  .account-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .membership-matrix { display: block; overflow-x: auto; }
+  .collaborator-list li { align-items: stretch; flex-direction: column; }
+  .collaborator-list li strong { margin-right: 0; }
+  .collaboration-comments--floating { top: auto; bottom: 180px; max-height: 38vh; }
+}
+
 @media (max-width: 880px) {
   .my-work-card__form {
     grid-template-columns: 1fr 1fr;

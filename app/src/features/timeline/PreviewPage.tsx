@@ -9,6 +9,10 @@ import {
 import { Link, useParams } from 'react-router-dom'
 
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
+import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
+import { CollaborationRepository } from '../collaboration/collaboration-repository'
+import type { MembershipPlanId } from '../membership/membership-model'
+import { MembershipRepository } from '../membership/membership-repository'
 import type { LibraryAssetRecord } from '../assets/library-model'
 import {
   ProjectRepository,
@@ -48,6 +52,8 @@ const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultTimelineRepository = new TimelineRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
+const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
+const defaultMembershipRepository = new MembershipRepository(defaultDatabase)
 
 class TransientTimelineRepository implements TimelineProjectRepository {
   private readonly projects = new Map<string, TimelineProject>()
@@ -69,6 +75,8 @@ export interface PreviewPageProps {
   timelineRepository?: TimelineProjectRepository
   libraryRepository?: PreviewLibraryRepository
   recorderFactory?: PreviewRecorderFactory
+  collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
+  membershipStore?: Pick<MembershipRepository, 'get'>
 }
 
 function candidateSources(
@@ -107,6 +115,8 @@ export function PreviewPage({
   timelineRepository,
   libraryRepository,
   recorderFactory,
+  collaborationRepository = defaultCollaborationRepository,
+  membershipStore = defaultMembershipRepository,
 }: PreviewPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const activeProject = useProjectStore((state) => state.activeProject)
@@ -119,6 +129,7 @@ export function PreviewPage({
   const [currentTime, setCurrentTime] = useState(0)
   const [selectedClipId, setSelectedClipId] = useState<string>()
   const [recordingSupported, setRecordingSupported] = useState(false)
+  const [membershipPlan, setMembershipPlan] = useState<MembershipPlanId>('free')
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing' | 'error'>(
     project ? 'ready' : 'loading',
   )
@@ -216,6 +227,15 @@ export function PreviewPage({
       supportsPreviewRecording(canvasRef.current ?? undefined, effectiveRecorderFactory),
     )
   }, [effectiveRecorderFactory, timeline])
+
+  useEffect(() => {
+    let mounted = true
+    void membershipStore.get().then(
+      (subscription) => { if (mounted) setMembershipPlan(subscription.plan) },
+      () => { if (mounted) setMembershipPlan('free') },
+    )
+    return () => { mounted = false }
+  }, [membershipStore])
 
   const persistTimeline = useCallback(
     (next: TimelineProject) => {
@@ -337,9 +357,19 @@ export function PreviewPage({
             onCurrentTimeChange={setCurrentTime}
             onSelectedClipChange={setSelectedClipId}
           />
+          {selectedClipId ? (
+            <CollaborationCommentsPanel
+              projectId={project.id}
+              targetType="clip"
+              targetId={selectedClipId}
+              targetLabel={timeline.tracks.flatMap(({ clips }) => clips).find(({ id }) => id === selectedClipId)?.name ?? '当前片段'}
+              repository={collaborationRepository}
+            />
+          ) : null}
           <TimelineExportPanel
             timeline={timeline}
             recordingSupported={recordingSupported}
+            membershipPlan={membershipPlan}
             onStartRecording={
               recordingSupported && effectiveRecorderFactory
                 ? () =>
