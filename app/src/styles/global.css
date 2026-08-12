@@ -3707,6 +3707,123 @@ select {
   background: var(--surface-node);
 }
 
+.agents-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.agents-page .platform-page__header { margin: 0; }
+
+.agent-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.agent-skill-card,
+.agent-result-card {
+  padding: var(--space-5);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 14px;
+  background: rgb(23 25 30 / 82%);
+}
+
+.agent-skill-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.agent-skill-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.agent-skill-card h2,
+.agent-result-card h2 { margin: var(--space-1) 0 0; }
+
+.agent-skill-card__heading span,
+.agent-result-card > span {
+  color: var(--focus-ring);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.agent-skill-card > p,
+.agent-result-card > p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.agent-skill-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.agent-skill-fields { display: grid; gap: var(--space-3); }
+
+.agent-skill-fields label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.agent-skill-fields input,
+.agent-skill-fields select {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface-node);
+}
+
+.agent-skill-card > button,
+.agent-result-card button,
+.agent-result-card a {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(169 162 255 / 32%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(114 104 240 / 14%);
+  cursor: pointer;
+}
+
+.agent-skill-card > button:disabled,
+.agent-result-card button:disabled { cursor: not-allowed; opacity: 0.48; }
+
+.agent-result-card pre {
+  overflow: auto;
+  max-height: 360px;
+  padding: var(--space-4);
+  border-radius: 10px;
+  color: var(--text-primary);
+  background: rgb(0 0 0 / 24%);
+  font: inherit;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.agent-result-card > div { display: flex; align-items: center; gap: var(--space-3); }
+.agent-result-card a { display: inline-flex; align-items: center; text-decoration: none; }
+.agent-feedback { color: var(--text-secondary); }
+.director-composer__skills-link { color: var(--focus-ring); font-size: 0.75rem; }
+
+@media (max-width: 760px) {
+  .agent-skill-grid { grid-template-columns: 1fr; }
+}
+
 .membership-gate {
   margin: var(--space-3) 0 0;
   color: var(--status-error);

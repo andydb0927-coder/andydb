@@ -1,4 +1,4 @@
-import { Clapperboard, Compass, Cpu, FolderOpen, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
+import { Bot, Clapperboard, Compass, Cpu, FolderOpen, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
@@ -11,6 +11,7 @@ export const platformNavigation = [
   { to: '/workflows', label: '工作流与模板', icon: Sparkles, end: false },
   { to: '/discover', label: '发现与作品', icon: Compass, end: false },
   { to: '/models', label: '模型能力', icon: Cpu, end: false },
+  { to: '/agents', label: 'Agent 技能', icon: Bot, end: false },
   { to: '/account', label: '本地工作区', icon: UserRound, end: false },
 ] as const
 

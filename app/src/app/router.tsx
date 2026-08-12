@@ -11,6 +11,7 @@ import { ModelsPage } from '../features/platform/ModelsPage'
 import { AccountPage } from '../features/platform/AccountPage'
 import { MyWorksPage } from '../features/community/MyWorksPage'
 import { WorkDetailPage } from '../features/community/WorkDetailPage'
+import { AgentsPage } from '../features/agent/AgentsPage'
 
 export const routes: RouteObject[] = [
   {
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       { path: '/discover/mine', element: <MyWorksPage /> },
       { path: '/discover/:workId', element: <WorkDetailPage /> },
       { path: '/models', element: <ModelsPage /> },
+      { path: '/agents', element: <AgentsPage /> },
       { path: '/account', element: <AccountPage /> },
     ],
   },

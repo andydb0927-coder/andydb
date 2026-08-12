@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 import {
   parseDirectorCommand,
@@ -68,6 +69,7 @@ export function DirectorComposer({
           <p className="director-composer__disclosure">
             本地演示生成 · 视频结果使用 PNG 视觉缩略图
           </p>
+          <Link className="director-composer__skills-link" to="/agents">浏览 Agent 技能</Link>
         </div>
       </div>
       <form onSubmit={submit}>
