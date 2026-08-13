@@ -186,6 +186,9 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     .getByRole('button', { name: '生成视频' })
   await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
+  const modeBarBox = await page
+    .getByRole('toolbar', { name: '画布模式工具' })
+    .boundingBox()
   const workflowPanelBox = await page
     .getByRole('complementary', { name: '工作流运行面板' })
     .boundingBox()
@@ -194,17 +197,28 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     height: window.innerHeight,
   }))
   expect(actionBox).not.toBeNull()
+  expect(modeBarBox).not.toBeNull()
   expect(workflowPanelBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height)
+  const actionOverlapsModeBar =
+    actionBox!.x < modeBarBox!.x + modeBarBox!.width &&
+    actionBox!.x + actionBox!.width > modeBarBox!.x &&
+    actionBox!.y < modeBarBox!.y + modeBarBox!.height &&
+    actionBox!.y + actionBox!.height > modeBarBox!.y
+  expect(
+    actionOverlapsModeBar,
+    `primary action=${JSON.stringify(actionBox)}, mode bar=${JSON.stringify(modeBarBox)}`,
+  ).toBe(false)
   const actionHitTarget = await page.evaluate(
     ({ x, y }) => {
       const target = document.elementFromPoint(x, y)
       return {
         blockedByWorkflowPanel: Boolean(target?.closest('.workflow-run-panel')),
-        buttonText: target?.closest('button')?.textContent?.trim(),
+        blockedByModeBar: Boolean(target?.closest('.canvas-mode-bar')),
+        action: target?.closest('button')?.getAttribute('data-action'),
       }
     },
     {
@@ -216,7 +230,8 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     actionHitTarget.blockedByWorkflowPanel,
     `primary action=${JSON.stringify(actionBox)}, workflow panel=${JSON.stringify(workflowPanelBox)}`,
   ).toBe(false)
-  expect(actionHitTarget.buttonText).toContain('生成视频')
+  expect(actionHitTarget.blockedByModeBar).toBe(false)
+  expect(actionHitTarget.action).toBe('generate-video')
   await primaryAction.click()
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),

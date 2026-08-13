@@ -7861,11 +7861,12 @@ select {
   }
 
   .canvas-mode-bar {
+    z-index: 35;
     top: var(--space-2);
     left: var(--space-2);
     display: flex;
-    width: calc(100% - 104px);
-    max-width: none;
+    width: max-content;
+    max-width: calc(100% - 16px);
   }
 
   .canvas-mode-bar__hint {
@@ -7925,5 +7926,12 @@ select {
 
   .canvas-page--agent-open .selection-context-bar {
     display: none;
+  }
+}
+
+@media (max-width: 800px) and (min-height: 600px) {
+  .creative-node-actions,
+  .creative-node-actions[data-placement='before'] {
+    top: 44px;
   }
 }

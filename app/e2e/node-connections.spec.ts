@@ -498,8 +498,14 @@ test('keeps the visibility control reachable at 721 by 778 and reloads visible',
     width: 721,
     height: 778,
   })
+  const modeBarBox = await page
+    .getByRole('toolbar', { name: '画布模式工具' })
+    .boundingBox()
+  expect(modeBarBox).not.toBeNull()
+  expect(modeBarBox!.width).toBeLessThanOrEqual(240)
+  expect(modeBarBox!.x + modeBarBox!.width).toBeLessThanOrEqual(721)
   const separatorAlpha = await toggle.evaluate((button) => {
-    const color = getComputedStyle(button).borderTopColor
+    const color = getComputedStyle(button).borderLeftColor
     const match = color.match(/rgba?\(([^)]+)\)/)
     if (!match) return 0
     const channels = match[1].split(',').map(Number)
