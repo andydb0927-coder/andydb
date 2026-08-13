@@ -3,6 +3,7 @@ import {
   Controls,
   MarkerType,
   ReactFlow,
+  ViewportPortal,
   type Connection,
   type EdgeChange,
   type NodeChange,
@@ -43,6 +44,7 @@ import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapt
 import type { MembershipPlanId } from '../membership/membership-model'
 import { MembershipRepository } from '../membership/membership-repository'
 import type {
+  CanvasGroup,
   CreativeCardKind,
   GenerationJob,
   Project,
@@ -76,6 +78,11 @@ import {
   type CanvasTool,
 } from './CanvasToolbar'
 import { CanvasTopBar } from './CanvasTopBar'
+import { CanvasGroupOverlay } from './CanvasGroupOverlay'
+import {
+  findSelectedCanvasGroup,
+  measureCanvasGroup,
+} from './canvas-group'
 import { CreativeCardEditor } from './CreativeCardEditor'
 import { DependencyImpactDialog } from './DependencyImpactDialog'
 import { edgeTypes, type DependencyFlowEdge } from './edge-types'
@@ -331,6 +338,8 @@ export function CanvasPage({
   const updateNodePositions = useProjectStore(
     (state) => state.updateNodePositions,
   )
+  const groupNodes = useProjectStore((state) => state.groupNodes)
+  const ungroupNodes = useProjectStore((state) => state.ungroupNodes)
   const deleteNode = useProjectStore((state) => state.deleteNode)
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
     () => new Set(),
@@ -352,6 +361,7 @@ export function CanvasPage({
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
   const [connectionsVisible, setConnectionsVisible] = useState(true)
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
+  const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
   const [pendingRemoteGeneration, setPendingRemoteGeneration] =
     useState<PendingRemoteGeneration>()
@@ -382,6 +392,49 @@ export function CanvasPage({
     setPrimaryNodeId(nodeId)
   }, [])
 
+  const selectedCanvasGroup = useMemo(
+    () =>
+      findSelectedCanvasGroup(project?.groups ?? [], selectedNodeIds),
+    [project?.groups, selectedNodeIds],
+  )
+
+  const selectCanvasGroup = useCallback(
+    (group: CanvasGroup) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const liveNodeIds = new Set(
+        currentProject?.nodes.map(({ id }) => id) ?? [],
+      )
+      const memberIds = group.nodeIds.filter((nodeId) => liveNodeIds.has(nodeId))
+      if (memberIds.length < 2) return
+      setSelectedEdgeId(undefined)
+      setSelectedNodeIds(new Set(memberIds))
+      setPrimaryNodeId(memberIds.at(-1))
+    },
+    [],
+  )
+
+  const removeCanvasGroup = useCallback(
+    (groupId: string, restoreCanvasFocus = false) => {
+      if (!ungroupNodes(groupId)) return
+      setVisibilityFeedback(undefined)
+      setGroupFeedback('已取消分组')
+      if (restoreCanvasFocus) {
+        queueMicrotask(() => viewportRef.current?.focus())
+      }
+    },
+    [ungroupNodes],
+  )
+
+  const handleGroupAction = useCallback(() => {
+    if (selectedCanvasGroup) {
+      removeCanvasGroup(selectedCanvasGroup.id)
+      return
+    }
+    if (!groupNodes(selectedNodeIds)) return
+    setVisibilityFeedback(undefined)
+    setGroupFeedback('已创建分组')
+  }, [groupNodes, removeCanvasGroup, selectedCanvasGroup, selectedNodeIds])
+
   useEffect(() => {
     nativeConnectionActiveRef.current = false
     setActiveTool('select')
@@ -389,6 +442,7 @@ export function CanvasPage({
     setConnectionFeedback(undefined)
     setConnectionsVisible(true)
     setVisibilityFeedback(undefined)
+    setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
     setPendingRemoteGeneration(undefined)
     setSelectedEdgeId(undefined)
@@ -417,6 +471,7 @@ export function CanvasPage({
   const toggleConnectionsVisibility = useCallback(() => {
     const nextConnectionsVisible = !connectionsVisible
     if (!nextConnectionsVisible) setSelectedEdgeId(undefined)
+    setGroupFeedback(undefined)
     setConnectionsVisible(nextConnectionsVisible)
     setVisibilityFeedback(
       nextConnectionsVisible ? '连线已显示' : '连线已隐藏，端口仍可使用',
@@ -1049,6 +1104,15 @@ export function CanvasPage({
     })
   }, [dragPreview, measuredFlowNodes, project])
 
+  const canvasGroupOverlays = useMemo(
+    () =>
+      (project?.groups ?? []).flatMap((group) => {
+        const bounds = measureCanvasGroup(group, flowNodes)
+        return bounds ? [{ group, bounds }] : []
+      }),
+    [flowNodes, project?.groups],
+  )
+
   const disconnectEdge = useCallback(
     (edgeId: string) => {
       const current = useProjectStore.getState().activeProject
@@ -1644,7 +1708,7 @@ export function CanvasPage({
         : undefined
   const canvasHint =
     connectionFeedback ?? connectionHint ?? generationFeedback ??
-    visibilityFeedback ?? placementHint
+    groupFeedback ?? visibilityFeedback ?? placementHint
   const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
 
   const cancelDelete = () => {
@@ -1735,12 +1799,31 @@ export function CanvasPage({
         >
           <Background gap={24} size={1} color="rgba(255,255,255,0.1)" />
           <Controls showInteractive={false} />
+          <ViewportPortal>
+            {canvasGroupOverlays.map(({ group, bounds }) => (
+              <CanvasGroupOverlay
+                key={group.id}
+                group={group}
+                bounds={bounds}
+                onSelect={() => selectCanvasGroup(group)}
+                onUngroup={() => removeCanvasGroup(group.id, true)}
+              />
+            ))}
+          </ViewportPortal>
         </ReactFlow>
         <CanvasToolbar
           activeTool={activeTool}
           connectionsVisible={connectionsVisible}
           disabled={!project}
           draftOpen={Boolean(pendingPlacement || editingCard)}
+          groupAction={
+            selectedCanvasGroup
+              ? 'ungroup'
+              : selectedNodeIds.size >= 2
+                ? 'group'
+                : 'disabled'
+          }
+          onGroupAction={handleGroupAction}
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
         />
@@ -1753,7 +1836,9 @@ export function CanvasPage({
                   ? 'canvas-visibility-hint'
                   : generationFeedback && canvasHint === generationFeedback
                     ? 'canvas-generation-hint'
-                  : 'canvas-placement-hint'
+                    : groupFeedback && canvasHint === groupFeedback
+                      ? 'canvas-group-hint'
+                      : 'canvas-placement-hint'
             }${
               connectionFeedback ? ' canvas-connection-hint--error' : ''
             }`}

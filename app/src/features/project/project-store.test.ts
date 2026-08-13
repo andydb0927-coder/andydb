@@ -86,6 +86,7 @@ describe('project domain', () => {
     expect(project.timeline).toEqual([])
     expect(project.nodes).toEqual([])
     expect(project.assets).toEqual([])
+    expect(project.groups).toEqual([])
   })
 
   test('appends a node version without changing prior versions or asset records', () => {
@@ -159,6 +160,68 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('groups two existing nodes in one history entry and supports undo and redo', () => {
+    const original = useProjectStore.getState().activeProject!
+    const groupId = useProjectStore.getState().groupNodes(['rain-audio', 'shot-1', 'shot-1'])
+
+    const grouped = useProjectStore.getState().activeProject!
+    expect(groupId).toBeTruthy()
+    expect(grouped.groups).toEqual([
+      expect.objectContaining({
+        id: groupId,
+        title: '分组 01',
+        nodeIds: ['shot-1', 'rain-audio'],
+      }),
+    ])
+    expect(grouped.edges).toEqual(original.edges)
+    expect(grouped.timeline).toEqual(original.timeline)
+    expect(grouped.jobs).toEqual(original.jobs)
+    expect(useProjectStore.getState().past).toEqual([original])
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(original)
+    useProjectStore.getState().redo()
+    expect(useProjectStore.getState().activeProject?.groups?.[0].id).toBe(groupId)
+  })
+
+  test('keeps invalid grouping as a no-op and removes a group atomically', () => {
+    expect(useProjectStore.getState().groupNodes(['shot-1', 'missing'])).toBeUndefined()
+    expect(useProjectStore.getState().past).toEqual([])
+
+    const groupId = useProjectStore.getState().groupNodes(['shot-1', 'rain-audio'])!
+    expect(useProjectStore.getState().ungroupNodes('missing')).toBe(false)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(useProjectStore.getState().ungroupNodes(groupId)).toBe(true)
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([])
+    expect(useProjectStore.getState().past).toHaveLength(2)
+  })
+
+  test('prunes single-member groups when regrouping or deleting a node', () => {
+    const project = makeProjectFixture()
+    const extraNode: CanvasNode = {
+      ...project.nodes[0],
+      id: 'shot-extra',
+      title: '补充分镜',
+      position: { x: 900, y: 240 },
+    }
+    const expanded = { ...project, nodes: [...project.nodes, extraNode] }
+    useProjectStore.setState({
+      projectsById: { [expanded.id]: expanded },
+      activeProject: expanded,
+      past: [],
+      future: [],
+    })
+
+    useProjectStore.getState().groupNodes(['shot-1', 'rain-audio'])
+    useProjectStore.getState().groupNodes(['rain-audio', 'shot-extra'])
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([
+      expect.objectContaining({ nodeIds: ['rain-audio', 'shot-extra'] }),
+    ])
+
+    useProjectStore.getState().deleteNode('rain-audio')
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([])
+  })
+
   test('edits a creative card atomically, invalidates downstream nodes, and supports undo', () => {
     const base = useProjectStore.getState().activeProject!
     const upstreamCreation = buildCreativeCardCreation(

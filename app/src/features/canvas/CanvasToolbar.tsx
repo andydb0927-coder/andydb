@@ -35,6 +35,8 @@ export interface CanvasToolbarProps {
   connectionsVisible: boolean
   disabled?: boolean
   draftOpen: boolean
+  groupAction?: 'disabled' | 'group' | 'ungroup'
+  onGroupAction?(): void
   onToggleConnections(): void
   onToolChange(tool: CanvasTool, trigger: HTMLButtonElement): void
 }
@@ -44,31 +46,40 @@ export function CanvasToolbar({
   connectionsVisible,
   disabled = false,
   draftOpen,
+  groupAction = 'disabled',
+  onGroupAction,
   onToggleConnections,
   onToolChange,
 }: CanvasToolbarProps) {
   return (
     <FloatingPanel className="canvas-toolbar" role="toolbar" aria-label="创作工具">
       {tools.map(({ id, label, icon: Icon }) => {
-        const unavailable = id === 'group'
+        const isGroup = id === 'group'
         const toolDisabled =
-          disabled || unavailable || (draftOpen && id !== 'select')
-        const title = unavailable
-          ? `${label}将在后续版本提供`
-          : draftOpen && id !== 'select'
+          disabled ||
+          (isGroup && groupAction === 'disabled') ||
+          (draftOpen && id !== 'select')
+        const actionLabel =
+          isGroup && groupAction === 'ungroup' ? '取消分组' : label
+        const title = draftOpen && id !== 'select'
             ? '请先完成或取消当前节点'
-            : label
+            : isGroup && groupAction === 'disabled'
+              ? '请先选择至少两个节点'
+              : actionLabel
 
         return (
           <button
             key={id}
             type="button"
             className={activeTool === id ? 'canvas-toolbar__active' : undefined}
-            aria-label={label}
-            aria-pressed={activeTool === id}
+            aria-label={actionLabel}
+            aria-pressed={isGroup ? false : activeTool === id}
             disabled={toolDisabled}
             title={title}
-            onClick={(event) => onToolChange(id, event.currentTarget)}
+            onClick={(event) => {
+              if (isGroup) onGroupAction?.()
+              else onToolChange(id, event.currentTarget)
+            }}
           >
             <Icon aria-hidden="true" />
           </button>

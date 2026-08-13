@@ -39,7 +39,8 @@ describe('platform task progress persistence', () => {
     expect(snapshot.statuses['platform-shell']).toBe('completed')
     expect(snapshot.statuses['account-space']).toBe('completed')
     expect(snapshot.statuses['project-home']).toBe('completed')
-    expect(snapshot.statuses['canvas-workflow']).toBe('in-progress')
+    expect(snapshot.statuses['canvas-workflow']).toBe('completed')
+    expect(snapshot.statuses['models-generation']).toBe('in-progress')
   })
 
   test('persists known task statuses and removes unknown task ids', () => {

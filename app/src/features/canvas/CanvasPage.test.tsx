@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ComponentProps, ComponentType } from 'react'
+import type { ComponentProps, ComponentType, ReactNode } from 'react'
 import {
   MemoryRouter,
   Route,
@@ -37,6 +37,7 @@ interface FlowNodeFixture {
 }
 
 interface FlowPropsFixture {
+  children?: ReactNode
   nodes: FlowNodeFixture[]
   edges: Array<{
     id: string
@@ -122,9 +123,11 @@ vi.mock('@xyflow/react', () => ({
             </div>
           )
         })}
+        {props.children}
       </div>
     )
   },
+  ViewportPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
   getBezierPath: () => ['M0 0L10 10'],
 }))
 
@@ -2420,6 +2423,60 @@ describe('creative canvas', () => {
       { x: 80, y: 80 },
       { x: 390, y: 210 },
     ])
+  })
+
+  test('groups selected nodes, restores the group selection, and ungroups through the toolbar', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    expect(screen.getByRole('button', { name: '分组' })).toBeDisabled()
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        { id: 'character', type: 'select', selected: true },
+        { id: 'scene', type: 'select', selected: true },
+      ])
+    })
+
+    await user.click(screen.getByRole('button', { name: '分组' }))
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([
+      expect.objectContaining({ title: '分组 01', nodeIds: ['character', 'scene'] }),
+    ])
+    const groupOverlay = screen.getByRole('group', { name: '节点分组：分组 01' })
+    expect(groupOverlay).toBeVisible()
+    expect(groupOverlay).toHaveStyle({ left: '48px', top: '26px' })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        {
+          id: 'character',
+          type: 'position',
+          position: { x: 160, y: 120 },
+          dragging: true,
+        },
+      ])
+    })
+    expect(groupOverlay).toHaveStyle({ left: '128px', top: '66px' })
+
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        { id: 'character', type: 'select', selected: false },
+        { id: 'scene', type: 'select', selected: false },
+      ])
+    })
+    await user.click(screen.getByRole('button', { name: '选择分组：分组 01' }))
+    expect(latestFlowProps?.nodes.filter(({ selected }) => selected).map(({ id }) => id)).toEqual([
+      'character',
+      'scene',
+    ])
+
+    await user.click(screen.getByRole('button', { name: '取消分组' }))
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([])
+    expect(useProjectStore.getState().past).toHaveLength(2)
+    act(() => useProjectStore.getState().undo())
+    expect(useProjectStore.getState().activeProject?.groups).toHaveLength(1)
+    act(() => useProjectStore.getState().redo())
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([])
   })
 
   test('renders drag positions continuously but commits one history entry on release', () => {

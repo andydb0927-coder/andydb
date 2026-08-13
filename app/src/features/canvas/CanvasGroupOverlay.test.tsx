@@ -1,0 +1,35 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { expect, test, vi } from 'vitest'
+
+import type { CanvasGroup } from '../project/model'
+import { CanvasGroupOverlay } from './CanvasGroupOverlay'
+
+const group: CanvasGroup = {
+  id: 'group-1',
+  title: '分组 01',
+  nodeIds: ['a', 'b'],
+  createdAt: '2026-08-13T08:00:00.000Z',
+  updatedAt: '2026-08-13T08:00:00.000Z',
+}
+
+test('exposes a non-blocking visual group with keyboard-operable select and ungroup actions', async () => {
+  const user = userEvent.setup()
+  const onSelect = vi.fn()
+  const onUngroup = vi.fn()
+  render(
+    <CanvasGroupOverlay
+      group={group}
+      bounds={{ x: 20, y: 40, width: 600, height: 360 }}
+      onSelect={onSelect}
+      onUngroup={onUngroup}
+    />,
+  )
+
+  const overlay = screen.getByRole('group', { name: '节点分组：分组 01' })
+  expect(overlay).toHaveStyle({ left: '20px', top: '40px', width: '600px', height: '360px' })
+  await user.click(screen.getByRole('button', { name: '选择分组：分组 01' }))
+  await user.click(screen.getByRole('button', { name: '取消分组：分组 01' }))
+  expect(onSelect).toHaveBeenCalledOnce()
+  expect(onUngroup).toHaveBeenCalledOnce()
+})

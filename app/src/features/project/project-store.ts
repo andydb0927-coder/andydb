@@ -50,6 +50,8 @@ interface ProjectStore {
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
+  groupNodes: (nodeIds: Iterable<string>) => string | undefined
+  ungroupNodes: (groupId: string) => boolean
   deleteNode: (nodeId: string) => void
   connectNodes: (edge: DependencyEdge) => ConnectionValidationResult
   disconnectNodes: (edgeId: string) => boolean
@@ -216,6 +218,15 @@ function nextVideoNumber(nodes: CanvasNode[], source: CanvasNode) {
   return candidate
 }
 
+function nextGroupNumber(titles: Iterable<string>) {
+  let highest = 0
+  for (const title of titles) {
+    const match = title.match(/^分组\s*(\d+)$/)
+    if (match) highest = Math.max(highest, Number(match[1]))
+  }
+  return highest + 1
+}
+
 export const useProjectStore = create<ProjectStore>((set, get) => {
   let persistenceRequestId = 0
   let hydrationRequestId = 0
@@ -350,10 +361,68 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
+    groupNodes: (nodeIds) => {
+      let createdGroupId: string | undefined
+      commit((project) => {
+        const requested = new Set(nodeIds)
+        const orderedNodeIds = project.nodes
+          .filter(({ id }) => requested.has(id))
+          .map(({ id }) => id)
+        if (orderedNodeIds.length < 2) return project
+
+        const selected = new Set(orderedNodeIds)
+        const existingGroups = project.groups ?? []
+        const timestamp = new Date().toISOString()
+        const remainingGroups = existingGroups
+          .map((group) => {
+            const nextNodeIds = group.nodeIds.filter(
+              (nodeId) => !selected.has(nodeId),
+            )
+            return nextNodeIds.length === group.nodeIds.length
+              ? group
+              : { ...group, nodeIds: nextNodeIds, updatedAt: timestamp }
+          })
+          .filter((group) => group.nodeIds.length >= 2)
+        createdGroupId = crypto.randomUUID()
+        const number = nextGroupNumber(existingGroups.map(({ title }) => title))
+
+        return withUpdatedTimestamp({
+          ...project,
+          groups: [
+            ...remainingGroups,
+            {
+              id: createdGroupId,
+              title: `分组 ${String(number).padStart(2, '0')}`,
+              nodeIds: orderedNodeIds,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            },
+          ],
+        })
+      })
+      return createdGroupId
+    },
+
+    ungroupNodes: (groupId) => {
+      let removed = false
+      commit((project) => {
+        if (!(project.groups ?? []).some(({ id }) => id === groupId)) {
+          return project
+        }
+        removed = true
+        return withUpdatedTimestamp({
+          ...project,
+          groups: (project.groups ?? []).filter(({ id }) => id !== groupId),
+        })
+      })
+      return removed
+    },
+
     deleteNode: (nodeId) => {
       commit((project) => {
         if (!project.nodes.some((node) => node.id === nodeId)) return project
         const downstream = findDownstream(project, nodeId)
+        const timestamp = new Date().toISOString()
 
         return withUpdatedTimestamp({
           ...project,
@@ -370,6 +439,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ),
           timeline: project.timeline.filter((item) => item.nodeId !== nodeId),
           jobs: project.jobs.filter((job) => job.nodeId !== nodeId),
+          ...(project.groups
+            ? {
+                groups: project.groups
+                  .map((group) => {
+                    const nextNodeIds = group.nodeIds.filter(
+                      (id) => id !== nodeId,
+                    )
+                    return nextNodeIds.length === group.nodeIds.length
+                      ? group
+                      : { ...group, nodeIds: nextNodeIds, updatedAt: timestamp }
+                  })
+                  .filter((group) => group.nodeIds.length >= 2),
+              }
+            : {}),
         })
       })
     },

@@ -81,6 +81,14 @@ export interface CanvasNode {
   card?: CreativeCard
 }
 
+export interface CanvasGroup {
+  id: string
+  title: string
+  nodeIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CanvasCreation {
   node: CanvasNode
   asset?: Asset
@@ -137,6 +145,7 @@ export interface Project {
   timeline: TimelineItem[]
   jobs: GenerationJob[]
   exportJobs: ExportJob[]
+  groups?: CanvasGroup[]
 }
 
 export function createProject(title: string, intent: string): Project {
@@ -154,6 +163,7 @@ export function createProject(title: string, intent: string): Project {
     timeline: [],
     jobs: [],
     exportJobs: [],
+    groups: [],
   }
 }
 
