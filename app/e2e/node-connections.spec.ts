@@ -171,13 +171,12 @@ async function measureEdgeHitBand(
           const centerEdge = edgeAt(screenPoint.x, screenPoint.y)
           const edge11 = edgeAt(at11.x, at11.y)
           const edge13 = edgeAt(at13.x, at13.y)
-          const hasAdjacentEdge =
-            (edge11 !== null && edge11 !== label) ||
-            (edge13 !== null && edge13 !== label)
+          const at11Blocked = isBlockedAt(at11.x, at11.y)
           if (
             centerEdge === label &&
-            !hasAdjacentEdge &&
-            !isBlockedAt(at13.x, at13.y)
+            edge11 === label &&
+            edge13 !== label &&
+            !at11Blocked
           ) {
             return { at11, at13, edge11, edge13 }
           }
@@ -186,7 +185,7 @@ async function measureEdgeHitBand(
               centerEdge,
               edge11,
               edge13,
-              hasAdjacentEdge,
+              at11Blocked,
               zoom,
             })
           }
@@ -194,7 +193,7 @@ async function measureEdgeHitBand(
       }
 
       throw new Error(
-        `No isolated dependency edge boundary point found: ${JSON.stringify({
+        `No dependency edge boundary point found: ${JSON.stringify({
           expectedEdgeLabel: label,
           diagnostics,
         })}`,
