@@ -18,6 +18,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
@@ -2059,6 +2060,11 @@ export function CanvasPage({
         <div className="canvas-workflow-layer" hidden={workspaceMode !== 'workflow'}>
         <ReactFlow<CreativeFlowNode, DependencyFlowEdge>
           aria-label="创作节点图"
+          style={
+            {
+              '--canvas-handle-hit-size': `${24 / Math.max(zoomPercent / 100, 0.35)}px`,
+            } as CSSProperties
+          }
           nodes={flowNodes}
           edges={flowEdges}
           nodeTypes={nodeTypes}

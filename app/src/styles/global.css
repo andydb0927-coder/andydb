@@ -2281,6 +2281,17 @@ select {
     outline-offset 140ms ease;
 }
 
+.react-flow__handle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--canvas-handle-hit-size, 24px);
+  height: var(--canvas-handle-hit-size, 24px);
+  border-radius: 50%;
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
 .react-flow__node:hover .react-flow__handle,
 .react-flow__node:focus-within .react-flow__handle,
 .react-flow__node.selected .react-flow__handle,

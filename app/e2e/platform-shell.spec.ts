@@ -9,17 +9,16 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
 
   await page.goto('/')
   await expect(page.getByRole('navigation', { name: '首页导航' })).toBeVisible()
-  await page.getByRole('link', { name: '项目', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '全部项目' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: '平台导航' })).toBeVisible()
-  await page.getByRole('link', { name: '工作流与模板' }).click()
-  await page.getByRole('link', { name: '使用电影感叙事' }).click()
+  await page.getByRole('link', { name: '新建项目', exact: true }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(page).toHaveURL(/\/project\/[^/]+$/)
+  const projectTitle = await page.getByRole('heading', { level: 1 }).textContent()
+  expect(projectTitle).toMatch(/^未命名项目 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
 
   await page.getByRole('link', { name: '素材与历史' }).click()
   await expect(page.getByRole('heading', { name: '素材与历史' })).toBeVisible()
   await expect(
-    page.getByRole('region', { name: '电影感叙事' }).getByText('角色参考', { exact: true }),
+    page.getByRole('region', { name: projectTitle! }).getByText('角色参考', { exact: true }),
   ).toBeVisible()
   await page.getByRole('link', { name: '在画布中查看 角色参考' }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()

@@ -1,7 +1,12 @@
 import Dexie from 'dexie'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ComponentProps, ComponentType, ReactNode } from 'react'
+import type {
+  ComponentProps,
+  ComponentType,
+  CSSProperties,
+  ReactNode,
+} from 'react'
 import {
   MemoryRouter,
   Route,
@@ -38,6 +43,7 @@ interface FlowNodeFixture {
 
 interface FlowPropsFixture {
   children?: ReactNode
+  style?: CSSProperties
   nodes: FlowNodeFixture[]
   edges: Array<{
     id: string
@@ -78,6 +84,10 @@ interface FlowPropsFixture {
   panActivationKeyCode: string
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
+  onMove?(
+    event: unknown,
+    viewport: { x: number; y: number; zoom: number },
+  ): void
   snapToGrid?: boolean
   onPaneClick?(event: { clientX: number; clientY: number; detail?: number }): void
   onPaneContextMenu?(event: {
@@ -127,7 +137,7 @@ vi.mock('@xyflow/react', () => ({
   ReactFlow: (props: FlowPropsFixture & { 'aria-label'?: string }) => {
     latestFlowProps = props
     return (
-      <div role="region" aria-label={props['aria-label']}>
+      <div role="region" aria-label={props['aria-label']} style={props.style}>
         {props.nodes.map((node) => {
           const Node = props.nodeTypes[node.type ?? 'asset']
           return (
@@ -2445,6 +2455,24 @@ describe('creative canvas', () => {
 
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(5)
     expect(useProjectStore.getState().activeProject?.timeline).toHaveLength(0)
+  })
+
+  test('keeps native connection handle hit areas screen-sized across canvas zoom', () => {
+    renderCanvas()
+
+    expect(latestFlowProps?.style).toHaveProperty(
+      '--canvas-handle-hit-size',
+      '24px',
+    )
+
+    act(() => {
+      latestFlowProps?.onMove?.({}, { x: 0, y: 0, zoom: 0.35 })
+    })
+
+    expect(latestFlowProps?.style).toHaveProperty(
+      '--canvas-handle-hit-size',
+      `${24 / 0.35}px`,
+    )
   })
 
   test('moves every selected node in one undoable mutation', () => {

@@ -557,9 +557,26 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   ).toBeVisible()
 
   await character.hover()
-  const sourceHandle = page.getByLabel('从角色参考建立连接')
-  const targetHandle = page.getByLabel('连接到视频 01')
-  await sourceHandle.dragTo(targetHandle)
+  const sourceHandle = page.getByRole('button', {
+    name: '从角色参考建立连接',
+    exact: true,
+  })
+  const targetHandle = page.getByRole('button', {
+    name: '连接到视频 01',
+    exact: true,
+  })
+  const handleHitSize = await sourceHandle.evaluate((handle) => {
+    const viewport = handle
+      .closest('.react-flow')
+      ?.querySelector<HTMLElement>('.react-flow__viewport')
+    const zoom = viewport
+      ? new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a
+      : 1
+
+    return Number.parseFloat(getComputedStyle(handle, '::after').width) * zoom
+  })
+  expect(handleHitSize).toBeCloseTo(24, 1)
+  await dragHandle(page, sourceHandle, targetHandle)
   const characterVideoEdge = page.getByLabel('角色参考 → 视频 01', {
     exact: true,
   })
