@@ -28,14 +28,18 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to structured creative cards after asset lifecycle history', () => {
+  test('advances to workflow templates after the story bible phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
     expect(defaultPlatformTaskStatuses['canvas-workflow']).toBe('completed')
     expect(defaultPlatformTaskStatuses['models-generation']).toBe('completed')
     expect(defaultPlatformTaskStatuses['assets-history']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['creative-cards']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['creative-cards']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['workflow-templates']).toBe('in-progress')
+    expect(
+      platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
+    ).toBe('/story')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })
