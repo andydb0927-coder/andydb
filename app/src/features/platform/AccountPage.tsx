@@ -316,14 +316,15 @@ export function AccountPage({
         <p className="account-boundary-note">Access key 未生成；当前 CLI 仅通过本地工作区桥接运行。</p>
       </section>
 
-      <section className="account-summary" aria-label="我的项目统计">
+      <section id="credits" className="account-summary" aria-label="我的项目统计">
+        <div><span>积分</span><strong>本地演示不计费</strong></div>
         <div><span>项目</span><strong>{projects.length} 个本地项目</strong></div>
         <div><span>画布</span><strong>{stats.nodes} 个画布节点</strong></div>
         <div><span>素材</span><strong>{stats.assets} 个项目素材</strong></div>
         <div><span>评论</span><strong>{commentCount} 条待处理</strong></div>
       </section>
 
-      <section className="platform-section account-membership" aria-labelledby="membership-title">
+      <section id="membership" className="platform-section account-membership" aria-labelledby="membership-title">
         <div className="platform-section__heading">
           <div><p>MEMBERSHIP · 本地模拟</p><h2 id="membership-title">会员状态</h2></div>
           <strong>{subscription ? `当前：${membershipPlan(subscription.plan).name}` : '正在读取'}</strong>

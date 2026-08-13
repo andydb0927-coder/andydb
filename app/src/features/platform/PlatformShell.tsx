@@ -1,7 +1,25 @@
-import { BookOpenText, Bot, Clapperboard, ClipboardList, Compass, Cpu, Film, FolderOpen, PackageCheck, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
+import {
+  BookOpenText,
+  Bot,
+  CircleHelp,
+  Clapperboard,
+  ClipboardList,
+  Compass,
+  Cpu,
+  Film,
+  FolderKanban,
+  FolderOpen,
+  Home,
+  PackageCheck,
+  PanelsTopLeft,
+  Plus,
+  Sparkles,
+  Trophy,
+  UserRound,
+} from 'lucide-react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 
 import { PlatformTaskDrawer } from './PlatformTaskDrawer'
 
@@ -20,12 +38,26 @@ export const platformNavigation = [
   { to: '/account', label: '本地工作区', icon: UserRound, end: false },
 ] as const
 
+const homeNavigation = [
+  { to: '/', label: '首页', icon: Home, end: true },
+  { to: '/projects', label: '项目', icon: FolderKanban, end: true },
+  { to: '/agents', label: 'Skills', icon: Sparkles, end: false },
+  {
+    to: '/discover?tag=精选画布',
+    label: '创作者挑战赛',
+    icon: Trophy,
+    end: false,
+  },
+] as const
+
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {
   const { projectId } = useParams<{ projectId: string }>()
+  const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [tasksOpen, setTasksOpen] = useState(false)
   const taskTriggerRef = useRef<HTMLButtonElement>(null)
   const canvasPath = projectId ? `/project/${projectId}` : '/'
+  const isHomepage = mode === 'standard' && location.pathname === '/'
 
   const closeTasks = useCallback(() => {
     setTasksOpen(false)
@@ -41,11 +73,15 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
     return () => document.removeEventListener('keydown', closeOnEscape)
   }, [closeTasks, tasksOpen])
 
+  useEffect(() => {
+    if (isHomepage && tasksOpen) setTasksOpen(false)
+  }, [isHomepage, tasksOpen])
+
   return (
     <div
-      className={`platform-shell platform-shell--${mode}${collapsed ? ' platform-shell--collapsed' : ''}${tasksOpen ? ' platform-shell--tasks-open' : ''}`}
+      className={`platform-shell platform-shell--${mode}${isHomepage ? ' platform-shell--home' : ''}${collapsed ? ' platform-shell--collapsed' : ''}${tasksOpen && !isHomepage ? ' platform-shell--tasks-open' : ''}`}
     >
-      <aside className="platform-shell__rail">
+      <aside className="platform-shell__rail" aria-label={isHomepage ? '侧边导航' : undefined}>
         <button
           aria-label={collapsed ? '展开平台导航' : '收起平台导航'}
           className="platform-shell__collapse focus-visible"
@@ -58,52 +94,89 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
           <Clapperboard aria-hidden="true" />
           <span>无线画布</span>
         </div>
-        <nav
-          aria-label="平台导航"
-          className="platform-shell__navigation"
-          data-collapsed={collapsed}
-        >
-          <NavLink
-            className={({ isActive }) =>
-              `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
-            }
-            end
-            to={canvasPath}
+        {isHomepage ? (
+          <>
+            <Link
+              className="platform-shell__new-project focus-visible"
+              to="/#create-project"
+            >
+              <Plus aria-hidden="true" />
+              <span>新建项目</span>
+            </Link>
+            <nav
+              aria-label="首页导航"
+              className="platform-shell__navigation"
+              data-collapsed={collapsed}
+            >
+              {homeNavigation.map(({ to, label, icon: Icon, end }) => (
+                <NavLink
+                  key={to}
+                  className={({ isActive }) =>
+                    `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
+                  }
+                  end={end}
+                  to={to}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <Link className="platform-shell__help focus-visible" to="/#help">
+              <CircleHelp aria-hidden="true" />
+              <span>帮助</span>
+            </Link>
+          </>
+        ) : (
+          <nav
+            aria-label="平台导航"
+            className="platform-shell__navigation"
+            data-collapsed={collapsed}
           >
-            <Clapperboard aria-hidden="true" />
-            <span>创作画布</span>
-          </NavLink>
-          {platformNavigation.map(({ to, label, icon: Icon, end }) => (
             <NavLink
-              key={to}
               className={({ isActive }) =>
                 `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
               }
-              end={end}
-              to={to}
+              end
+              to={canvasPath}
             >
-              <Icon aria-hidden="true" />
-              <span>{label}</span>
+              <Clapperboard aria-hidden="true" />
+              <span>创作画布</span>
             </NavLink>
-          ))}
-        </nav>
-        <button
-          ref={taskTriggerRef}
-          aria-controls="platform-task-drawer"
-          aria-expanded={tasksOpen}
-          aria-label={tasksOpen ? '关闭阶段任务' : '打开阶段任务'}
-          className="platform-shell__task-trigger focus-visible"
-          type="button"
-          onClick={() => (tasksOpen ? closeTasks() : setTasksOpen(true))}
-        >
-          <ClipboardList aria-hidden="true" />
-          <span>阶段任务</span>
-        </button>
+            {platformNavigation.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                className={({ isActive }) =>
+                  `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
+                }
+                end={end}
+                to={to}
+              >
+                <Icon aria-hidden="true" />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        )}
+        {isHomepage ? null : (
+          <button
+            ref={taskTriggerRef}
+            aria-controls="platform-task-drawer"
+            aria-expanded={tasksOpen}
+            aria-label={tasksOpen ? '关闭阶段任务' : '打开阶段任务'}
+            className="platform-shell__task-trigger focus-visible"
+            type="button"
+            onClick={() => (tasksOpen ? closeTasks() : setTasksOpen(true))}
+          >
+            <ClipboardList aria-hidden="true" />
+            <span>阶段任务</span>
+          </button>
+        )}
       </aside>
       <div className="platform-shell__content">
         <Outlet />
       </div>
-      {tasksOpen ? <PlatformTaskDrawer onRequestClose={closeTasks} /> : null}
+      {tasksOpen && !isHomepage ? <PlatformTaskDrawer onRequestClose={closeTasks} /> : null}
     </div>
   )
 }

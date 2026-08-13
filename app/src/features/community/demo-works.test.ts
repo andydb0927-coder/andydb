@@ -9,6 +9,7 @@ describe('community demo works', () => {
     expect(works.length).toBeGreaterThanOrEqual(8)
     expect(new Set(works.map(({ id }) => id)).size).toBe(works.length)
     expect(works.every(({ authorVerified }) => authorVerified)).toBe(true)
+    expect(works.filter(({ tags }) => tags.includes('Seedance2.5'))).toHaveLength(2)
     for (const category of [
       '精选画布',
       '专业影视',

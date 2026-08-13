@@ -70,6 +70,7 @@ describe('community repository', () => {
     const { community, database } = createRepositories()
     const existing = {
       ...buildDemoWorks()[0],
+      tags: buildDemoWorks()[0].tags.filter((tag) => tag !== 'Seedance2.5'),
       metrics: { views: 999, likes: 88, favorites: 77 },
     }
     await database.publishedWorks.put(existing)
@@ -78,6 +79,7 @@ describe('community repository', () => {
     const works = await community.listPublished({ query: '', tag: 'all', sort: 'latest' })
     expect(works).toHaveLength(buildDemoWorks().length)
     expect((await community.get(existing.id))?.metrics).toEqual(existing.metrics)
+    expect((await community.get(existing.id))?.tags).toContain('Seedance2.5')
     expect(await community.ensureDemoWorks()).toBe(false)
   })
 

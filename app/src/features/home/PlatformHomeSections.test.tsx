@@ -39,13 +39,12 @@ function renderHome() {
 }
 
 describe('platform home sections', () => {
-  test('renders the required hero, local activity countdown and six canvas modes', async () => {
-    const user = userEvent.setup()
+  test('renders the exact hero and six specified canvas modes', async () => {
     const { contentRepository } = renderHome()
 
     expect(
       await screen.findByRole('heading', {
-        name: '只需一张画布，连接你的多种创意想法',
+        name: '只需一张画布 连接你的多种创意想法',
       }),
     ).toBeVisible()
     expect(contentRepository.ensureSeed).toHaveBeenCalledTimes(1)
@@ -53,13 +52,42 @@ describe('platform home sections', () => {
       'href',
       '#create-project',
     )
-    expect(screen.getByRole('timer')).toHaveTextContent(/\d{2}:\d{2}:\d{2}/)
     const modes = screen.getByRole('group', { name: '画布创作模式' })
     expect(within(modes).getAllByRole('button')).toHaveLength(6)
-    expect(within(modes).getByRole('button', { name: /逐帧拉片/ })).toBeVisible()
+    for (const name of [
+      'SD2.5直出5分钟视频',
+      '片段重拍',
+      '智能引用 AutoLink',
+      '讲解视频',
+      '素材混剪',
+      '逐帧拉片',
+    ]) {
+      expect(within(modes).getByRole('button', { name: new RegExp(name) })).toBeVisible()
+    }
+  })
 
-    await user.click(screen.getByRole('button', { name: '关闭活动横幅' }))
-    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+  test('cycles through five linked product feature cards', async () => {
+    const user = userEvent.setup()
+    renderHome()
+
+    const carousel = await screen.findByRole('region', { name: '产品特性轮播' })
+    expect(within(carousel).getAllByTestId('home-feature-card')).toHaveLength(5)
+    const position = within(carousel).getByText('1 / 5 · Seedance 2.5 模型上新')
+    expect(position).toHaveAttribute('aria-live', 'polite')
+    expect(position).toHaveTextContent(
+      '1 / 5 · Seedance 2.5 模型上新',
+    )
+    expect(within(carousel).getByRole('link', { name: /Seedance 2.5 模型上新/ })).toHaveAttribute(
+      'href',
+      '/models',
+    )
+
+    await user.click(within(carousel).getByRole('button', { name: '下一张特性' }))
+    expect(within(carousel).getByText('2 / 5 · 导演台')).toBeVisible()
+    await user.click(within(carousel).getByRole('button', { name: '上一张特性' }))
+    expect(within(carousel).getByText('1 / 5 · Seedance 2.5 模型上新')).toHaveTextContent(
+      '1 / 5 · Seedance 2.5 模型上新',
+    )
   })
 
   test('validates an Agent idea, accepts local attachments and sends the idea to canvas', async () => {
@@ -87,15 +115,23 @@ describe('platform home sections', () => {
     })
   })
 
-  test('groups six recommendation cards and starts a selected Skill', async () => {
+  test('switches horizontal Skill categories and starts a selected Skill', async () => {
     const user = userEvent.setup()
     const { onStartPrompt } = renderHome()
-    await screen.findByRole('heading', { name: '推荐 Skill' })
+    await screen.findByRole('heading', { name: 'Skill 灵感库' })
 
+    const categories = screen.getByRole('group', { name: 'Skill 分类' })
     for (const category of ['专业影视', '商业广告', '音乐MV']) {
-      const group = screen.getByRole('region', { name: category })
-      expect(within(group).getAllByRole('article')).toHaveLength(2)
+      expect(within(categories).getByRole('button', { name: category })).toBeVisible()
     }
+    expect(within(categories).getByRole('button', { name: '专业影视' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('article', { name: '电影叙事分镜师' })).toBeVisible()
+    expect(screen.getByRole('article', { name: '连续性导演' })).toBeVisible()
+
+    await user.click(within(categories).getByRole('button', { name: '商业广告' }))
     const card = screen.getByRole('article', { name: '品牌氛围片' })
     expect(within(card).getByText('栖光创意')).toBeVisible()
     expect(within(card).getByText('3,612 次使用')).toBeVisible()
@@ -111,28 +147,29 @@ describe('platform home sections', () => {
     )
   })
 
-  test('links four capabilities and filters the eight-work TV Show locally', async () => {
+  test('filters the eight-work TV Show by Seedance2.5 and explicit local search', async () => {
     const user = userEvent.setup()
     const { communityRepository } = renderHome()
-    expect(await screen.findByRole('heading', { name: '模型与创作工具' })).toBeVisible()
-    expect(screen.getAllByTestId('home-capability')).toHaveLength(4)
-    expect(screen.getByRole('link', { name: /查看模型能力/ })).toHaveAttribute(
-      'href',
-      '/models',
-    )
     expect(communityRepository.ensureDemoWorks).toHaveBeenCalledTimes(1)
 
     const show = await screen.findByRole('region', { name: 'TV Show 社区作品' })
     expect(within(show).getAllByRole('article')).toHaveLength(8)
+    expect(within(show).getByRole('button', { name: 'Seedance2.5' })).toBeVisible()
     expect(
       within(show).getByRole('button', { name: '教育生活' }),
     ).toBeVisible()
+    await user.click(within(show).getByRole('button', { name: 'Seedance2.5' }))
+    expect(within(show).getAllByRole('article')).toHaveLength(2)
+
+    await user.click(within(show).getByRole('button', { name: '全部' }))
     await user.click(within(show).getByRole('button', { name: '动漫游戏' }))
     expect(within(show).getAllByRole('article')).toHaveLength(1)
     expect(within(show).getByRole('article', { name: '机甲苏醒时' })).toBeVisible()
 
     await user.click(within(show).getByRole('button', { name: '全部' }))
     await user.type(within(show).getByRole('searchbox', { name: '搜索 TV Show' }), '山岚')
+    expect(within(show).getAllByRole('article')).toHaveLength(8)
+    await user.click(within(show).getByRole('button', { name: '搜索作品' }))
     const card = within(show).getByRole('article', { name: '山岚入茶' })
     expect(within(card).getByLabelText('一帧商业 已认证')).toBeVisible()
     expect(

@@ -20,8 +20,14 @@ export class HomeContentRepository implements PlatformHomeContentRepository {
         seed.map(({ id }) => id),
       )
       const missing = seed.filter((_, index) => !existing[index])
-      if (missing.length === 0) return false
-      await this.database.homeContent.bulkAdd(missing)
+      const refreshed = seed.filter((record, index) => {
+        if (record.kind !== 'mode' && record.kind !== 'capability') return false
+        const current = existing[index]
+        return current !== undefined && JSON.stringify(current) !== JSON.stringify(record)
+      })
+      const writes = [...missing, ...refreshed]
+      if (writes.length === 0) return false
+      await this.database.homeContent.bulkPut(writes)
       return true
     })
   }

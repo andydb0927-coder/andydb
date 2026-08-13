@@ -118,6 +118,24 @@ afterEach(() => {
 })
 
 describe('project launcher', () => {
+  test('renders the public-style account actions as real local routes', () => {
+    renderLauncher()
+
+    const navigation = screen.getByRole('navigation', { name: '首页账户入口' })
+    expect(within(navigation).getByRole('link', { name: '积分超市' })).toHaveAttribute(
+      'href',
+      '/account#credits',
+    )
+    expect(within(navigation).getByRole('link', { name: '开通会员' })).toHaveAttribute(
+      'href',
+      '/account#membership',
+    )
+    expect(within(navigation).getByRole('link', { name: '注册/登录' })).toHaveAttribute(
+      'href',
+      '/account',
+    )
+  })
+
   test('opens a locally seeded mode with its canvas hint persisted', async () => {
     const user = userEvent.setup()
     const { repository } = renderLauncher()

@@ -389,13 +389,16 @@ export function ProjectLauncherPage({
         <Link className="launcher-brand focus-visible" to="/">
           无线画布
         </Link>
-        <nav className="launcher-header__actions" aria-label="辅助导航">
-          <a className="launcher-header__link focus-visible" href="#help">
-            帮助
-          </a>
-          <button className="launcher-account focus-visible" type="button">
-            账户
-          </button>
+        <nav className="launcher-header__actions" aria-label="首页账户入口">
+          <Link className="launcher-header__link focus-visible" to="/account#credits">
+            积分超市
+          </Link>
+          <Link className="launcher-header__membership focus-visible" to="/account#membership">
+            开通会员
+          </Link>
+          <Link className="launcher-account focus-visible" to="/account">
+            注册/登录
+          </Link>
         </nav>
       </header>
 
@@ -568,6 +571,19 @@ export function ProjectLauncherPage({
           ) : null}
         </div>
       </section>
+
+      <footer id="help" className="launcher-help" aria-labelledby="launcher-help-title">
+        <div>
+          <p className="launcher-eyebrow">LOCAL DEMO · HELP</p>
+          <h2 id="launcher-help-title">从一个真实入口继续创作</h2>
+          <p>所有演示内容保存在当前浏览器；不会连接 LibTV、消耗积分或发起真实购买。</p>
+        </div>
+        <nav aria-label="首页帮助链接">
+          <Link to="/projects">查看项目</Link>
+          <Link to="/agents">浏览 Skills</Link>
+          <Link to="/discover">打开作品墙</Link>
+        </nav>
+      </footer>
     </main>
   )
 }

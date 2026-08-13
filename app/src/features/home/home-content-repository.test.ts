@@ -56,7 +56,11 @@ describe('home content repository', () => {
       ...seed[0],
       title: '保留的本地活动文案',
     }
-    await database.homeContent.put(customized)
+    const staleMode: HomeContentRecord = {
+      ...seed.find(({ kind }) => kind === 'mode')!,
+      title: '旧版创作模式',
+    }
+    await database.homeContent.bulkPut([customized, staleMode])
 
     expect(await repository.ensureSeed()).toBe(true)
     expect(await repository.ensureSeed()).toBe(false)
@@ -65,6 +69,9 @@ describe('home content repository', () => {
     expect(records).toHaveLength(seed.length)
     expect(records.find(({ id }) => id === customized.id)?.title).toBe(
       '保留的本地活动文案',
+    )
+    expect(records.find(({ id }) => id === staleMode.id)?.title).toBe(
+      'SD2.5直出5分钟视频',
     )
     expect(records.map(({ order }) => order)).toEqual(
       [...records.map(({ order }) => order)].sort((a, b) => a - b),

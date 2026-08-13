@@ -1,5 +1,7 @@
 import {
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   Film,
   Layers3,
   Paperclip,
@@ -7,7 +9,6 @@ import {
   Send,
   Sparkles,
   WandSparkles,
-  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -18,7 +19,6 @@ import type {
 import type { PublishedWork } from '../community/community-model'
 import { WorkCard } from '../community/WorkCard'
 import type {
-  HomeActivityContent,
   HomeCapabilityContent,
   HomeContentRecord,
   HomeModeContent,
@@ -58,6 +58,7 @@ type CommunityState =
 const skillCategories: HomeSkillCategory[] = ['专业影视', '商业广告', '音乐MV']
 const showCategories = [
   '全部',
+  'Seedance2.5',
   '精选画布',
   '专业影视',
   '短剧漫剧',
@@ -65,10 +66,6 @@ const showCategories = [
   '动漫游戏',
   '教育生活',
 ] as const
-
-function isActivity(record: HomeContentRecord): record is HomeActivityContent {
-  return record.kind === 'activity'
-}
 
 function isMode(record: HomeContentRecord): record is HomeModeContent {
   return record.kind === 'mode'
@@ -88,16 +85,6 @@ function readableUsage(value: number): string {
   return new Intl.NumberFormat('zh-CN').format(value)
 }
 
-function readableCountdown(totalSeconds: number): string {
-  const safe = Math.max(0, Math.floor(totalSeconds))
-  const hours = Math.floor(safe / 3600)
-  const minutes = Math.floor((safe % 3600) / 60)
-  const seconds = safe % 60
-  return [hours, minutes, seconds]
-    .map((value) => String(value).padStart(2, '0'))
-    .join(':')
-}
-
 export function PlatformHomeSections({
   contentRepository,
   communityRepository,
@@ -108,13 +95,15 @@ export function PlatformHomeSections({
   const [community, setCommunity] = useState<CommunityState>({
     status: 'loading',
   })
-  const [activityVisible, setActivityVisible] = useState(true)
-  const [countdown, setCountdown] = useState(0)
   const [agentIdea, setAgentIdea] = useState('')
   const [agentError, setAgentError] = useState('')
   const [attachments, setAttachments] = useState<string[]>([])
+  const [selectedSkillCategory, setSelectedSkillCategory] =
+    useState<HomeSkillCategory>('专业影视')
+  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0)
   const [showCategory, setShowCategory] =
     useState<(typeof showCategories)[number]>('全部')
+  const [showDraftQuery, setShowDraftQuery] = useState('')
   const [showQuery, setShowQuery] = useState('')
 
   useEffect(() => {
@@ -125,7 +114,6 @@ export function PlatformHomeSections({
       .then((records) => {
         if (!active) return
         setContent({ status: 'loaded', records })
-        setCountdown(records.find(isActivity)?.durationSeconds ?? 0)
       })
       .catch(() => {
         if (active) setContent({ status: 'error' })
@@ -157,19 +145,17 @@ export function PlatformHomeSections({
     }
   }, [communityRepository])
 
-  useEffect(() => {
-    if (!activityVisible || countdown <= 0) return
-    const timer = window.setInterval(() => {
-      setCountdown((value) => Math.max(0, value - 1))
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [activityVisible, countdown > 0])
-
   const records = content.status === 'loaded' ? content.records : []
-  const activity = records.find(isActivity)
   const modes = records.filter(isMode)
   const skills = records.filter(isSkill)
   const capabilities = records.filter(isCapability)
+  const orderedCapabilities = capabilities.map(
+    (_, offset) =>
+      capabilities[(activeFeatureIndex + offset) % capabilities.length],
+  )
+  const visibleSkills = skills.filter(
+    ({ category }) => category === selectedSkillCategory,
+  )
   const visibleWorks = useMemo(() => {
     if (community.status !== 'loaded') return []
     const query = showQuery.trim().toLocaleLowerCase()
@@ -184,6 +170,13 @@ export function PlatformHomeSections({
     })
   }, [community, showCategory, showQuery])
 
+  const cycleFeature = (direction: -1 | 1) => {
+    if (capabilities.length === 0) return
+    setActiveFeatureIndex((index) =>
+      (index + direction + capabilities.length) % capabilities.length,
+    )
+  }
+
   const sendIdea = () => {
     const prompt = agentIdea.trim()
     if (!prompt) {
@@ -196,39 +189,18 @@ export function PlatformHomeSections({
 
   return (
     <>
-      {activityVisible && activity ? (
-        <aside className="home-activity" aria-label="限时活动">
-          <div className="home-activity__copy">
-            <strong>{activity.title}</strong>
-            <span>{activity.description}</span>
-          </div>
-          <time className="home-activity__timer" role="timer">
-            {readableCountdown(countdown)}
-          </time>
-          <a className="home-activity__cta focus-visible" href="#create-project">
-            {activity.ctaLabel}<ArrowRight aria-hidden="true" />
-          </a>
-          <button
-            className="home-activity__close focus-visible"
-            type="button"
-            aria-label="关闭活动横幅"
-            onClick={() => setActivityVisible(false)}
-          >
-            <X aria-hidden="true" />
-          </button>
-        </aside>
-      ) : null}
-
       <section className="home-hero" aria-labelledby="home-hero-title">
         <div className="home-hero__glow" aria-hidden="true" />
-        <p className="home-kicker"><Sparkles aria-hidden="true" />LOCAL AI CREATIVE PLATFORM</p>
-        <h1 id="home-hero-title">只需一张画布，连接你的多种创意想法</h1>
-        <p className="home-hero__intro">
-          从一句灵感到镜头、素材和时间线，把每一步都留在同一张画布里。
-        </p>
-        <a className="home-hero__primary focus-visible" href="#create-project">
-          新建画布创作<ArrowRight aria-hidden="true" />
-        </a>
+        <div className="home-hero__copy">
+          <p className="home-kicker"><Sparkles aria-hidden="true" />ONE CANVAS · MANY IDEAS</p>
+          <h1 id="home-hero-title">只需一张画布 连接你的多种创意想法</h1>
+          <p className="home-hero__intro">
+            把灵感、角色、素材、生成与剪辑串进同一条创作脉络。
+          </p>
+          <a className="home-hero__primary focus-visible" href="#create-project">
+            新建画布创作<ArrowRight aria-hidden="true" />
+          </a>
+        </div>
 
         {content.status === 'loading' ? (
           <p className="home-section-state" role="status">正在加载创作模式…</p>
@@ -256,16 +228,79 @@ export function PlatformHomeSections({
               <span className="home-mode-card__index">0{index + 1}</span>
               <strong>{mode.title}</strong>
               <span>{mode.description}</span>
+              <ArrowRight className="home-mode-card__arrow" aria-hidden="true" />
             </button>
           ))}
         </div>
       </section>
 
+      {capabilities.length > 0 ? (
+        <section
+          className="home-features"
+          aria-label="产品特性轮播"
+          role="region"
+        >
+          <div className="home-features__heading">
+            <div>
+              <p className="home-kicker"><Layers3 aria-hidden="true" />WHAT'S NEW</p>
+              <h2>产品特性</h2>
+            </div>
+            <div className="home-features__controls">
+              <button
+                className="focus-visible"
+                type="button"
+                aria-label="上一张特性"
+                onClick={() => cycleFeature(-1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <p aria-live="polite" aria-atomic="true">
+                {activeFeatureIndex + 1} / {capabilities.length} · {capabilities[activeFeatureIndex]?.title}
+              </p>
+              <button
+                className="focus-visible"
+                type="button"
+                aria-label="下一张特性"
+                onClick={() => cycleFeature(1)}
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div className="home-features__viewport">
+            <div className="home-features__track">
+              {orderedCapabilities.map((capability) => {
+                const index = capabilities.findIndex(
+                  ({ id }) => id === capability.id,
+                )
+                return (
+                  <Link
+                    key={capability.id}
+                    className="home-feature-card focus-visible"
+                    data-active={activeFeatureIndex === index}
+                    data-testid="home-feature-card"
+                    to={capability.targetPath}
+                  >
+                    <span className="home-feature-card__number">0{index + 1}</span>
+                    <Film aria-hidden="true" />
+                    <span className="home-feature-card__copy">
+                      <strong>{capability.title}</strong>
+                      <small>{capability.description}</small>
+                    </span>
+                    <em>{capability.ctaLabel}<ArrowRight aria-hidden="true" /></em>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="home-agent" aria-labelledby="home-agent-title">
         <div className="home-section-heading">
-          <p className="home-kicker"><WandSparkles aria-hidden="true" />LIBTV AGENT · LOCAL</p>
+          <p className="home-kicker"><WandSparkles aria-hidden="true" />CREATIVE AGENT · LOCAL</p>
           <h2 id="home-agent-title">说出你的创意</h2>
-          <p>描述你想看见的故事，让本地画布替你接住第一步。</p>
+          <p>从一句话开始，选择合适的 Skill，把第一步直接送进本地画布。</p>
         </div>
         <div className="home-agent__composer">
           <textarea
@@ -298,9 +333,10 @@ export function PlatformHomeSections({
               className="home-agent__send focus-visible"
               type="button"
               disabled={disabled}
+              aria-label="发送创意"
               onClick={sendIdea}
             >
-              <Send aria-hidden="true" />发送创意
+              <Send aria-hidden="true" />发送
             </button>
           </div>
           {attachments.length > 0 ? (
@@ -311,77 +347,58 @@ export function PlatformHomeSections({
 
         <div className="home-skills" aria-labelledby="home-skills-title">
           <div className="home-skills__heading">
-            <h2 id="home-skills-title">推荐 Skill</h2>
+            <div>
+              <p className="home-kicker">CURATED SKILLS</p>
+              <h2 id="home-skills-title">Skill 灵感库</h2>
+            </div>
             <Link to="/agents">查看全部 Skill<ArrowRight aria-hidden="true" /></Link>
           </div>
-          {skillCategories.map((category) => (
-            <section
-              key={category}
-              className="home-skill-group"
-              aria-label={category}
-            >
-              <h3>{category}</h3>
-              <div className="home-skill-grid">
-                {skills
-                  .filter((skill) => skill.category === category)
-                  .map((skill) => (
-                    <article
-                      key={skill.id}
-                      className="home-skill-card"
-                      aria-label={skill.title}
-                    >
-                      <img src={skill.imageUrl} alt="" />
-                      <div className="home-skill-card__body">
-                        <strong>{skill.title}</strong>
-                        <p>{skill.description}</p>
-                        <div className="home-skill-card__meta">
-                          <span>{skill.author}</span>
-                          <span>{readableUsage(skill.usageCount)} 次使用</span>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          aria-label={`使用 Skill：${skill.title}`}
-                          onClick={() =>
-                            onStartPrompt({
-                              key: skill.id,
-                              title: skill.title,
-                              prompt: skill.prompt,
-                            })
-                          }
-                        >
-                          使用 Skill<ArrowRight aria-hidden="true" />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </section>
-
-      <section className="home-capabilities" aria-labelledby="home-capabilities-title">
-        <div className="home-section-heading">
-          <p className="home-kicker"><Layers3 aria-hidden="true" />LOCAL TOOLCHAIN</p>
-          <h2 id="home-capabilities-title">模型与创作工具</h2>
-        </div>
-        <div className="home-capability-strip">
-          {capabilities.map((capability) => (
-            <Link
-              key={capability.id}
-              className="home-capability focus-visible"
-              data-testid="home-capability"
-              to={capability.targetPath}
-            >
-              <Film aria-hidden="true" />
-              <span>
-                <strong>{capability.title}</strong>
-                <small>{capability.description}</small>
-              </span>
-              <em>{capability.ctaLabel}<ArrowRight aria-hidden="true" /></em>
-            </Link>
-          ))}
+          <div className="home-skill-categories" role="group" aria-label="Skill 分类">
+            {skillCategories.map((category) => (
+              <button
+                key={category}
+                className="focus-visible"
+                type="button"
+                aria-pressed={selectedSkillCategory === category}
+                onClick={() => setSelectedSkillCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          <div className="home-skill-grid">
+            {visibleSkills.map((skill) => (
+              <article
+                key={skill.id}
+                className="home-skill-card"
+                aria-label={skill.title}
+              >
+                <img src={skill.imageUrl} alt="" />
+                <div className="home-skill-card__body">
+                  <strong>{skill.title}</strong>
+                  <p>{skill.description}</p>
+                  <div className="home-skill-card__meta">
+                    <span>{skill.author}</span>
+                    <span>{readableUsage(skill.usageCount)} 次使用</span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    aria-label={`使用 Skill：${skill.title}`}
+                    onClick={() =>
+                      onStartPrompt({
+                        key: skill.id,
+                        title: skill.title,
+                        prompt: skill.prompt,
+                      })
+                    }
+                  >
+                    使用 Skill<ArrowRight aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -410,16 +427,26 @@ export function PlatformHomeSections({
               </button>
             ))}
           </div>
-          <label className="home-show__search">
-            <Search aria-hidden="true" />
-            <input
-              type="search"
-              aria-label="搜索 TV Show"
-              placeholder="搜索作品或创作者"
-              value={showQuery}
-              onChange={(event) => setShowQuery(event.target.value)}
-            />
-          </label>
+          <form
+            className="home-show__search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault()
+              setShowQuery(showDraftQuery)
+            }}
+          >
+            <label>
+              <Search aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="搜索 TV Show"
+                placeholder="搜索作品或创作者"
+                value={showDraftQuery}
+                onChange={(event) => setShowDraftQuery(event.target.value)}
+              />
+            </label>
+            <button className="focus-visible" type="submit">搜索作品</button>
+          </form>
         </div>
         {community.status === 'loading' ? (
           <p className="home-section-state" role="status">正在载入本地作品…</p>

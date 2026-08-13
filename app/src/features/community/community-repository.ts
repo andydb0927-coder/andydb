@@ -56,8 +56,25 @@ export class CommunityRepository implements CommunityWorkRepository {
         seeds.map(({ id }) => id),
       )
       const missing = seeds.filter((_, index) => !existing[index])
-      if (missing.length === 0) return false
-      await this.database.publishedWorks.bulkAdd(missing)
+      const refreshed = seeds.flatMap((seed, index) => {
+        const current = existing[index]
+        if (!current) return []
+        const tags = [...new Set([...seed.tags, ...current.tags])].slice(0, 5)
+        if (
+          JSON.stringify(tags) === JSON.stringify(current.tags) &&
+          (current.authorVerified ?? false) === (seed.authorVerified ?? false)
+        ) {
+          return []
+        }
+        return [{
+          ...current,
+          tags,
+          authorVerified: seed.authorVerified ?? current.authorVerified,
+        }]
+      })
+      const writes = [...missing, ...refreshed]
+      if (writes.length === 0) return false
+      await this.database.publishedWorks.bulkPut(writes)
       return true
     })
   }

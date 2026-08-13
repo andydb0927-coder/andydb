@@ -33,7 +33,7 @@ export function WorkCard({ work }: { work: PublishedWork }) {
           {work.tags.map((tag) => <li key={tag}>{tag}</li>)}
         </ul>
         <div className="community-metrics">
-          <span aria-label={`${work.metrics.views} 次浏览`}><Eye aria-hidden="true" />{work.metrics.views}</span>
+          <span aria-label={`${work.metrics.views} 次浏览`}><Eye aria-hidden="true" />{work.metrics.views} 播放</span>
           <span aria-label={`${work.metrics.likes} 次点赞`}><Heart aria-hidden="true" />{work.metrics.likes}</span>
           <span aria-label={`${work.metrics.favorites} 次收藏`}><Bookmark aria-hidden="true" />{work.metrics.favorites}</span>
         </div>

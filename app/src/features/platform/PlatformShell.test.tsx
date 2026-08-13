@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test } from 'vitest'
@@ -40,7 +40,7 @@ describe('platform shell', () => {
     expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
   })
 
-  test('keeps the platform home and project space as separate destinations', () => {
+  test('uses the five-item public home navigation without hiding full navigation on other pages', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -51,11 +51,34 @@ describe('platform shell', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: '创作画布' })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: '项目空间' })).toHaveAttribute('href', '/projects')
-    expect(screen.getByRole('link', { name: '故事设定' })).toHaveAttribute('href', '/story')
-    expect(screen.getByRole('link', { name: '剪辑项目' })).toHaveAttribute('href', '/editor')
-    expect(screen.getByRole('link', { name: '交付与发布' })).toHaveAttribute('href', '/delivery')
+    const homeNavigation = screen.getByRole('navigation', { name: '首页导航' })
+    expect(homeNavigation).toBeVisible()
+    expect(within(homeNavigation).getAllByRole('link')).toHaveLength(4)
+    expect(within(homeNavigation).getByRole('link', { name: '首页' })).toHaveAttribute('href', '/')
+    expect(within(homeNavigation).getByRole('link', { name: '项目' })).toHaveAttribute('href', '/projects')
+    expect(within(homeNavigation).getByRole('link', { name: 'Skills' })).toHaveAttribute('href', '/agents')
+    expect(within(homeNavigation).getByRole('link', { name: '创作者挑战赛' })).toHaveAttribute(
+      'href',
+      '/discover?tag=精选画布',
+    )
+    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
+    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/#create-project')
+    expect(screen.queryByRole('link', { name: '故事设定' })).not.toBeInTheDocument()
+
+    render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/projects" element={<PlatformShell />}>
+            <Route index element={<h1>项目空间</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const platformNavigation = screen.getByRole('navigation', { name: '平台导航' })
+    expect(within(platformNavigation).getByRole('link', { name: '故事设定' })).toHaveAttribute('href', '/story')
+    expect(within(platformNavigation).getByRole('link', { name: '剪辑项目' })).toHaveAttribute('href', '/editor')
+    expect(within(platformNavigation).getByRole('link', { name: '交付与发布' })).toHaveAttribute('href', '/delivery')
   })
 
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {
