@@ -23,6 +23,9 @@ const AssetsHistoryPage = lazy(() =>
 const StoryBiblePage = lazy(() =>
   import('../features/platform/StoryBiblePage').then((m) => ({ default: m.StoryBiblePage })),
 )
+const EditorProjectsPage = lazy(() =>
+  import('../features/platform/EditorProjectsPage').then((m) => ({ default: m.EditorProjectsPage })),
+)
 const WorkflowsPage = lazy(() =>
   import('../features/platform/WorkflowsPage').then((m) => ({ default: m.WorkflowsPage })),
 )
@@ -65,6 +68,7 @@ export const routes: RouteObject[] = [
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/assets', element: withSuspense(<AssetsHistoryPage />) },
       { path: '/story', element: withSuspense(<StoryBiblePage />) },
+      { path: '/editor', element: withSuspense(<EditorProjectsPage />) },
       { path: '/workflows', element: withSuspense(<WorkflowsPage />) },
       { path: '/discover', element: withSuspense(<DiscoverPage />) },
       { path: '/discover/mine', element: withSuspense(<MyWorksPage />) },

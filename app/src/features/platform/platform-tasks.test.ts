@@ -28,7 +28,7 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to professional timeline after the workflow center phase', () => {
+  test('advances to export and sharing after the editor projects phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
@@ -37,13 +37,17 @@ describe('platform task catalogue', () => {
     expect(defaultPlatformTaskStatuses['assets-history']).toBe('completed')
     expect(defaultPlatformTaskStatuses['creative-cards']).toBe('completed')
     expect(defaultPlatformTaskStatuses['workflow-templates']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['professional-timeline']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['professional-timeline']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['export-publish-share']).toBe('in-progress')
     expect(
       platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
     ).toBe('/story')
     expect(
       platformTasks.find((task) => task.id === 'workflow-templates')?.targetPath,
     ).toBe('/workflows')
+    expect(
+      platformTasks.find((task) => task.id === 'professional-timeline')?.targetPath,
+    ).toBe('/editor')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })

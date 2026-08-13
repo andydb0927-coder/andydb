@@ -4030,6 +4030,133 @@ select {
   justify-self: start;
 }
 
+.editor-projects-page__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.editor-projects-page__header > strong {
+  flex: none;
+  color: #d8d5ff;
+}
+
+.editor-projects-page__controls {
+  display: flex;
+  align-items: end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 12px;
+  background: rgb(12 13 17 / 54%);
+}
+
+.editor-projects-page__controls > label {
+  display: grid;
+  flex: 1;
+  gap: var(--space-2);
+}
+
+.editor-projects-page__controls > label > span,
+.editor-projects-page__controls legend {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.editor-projects-page__controls input[type='search'] {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+}
+
+.editor-projects-page__controls fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.editor-projects-page__controls fieldset label {
+  position: relative;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.editor-projects-page__controls fieldset label:has(input:checked) {
+  border-color: rgb(169 162 255 / 42%);
+  background: rgb(114 104 240 / 16%);
+}
+
+.editor-projects-page__controls fieldset input {
+  position: absolute;
+  opacity: 0;
+}
+
+.editor-projects-page__controls fieldset label:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.editor-projects-page__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.editor-project-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 14px;
+  background: rgb(12 13 17 / 62%);
+}
+
+.editor-project-card h2,
+.editor-project-card p,
+.editor-project-card dl {
+  margin: 0;
+}
+
+.editor-project-card > p,
+.editor-project-card__status,
+.editor-project-card dt {
+  color: var(--text-muted);
+}
+
+.editor-project-card__status {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+}
+
+.editor-project-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.editor-project-card dl > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.editor-project-card dt,
+.editor-project-card dd {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
 .story-bible-page__header > strong {
   flex: none;
   color: #d8d5ff;
@@ -4148,11 +4275,17 @@ select {
   .story-bible-page__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .editor-projects-page__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
   .story-bible-page__header,
-  .story-bible-page__controls {
+  .story-bible-page__controls,
+  .editor-projects-page__header,
+  .editor-projects-page__controls {
     align-items: stretch;
     flex-direction: column;
   }
@@ -4162,6 +4295,10 @@ select {
   }
 
   .workflow-operations__list {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-projects-page__grid {
     grid-template-columns: 1fr;
   }
 }
