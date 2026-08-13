@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
@@ -37,6 +38,56 @@ export interface AgentsPageProps {
 const database = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(database)
 const defaultTimelineRepository = new TimelineRepository(database)
+
+const skillCategories = [
+  '全部',
+  '专业影视',
+  '商业广告',
+  '短剧漫剧',
+  '动漫游戏',
+  '音乐MV',
+  '自媒体创作',
+  '通用技能',
+] as const
+
+type SkillCategory = (typeof skillCategories)[number]
+
+interface SkillPresentation {
+  author: string
+  category: Exclude<SkillCategory, '全部'>
+  coverLabel: string
+  tone: string
+  usage: string
+}
+
+const skillPresentationById: Record<string, SkillPresentation> = {
+  'storyboard.prompt-batch': {
+    author: '无线导演', category: '专业影视', coverLabel: 'SHOT', tone: 'violet', usage: '1.8K',
+  },
+  'assets.organize-report': {
+    author: '素材管家', category: '通用技能', coverLabel: 'ASSET', tone: 'cyan', usage: '936',
+  },
+  'timeline.duration-stats': {
+    author: '剪辑助手', category: '通用技能', coverLabel: 'TIME', tone: 'amber', usage: '684',
+  },
+  'publishing.copywriter': {
+    author: '发布主理人', category: '自媒体创作', coverLabel: 'COPY', tone: 'rose', usage: '2.1K',
+  },
+  'project.backup-check': {
+    author: '项目守护者', category: '通用技能', coverLabel: 'SAFE', tone: 'emerald', usage: '512',
+  },
+}
+
+function skillPresentation(skill: AgentSkillDefinition): SkillPresentation {
+  return skillPresentationById[skill.id] ?? {
+    author: '本地创作者',
+    category: skill.category === 'writing' ? '自媒体创作' : '通用技能',
+    coverLabel: 'SKILL',
+    tone: 'violet',
+    usage: '本地',
+  }
+}
+
 function initialInput(definition: AgentSkillDefinition): AgentSkillInput {
   return Object.fromEntries(
     Object.entries(definition.inputSchema.properties).flatMap(([key, property]) =>
@@ -65,6 +116,8 @@ export function AgentsPage({
     Object.fromEntries(agentSkills.map((skill) => [skill.id, initialInput(skill)])),
   )
   const [enablementVersion, setEnablementVersion] = useState(0)
+  const [skillCategory, setSkillCategory] = useState<SkillCategory>('全部')
+  const [skillQuery, setSkillQuery] = useState('')
   const [runningSkillId, setRunningSkillId] = useState<string>()
   const [result, setResult] = useState<{
     skill: AgentSkillDefinition
@@ -108,6 +161,17 @@ export function AgentsPage({
   }, [])
 
   const selectedProject = projects.find(({ id }) => id === selectedProjectId)
+  const visibleSkills = useMemo(() => {
+    const normalizedQuery = skillQuery.trim().toLocaleLowerCase()
+    return agentSkills.filter((skill) => {
+      const presentation = skillPresentation(skill)
+      if (skillCategory !== '全部' && presentation.category !== skillCategory) return false
+      if (!normalizedQuery) return true
+      return `${skill.name} ${skill.description} ${presentation.author} ${presentation.category}`
+        .toLocaleLowerCase()
+        .includes(normalizedQuery)
+    })
+  }, [agentSkills, skillCategory, skillQuery])
 
   const runSkill = async (skill: AgentSkillDefinition) => {
     if (runningSkillId || !selectedProject || !enablementStore.isEnabled(skill.id)) return
@@ -188,10 +252,38 @@ export function AgentsPage({
   return (
     <main className="platform-page agents-page">
       <header className="platform-page__header">
-        <p className="platform-page__eyebrow">LOCAL AGENT · SKILL REGISTRY</p>
-        <h1>Agent、Skill 与 CLI</h1>
-        <p>五个内置技能均使用本地确定性逻辑；不调用外部 LibTV、不消耗积分，也不会上传项目数据。</p>
+        <p className="platform-page__eyebrow">LOCAL SKILLS · AGENT REGISTRY</p>
+        <h1>Skill 全开，故事走起</h1>
+        <p>浏览并筛选本地创作 Skill；全部能力使用确定性逻辑，不调用外部 LibTV、不消耗积分，也不会上传项目数据。</p>
       </header>
+
+      <section className="agent-catalog-tools" role="region" aria-label="Skill 分类与搜索">
+        <div className="agent-catalog-tabs" aria-label="Skill 分类">
+          {skillCategories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              aria-pressed={skillCategory === category}
+              onClick={() => setSkillCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+        <label className="agent-catalog-search">
+          <span>搜索 Skill</span>
+          <span>
+            <Search aria-hidden="true" />
+            <input
+              type="search"
+              aria-label="搜索 Skill"
+              value={skillQuery}
+              placeholder="搜索名称、描述或作者"
+              onChange={(event) => setSkillQuery(event.target.value)}
+            />
+          </span>
+        </label>
+      </section>
 
       <label className="platform-page__project-picker">
         执行项目
@@ -202,14 +294,24 @@ export function AgentsPage({
       </label>
 
       <section className="agent-skill-grid" aria-label="已注册技能">
-        {agentSkills.map((skill) => {
+        {visibleSkills.map((skill) => {
           const enabled = enablementStore.isEnabled(skill.id)
           const skillInput = inputs[skill.id] ?? {}
+          const presentation = skillPresentation(skill)
           return (
             <article key={skill.id} className="agent-skill-card" aria-label={skill.name}>
+              <div
+                className="agent-skill-card__cover"
+                data-tone={presentation.tone}
+                role="img"
+                aria-label={`${skill.name}封面`}
+              >
+                <span>{presentation.category}</span>
+                <strong>{presentation.coverLabel}</strong>
+              </div>
               <div className="agent-skill-card__heading">
                 <div>
-                  <span>{skill.category} · v{skill.version}</span>
+                  <span>{presentation.category} · v{skill.version}</span>
                   <h2>{skill.name}</h2>
                 </div>
                 <label className="agent-skill-toggle">
@@ -226,6 +328,11 @@ export function AgentsPage({
                 </label>
               </div>
               <p>{skill.description}</p>
+              <div className="agent-skill-card__meta">
+                <span>{presentation.author}</span>
+                <span aria-hidden="true">·</span>
+                <span>{presentation.usage} 次使用</span>
+              </div>
               <div className="agent-skill-fields">
                 {Object.entries(skill.inputSchema.properties).map(([key, property]) => (
                   <label key={key}>
@@ -263,16 +370,23 @@ export function AgentsPage({
               ) : (
                 <button
                   type="button"
+                  aria-label="运行技能"
                   disabled={!enabled || !selectedProject || Boolean(runningSkillId)}
                   onClick={() => void runSkill(skill)}
                 >
-                  运行技能
+                  使用
                 </button>
               )}
             </article>
           )
         })}
       </section>
+      {visibleSkills.length === 0 ? (
+        <div className="agent-catalog-empty" role="status">
+          <strong>没有匹配的 Skill</strong>
+          <span>换一个分类或搜索关键词试试。</span>
+        </div>
+      ) : null}
 
       <section className="agent-cli-status" role="region" aria-labelledby="agent-cli-heading">
         <div>

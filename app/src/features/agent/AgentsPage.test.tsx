@@ -45,6 +45,35 @@ function setup() {
 }
 
 describe('Agents page', () => {
+  test('shows Liblib-style Skill cards and filters them by category and search', async () => {
+    const user = userEvent.setup()
+    setup()
+
+    const cards = await screen.findAllByRole('article')
+    expect(cards).toHaveLength(5)
+    const storyboard = screen.getByRole('article', { name: '批量生成分镜提示词' })
+    expect(within(storyboard).getByRole('img', { name: '批量生成分镜提示词封面' })).toBeVisible()
+    expect(within(storyboard).getByText('无线导演')).toBeVisible()
+    expect(within(storyboard).getByText('1.8K 次使用')).toBeVisible()
+    expect(within(storyboard).getByText('使用')).toBeVisible()
+
+    const filters = screen.getByRole('region', { name: 'Skill 分类与搜索' })
+    expect(within(filters).getByRole('button', { name: '全部' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(filters).getByRole('button', { name: '专业影视' })).toBeVisible()
+    expect(within(filters).getByRole('button', { name: '商业广告' })).toBeVisible()
+
+    await user.type(within(filters).getByRole('searchbox', { name: '搜索 Skill' }), '发布文案')
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+    expect(screen.getByRole('article', { name: '作品发布文案生成' })).toBeVisible()
+
+    await user.clear(within(filters).getByRole('searchbox', { name: '搜索 Skill' }))
+    await user.click(within(filters).getByRole('button', { name: '通用技能' }))
+    expect(screen.getAllByRole('article')).toHaveLength(3)
+    expect(screen.getByRole('article', { name: '素材整理报告' })).toBeVisible()
+    expect(screen.getByRole('article', { name: '时间线时长统计' })).toBeVisible()
+    expect(screen.getByRole('article', { name: '项目备份检查' })).toBeVisible()
+  })
+
   test('browses five local skills and persists enable/disable controls', async () => {
     const user = userEvent.setup()
     const { enablementStore } = setup()
