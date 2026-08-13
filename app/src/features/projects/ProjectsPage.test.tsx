@@ -86,6 +86,14 @@ describe('projects page', () => {
     expect(await screen.findByRole('heading', { name: '全部项目' })).toBeVisible()
     expect(screen.getByText('当前设备上的 2 个项目')).toBeVisible()
     expect(screen.getByText('数据保存在当前浏览器，不会自动同步到云端。')).toBeVisible()
+    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute(
+      'href',
+      '/#create-project',
+    )
+    expect(screen.getByRole('img', { name: '月下茶席 缩略图' })).toHaveAttribute(
+      'src',
+      '/demo/shot-river.png',
+    )
     expect(screen.getByRole('link', { name: '打开 月下茶席' })).toHaveAttribute(
       'href',
       '/project/project-new',

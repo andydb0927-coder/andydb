@@ -4067,9 +4067,52 @@ select {
 
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: var(--space-4);
   margin-top: var(--space-5);
+}
+
+.project-create-card {
+  display: grid;
+  min-height: 320px;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 2%);
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.project-create-card:hover {
+  border-color: rgb(180 255 75 / 55%);
+  background: rgb(180 255 75 / 6%);
+  transform: translateY(-2px);
+}
+
+.project-create-card > span:last-child {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.project-create-card__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  color: var(--surface-canvas);
+  background: var(--accent);
+}
+
+.project-create-card__icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .project-directory-card {
@@ -4080,6 +4123,35 @@ select {
   background:
     linear-gradient(145deg, rgb(114 104 240 / 10%), transparent 45%),
     var(--surface-node);
+}
+
+.project-directory-card__thumbnail {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 75% 25%, rgb(180 255 75 / 24%), transparent 32%),
+    linear-gradient(145deg, #302b59, #151821 72%);
+}
+
+.project-directory-card__thumbnail img,
+.project-directory-card__thumbnail > span {
+  width: 100%;
+  height: 100%;
+}
+
+.project-directory-card__thumbnail img {
+  display: block;
+  object-fit: cover;
+}
+
+.project-directory-card__thumbnail > span {
+  display: grid;
+  place-items: center;
+  color: rgb(255 255 255 / 72%);
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .project-directory-card__heading {

@@ -1,4 +1,4 @@
-import { FolderPlus, Search } from 'lucide-react'
+import { FolderPlus, Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -49,6 +49,10 @@ function formatUpdatedAt(value: string): string {
     month: '2-digit',
     day: '2-digit',
   }).format(date)
+}
+
+function projectThumbnail(project: Project) {
+  return project.assets.find((asset) => asset.kind === 'image')
 }
 
 export interface ProjectsPageProps {
@@ -291,10 +295,29 @@ export function ProjectsPage({
 
             {actionMessage ? <p className="projects-page__error" role="alert">{actionMessage}</p> : null}
 
-            {visibleProjects.length ? (
-              <div className="projects-grid">
-                {visibleProjects.map((project) => (
+            <div className="projects-grid">
+              <Link
+                aria-label="新建项目"
+                className="project-create-card focus-visible"
+                to="/#create-project"
+              >
+                <span className="project-create-card__icon"><Plus aria-hidden="true" /></span>
+                <strong>开始创作</strong>
+                <span>创建新的视频项目</span>
+              </Link>
+              {visibleProjects.map((project) => {
+                const thumbnail = projectThumbnail(project)
+                return (
                   <article key={project.id} className="project-directory-card">
+                    <div className="project-directory-card__thumbnail">
+                      {thumbnail ? (
+                        <img src={thumbnail.url} alt={`${project.title} 缩略图`} />
+                      ) : (
+                        <span role="img" aria-label={`${project.title} 缩略图`}>
+                          {project.title.slice(0, 1)}
+                        </span>
+                      )}
+                    </div>
                     <div className="project-directory-card__heading">
                       <div>
                         <p>{formatUpdatedAt(project.updatedAt)}</p>
@@ -330,14 +353,15 @@ export function ProjectsPage({
                       </Link>
                     </div>
                   </article>
-                ))}
-              </div>
-            ) : (
+                )
+              })}
+            </div>
+            {!visibleProjects.length ? (
               <div className="projects-directory__empty">
                 <h2>这里还没有匹配的项目</h2>
                 <p>调整搜索条件或文件夹筛选，也可以从平台首页开始新创作。</p>
               </div>
-            )}
+            ) : null}
           </section>
         </div>
       )}
