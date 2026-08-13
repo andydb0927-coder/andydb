@@ -45,7 +45,8 @@ describe('platform task progress persistence', () => {
     expect(snapshot.statuses['creative-cards']).toBe('completed')
     expect(snapshot.statuses['workflow-templates']).toBe('completed')
     expect(snapshot.statuses['professional-timeline']).toBe('completed')
-    expect(snapshot.statuses['export-publish-share']).toBe('in-progress')
+    expect(snapshot.statuses['export-publish-share']).toBe('completed')
+    expect(snapshot.statuses['community-works']).toBe('in-progress')
   })
 
   test('persists known task statuses and removes unknown task ids', () => {

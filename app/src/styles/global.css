@@ -4157,6 +4157,17 @@ select {
   font-size: 0.75rem;
 }
 
+.delivery-project-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.delivery-project-card__actions button {
+  min-height: 40px;
+}
+
 .story-bible-page__header > strong {
   flex: none;
   color: #d8d5ff;

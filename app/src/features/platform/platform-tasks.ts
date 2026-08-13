@@ -69,7 +69,7 @@ export const platformTasks = [
     order: 10,
     title: '导出、发布与分享',
     description: '导出任务、项目包、分享与发布边界',
-    targetPath: '/assets',
+    targetPath: '/delivery',
   },
   {
     id: 'community-works',
@@ -108,8 +108,8 @@ export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'creative-cards': 'completed',
   'workflow-templates': 'completed',
   'professional-timeline': 'completed',
-  'export-publish-share': 'in-progress',
-  'community-works': 'pending',
+  'export-publish-share': 'completed',
+  'community-works': 'in-progress',
   'collaboration-membership': 'pending',
   'agent-skill-cli': 'pending',
 }

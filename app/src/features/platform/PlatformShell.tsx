@@ -1,4 +1,4 @@
-import { BookOpenText, Bot, Clapperboard, ClipboardList, Compass, Cpu, Film, FolderOpen, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
+import { BookOpenText, Bot, Clapperboard, ClipboardList, Compass, Cpu, Film, FolderOpen, PackageCheck, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
@@ -13,6 +13,7 @@ export const platformNavigation = [
   { to: '/story', label: '故事设定', icon: BookOpenText, end: false },
   { to: '/workflows', label: '工作流与模板', icon: Sparkles, end: false },
   { to: '/editor', label: '剪辑项目', icon: Film, end: false },
+  { to: '/delivery', label: '交付与发布', icon: PackageCheck, end: false },
   { to: '/discover', label: '发现与作品', icon: Compass, end: false },
   { to: '/models', label: '模型能力', icon: Cpu, end: false },
   { to: '/agents', label: 'Agent 技能', icon: Bot, end: false },

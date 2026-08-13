@@ -55,6 +55,7 @@ describe('platform shell', () => {
     expect(screen.getByRole('link', { name: '项目空间' })).toHaveAttribute('href', '/projects')
     expect(screen.getByRole('link', { name: '故事设定' })).toHaveAttribute('href', '/story')
     expect(screen.getByRole('link', { name: '剪辑项目' })).toHaveAttribute('href', '/editor')
+    expect(screen.getByRole('link', { name: '交付与发布' })).toHaveAttribute('href', '/delivery')
   })
 
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {
