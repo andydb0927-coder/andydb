@@ -117,7 +117,7 @@ export function EditorProjectsPage({
       {loadState.status === 'loaded' && loadState.projects.length === 0 ? (
         <section className="platform-page__empty">
           <h2>尚无可剪辑项目</h2>
-          <Link to="/">创建项目</Link>
+          <Link to="/projects/new">创建项目</Link>
         </section>
       ) : null}
       {loadState.status === 'loaded' && loadState.projects.length > 0 ? (

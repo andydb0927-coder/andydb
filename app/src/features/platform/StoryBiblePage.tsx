@@ -139,7 +139,7 @@ export function StoryBiblePage({
         <section className="platform-page__empty">
           <h2>尚无项目</h2>
           <p>创建项目并在画布中添加结构化创作卡后，这里会自动汇总。</p>
-          <Link to="/">创建项目</Link>
+          <Link to="/projects/new">创建项目</Link>
         </section>
       ) : null}
 

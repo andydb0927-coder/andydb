@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 
 import { PlatformShell } from '../features/platform/PlatformShell'
+import { quickCreateProjectLoader } from '../features/launcher/quick-create-project'
 import '../styles/global.css'
 
 // 路由级代码分割：每个页面独立 chunk，控制首屏主包体积
@@ -77,6 +78,7 @@ export const routes: RouteObject[] = [
     element: <PlatformShell />,
     children: [
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
+      { path: '/projects/new', loader: quickCreateProjectLoader },
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/assets', element: withSuspense(<AssetsHistoryPage />) },
       { path: '/story', element: withSuspense(<StoryBiblePage />) },

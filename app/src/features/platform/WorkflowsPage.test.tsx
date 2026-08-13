@@ -74,7 +74,7 @@ describe('WorkflowsPage', () => {
 
     expect(
       screen.getByRole('link', { name: '使用品牌氛围片' }),
-    ).toHaveAttribute('href', '/?recipe=brand-atmosphere')
+    ).toHaveAttribute('href', '/projects/new?recipe=brand-atmosphere')
     const graphs = screen.getAllByRole('list', { name: /任务图/ })
     expect(graphs).toHaveLength(3)
     expect(within(graphs[0]).getAllByRole('listitem')).toHaveLength(3)

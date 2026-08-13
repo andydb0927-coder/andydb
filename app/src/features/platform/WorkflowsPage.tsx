@@ -130,7 +130,7 @@ export function WorkflowsPage({
                   </li>
                 ))}
               </ol>
-              <Link to={`/?${RECIPE_QUERY_PARAM}=${recipe.id}`}>
+              <Link to={`/projects/new?${RECIPE_QUERY_PARAM}=${recipe.id}`}>
                 使用{recipe.title}
               </Link>
             </article>

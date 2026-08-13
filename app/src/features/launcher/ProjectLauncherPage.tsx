@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
 import {
@@ -8,18 +8,10 @@ import {
 } from '../project/project-repository'
 import {
   buildExampleProject,
-  buildRecipeProject,
   exampleProject,
 } from '../project/example-project'
-import {
-  findRecipe,
-  RECIPE_QUERY_PARAM,
-  recipeDefinitions,
-} from '../project/recipe-catalog'
 import { useProjectStore } from '../project/project-store'
 import { Button } from '../../ui/Button'
-import { StatusText } from '../../ui/StatusText'
-import { RecipeRow, type RecipeId } from './RecipeRow'
 import {
   PlatformHomeSections,
   type HomePromptRequest,
@@ -43,21 +35,12 @@ type LauncherCommunityRepository = Pick<
   'ensureDemoWorks' | 'listPublished'
 >
 
-export type RecipeParser = (
-  recipeId: RecipeId,
-  intent: string,
-  signal: AbortSignal,
-) => Promise<void>
-
 type LauncherState =
   | { status: 'idle' }
-  | { status: 'parsing'; abortController: AbortController }
   | { status: 'creating' }
   | { status: 'failed'; message: string; operation: RetryOperation }
 
 type RetryOperation =
-  | { kind: 'recipe' }
-  | { kind: 'blank' }
   | { kind: 'recent'; projectId: string }
   | { kind: 'example' }
   | { kind: 'prompt'; request: HomePromptRequest }
@@ -78,58 +61,27 @@ const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultHomeContentRepository = new HomeContentRepository(defaultDatabase)
 const defaultCommunityRepository = new CommunityRepository(defaultDatabase)
 
-function defaultParseRecipe(
-  _recipeId: RecipeId,
-  _intent: string,
-  signal: AbortSignal,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const finish = () => {
-      signal.removeEventListener('abort', cancel)
-      resolve()
-    }
-    const cancel = () => {
-      window.clearTimeout(timer)
-      reject(new DOMException('已取消', 'AbortError'))
-    }
-    const timer = window.setTimeout(finish, 320)
-
-    if (signal.aborted) cancel()
-    else signal.addEventListener('abort', cancel, { once: true })
-  })
-}
-
 function readableError(error: unknown): string {
   return error instanceof Error && error.message
     ? error.message
-    : '暂时无法解析创作意图'
+    : '暂时无法完成此操作'
 }
 
 export interface ProjectLauncherPageProps {
   repository?: LauncherRepository
-  parseRecipe?: RecipeParser
   homeContentRepository?: PlatformHomeContentRepository
   communityRepository?: LauncherCommunityRepository
 }
 
 export function ProjectLauncherPage({
   repository = defaultRepository,
-  parseRecipe = defaultParseRecipe,
   homeContentRepository = defaultHomeContentRepository,
   communityRepository = defaultCommunityRepository,
 }: ProjectLauncherPageProps) {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [intent, setIntent] = useState('')
-  const requestedRecipeId = findRecipe(
-    searchParams.get(RECIPE_QUERY_PARAM),
-  )?.id
-  const [selectedRecipeId, setSelectedRecipeId] =
-    useState<RecipeId>(() => requestedRecipeId ?? 'cinematic-story')
   const [launcherState, setLauncherState] = useState<LauncherState>({
     status: 'idle',
   })
-  const [validationMessage, setValidationMessage] = useState('')
   const [recentProjectsState, setRecentProjectsState] =
     useState<RecentProjectsState>({ status: 'loading' })
   const mountedRef = useRef(true)
@@ -149,10 +101,6 @@ export function ProjectLauncherPage({
       activeOperationRef.current = undefined
     }
   }, [])
-
-  useEffect(() => {
-    setSelectedRecipeId(requestedRecipeId ?? 'cinematic-story')
-  }, [requestedRecipeId])
 
   const loadRecentProjects = useCallback(async () => {
     if (recentListInFlightRef.current) return
@@ -232,71 +180,6 @@ export function ProjectLauncherPage({
     navigate(`/project/${project.id}`)
   }
 
-  const startRecipe = async () => {
-    const trimmedIntent = intent.trim()
-    if (!trimmedIntent) {
-      setValidationMessage('请先描述短片主题')
-      return
-    }
-
-    setValidationMessage('')
-    const operation = beginOperation('recipe')
-    if (!operation) return
-    setLauncherState({
-      status: 'parsing',
-      abortController: operation.abortController,
-    })
-
-    try {
-      await parseRecipe(
-        selectedRecipeId,
-        trimmedIntent,
-        operation.abortController.signal,
-      )
-      if (!isCurrentOperation(operation)) return
-
-      setLauncherState({ status: 'creating' })
-      const recipe = recipeDefinitions.find(({ id }) => id === selectedRecipeId)!
-      await persistAndOpen(buildRecipeProject(trimmedIntent, recipe), operation)
-    } catch (error) {
-      if (!isCurrentOperation(operation)) return
-      finishOperation(operation)
-      setLauncherState({
-        status: 'failed',
-        message: readableError(error),
-        operation: { kind: 'recipe' },
-      })
-    }
-  }
-
-  const cancelParsing = () => {
-    if (launcherState.status !== 'parsing') return
-    launcherState.abortController.abort()
-    operationIdRef.current += 1
-    activeOperationRef.current = undefined
-    setLauncherState({ status: 'idle' })
-  }
-
-  const openBlankCanvas = async () => {
-    const operation = beginOperation('blank')
-    if (!operation) return
-    setLauncherState({ status: 'creating' })
-    try {
-      await persistAndOpen(
-        createProject('空白项目', intent.trim()),
-        operation,
-      )
-    } catch (error) {
-      if (!isCurrentOperation(operation)) return
-      finishOperation(operation)
-      setLauncherState({
-        status: 'failed',
-        message: readableError(error),
-        operation: { kind: 'blank' },
-      })
-    }
-  }
-
   const openRecentProject = async (projectId: string) => {
     const operation = beginOperation(`recent:${projectId}`)
     if (!operation) return
@@ -361,12 +244,6 @@ export function ProjectLauncherPage({
     if (launcherState.status !== 'failed') return
 
     switch (launcherState.operation.kind) {
-      case 'recipe':
-        void startRecipe()
-        break
-      case 'blank':
-        void openBlankCanvas()
-        break
       case 'recent':
         void openRecentProject(launcherState.operation.projectId)
         break
@@ -379,9 +256,7 @@ export function ProjectLauncherPage({
     }
   }
 
-  const isParsing = launcherState.status === 'parsing'
-  const isCreating = launcherState.status === 'creating'
-  const isBusy = isParsing || isCreating
+  const isBusy = launcherState.status === 'creating'
 
   return (
     <main className="launcher-page">
@@ -409,101 +284,27 @@ export function ProjectLauncherPage({
         onStartPrompt={(request) => void openPromptCanvas(request)}
       />
 
-      <section
-        id="create-project"
-        className="launcher-hero launcher-create"
-        aria-labelledby="launcher-title"
-      >
-        <p className="launcher-eyebrow">AI CINEMATIC CANVAS</p>
-        <h1 id="launcher-title">创建你的第一部短片</h1>
-        <p className="launcher-intro">
-          从一句创作意图开始，整理角色、场景与第一个镜头。
-        </p>
-
-        <div className="launcher-form">
-          <label className="launcher-intent-label" htmlFor="creative-intent">
-            描述你想创作的短片
-          </label>
-          <textarea
-            id="creative-intent"
-            className="launcher-intent focus-visible"
-            value={intent}
-            disabled={isBusy}
-            rows={5}
-            placeholder="例如：一位女子在雨夜寻找失踪的弟弟……"
-            aria-describedby={validationMessage ? 'intent-error' : undefined}
-            aria-invalid={Boolean(validationMessage)}
-            onChange={(event) => {
-              setIntent(event.target.value)
-              if (validationMessage) setValidationMessage('')
-            }}
-          />
-          {validationMessage ? (
-            <p id="intent-error" className="launcher-message" role="alert">
-              {validationMessage}
-            </p>
-          ) : null}
-
-          <fieldset className="launcher-recipes" disabled={isBusy}>
-            <legend>选择创作配方</legend>
-            <div className="launcher-recipes__grid">
-              {recipeDefinitions.map((recipe) => (
-                <RecipeRow
-                  key={recipe.id}
-                  {...recipe}
-                  checked={selectedRecipeId === recipe.id}
-                  disabled={isBusy}
-                  onChange={setSelectedRecipeId}
-                />
-              ))}
-            </div>
-          </fieldset>
-
-          {launcherState.status === 'failed' ? (
-            <div className="launcher-recovery">
-              <p className="launcher-message" role="alert">
-                {launcherState.message}
-              </p>
-              <div className="launcher-recovery__actions">
-                <Button onClick={retryFailedOperation}>重试</Button>
-                {launcherState.operation.kind === 'recipe' ? (
-                  <Button
-                    className="launcher-button--secondary"
-                    onClick={() => void openBlankCanvas()}
-                  >
-                    直接进入空白画布
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : isParsing ? (
-            <div className="launcher-progress">
-              <StatusText status="running" role="status" aria-live="polite">
-                正在整理角色、场景与镜头结构
-              </StatusText>
-              <Button
-                className="launcher-button--secondary"
-                onClick={cancelParsing}
-              >
-                取消
-              </Button>
-            </div>
-          ) : isCreating ? (
-            <div className="launcher-progress">
-              <StatusText status="saving" role="status" aria-live="polite">
-                正在创建项目
-              </StatusText>
-            </div>
-          ) : (
-            <Button
-              className="launcher-submit"
-              onClick={() => void startRecipe()}
-            >
-              创建项目
-            </Button>
-          )}
+      {launcherState.status === 'failed' ? (
+        <div className="launcher-progress launcher-operation-state">
+          <p className="launcher-message" role="alert">
+            {launcherState.message}
+          </p>
+          <Button
+            className="launcher-button--secondary"
+            onClick={retryFailedOperation}
+          >
+            重试
+          </Button>
         </div>
-      </section>
+      ) : launcherState.status === 'creating' ? (
+        <p
+          className="launcher-progress launcher-operation-state"
+          role="status"
+          aria-live="polite"
+        >
+          正在打开画布…
+        </p>
+      ) : null}
 
       <section className="launcher-recent" aria-labelledby="recent-title">
         <div className="launcher-recent__heading">

@@ -199,7 +199,7 @@ export function ProjectsPage({
             数据保存在当前浏览器，不会自动同步到云端。
           </p>
         </div>
-        <Link className="projects-page__create focus-visible" to="/#create-project">
+        <Link className="projects-page__create focus-visible" to="/projects/new">
           开始创作
         </Link>
       </header>
@@ -299,7 +299,7 @@ export function ProjectsPage({
               <Link
                 aria-label="新建项目"
                 className="project-create-card focus-visible"
-                to="/#create-project"
+                to="/projects/new"
               >
                 <span className="project-create-card__icon"><Plus aria-hidden="true" /></span>
                 <strong>开始创作</strong>

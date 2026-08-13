@@ -14,9 +14,6 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   await expect(page.getByRole('navigation', { name: '平台导航' })).toBeVisible()
   await page.getByRole('link', { name: '工作流与模板' }).click()
   await page.getByRole('link', { name: '使用电影感叙事' }).click()
-  await expect(page.getByRole('radio', { name: /电影感叙事/ })).toBeChecked()
-  await page.getByLabel('描述你想创作的短片').fill('雨夜追踪')
-  await page.getByRole('button', { name: '创建项目' }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 
   await page.getByRole('link', { name: '素材与历史' }).click()

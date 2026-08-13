@@ -525,6 +525,6 @@ describe('assets and history page', () => {
 
     expect(
       await screen.findByRole('link', { name: '创建项目' }),
-    ).toHaveAttribute('href', '/')
+    ).toHaveAttribute('href', '/projects/new')
   })
 })

@@ -131,7 +131,10 @@ describe('community repository', () => {
 
   test('lists durable timeline projects for personal publishing management', async () => {
     const { timelines } = createRepositories()
-    const first = createTimelineProject(makeProjectFixture())
+    const first = {
+      ...createTimelineProject(makeProjectFixture()),
+      updatedAt: '2026-08-13T11:00:00.000Z',
+    }
     const second = {
       ...first,
       id: 'project-later',

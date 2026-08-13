@@ -197,9 +197,9 @@ export function PlatformHomeSections({
           <p className="home-hero__intro">
             把灵感、角色、素材、生成与剪辑串进同一条创作脉络。
           </p>
-          <a className="home-hero__primary focus-visible" href="#create-project">
+          <Link className="home-hero__primary focus-visible" to="/projects/new">
             新建画布创作<ArrowRight aria-hidden="true" />
-          </a>
+          </Link>
         </div>
 
         {content.status === 'loading' ? (

@@ -184,14 +184,9 @@ select {
   font-weight: 720;
 }
 
-.launcher-hero,
 .launcher-recent {
   width: min(920px, 100%);
   margin-inline: auto;
-}
-
-.launcher-hero {
-  padding-top: clamp(var(--space-8), 9vh, 88px);
 }
 
 .launcher-eyebrow {
@@ -202,126 +197,10 @@ select {
   letter-spacing: 0.18em;
 }
 
-.launcher-hero h1 {
-  max-width: 690px;
-  margin: 0;
-  font-size: clamp(2.2rem, 6vw, 4.5rem);
-  font-weight: 650;
-  letter-spacing: -0.045em;
-  line-height: 1.02;
-}
-
-.launcher-intro {
-  margin: var(--space-4) 0 var(--space-7);
-  color: var(--text-muted);
-  font-size: 1rem;
-}
-
-.launcher-form {
-  padding: clamp(var(--space-4), 4vw, var(--space-6));
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 16px;
-  background: rgb(23 25 30 / 92%);
-  box-shadow: 0 28px 80px rgb(0 0 0 / 28%);
-}
-
-.launcher-intent-label,
-.launcher-recipes legend {
-  display: block;
-  margin-bottom: var(--space-3);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  font-weight: 650;
-}
-
-.launcher-intent {
-  width: 100%;
-  min-height: 132px;
-  resize: vertical;
-  padding: var(--space-4);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 10px;
-  color: var(--text-primary);
-  background: var(--surface-canvas);
-  line-height: 1.6;
-}
-
-.launcher-intent::placeholder {
-  color: var(--text-muted);
-}
-
-.launcher-intent:disabled {
-  opacity: 0.72;
-}
-
 .launcher-message {
   margin: var(--space-3) 0 0;
   color: var(--status-error);
   font-size: 0.875rem;
-}
-
-.launcher-recipes {
-  min-width: 0;
-  margin: var(--space-5) 0;
-  padding: 0;
-  border: 0;
-}
-
-.launcher-recipes__grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.recipe-row {
-  position: relative;
-  display: flex;
-  min-height: 112px;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 10px;
-  background: rgb(11 12 15 / 54%);
-  cursor: pointer;
-}
-
-.recipe-row:has(.recipe-row__radio:checked) {
-  border-color: var(--accent);
-  background: rgb(114 104 240 / 10%);
-}
-
-.recipe-row:has(.recipe-row__radio:disabled) {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.recipe-row__radio {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  margin: 2px 0 0;
-  accent-color: var(--accent);
-}
-
-.recipe-row__copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.recipe-row__title {
-  font-size: 0.9375rem;
-  font-weight: 650;
-}
-
-.recipe-row__description {
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.launcher-submit {
-  min-width: 148px;
 }
 
 .launcher-button--secondary {
@@ -334,25 +213,16 @@ select {
   background: rgb(255 255 255 / 7%);
 }
 
-.launcher-progress,
-.launcher-recovery__actions {
+.launcher-progress {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
-.launcher-recovery {
-  padding-top: var(--space-2);
-  border-top: 1px solid rgb(255 255 255 / 8%);
-}
-
-.launcher-recovery .launcher-message {
-  margin: 0 0 var(--space-3);
-}
-
-.launcher-recovery__actions {
-  justify-content: flex-start;
+.launcher-operation-state {
+  width: min(920px, 100%);
+  margin: var(--space-6) auto 0;
 }
 
 .launcher-recent {
@@ -512,7 +382,6 @@ select {
 .home-features,
 .home-agent,
 .home-show,
-.launcher-create,
 .launcher-recent,
 .launcher-help {
   width: min(1320px, 100%);
@@ -1178,20 +1047,6 @@ select {
   text-decoration: none;
 }
 
-.launcher-create {
-  margin-top: clamp(48px, 7vw, 96px);
-  padding: clamp(48px, 7vw, 84px);
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 24px;
-  background:
-    linear-gradient(145deg, rgb(116 78 255 / 9%), transparent 45%),
-    rgb(15 16 21 / 92%);
-}
-
-.launcher-create.launcher-hero {
-  width: min(1080px, 100%);
-}
-
 .launcher-help {
   display: flex;
   align-items: flex-end;
@@ -1410,9 +1265,6 @@ select {
     column-count: 1;
   }
 
-  .launcher-create {
-    padding: var(--space-5);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7030,14 +6882,6 @@ select {
 
   .platform-library .platform-section__heading {
     flex-direction: column;
-  }
-
-  .launcher-recipes__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .recipe-row {
-    min-height: 0;
   }
 
   .recent-project,

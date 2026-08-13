@@ -50,7 +50,7 @@ describe('platform home sections', () => {
     expect(contentRepository.ensureSeed).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('link', { name: '新建画布创作' })).toHaveAttribute(
       'href',
-      '#create-project',
+      '/projects/new',
     )
     const modes = screen.getByRole('group', { name: '画布创作模式' })
     expect(within(modes).getAllByRole('button')).toHaveLength(6)

@@ -3,7 +3,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { routes } from './router'
 
 it.each([
-  ['/', '创建你的第一部短片'],
+  ['/', '只需一张画布 连接你的多种创意想法'],
   ['/projects', '全部项目'],
   ['/agents', 'Skill 全开，故事走起'],
   ['/challenges', '创作者挑战赛'],

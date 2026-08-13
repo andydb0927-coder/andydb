@@ -99,7 +99,7 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
           <>
             <Link
               className="platform-shell__new-project focus-visible"
-              to="/#create-project"
+              to="/projects/new"
             >
               <Plus aria-hidden="true" />
               <span>新建项目</span>

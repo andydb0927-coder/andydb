@@ -7,11 +7,7 @@ const onePixelPng = Buffer.from(
 
 async function createCinematicProject(page: import('@playwright/test').Page) {
   await page.goto('/')
-  await page
-    .getByLabel('描述你想创作的短片')
-    .fill('一位女子在雨夜寻找失踪的弟弟')
-  await page.getByRole('radio', { name: /电影感叙事/ }).check()
-  await page.getByRole('button', { name: '创建项目' }).click()
+  await page.getByRole('link', { name: '新建项目', exact: true }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 

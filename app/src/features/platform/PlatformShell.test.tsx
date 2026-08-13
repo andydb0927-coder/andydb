@@ -62,7 +62,7 @@ describe('platform shell', () => {
       '/challenges',
     )
     expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
-    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/#create-project')
+    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
     expect(screen.queryByRole('link', { name: '故事设定' })).not.toBeInTheDocument()
 
     render(

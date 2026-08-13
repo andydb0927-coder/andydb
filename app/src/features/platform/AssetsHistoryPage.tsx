@@ -584,7 +584,7 @@ export function AssetsHistoryPage({
           <section className="platform-page__empty">
             <h2>尚无可查看的素材</h2>
             <p>创建项目后，这里会显示画布引用的素材与版本历史。</p>
-            <Link to="/">创建项目</Link>
+            <Link to="/projects/new">创建项目</Link>
           </section>
         ) : null}
 
