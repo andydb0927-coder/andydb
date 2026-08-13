@@ -8,7 +8,13 @@ import {
 } from '../account/local-account-preferences'
 
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
-import type { Collaborator, CollaboratorRole } from '../collaboration/collaboration-model'
+import {
+  canCollaborator,
+  collaboratorCapabilities,
+  type Collaborator,
+  type CollaboratorCapability,
+  type CollaboratorRole,
+} from '../collaboration/collaboration-model'
 import {
   createShareLink,
   downloadJson,
@@ -53,6 +59,14 @@ const defaultPreferenceStore = createLocalAccountPreferenceStore()
 
 const roleCopy: Record<CollaboratorRole, string> = {
   owner: '所有者', editor: '编辑者', viewer: '只读',
+}
+
+const capabilityCopy: Record<CollaboratorCapability, string> = {
+  'edit-project': '编辑项目',
+  comment: '发表评论',
+  'resolve-comments': '解决评论',
+  'manage-members': '管理成员',
+  'export-project': '导出项目包',
 }
 
 async function copyToClipboard(value: string) {
@@ -336,6 +350,20 @@ export function AccountPage({
           <div><p>COLLABORATION · 本地模拟</p><h2 id="collaboration-title">协作者与项目共享</h2></div>
           <Link to={selectedProject ? `/project/${selectedProject.id}` : '/'}>打开画布</Link>
         </div>
+        <table className="membership-matrix collaboration-permission-matrix" aria-label="本地协作角色权限">
+          <thead><tr><th>能力</th><th>所有者</th><th>编辑者</th><th>只读</th></tr></thead>
+          <tbody>
+            {collaboratorCapabilities.map((capability) => (
+              <tr key={capability}>
+                <th>{capabilityCopy[capability]}</th>
+                {(['owner', 'editor', 'viewer'] as const).map((role) => (
+                  <td key={role}>{canCollaborator(role, capability) ? '可用' : '—'}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="account-boundary-note">权限矩阵仅用于当前设备的交互预览；尚无服务端身份与强制授权。</p>
         <label className="account-project-picker">项目<select aria-label="协作项目" value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.currentTarget.value)}>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
         <ul className="collaborator-list">
           {collaborators.map((collaborator) => (

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   buildChangeComment,
   buildCollaborator,
+  canCollaborator,
   createLocalOwner,
 } from './collaboration-model'
 
@@ -32,5 +33,14 @@ describe('collaboration model', () => {
       .toMatchObject({ targetType: 'node', targetId: 'shot-1', body: '调亮一点', status: 'open' })
     expect(() => buildChangeComment('project-1', 'clip', 'clip-1', ' ', environment))
       .toThrow('请输入评论内容')
+  })
+
+  test('keeps owner, editor, and viewer capabilities in one permission matrix', () => {
+    expect(canCollaborator('owner', 'manage-members')).toBe(true)
+    expect(canCollaborator('editor', 'edit-project')).toBe(true)
+    expect(canCollaborator('editor', 'manage-members')).toBe(false)
+    expect(canCollaborator('viewer', 'comment')).toBe(true)
+    expect(canCollaborator('viewer', 'edit-project')).toBe(false)
+    expect(canCollaborator('viewer', 'export-project')).toBe(false)
   })
 })

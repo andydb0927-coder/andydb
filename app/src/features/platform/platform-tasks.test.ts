@@ -28,7 +28,7 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to collaboration after the community phase', () => {
+  test('advances to agent skills after the collaboration phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
@@ -40,7 +40,8 @@ describe('platform task catalogue', () => {
     expect(defaultPlatformTaskStatuses['professional-timeline']).toBe('completed')
     expect(defaultPlatformTaskStatuses['export-publish-share']).toBe('completed')
     expect(defaultPlatformTaskStatuses['community-works']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['collaboration-membership']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['collaboration-membership']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['agent-skill-cli']).toBe('in-progress')
     expect(
       platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
     ).toBe('/story')

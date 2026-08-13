@@ -19,6 +19,24 @@ function createRepository() {
   )
 }
 
+function createVersionedRepository() {
+  const name = `collaboration-versioned-${crypto.randomUUID()}`
+  names.push(name)
+  let sequence = 0
+  const timestamps = [
+    '2026-08-13T08:00:00.000Z',
+    '2026-08-13T08:00:00.000Z',
+    '2026-08-13T08:02:00.000Z',
+  ]
+  return new CollaborationRepository(
+    new WirelessCanvasDatabase(name),
+    {
+      now: () => timestamps[Math.min(sequence++, timestamps.length - 1)],
+      randomId: () => `versioned-${sequence}`,
+    },
+  )
+}
+
 afterEach(async () => {
   await Promise.all(names.splice(0).map((name) => Dexie.delete(name)))
 })
@@ -45,5 +63,23 @@ describe('collaboration repository', () => {
     expect(await repository.listComments('project-1', 'node', 'shot-1')).toEqual([node])
     expect((await repository.resolveComment(node.id)).status).toBe('resolved')
     expect(await repository.listComments('project-1')).toHaveLength(2)
+  })
+
+  test('edits and deletes comments with optimistic concurrency protection', async () => {
+    const repository = createVersionedRepository()
+    const comment = await repository.addComment('project-1', 'node', 'shot-1', '调亮画面')
+    const updated = await repository.updateComment(comment.id, '增加雨雾', comment.updatedAt)
+
+    expect(updated.body).toBe('增加雨雾')
+    expect(updated.updatedAt).not.toBe(comment.updatedAt)
+    await expect(
+      repository.updateComment(comment.id, '过期覆盖', comment.updatedAt),
+    ).rejects.toThrow('评论已被其他操作更新，请刷新后重试')
+    await expect(
+      repository.deleteComment(comment.id, comment.updatedAt),
+    ).rejects.toThrow('评论已被其他操作更新，请刷新后重试')
+
+    await repository.deleteComment(comment.id, updated.updatedAt)
+    expect(await repository.listComments('project-1')).toEqual([])
   })
 })

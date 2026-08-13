@@ -10,6 +10,15 @@ import {
   type CommentTargetType,
 } from './collaboration-model'
 
+function nextCommentVersion(current: string, candidate: string) {
+  const currentTime = Date.parse(current)
+  const candidateTime = Date.parse(candidate)
+  if (Number.isFinite(currentTime) && Number.isFinite(candidateTime) && candidateTime <= currentTime) {
+    return new Date(currentTime + 1).toISOString()
+  }
+  return candidate
+}
+
 export class CollaborationRepository {
   private readonly database: WirelessCanvasDatabase
   private readonly environment: CollaborationEnvironment
@@ -124,6 +133,36 @@ export class CollaborationRepository {
       }
       await this.database.changeComments.put(next)
       return next
+    })
+  }
+
+  async updateComment(id: string, body: string, expectedUpdatedAt: string) {
+    const normalizedBody = body.trim()
+    if (!normalizedBody) throw new Error('请输入评论内容')
+    return this.database.transaction('rw', this.database.changeComments, async () => {
+      const current = await this.database.changeComments.get(id)
+      if (!current) throw new Error('未找到评论')
+      if (current.updatedAt !== expectedUpdatedAt) {
+        throw new Error('评论已被其他操作更新，请刷新后重试')
+      }
+      const next = {
+        ...current,
+        body: normalizedBody,
+        updatedAt: nextCommentVersion(current.updatedAt, this.environment.now()),
+      }
+      await this.database.changeComments.put(next)
+      return next
+    })
+  }
+
+  async deleteComment(id: string, expectedUpdatedAt: string) {
+    return this.database.transaction('rw', this.database.changeComments, async () => {
+      const current = await this.database.changeComments.get(id)
+      if (!current) throw new Error('未找到评论')
+      if (current.updatedAt !== expectedUpdatedAt) {
+        throw new Error('评论已被其他操作更新，请刷新后重试')
+      }
+      await this.database.changeComments.delete(id)
     })
   }
 }

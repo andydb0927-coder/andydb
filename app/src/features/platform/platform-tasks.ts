@@ -110,8 +110,8 @@ export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'professional-timeline': 'completed',
   'export-publish-share': 'completed',
   'community-works': 'completed',
-  'collaboration-membership': 'in-progress',
-  'agent-skill-cli': 'pending',
+  'collaboration-membership': 'completed',
+  'agent-skill-cli': 'in-progress',
 }
 
 export function isPlatformTaskId(value: string): value is PlatformTaskId {

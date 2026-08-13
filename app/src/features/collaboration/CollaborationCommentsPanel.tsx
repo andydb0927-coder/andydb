@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import type { CollaborationRepository } from './collaboration-repository'
 import type { ChangeComment, CommentTargetType } from './collaboration-model'
 
-type CommentStore = Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
+type CommentStore = Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'> &
+  Partial<Pick<CollaborationRepository, 'updateComment' | 'deleteComment'>>
 
 export interface CollaborationCommentsPanelProps {
   projectId: string
@@ -26,6 +27,9 @@ export function CollaborationCommentsPanel({
   const [comments, setComments] = useState<ChangeComment[]>([])
   const [body, setBody] = useState('')
   const [feedback, setFeedback] = useState<string>()
+  const [editingId, setEditingId] = useState<string>()
+  const [editingBody, setEditingBody] = useState('')
+  const [pendingDeleteId, setPendingDeleteId] = useState<string>()
   const [collapsed, setCollapsed] = useState(
     () => variant === 'floating' && typeof window !== 'undefined' && window.innerWidth <= 800,
   )
@@ -68,6 +72,35 @@ export function CollaborationCommentsPanel({
     }
   }
 
+  const saveEdit = async (comment: ChangeComment) => {
+    if (!repository.updateComment) return
+    try {
+      const next = await repository.updateComment(
+        comment.id,
+        editingBody,
+        comment.updatedAt,
+      )
+      setComments((current) => current.map((item) => item.id === comment.id ? next : item))
+      setEditingId(undefined)
+      setEditingBody('')
+      setFeedback('评论修改已保存到本地')
+    } catch {
+      setFeedback('评论已被其他操作更新，请刷新后重试')
+    }
+  }
+
+  const remove = async (comment: ChangeComment) => {
+    if (!repository.deleteComment) return
+    try {
+      await repository.deleteComment(comment.id, comment.updatedAt)
+      setComments((current) => current.filter((item) => item.id !== comment.id))
+      setPendingDeleteId(undefined)
+      setFeedback('评论已从本地删除')
+    } catch {
+      setFeedback('评论已被其他操作更新，请刷新后重试')
+    }
+  }
+
   const openCount = comments.filter(({ status }) => status === 'open').length
   const asideClass = collapsed
     ? `collaboration-comments collaboration-comments--${variant} collaboration-comments--collapsed`
@@ -92,10 +125,44 @@ export function CollaborationCommentsPanel({
       <ol>
         {comments.map((comment) => (
           <li key={comment.id} data-status={comment.status}>
-            <span>{comment.body}</span>
-            {comment.status === 'open' ? (
-              <button type="button" onClick={() => void resolve(comment.id)}>标记已解决</button>
-            ) : <small>已解决</small>}
+            {editingId === comment.id ? (
+              <div className="collaboration-comments__editor">
+                <label>
+                  <span>编辑评论内容</span>
+                  <textarea
+                    aria-label="编辑评论内容"
+                    value={editingBody}
+                    onChange={(event) => setEditingBody(event.currentTarget.value)}
+                  />
+                </label>
+                <div>
+                  <button type="button" disabled={!editingBody.trim()} onClick={() => void saveEdit(comment)}>保存修改</button>
+                  <button type="button" onClick={() => { setEditingId(undefined); setEditingBody('') }}>取消编辑</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span>{comment.body}</span>
+                <div className="collaboration-comments__actions">
+                  {comment.status === 'open' ? (
+                    <button type="button" onClick={() => void resolve(comment.id)}>标记已解决</button>
+                  ) : <small>已解决</small>}
+                  {repository.updateComment ? (
+                    <button type="button" onClick={() => { setEditingId(comment.id); setEditingBody(comment.body) }}>编辑评论</button>
+                  ) : null}
+                  {repository.deleteComment ? (
+                    <button type="button" onClick={() => setPendingDeleteId(comment.id)}>删除评论</button>
+                  ) : null}
+                </div>
+                {pendingDeleteId === comment.id ? (
+                  <div className="collaboration-comments__delete-confirm" role="group" aria-label="删除评论确认">
+                    <span>删除后无法恢复。</span>
+                    <button type="button" onClick={() => void remove(comment)}>确认删除评论</button>
+                    <button type="button" onClick={() => setPendingDeleteId(undefined)}>取消删除</button>
+                  </div>
+                ) : null}
+              </>
+            )}
           </li>
         ))}
       </ol>

@@ -1,5 +1,53 @@
 export type CollaboratorRole = 'owner' | 'editor' | 'viewer'
 export type CommentTargetType = 'node' | 'clip'
+export type CollaboratorCapability =
+  | 'edit-project'
+  | 'comment'
+  | 'resolve-comments'
+  | 'manage-members'
+  | 'export-project'
+
+export const collaboratorCapabilities: CollaboratorCapability[] = [
+  'edit-project',
+  'comment',
+  'resolve-comments',
+  'manage-members',
+  'export-project',
+]
+
+const collaboratorPermissionMatrix: Record<
+  CollaboratorRole,
+  Record<CollaboratorCapability, boolean>
+> = {
+  owner: {
+    'edit-project': true,
+    comment: true,
+    'resolve-comments': true,
+    'manage-members': true,
+    'export-project': true,
+  },
+  editor: {
+    'edit-project': true,
+    comment: true,
+    'resolve-comments': true,
+    'manage-members': false,
+    'export-project': true,
+  },
+  viewer: {
+    'edit-project': false,
+    comment: true,
+    'resolve-comments': false,
+    'manage-members': false,
+    'export-project': false,
+  },
+}
+
+export function canCollaborator(
+  role: CollaboratorRole,
+  capability: CollaboratorCapability,
+) {
+  return collaboratorPermissionMatrix[role][capability]
+}
 
 export interface Collaborator {
   id: string

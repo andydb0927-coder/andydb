@@ -21,7 +21,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 | `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run build` | TypeScript 检查 + 生产构建（输出到 `dist/`） |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
-| `npm run test:run` | 全量 Vitest 单测（当前 825 项） |
+| `npm run test:run` | 全量 Vitest 单测（当前 832 项） |
 | `npm run e2e` | Playwright Chromium E2E（当前 26 项） |
 
 ## 功能地图
@@ -37,7 +37,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 | 发现与作品 | `/discover` | 作品墙：标签/搜索筛选、最新/最热排序、点赞/收藏/浏览、作品详情、创作者主页、相关推荐、个人作品管理 |
 | 模型能力 | `/models` | 模型目录与远程画布选择（LibTV 目录只读预览，真实调用需确认） |
 | Agent 技能 | `/agents` | 5 个内置本地技能：分镜提示词、素材报告、时间线统计、发布文案、备份检查 |
-| 本地工作区 | `/account` | 个人中心：会员等级（本地模拟）、协作者管理、项目统计、导出/导入备份 |
+| 本地工作区 | `/account` | 个人中心：会员等级（本地模拟）、协作角色权限、可追踪评论、项目统计、导出/导入备份 |
 
 ## 架构要点
 

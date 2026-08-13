@@ -27,6 +27,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function isValidCollaborator(value: unknown, projectId: string) {
+  if (!isRecord(value)) return false
+  return (
+    isNonEmptyString(value.id) &&
+    value.projectId === projectId &&
+    isNonEmptyString(value.name) &&
+    (value.role === 'owner' || value.role === 'editor' || value.role === 'viewer') &&
+    isNonEmptyString(value.createdAt) &&
+    isNonEmptyString(value.updatedAt)
+  )
+}
+
+function isValidComment(value: unknown, projectId: string) {
+  if (!isRecord(value)) return false
+  return (
+    isNonEmptyString(value.id) &&
+    value.projectId === projectId &&
+    (value.targetType === 'node' || value.targetType === 'clip') &&
+    isNonEmptyString(value.targetId) &&
+    isNonEmptyString(value.body) &&
+    isNonEmptyString(value.authorName) &&
+    (value.status === 'open' || value.status === 'resolved') &&
+    isNonEmptyString(value.createdAt) &&
+    isNonEmptyString(value.updatedAt)
+  )
+}
+
 function validatePackage(value: unknown): asserts value is LocalProjectPackage {
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new Error('不支持的项目包版本')
@@ -48,13 +79,13 @@ function validatePackage(value: unknown): asserts value is LocalProjectPackage {
   ) {
     throw new Error('项目包结构无效')
   }
+  const projectId = project.id as string
   const collaboration = value.collaboration as LocalProjectPackage['collaboration']
   if (
-    [...collaboration.collaborators, ...collaboration.comments].some(
-      ({ projectId }) => projectId !== project.id,
-    )
+    collaboration.collaborators.some((item) => !isValidCollaborator(item, projectId)) ||
+    collaboration.comments.some((item) => !isValidComment(item, projectId))
   ) {
-    throw new Error('项目包协作记录不属于当前项目')
+    throw new Error('项目包协作记录无效')
   }
 }
 
