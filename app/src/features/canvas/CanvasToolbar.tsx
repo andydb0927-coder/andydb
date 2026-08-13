@@ -1,19 +1,25 @@
 import {
   BookOpenText,
+  CircleHelp,
   Clapperboard,
   Contact,
   Eye,
   EyeOff,
   Film,
+  FolderOpen,
   Group,
   Globe2,
+  History,
   Image,
+  Keyboard,
   MousePointer2,
+  Plus,
   Type,
   Unplug,
 } from 'lucide-react'
 
 import { FloatingPanel } from '../../ui/FloatingPanel'
+import type { WorkspacePanel } from './CanvasWorkspace'
 
 const tools = [
   { id: 'select', label: '选择', icon: MousePointer2 },
@@ -37,6 +43,7 @@ export interface CanvasToolbarProps {
   draftOpen: boolean
   groupAction?: 'disabled' | 'group' | 'ungroup'
   onGroupAction?(): void
+  onOpenPanel?(panel: WorkspacePanel): void
   onToggleConnections(): void
   onToolChange(tool: CanvasTool, trigger: HTMLButtonElement): void
 }
@@ -48,11 +55,13 @@ export function CanvasToolbar({
   draftOpen,
   groupAction = 'disabled',
   onGroupAction,
+  onOpenPanel,
   onToggleConnections,
   onToolChange,
 }: CanvasToolbarProps) {
   return (
     <FloatingPanel className="canvas-toolbar" role="toolbar" aria-label="创作工具">
+      <span className="canvas-toolbar__section-label"><Plus aria-hidden="true" />添加节点</span>
       {tools.map(({ id, label, icon: Icon }) => {
         const isGroup = id === 'group'
         const toolDisabled =
@@ -96,6 +105,14 @@ export function CanvasToolbar({
       >
         {connectionsVisible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
       </button>
+      {onOpenPanel ? (
+        <div className="canvas-toolbar__resources" aria-label="工作区资源">
+          <button type="button" aria-label="打开资产" onClick={() => onOpenPanel('assets')}><FolderOpen aria-hidden="true" /></button>
+          <button type="button" aria-label="打开历史" onClick={() => onOpenPanel('history')}><History aria-hidden="true" /></button>
+          <button type="button" aria-label="打开快捷键" onClick={() => onOpenPanel('shortcuts')}><Keyboard aria-hidden="true" /></button>
+          <button type="button" aria-label="打开帮助" onClick={() => onOpenPanel('help')}><CircleHelp aria-hidden="true" /></button>
+        </div>
+      ) : null}
     </FloatingPanel>
   )
 }

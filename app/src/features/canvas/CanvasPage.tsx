@@ -2,6 +2,7 @@ import {
   Background,
   Controls,
   MarkerType,
+  MiniMap,
   ReactFlow,
   ViewportPortal,
   type Connection,
@@ -78,6 +79,15 @@ import {
   type CanvasTool,
 } from './CanvasToolbar'
 import { CanvasTopBar } from './CanvasTopBar'
+import {
+  CanvasAgentPanel,
+  CanvasStoryboardView,
+  CanvasViewControls,
+  SelectionContextBar,
+  WorkspaceSidePanel,
+  type WorkspaceMode,
+  type WorkspacePanel,
+} from './CanvasWorkspace'
 import { CanvasGroupOverlay } from './CanvasGroupOverlay'
 import {
   findSelectedCanvasGroup,
@@ -175,6 +185,25 @@ const defaultGenerationAdapter = new RuntimeGenerationAdapter(
     preferenceStore: browserGenerationPreferenceStore,
   }),
 )
+
+const workspacePreferencesKey = 'wireless-canvas:workspace-preferences'
+
+function readWorkspacePreferences() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(workspacePreferencesKey) ?? '{}') as {
+      minimapVisible?: unknown
+      snapToGrid?: unknown
+      connectionsVisible?: unknown
+    }
+    return {
+      minimapVisible: stored.minimapVisible === true,
+      snapToGrid: stored.snapToGrid === true,
+      connectionsVisible: stored.connectionsVisible !== false,
+    }
+  } catch {
+    return { minimapVisible: false, snapToGrid: false, connectionsVisible: true }
+  }
+}
 
 function currentLibTvSelection(
   store: GenerationProviderPreferenceStore,
@@ -356,12 +385,24 @@ export function CanvasPage({
   const [nodeMeasurements, setNodeMeasurements] =
     useState<NodeMeasurementState>({ measurements: {} })
   const [nodeListOpen, setNodeListOpen] = useState(false)
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('workflow')
+  const [workspacePanel, setWorkspacePanel] = useState<WorkspacePanel>()
+  const [agentOpen, setAgentOpen] = useState(false)
+  const [minimapVisible, setMinimapVisible] = useState(
+    () => readWorkspacePreferences().minimapVisible,
+  )
+  const [snapToGrid, setSnapToGrid] = useState(
+    () => readWorkspacePreferences().snapToGrid,
+  )
+  const [zoomPercent, setZoomPercent] = useState(100)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
   const [connectionTool, setConnectionTool] = useState<ConnectionToolState>({
     phase: 'idle',
   })
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
-  const [connectionsVisible, setConnectionsVisible] = useState(true)
+  const [connectionsVisible, setConnectionsVisible] = useState(
+    () => readWorkspacePreferences().connectionsVisible,
+  )
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
@@ -439,10 +480,13 @@ export function CanvasPage({
 
   useEffect(() => {
     nativeConnectionActiveRef.current = false
+    setWorkspaceMode('workflow')
+    setWorkspacePanel(undefined)
+    setAgentOpen(false)
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
-    setConnectionsVisible(true)
+    setConnectionsVisible(readWorkspacePreferences().connectionsVisible)
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
@@ -460,6 +504,13 @@ export function CanvasPage({
       connectionTriggerRef.current = null
     }
   }, [projectId])
+
+  useEffect(() => {
+    localStorage.setItem(
+      workspacePreferencesKey,
+      JSON.stringify({ minimapVisible, snapToGrid, connectionsVisible }),
+    )
+  }, [connectionsVisible, minimapVisible, snapToGrid])
 
   useEffect(() => {
     let active = true
@@ -1726,18 +1777,65 @@ export function CanvasPage({
     queueMicrotask(() => deleteTriggerRef.current?.focus())
   }
   const commentNode = project?.nodes.find(({ id }) => id === primaryNodeId)
+  const selectedWorkspaceNode = project?.nodes.find(({ id }) => id === primaryNodeId)
+
+  const openWorkspaceNode = (nodeId: string) => {
+    setWorkspaceMode('workflow')
+    setWorkspacePanel(undefined)
+    setSelectedEdgeId(undefined)
+    selectOnlyNode(nodeId)
+    queueMicrotask(() => {
+      void flowInstance?.fitView({
+        nodes: [{ id: nodeId }],
+        duration: 260,
+        padding: 0.4,
+      })
+    })
+  }
+
+  const createImageToolNode = (tool: string) => {
+    const currentProject = useProjectStore.getState().activeProject
+    const sourceNode = currentProject?.nodes.find(({ id }) => id === primaryNodeId)
+    if (!currentProject || currentProject.id !== projectId || !sourceNode) return
+    const creation = buildCanvasCreation(currentProject, {
+      kind: 'text',
+      title: `${tool}配置`,
+      content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
+      position: {
+        x: sourceNode.position.x + 360,
+        y: sourceNode.position.y + 40,
+      },
+    })
+    createCanvasContent(creation)
+    selectOnlyNode(creation.node.id)
+    setGenerationFeedback(`已创建“${tool}配置”节点；尚未触发外部生成。`)
+  }
+
+  const closeAgent = () => {
+    setAgentOpen(false)
+    queueMicrotask(() => {
+      viewportRef.current
+        ?.closest('.canvas-page')
+        ?.querySelector<HTMLButtonElement>('button[aria-label="Agent"]')
+        ?.focus()
+    })
+  }
 
   return (
-    <main className="canvas-page">
+    <main className={`canvas-page${agentOpen ? ' canvas-page--agent-open' : ''}`}>
       <CanvasTopBar
         projectId={project?.id}
         projectTitle={project?.title ?? '项目画布'}
         saveStatus={saveStatus}
         canUndo={Boolean(project) && canUndo}
         canRedo={Boolean(project) && canRedo}
+        mode={workspaceMode}
+        agentOpen={agentOpen}
         onUndo={undo}
         onRedo={redo}
         onOpenNodeList={openNodeList}
+        onModeChange={setWorkspaceMode}
+        onToggleAgent={() => setAgentOpen((open) => !open)}
       />
       <div
         ref={viewportRef}
@@ -1759,6 +1857,7 @@ export function CanvasPage({
             {assetAttachSuccessMessage}
           </p>
         ) : null}
+        <div className="canvas-workflow-layer" hidden={workspaceMode !== 'workflow'}>
         <ReactFlow<CreativeFlowNode, DependencyFlowEdge>
           aria-label="创作节点图"
           nodes={flowNodes}
@@ -1787,6 +1886,7 @@ export function CanvasPage({
             handleNodeSelection(node.id)
           }}
           onInit={setFlowInstance}
+          onMove={(_event, viewport) => setZoomPercent(viewport.zoom * 100)}
           fitView
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll
@@ -1798,9 +1898,12 @@ export function CanvasPage({
           deleteKeyCode={['Backspace', 'Delete']}
           minZoom={0.35}
           maxZoom={1.8}
+          snapToGrid={snapToGrid}
+          snapGrid={[24, 24]}
         >
           <Background gap={24} size={1} color="rgba(255,255,255,0.1)" />
           <Controls showInteractive={false} />
+          {minimapVisible ? <MiniMap aria-label="画布小地图" pannable zoomable /> : null}
           <ViewportPortal>
             {canvasGroupOverlays.map(({ group, bounds }) => (
               <CanvasGroupOverlay
@@ -1826,8 +1929,21 @@ export function CanvasPage({
                 : 'disabled'
           }
           onGroupAction={handleGroupAction}
+          onOpenPanel={setWorkspacePanel}
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
+        />
+        <CanvasViewControls
+          minimapVisible={minimapVisible}
+          snapToGrid={snapToGrid}
+          zoomPercent={zoomPercent}
+          onToggleMinimap={() => setMinimapVisible((visible) => !visible)}
+          onToggleSnap={() => setSnapToGrid((enabled) => !enabled)}
+          onFitView={() => void flowInstance?.fitView({ duration: 260, padding: 0.16 })}
+        />
+        <SelectionContextBar
+          node={selectedWorkspaceNode}
+          onCreateToolNode={createImageToolNode}
         />
         {canvasHint ? (
           <p
@@ -1894,13 +2010,27 @@ export function CanvasPage({
             />
           )
         })() : null}
-        {project ? (
-          <DirectorComposer
-            selectedNodeId={primaryNodeId}
-            onExecute={handleDirectorCommand}
+        </div>
+        {workspaceMode === 'storyboard' && project ? (
+          <CanvasStoryboardView project={project} onOpenNode={openWorkspaceNode} />
+        ) : null}
+        {workspacePanel && project ? (
+          <WorkspaceSidePanel
+            panel={workspacePanel}
+            project={project}
+            onClose={() => setWorkspacePanel(undefined)}
+            onSelectNode={openWorkspaceNode}
           />
         ) : null}
-        {project ? (
+        {agentOpen && project ? (
+          <CanvasAgentPanel onClose={closeAgent}>
+            <DirectorComposer
+              selectedNodeId={primaryNodeId}
+              onExecute={handleDirectorCommand}
+            />
+          </CanvasAgentPanel>
+        ) : null}
+        {project && workspaceMode === 'workflow' ? (
           <WorkflowRunPanel
             selectedCount={workflowSelectedCount}
             runs={workflowRuns}
@@ -1910,7 +2040,7 @@ export function CanvasPage({
             membershipPlan={membershipPlan}
           />
         ) : null}
-        {project && commentNode ? (
+        {project && commentNode && workspaceMode === 'workflow' ? (
           <CollaborationCommentsPanel
             projectId={project.id}
             targetType="node"

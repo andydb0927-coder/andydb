@@ -78,6 +78,7 @@ interface FlowPropsFixture {
   panActivationKeyCode: string
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
+  snapToGrid?: boolean
   onPaneClick?(event: { clientX: number; clientY: number }): void
   onNodeClick?(
     event: { target?: EventTarget | null },
@@ -104,6 +105,7 @@ vi.mock('@xyflow/react', () => ({
   Background: () => null,
   BaseEdge: () => null,
   Controls: () => null,
+  MiniMap: () => <div role="img" aria-label="画布小地图" />,
   Handle: () => null,
   Position: { Left: 'left', Right: 'right' },
   MarkerType: { ArrowClosed: 'arrowclosed' },
@@ -306,6 +308,7 @@ function clickPane(clientX = 420, clientY = 300) {
 
 beforeEach(() => {
   latestFlowProps = undefined
+  localStorage.clear()
   act(() => activate())
 })
 
@@ -1417,6 +1420,7 @@ describe('creative canvas', () => {
   test('keeps the floating AI director non-mutating for unknown input', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
     const viewport = screen.getByRole('region', { name: '项目画布' }).parentElement!
     expect(within(viewport).getByRole('heading', { name: 'AI 导演' })).toBeVisible()
     const before = useProjectStore.getState().activeProject
@@ -1437,6 +1441,7 @@ describe('creative canvas', () => {
   test('routes a destructive Director command through dependency confirmation and restores Director focus', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
     await user.click(screen.getByRole('button', { name: '场景设定' }))
     await user.type(
       screen.getByRole('textbox', { name: '告诉我下一步要做什么' }),
@@ -1466,6 +1471,7 @@ describe('creative canvas', () => {
   test('invalidates a director proposal when the selected node changes', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
     await user.click(screen.getByRole('button', { name: '场景设定' }))
     await user.type(
       screen.getByRole('textbox', { name: '告诉我下一步要做什么' }),
@@ -1482,8 +1488,10 @@ describe('creative canvas', () => {
     ).toBe(true)
   })
 
-  test('discloses that generation is a local PNG-thumbnail demo', () => {
+  test('discloses that generation is a local PNG-thumbnail demo', async () => {
+    const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
 
     expect(
       screen.getByText('本地演示生成 · 视频结果使用 PNG 视觉缩略图'),
@@ -1910,6 +1918,7 @@ describe('creative canvas', () => {
   test('ignores the L shortcut for modifiers, editable targets, and an open draft dialog', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
     const connect = screen.getByRole('button', { name: '连线' })
     const directorInput = screen.getByLabelText('告诉我下一步要做什么')
 
@@ -2240,6 +2249,7 @@ describe('creative canvas', () => {
   test('ignores the H shortcut in editable contexts and for modified or repeated key events', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
     const directorInput = screen.getByLabelText('告诉我下一步要做什么')
 
     act(() => {
@@ -2292,7 +2302,7 @@ describe('creative canvas', () => {
     )
   })
 
-  test('resets connection visibility when the active project changes', async () => {
+  test('persists connection visibility when the active project changes', async () => {
     const user = userEvent.setup()
     const projectB = {
       ...makeCanvasProject(),
@@ -2316,10 +2326,10 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
 
     expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
-    expect(latestFlowProps?.edges[0].data?.visible).toBe(true)
-    expect(screen.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
+    expect(latestFlowProps?.edges[0].data?.visible).toBe(false)
+    expect(screen.getByRole('button', { name: '显示连线' })).toHaveAttribute(
       'aria-pressed',
-      'true',
+      'false',
     )
   })
 
@@ -2600,6 +2610,10 @@ describe('creative canvas', () => {
       '连线',
       '分组',
       '隐藏连线',
+      '打开资产',
+      '打开历史',
+      '打开快捷键',
+      '打开帮助',
     ])
   })
 
@@ -3064,6 +3078,73 @@ describe('creative canvas', () => {
 })
 
 describe('canvas top bar', () => {
+  test('opens the Agent on demand and restores focus after closing it', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    const trigger = screen.getByRole('button', { name: 'Agent' })
+    expect(trigger).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('complementary', { name: 'Agent 工作区' })).not.toBeInTheDocument()
+
+    await user.click(trigger)
+    expect(screen.getByRole('complementary', { name: 'Agent 工作区' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '关闭 Agent' }))
+    expect(screen.queryByRole('complementary', { name: 'Agent 工作区' })).not.toBeInTheDocument()
+    await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  test('switches to a derived storyboard and returns to the selected source node', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const { fitView } = initializeFlow()
+
+    await user.click(screen.getByRole('button', { name: '故事板' }))
+    expect(screen.getByRole('region', { name: '项目故事板' })).toBeVisible()
+    expect(screen.queryByRole('toolbar', { name: '创作工具' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '在工作流中打开 场景设定' }))
+    expect(screen.getByRole('button', { name: '工作流' })).toHaveAttribute('aria-pressed', 'true')
+    expect(latestFlowProps?.nodes.find(({ id }) => id === 'scene')?.selected).toBe(true)
+    expect(fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: 'scene' }] }))
+  })
+
+  test('opens local workspace resources and persists view preferences outside project history', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+    const pastBefore = useProjectStore.getState().past
+
+    await user.click(screen.getByRole('button', { name: '打开资产' }))
+    expect(screen.getByRole('complementary', { name: '资产' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '打开快捷键' }))
+    expect(screen.queryByRole('complementary', { name: '资产' })).not.toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '快捷键' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '显示小地图' }))
+    await user.click(screen.getByRole('button', { name: '开启网格吸附' }))
+    expect(screen.getByRole('img', { name: '画布小地图' })).toBeVisible()
+    expect(latestFlowProps?.snapToGrid).toBe(true)
+    expect(useProjectStore.getState().past).toBe(pastBefore)
+    expect(localStorage.getItem('wireless-canvas:workspace-preferences')).toContain('"snapToGrid":true')
+  })
+
+  test('previews an image tool before creating an undoable local configuration node', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: '多角度' }))
+
+    expect(screen.getByRole('dialog', { name: '多角度配置' })).toBeVisible()
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
+    await user.click(screen.getByRole('button', { name: '创建配置节点' }))
+
+    expect(
+      useProjectStore.getState().activeProject?.nodes.some(({ title }) => title === '多角度配置'),
+    ).toBe(true)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('尚未触发外部生成')
+  })
+
   test.each([
     ['saved', '已保存'],
     ['saving', '保存中'],
