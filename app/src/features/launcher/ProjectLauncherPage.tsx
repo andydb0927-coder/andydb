@@ -260,23 +260,6 @@ export function ProjectLauncherPage({
 
   return (
     <main className="launcher-page">
-      <header className="launcher-header">
-        <Link className="launcher-brand focus-visible" to="/">
-          无线画布
-        </Link>
-        <nav className="launcher-header__actions" aria-label="首页账户入口">
-          <Link className="launcher-header__link focus-visible" to="/account#credits">
-            积分超市
-          </Link>
-          <Link className="launcher-header__membership focus-visible" to="/account#membership">
-            开通会员
-          </Link>
-          <Link className="launcher-account focus-visible" to="/account">
-            注册/登录
-          </Link>
-        </nav>
-      </header>
-
       <PlatformHomeSections
         contentRepository={homeContentRepository}
         communityRepository={communityRepository}
@@ -382,7 +365,7 @@ export function ProjectLauncherPage({
         <nav aria-label="首页帮助链接">
           <Link to="/projects">查看项目</Link>
           <Link to="/agents">浏览 Skills</Link>
-          <Link to="/discover">打开作品墙</Link>
+          <Link to="/challenges">浏览创作者挑战赛</Link>
         </nav>
       </footer>
     </main>

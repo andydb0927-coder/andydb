@@ -3392,6 +3392,36 @@ select {
   min-width: 0;
 }
 
+.platform-shell__topbar {
+  position: sticky;
+  z-index: 40;
+  top: 0;
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 clamp(var(--space-4), 4vw, var(--space-8));
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(11 12 16 / 88%);
+  backdrop-filter: blur(18px);
+}
+
+@media (max-width: 560px) {
+  .platform-shell__topbar {
+    justify-content: flex-end;
+    padding-inline: var(--space-3);
+  }
+
+  .platform-shell__topbar .launcher-brand {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
 .platform-task-drawer {
   position: sticky;
   z-index: 30;

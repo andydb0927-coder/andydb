@@ -22,14 +22,19 @@ describe('platform shell', () => {
     localStorage.clear()
   })
 
-  test('marks the current canvas and collapses its workspace rail', async () => {
+  test('keeps the Liblib navigation structure in the workspace rail', async () => {
     const user = userEvent.setup()
     renderWorkspaceShell()
 
-    expect(screen.getByRole('link', { name: '创作画布' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    const navigation = screen.getByRole('navigation', { name: '平台导航' })
+    expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      '首页',
+      '项目',
+      'Skills',
+      '创作者挑战赛',
+    ])
+    expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
+    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
 
     await user.click(screen.getByRole('button', { name: '收起平台导航' }))
 
@@ -40,7 +45,7 @@ describe('platform shell', () => {
     expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
   })
 
-  test('uses the five-item public home navigation without hiding full navigation on other pages', () => {
+  test('uses one compact public navigation on every standard page', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -75,14 +80,33 @@ describe('platform shell', () => {
       </MemoryRouter>,
     )
 
-    const platformNavigation = screen.getByRole('navigation', { name: '平台导航' })
-    expect(within(platformNavigation).getByRole('link', { name: '故事设定' })).toHaveAttribute('href', '/story')
-    expect(within(platformNavigation).getByRole('link', { name: '剪辑项目' })).toHaveAttribute('href', '/editor')
-    expect(within(platformNavigation).getByRole('link', { name: '交付与发布' })).toHaveAttribute('href', '/delivery')
-    expect(within(platformNavigation).getByRole('link', { name: '创作者挑战赛' })).toHaveAttribute(
-      'href',
-      '/challenges',
+    const platformNavigation = screen.getAllByRole('navigation', { name: '平台导航' })[0]
+    expect(within(platformNavigation).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      '首页',
+      '项目',
+      'Skills',
+      '创作者挑战赛',
+    ])
+    for (const removed of ['素材与历史', '故事设定', '剪辑项目', '交付与发布', '发现与作品', '模型能力']) {
+      expect(within(platformNavigation).queryByRole('link', { name: removed })).not.toBeInTheDocument()
+    }
+  })
+
+  test('exposes the compact Liblib account actions without routing to a deleted account page', () => {
+    render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/projects" element={<PlatformShell />}>
+            <Route index element={<h1>项目空间</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
     )
+
+    const topbar = screen.getByRole('navigation', { name: '顶栏账户入口' })
+    expect(within(topbar).getByRole('link', { name: '积分超市' })).toHaveAttribute('href', '/#credits')
+    expect(within(topbar).getByRole('link', { name: '开通会员' })).toHaveAttribute('href', '/#membership')
+    expect(within(topbar).getByRole('link', { name: '注册/登录' })).toHaveAttribute('href', '/#login')
   })
 
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {

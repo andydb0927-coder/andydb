@@ -44,16 +44,19 @@ describe('platform task catalogue', () => {
     expect(defaultPlatformTaskStatuses['agent-skill-cli']).toBe('completed')
     expect(
       platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
-    ).toBe('/story')
+    ).toBe('/projects')
     expect(
       platformTasks.find((task) => task.id === 'workflow-templates')?.targetPath,
-    ).toBe('/workflows')
+    ).toBe('/projects')
     expect(
       platformTasks.find((task) => task.id === 'professional-timeline')?.targetPath,
-    ).toBe('/editor')
+    ).toBe('/projects')
     expect(
       platformTasks.find((task) => task.id === 'export-publish-share')?.targetPath,
-    ).toBe('/delivery')
+    ).toBe('/projects')
+    expect(platformTasks.every((task) => ![
+      '/models', '/discover', '/assets', '/story', '/editor', '/delivery', '/workflows', '/account',
+    ].includes(task.targetPath))).toBe(true)
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })

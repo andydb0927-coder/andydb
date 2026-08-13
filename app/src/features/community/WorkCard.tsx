@@ -12,22 +12,19 @@ function readableDuration(seconds: number) {
 export function WorkCard({ work }: { work: PublishedWork }) {
   return (
     <article className="community-card" aria-label={work.title}>
-      <Link className="community-card__cover focus-visible" aria-label={`查看作品 ${work.title}`} to={`/discover/${work.id}`}>
+      <Link className="community-card__cover focus-visible" aria-label={`查看作品 ${work.title}`} to="/projects/new">
         <img src={work.coverUrl} alt={work.title} />
         <span>{readableDuration(work.durationSeconds)}</span>
       </Link>
       <div className="community-card__body">
         <div className="community-card__title">
           <h2>{work.title}</h2>
-          <Link
-            className="community-card__creator focus-visible"
-            to={`/discover/creator/${encodeURIComponent(work.author)}`}
-          >
+          <span className="community-card__creator">
             {work.author}
             {work.authorVerified ? (
               <BadgeCheck aria-label={`${work.author} 已认证`} />
             ) : null}
-          </Link>
+          </span>
         </div>
         <ul className="community-tags" aria-label={`${work.title} 标签`}>
           {work.tags.map((tag) => <li key={tag}>{tag}</li>)}
@@ -39,7 +36,7 @@ export function WorkCard({ work }: { work: PublishedWork }) {
         </div>
         <Link
           className="community-card__process focus-visible"
-          to={`/discover/${work.id}`}
+          to="/projects/new"
           aria-label={`查看 ${work.title} 的创作过程`}
         >
           查看创作过程

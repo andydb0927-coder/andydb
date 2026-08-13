@@ -79,7 +79,7 @@ describe('platform home sections', () => {
     )
     expect(within(carousel).getByRole('link', { name: /Seedance 2.5 模型上新/ })).toHaveAttribute(
       'href',
-      '/models',
+      '/agents',
     )
 
     await user.click(within(carousel).getByRole('button', { name: '下一张特性' }))
@@ -174,6 +174,6 @@ describe('platform home sections', () => {
     expect(within(card).getByLabelText('一帧商业 已认证')).toBeVisible()
     expect(
       within(card).getByRole('link', { name: '查看 山岚入茶 的创作过程' }),
-    ).toHaveAttribute('href', '/discover/demo-work-tea-mountain')
+    ).toHaveAttribute('href', '/projects/new')
   })
 })

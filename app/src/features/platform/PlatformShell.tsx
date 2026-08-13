@@ -1,45 +1,22 @@
 import {
-  BookOpenText,
-  Bot,
   CircleHelp,
   Clapperboard,
   ClipboardList,
-  Compass,
-  Cpu,
-  Film,
   FolderKanban,
-  FolderOpen,
   Home,
-  PackageCheck,
-  PanelsTopLeft,
   Plus,
   Sparkles,
   Trophy,
-  UserRound,
 } from 'lucide-react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { PlatformTaskDrawer } from './PlatformTaskDrawer'
 
 export type PlatformShellMode = 'standard' | 'workspace'
 
 export const platformNavigation = [
-  { to: '/projects', label: '项目空间', icon: PanelsTopLeft, end: true },
-  { to: '/assets', label: '素材与历史', icon: FolderOpen, end: false },
-  { to: '/story', label: '故事设定', icon: BookOpenText, end: false },
-  { to: '/workflows', label: '工作流与模板', icon: Sparkles, end: false },
-  { to: '/editor', label: '剪辑项目', icon: Film, end: false },
-  { to: '/delivery', label: '交付与发布', icon: PackageCheck, end: false },
-  { to: '/discover', label: '发现与作品', icon: Compass, end: false },
-  { to: '/models', label: '模型能力', icon: Cpu, end: false },
-  { to: '/agents', label: 'Agent 技能', icon: Bot, end: false },
-  { to: '/challenges', label: '创作者挑战赛', icon: Trophy, end: false },
-  { to: '/account', label: '本地工作区', icon: UserRound, end: false },
-] as const
-
-const homeNavigation = [
   { to: '/', label: '首页', icon: Home, end: true },
   { to: '/projects', label: '项目', icon: FolderKanban, end: true },
   { to: '/agents', label: 'Skills', icon: Sparkles, end: false },
@@ -52,12 +29,10 @@ const homeNavigation = [
 ] as const
 
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {
-  const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [tasksOpen, setTasksOpen] = useState(false)
   const taskTriggerRef = useRef<HTMLButtonElement>(null)
-  const canvasPath = projectId ? `/project/${projectId}` : '/'
   const isHomepage = mode === 'standard' && location.pathname === '/'
 
   const closeTasks = useCallback(() => {
@@ -95,70 +70,33 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
           <Clapperboard aria-hidden="true" />
           <span>无线画布</span>
         </div>
-        {isHomepage ? (
-          <>
-            <Link
-              className="platform-shell__new-project focus-visible"
-              to="/projects/new"
-            >
-              <Plus aria-hidden="true" />
-              <span>新建项目</span>
-            </Link>
-            <nav
-              aria-label="首页导航"
-              className="platform-shell__navigation"
-              data-collapsed={collapsed}
-            >
-              {homeNavigation.map(({ to, label, icon: Icon, end }) => (
-                <NavLink
-                  key={to}
-                  className={({ isActive }) =>
-                    `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
-                  }
-                  end={end}
-                  to={to}
-                >
-                  <Icon aria-hidden="true" />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </nav>
-            <Link className="platform-shell__help focus-visible" to="/#help">
-              <CircleHelp aria-hidden="true" />
-              <span>帮助</span>
-            </Link>
-          </>
-        ) : (
-          <nav
-            aria-label="平台导航"
-            className="platform-shell__navigation"
-            data-collapsed={collapsed}
-          >
+        <Link className="platform-shell__new-project focus-visible" to="/projects/new">
+          <Plus aria-hidden="true" />
+          <span>新建项目</span>
+        </Link>
+        <nav
+          aria-label={isHomepage ? '首页导航' : '平台导航'}
+          className="platform-shell__navigation"
+          data-collapsed={collapsed}
+        >
+          {platformNavigation.map(({ to, label, icon: Icon, end }) => (
             <NavLink
+              key={to}
               className={({ isActive }) =>
                 `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
               }
-              end
-              to={canvasPath}
+              end={end}
+              to={to}
             >
-              <Clapperboard aria-hidden="true" />
-              <span>创作画布</span>
+              <Icon aria-hidden="true" />
+              <span>{label}</span>
             </NavLink>
-            {platformNavigation.map(({ to, label, icon: Icon, end }) => (
-              <NavLink
-                key={to}
-                className={({ isActive }) =>
-                  `platform-shell__link${isActive ? ' platform-shell__link--active' : ''}`
-                }
-                end={end}
-                to={to}
-              >
-                <Icon aria-hidden="true" />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        )}
+          ))}
+        </nav>
+        <Link className="platform-shell__help focus-visible" to="/#help">
+          <CircleHelp aria-hidden="true" />
+          <span>帮助</span>
+        </Link>
         {isHomepage ? null : (
           <button
             ref={taskTriggerRef}
@@ -175,6 +113,16 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
         )}
       </aside>
       <div className="platform-shell__content">
+        {mode === 'standard' ? (
+          <header className="platform-shell__topbar">
+            <Link className="launcher-brand focus-visible" to="/">无线画布</Link>
+            <nav className="launcher-header__actions" aria-label="顶栏账户入口">
+              <Link className="launcher-header__link focus-visible" to="/#credits">积分超市</Link>
+              <Link className="launcher-header__membership focus-visible" to="/#membership">开通会员</Link>
+              <Link className="launcher-account focus-visible" to="/#login">注册/登录</Link>
+            </nav>
+          </header>
+        ) : null}
         <Outlet />
       </div>
       {tasksOpen && !isHomepage ? <PlatformTaskDrawer onRequestClose={closeTasks} /> : null}

@@ -24,7 +24,7 @@ test('guides free members to upgrade instead of starting batch workflows', async
   )
 
   expect(screen.getByRole('button', { name: '创建运行' })).toBeDisabled()
-  expect(screen.getByRole('link', { name: '升级到专业版' })).toHaveAttribute('href', '/account')
+  expect(screen.getByRole('link', { name: '升级到专业版' })).toHaveAttribute('href', '/#membership')
   await user.click(screen.getByRole('button', { name: '创建运行' }))
   expect(onCreate).not.toHaveBeenCalled()
 })
@@ -47,5 +47,5 @@ test('keeps JSON free while creator-only export actions show an upgrade guide', 
   expect(onDownload).toHaveBeenCalledOnce()
   expect(screen.getByRole('button', { name: '下载 EDL' })).toBeDisabled()
   expect(screen.queryByRole('button', { name: '开始录制预览' })).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '升级到创作者版' })).toHaveAttribute('href', '/account')
+  expect(screen.getByRole('link', { name: '升级到创作者版' })).toHaveAttribute('href', '/#membership')
 })

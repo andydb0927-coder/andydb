@@ -412,7 +412,7 @@ export function PlatformHomeSections({
             <p className="home-kicker">TV SHOW · LOCAL COMMUNITY</p>
             <h2 id="home-show-title">看看大家如何把灵感变成作品</h2>
           </div>
-          <Link to="/discover">进入完整作品墙<ArrowRight aria-hidden="true" /></Link>
+          <Link to="/challenges">浏览创作者挑战赛<ArrowRight aria-hidden="true" /></Link>
         </div>
         <div className="home-show__toolbar">
           <div className="home-show__categories" role="group" aria-label="TV Show 分类">

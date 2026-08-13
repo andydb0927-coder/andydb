@@ -79,7 +79,7 @@ export function TimelineExportPanel({
       </div>
       {!advancedExportAllowed ? (
         <p className="membership-gate">
-          EDL 与预览录制需要创作者版。<Link to="/account">升级到创作者版</Link>
+          EDL 与预览录制需要创作者版。<Link to="/#membership">升级到创作者版</Link>
         </p>
       ) : null}
       <p className="timeline-export__note">

@@ -11,7 +11,7 @@ interface HomeContentBase {
   imageUrl?: string
   author?: string
   usageCount?: number
-  targetPath?: '/models' | '/workflows' | '/agents'
+  targetPath?: '/projects' | '/agents'
   prompt?: string
   ctaLabel?: string
   durationSeconds?: number
@@ -39,7 +39,7 @@ export interface HomeSkillContent extends HomeContentBase {
 
 export interface HomeCapabilityContent extends HomeContentBase {
   kind: 'capability'
-  targetPath: '/models' | '/workflows' | '/agents'
+  targetPath: '/projects' | '/agents'
   ctaLabel: string
 }
 
@@ -184,7 +184,7 @@ const homeContentSeed: HomeContentRecord[] = [
     kind: 'capability',
     title: 'Seedance 2.5 模型上新',
     description: '长叙事、多镜头与角色连续性能力现已进入本地模型目录。',
-    targetPath: '/models',
+    targetPath: '/agents',
     ctaLabel: '查看模型上新',
     order: 60,
   },
@@ -202,7 +202,7 @@ const homeContentSeed: HomeContentRecord[] = [
     kind: 'capability',
     title: 'Blender 创作插件',
     description: '把专业 3D 预演接入节点工作流，规划场景和机位。',
-    targetPath: '/workflows',
+    targetPath: '/projects',
     ctaLabel: '浏览工作流',
     order: 62,
   },
@@ -211,7 +211,7 @@ const homeContentSeed: HomeContentRecord[] = [
     kind: 'capability',
     title: 'Minimax H3 模型上新',
     description: '高性价比视频草稿能力，用于快速验证动作与节奏。',
-    targetPath: '/models',
+    targetPath: '/agents',
     ctaLabel: '查看模型目录',
     order: 63,
   },
@@ -220,7 +220,7 @@ const homeContentSeed: HomeContentRecord[] = [
     kind: 'capability',
     title: '镜头工作流插件',
     description: '串联分镜、素材、生成与时间线，让创作过程可复用。',
-    targetPath: '/workflows',
+    targetPath: '/projects',
     ctaLabel: '浏览创作插件',
     order: 64,
   },

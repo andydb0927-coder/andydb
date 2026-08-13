@@ -10,9 +10,6 @@ it.each([
   ['/challenges/director-master', 'LibTV Skill 导演大师赛'],
   ['/project/demo-project', '项目画布'],
   ['/project/demo-project/preview', '成片预览'],
-  ['/discover', '发现与作品'],
-  ['/discover/mine', '我的作品'],
-  ['/discover/missing-work', '作品暂不可用'],
 ])('renders %s', async (path, heading) => {
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />)
   expect(await screen.findByRole('heading', { name: heading })).toBeVisible()
@@ -23,12 +20,16 @@ it.each([
   ).toBeVisible()
 })
 
-it('keeps discovery navigation active on community child routes', async () => {
-  render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/discover/missing-work'] })} />)
-
-  await screen.findByRole('heading', { name: '作品暂不可用' })
-  expect(screen.getByRole('link', { name: '发现与作品' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
+it('removes the redundant full-page feature domains from the route table', () => {
+  const paths = routes.flatMap((route) => route.children?.map((child) => child.path).filter(Boolean) ?? [])
+  expect(paths).not.toEqual(expect.arrayContaining([
+    '/models',
+    '/discover',
+    '/assets',
+    '/story',
+    '/editor',
+    '/delivery',
+    '/workflows',
+    '/account',
+  ]))
 })

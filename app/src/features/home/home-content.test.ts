@@ -36,7 +36,7 @@ describe('platform home content seed', () => {
     ])
     expect(capabilities.every(({ targetPath }) =>
       targetPath !== undefined &&
-      ['/models', '/workflows', '/agents'].includes(targetPath),
+      ['/projects', '/agents'].includes(targetPath),
     )).toBe(true)
     expect(new Set(records.map(({ id }) => id)).size).toBe(records.length)
   })

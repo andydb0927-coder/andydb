@@ -111,7 +111,7 @@ export function WorkflowRunPanel({
       </div>
       {upgradeRequired ? (
         <p className="membership-gate">
-          批量或并行工作流需要专业版。<Link to="/account">升级到专业版</Link>
+          批量或并行工作流需要专业版。<Link to="/#membership">升级到专业版</Link>
         </p>
       ) : null}
 

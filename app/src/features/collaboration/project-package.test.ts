@@ -31,7 +31,7 @@ describe('project package codec', () => {
 
   test('round-trips a local-only share link and rejects unsupported packages', () => {
     const packageValue = makePackage()
-    const link = createShareLink(packageValue, 'https://canvas.local/account')
+    const link = createShareLink(packageValue, 'https://canvas.local/projects')
 
     expect(link).toContain('#local-share=')
     expect(projectPackageFromShareLink(link)).toEqual(packageValue)

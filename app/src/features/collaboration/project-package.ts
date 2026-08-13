@@ -107,8 +107,8 @@ export function parseProjectPackage(json: string): LocalProjectPackage {
 export function createShareLink(
   value: LocalProjectPackage,
   baseUrl = typeof window === 'undefined'
-    ? 'http://localhost/account'
-    : `${window.location.origin}/account`,
+    ? 'http://localhost/projects'
+    : `${window.location.origin}/projects`,
 ) {
   const url = new URL(baseUrl)
   url.hash = `local-share=${encodeURIComponent(serializeProjectPackage(value))}`
