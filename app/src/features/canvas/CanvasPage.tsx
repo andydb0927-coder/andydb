@@ -2250,6 +2250,7 @@ export function CanvasPage({
         ) : null}
         {workspacePanel && project ? (
           <WorkspaceSidePanel
+            generationPreferenceStore={generationPreferenceStore}
             panel={workspacePanel}
             project={project}
             onClose={() => setWorkspacePanel(undefined)}

@@ -238,7 +238,7 @@ function currentSelection(
     !nonBlankString(preference.selection.imageModelName) ||
     !nonBlankString(preference.selection.videoModelKey) ||
     !nonBlankString(preference.selection.videoModelName)) {
-    throw new Error('请先在模型能力页启用 LibTV 实际生成。')
+    throw new Error('请先在画布的模型设置中启用 LibTV 实际生成。')
   }
   return {
     projectUuid: preference.selection.projectUuid,
@@ -424,7 +424,7 @@ async function bridgeErrorMessage(
     // Only fixed messages are returned for malformed error bodies.
   }
   if (code === 'WRITES_DISABLED') {
-    return 'LibTV 写入未启用，请在模型能力页检查写入门禁。'
+    return 'LibTV 写入未启用，请在画布的模型设置中检查写入门禁。'
   }
   if (code === 'PAYLOAD_TOO_LARGE') {
     return 'LibTV 生成请求过大，请减少参考素材后重试。'

@@ -12,11 +12,14 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
+import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import type { CanvasNode, JobStatus, Project } from '../project/model'
+import { CanvasGenerationSettings } from './CanvasGenerationSettings'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
   | 'nodes'
+  | 'models'
   | 'assets'
   | 'history'
   | 'shortcuts'
@@ -45,6 +48,7 @@ const jobCopy: Record<JobStatus, string> = {
 
 const panelCopy: Record<WorkspacePanel, string> = {
   nodes: '节点',
+  models: '模型设置',
   assets: '资产',
   history: '历史',
   shortcuts: '快捷键',
@@ -146,6 +150,7 @@ export function CanvasStoryboardView({
 interface WorkspaceSidePanelProps {
   panel: WorkspacePanel
   project: Project
+  generationPreferenceStore?: GenerationProviderPreferenceStore
   onClose(): void
   onSelectNode(nodeId: string): void
 }
@@ -153,6 +158,7 @@ interface WorkspaceSidePanelProps {
 export function WorkspaceSidePanel({
   panel,
   project,
+  generationPreferenceStore,
   onClose,
   onSelectNode,
 }: WorkspaceSidePanelProps) {
@@ -194,6 +200,10 @@ export function WorkspaceSidePanel({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {panel === 'models' ? (
+        <CanvasGenerationSettings preferenceStore={generationPreferenceStore} />
       ) : null}
 
       {panel === 'assets' ? (

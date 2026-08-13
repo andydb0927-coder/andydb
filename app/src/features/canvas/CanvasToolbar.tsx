@@ -1,5 +1,6 @@
 import {
   CircleHelp,
+  Cpu,
   Eye,
   EyeOff,
   FolderOpen,
@@ -98,6 +99,7 @@ export function CanvasToolbar({
       </button>
       {onOpenPanel ? (
         <div className="canvas-mode-bar__resources" aria-label="工作区资源">
+          <button type="button" aria-label="打开模型设置" onClick={() => onOpenPanel('models')}><Cpu aria-hidden="true" /></button>
           <button type="button" aria-label="打开资产" onClick={() => onOpenPanel('assets')}><FolderOpen aria-hidden="true" /></button>
           <button type="button" aria-label="打开历史" onClick={() => onOpenPanel('history')}><History aria-hidden="true" /></button>
           <button type="button" aria-label="打开快捷键" onClick={() => onOpenPanel('shortcuts')}><Keyboard aria-hidden="true" /></button>

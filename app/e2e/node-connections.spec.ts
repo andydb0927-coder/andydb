@@ -79,6 +79,37 @@ async function setCanvasZoom(
     -Math.log2(targetZoom / currentZoom) / 0.002,
   )
   await expect.poll(() => readCanvasZoom(page)).toBeCloseTo(targetZoom, 2)
+  await expect
+    .poll(async () => {
+      const zoom = await readCanvasZoom(page)
+      const graphStrokeWidths = await page
+        .locator('.dependency-edge__interaction')
+        .evaluateAll((paths) =>
+          paths.map((path) => Number(path.getAttribute('stroke-width'))),
+        )
+      return graphStrokeWidths.length > 0 && graphStrokeWidths.every(
+        (strokeWidth) => Math.abs(strokeWidth * zoom - 24) < 0.25,
+      )
+    })
+    .toBe(true)
+  await page.locator('.react-flow__viewport').evaluate(
+    (viewport) =>
+      new Promise<void>((resolve) => {
+        let previousTransform = viewport.getAttribute('style')
+        let stableFrames = 0
+        const waitForStableTransform = () => {
+          const transform = viewport.getAttribute('style')
+          stableFrames = transform === previousTransform ? stableFrames + 1 : 0
+          previousTransform = transform
+          if (stableFrames >= 3) {
+            resolve()
+            return
+          }
+          requestAnimationFrame(waitForStableTransform)
+        }
+        requestAnimationFrame(waitForStableTransform)
+      }),
+  )
 }
 
 async function measureEdgeHitBand(

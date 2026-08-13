@@ -168,10 +168,10 @@ describe('LibTvGenerationAdapter', () => {
 
     await expect(
       demoAdapter.start(imageRequest, new AbortController().signal),
-    ).rejects.toThrow('请先在模型能力页启用 LibTV 实际生成。')
+    ).rejects.toThrow('请先在画布的模型设置中启用 LibTV 实际生成。')
     await expect(
       malformedAdapter.start(imageRequest, new AbortController().signal),
-    ).rejects.toThrow('请先在模型能力页启用 LibTV 实际生成。')
+    ).rejects.toThrow('请先在画布的模型设置中启用 LibTV 实际生成。')
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
@@ -466,7 +466,7 @@ describe('LibTvGenerationAdapter', () => {
 
     await expect(
       adapter.start(imageRequest, new AbortController().signal),
-    ).rejects.toThrow('LibTV 写入未启用，请在模型能力页检查写入门禁。')
+    ).rejects.toThrow('LibTV 写入未启用，请在画布的模型设置中检查写入门禁。')
     await adapter
       .start(imageRequest, new AbortController().signal)
       .catch((error: unknown) => {

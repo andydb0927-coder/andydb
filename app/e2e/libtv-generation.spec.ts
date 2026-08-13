@@ -93,7 +93,7 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
   const projectId = new URL(canvasUrl).pathname.split('/').at(-1)
   expect(projectId).toBeTruthy()
 
-  await page.getByRole('link', { name: '模型能力' }).click()
+  await page.getByRole('button', { name: '打开模型设置' }).click()
   await expect(page.getByText('LibTV CLI e2e-controlled')).toBeVisible()
   await page.getByRole('radio', { name: 'LibTV 实际生成' }).check()
   await page.getByRole('combobox', { name: '远程画布' }).selectOption(remoteProject.uuid)
@@ -102,9 +102,7 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
   await page.getByRole('button', { name: '启用 LibTV 实际生成' }).click()
   await expect(page.getByRole('status')).toHaveText('已启用 LibTV 实际生成')
 
-  await page.goBack()
-  await expect(page).toHaveURL(canvasUrl)
-  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await page.getByRole('button', { name: '关闭模型设置面板' }).click()
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
   const generateVideo = page.getByRole('button', { name: '生成视频' })
   await generateVideo.focus()
@@ -171,10 +169,10 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
 
   await page.reload()
   await expect(page.getByRole('button', { name: '视频 01', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: '素材与历史' }).click()
-  const generatedAsset = page.getByRole('article', { name: '视频 01' })
-  await expect(generatedAsset).toBeVisible()
-  await expect(generatedAsset).toContainText('来源：生成结果')
+  await page.getByRole('button', { name: '打开资产' }).click()
+  const generatedAsset = page.getByRole('complementary', { name: '资产' })
+  await expect(generatedAsset.getByText('视频 01', { exact: true })).toBeVisible()
+  await expect(generatedAsset.getByText('VIDEO', { exact: true })).toBeVisible()
 
   expect(generationBodies).toHaveLength(1)
   expect(externalRequests).toEqual([])

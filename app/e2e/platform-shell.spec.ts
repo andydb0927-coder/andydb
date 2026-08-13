@@ -8,8 +8,13 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   page.on('pageerror', (error) => browserErrors.push(error.message))
 
   await page.goto('/')
-  await expect(page.getByRole('navigation', { name: '首页导航' })).toBeVisible()
-  await page.getByRole('link', { name: '新建项目', exact: true }).click()
+  const sidebar = page.getByRole('complementary', { name: '侧边导航' })
+  await expect(sidebar.getByRole('navigation', { name: '首页导航' })).toBeVisible()
+  for (const destination of ['新建项目', '首页', '项目', 'Skills', '创作者挑战赛', '帮助']) {
+    await expect(sidebar.getByRole('link', { name: destination, exact: true })).toBeVisible()
+  }
+  await expect(sidebar.getByRole('link', { name: '工作流与模板' })).toHaveCount(0)
+  await sidebar.getByRole('link', { name: '新建项目', exact: true }).click()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
   await expect(page).toHaveURL(/\/project\/[^/]+$/)
   const projectTitle = await page.getByRole('heading', { level: 1 }).textContent()

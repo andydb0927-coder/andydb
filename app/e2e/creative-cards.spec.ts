@@ -46,40 +46,63 @@ async function createCinematicProject(page: Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
+async function findBlankCanvasPoint(page: Page, reverse = false) {
+  return page.locator('.react-flow__pane').evaluate((pane, fromBottomRight) => {
+    const rect = pane.getBoundingClientRect()
+    const xs: number[] = []
+    const ys: number[] = []
+    for (let x = rect.left + 120; x <= rect.right - 48; x += 44) xs.push(x)
+    for (let y = rect.top + 76; y <= rect.bottom - 148; y += 44) ys.push(y)
+    if (fromBottomRight) {
+      xs.reverse()
+      ys.reverse()
+    }
+    for (const y of ys) {
+      for (const x of xs) {
+        const target = document.elementFromPoint(x, y)
+        if (!target) continue
+        if (
+          target.closest(
+            '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
+          )
+        ) continue
+        if (target === pane || pane.contains(target)) return { x, y }
+      }
+    }
+    throw new Error('No blank canvas point found')
+  }, reverse)
+}
+
+async function uploadReferenceToCanvas(page: Page) {
+  const point = await findBlankCanvasPoint(page, true)
+  await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '上传' }).click()
+
+  const dialog = page.getByRole('dialog', { name: '上传图片到画布' })
+  await dialog.getByLabel('标题').fill('潮汐城参考.png')
+  await dialog.getByLabel('本地图片').setInputFiles({
+    name: '潮汐城参考.png',
+    mimeType: 'image/png',
+    buffer: onePixelPng,
+  })
+  await dialog.getByRole('button', { name: '确认创建' }).click()
+
+  const reference = page.getByRole('button', {
+    name: '潮汐城参考.png',
+    exact: true,
+  })
+  await expect(reference).toBeVisible()
+  await reference.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: '保存到我的资产' }).click()
+  await expect(page.getByText('已将“潮汐城参考.png”保存到我的资产。')).toBeVisible()
+}
+
 async function openAddNodeAtBlank(
   page: Page,
   label: '剧本卡' | '角色卡' | '世界观卡',
   reverse = false,
 ) {
-  const point = await page.locator('.react-flow__pane').evaluate(
-    (pane, fromBottomRight) => {
-      const rect = pane.getBoundingClientRect()
-      const xs: number[] = []
-      const ys: number[] = []
-      for (let x = rect.left + 120; x <= rect.right - 48; x += 44) xs.push(x)
-      for (let y = rect.top + 76; y <= rect.bottom - 148; y += 44) ys.push(y)
-      if (fromBottomRight) {
-        xs.reverse()
-        ys.reverse()
-      }
-      for (const y of ys) {
-        for (const x of xs) {
-          const target = document.elementFromPoint(x, y)
-          if (!target) continue
-          if (
-            target.closest(
-              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
-            )
-          ) {
-            continue
-          }
-          if (target === pane || pane.contains(target)) return { x, y }
-        }
-      }
-      throw new Error('No blank canvas point found')
-    },
-    reverse,
-  )
+  const point = await findBlankCanvasPoint(page, reverse)
   await page.mouse.click(point.x, point.y, { button: 'right' })
   await page.getByRole('menuitem', { name: '添加节点' }).click()
   await page.getByRole('menuitem', { name: label }).click()
@@ -182,17 +205,7 @@ test('creates, links, edits, and reloads structured creative cards', async ({
 
   await installOfflineBuildRoute(page)
   await createCinematicProject(page)
-  await page.getByRole('link', { name: '素材与历史' }).click()
-  await page.getByLabel('上传本地素材').setInputFiles({
-    name: '潮汐城参考.png',
-    mimeType: 'image/png',
-    buffer: onePixelPng,
-  })
-  await expect(page.getByRole('status')).toHaveText('已导入 潮汐城参考.png')
-  await page
-    .getByRole('button', { name: '添加 潮汐城参考.png 到项目并打开画布' })
-    .click()
-  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await uploadReferenceToCanvas(page)
 
   await createScriptCard(page)
   await createCharacterCard(page)
@@ -202,6 +215,7 @@ test('creates, links, edits, and reloads structured creative cards', async ({
   await connectCards(page, '林渊角色卡', '潮汐城世界观')
 
   const character = page.getByRole('button', { name: '林渊角色卡', exact: true })
+  await fitCreatedCardsIntoView(page, ['林渊角色卡'])
   await character.click()
   const edit = page.getByRole('button', { name: '编辑卡片' })
   await edit.click()
@@ -213,6 +227,11 @@ test('creates, links, edits, and reloads structured creative cards', async ({
 
   await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
   await page.reload()
+  await fitCreatedCardsIntoView(page, [
+    '雨夜重逢',
+    '林渊角色卡',
+    '潮汐城世界观',
+  ])
   await expect(page.getByRole('button', { name: '雨夜重逢', exact: true })).toContainText(
     '场一：河岸夜外',
   )
@@ -230,8 +249,8 @@ test('creates, links, edits, and reloads structured creative cards', async ({
   await expect(page.getByLabel('雨夜重逢 → 林渊角色卡', { exact: true })).toBeVisible()
   await expect(page.getByLabel('林渊角色卡 → 潮汐城世界观', { exact: true })).toBeVisible()
 
-  await page.getByRole('link', { name: '素材与历史' }).click()
-  await page.getByLabel('搜索素材').fill('潮汐城参考')
-  await expect(page.getByRole('article', { name: '潮汐城参考.png' })).toHaveCount(1)
+  await page.getByRole('button', { name: '打开资产' }).click()
+  const assets = page.getByRole('complementary', { name: '资产' })
+  await expect(assets.getByText('潮汐城参考.png', { exact: true })).toBeVisible()
   expect(browserErrors).toEqual([])
 })
