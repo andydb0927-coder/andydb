@@ -27,6 +27,12 @@ const ChallengesPage = lazy(() =>
 const ChallengeDetailPage = lazy(() =>
   import('../features/challenges/ChallengeDetailPage').then((m) => ({ default: m.ChallengeDetailPage })),
 )
+const WorkDetailPage = lazy(() =>
+  import('../features/community/WorkDetailPage').then((m) => ({ default: m.WorkDetailPage })),
+)
+const CreationProcessPage = lazy(() =>
+  import('../features/community/CreationProcessPage').then((m) => ({ default: m.CreationProcessPage })),
+)
 
 function RouteLoading() {
   return (
@@ -49,7 +55,7 @@ export const routes: RouteObject[] = [
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/agents', element: withSuspense(<AgentsPage />) },
       { path: '/challenges', element: withSuspense(<ChallengesPage />) },
-      { path: '/challenges/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
+      { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
     ],
   },
   {
@@ -59,6 +65,8 @@ export const routes: RouteObject[] = [
       { path: '/project/:projectId/preview', element: withSuspense(<PreviewPage />) },
     ],
   },
+  { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />) },
+  { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />) },
 ]
 
 export function createAppRouter(): ReturnType<typeof createBrowserRouter> {

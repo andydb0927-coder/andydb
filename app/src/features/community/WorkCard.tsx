@@ -12,7 +12,7 @@ function readableDuration(seconds: number) {
 export function WorkCard({ work }: { work: PublishedWork }) {
   return (
     <article className="community-card" aria-label={work.title}>
-      <Link className="community-card__cover focus-visible" aria-label={`查看作品 ${work.title}`} to="/projects/new">
+      <Link className="community-card__cover focus-visible" aria-label={`查看作品 ${work.title}`} to={`/detail/${work.id}`}>
         <img src={work.coverUrl} alt={work.title} />
         <span>{readableDuration(work.durationSeconds)}</span>
       </Link>
@@ -36,7 +36,7 @@ export function WorkCard({ work }: { work: PublishedWork }) {
         </div>
         <Link
           className="community-card__process focus-visible"
-          to="/projects/new"
+          to={`/detail/${work.id}/process`}
           aria-label={`查看 ${work.title} 的创作过程`}
         >
           查看创作过程

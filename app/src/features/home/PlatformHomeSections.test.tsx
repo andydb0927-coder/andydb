@@ -174,6 +174,6 @@ describe('platform home sections', () => {
     expect(within(card).getByLabelText('一帧商业 已认证')).toBeVisible()
     expect(
       within(card).getByRole('link', { name: '查看 山岚入茶 的创作过程' }),
-    ).toHaveAttribute('href', '/projects/new')
+    ).toHaveAttribute('href', '/detail/demo-work-tea-mountain/process')
   })
 })

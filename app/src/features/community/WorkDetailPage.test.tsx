@@ -53,34 +53,36 @@ function repositoryWith(works: PublishedWork[]) {
 
 function renderDetail(repository: DetailRepository, workId = 'demo-work-frost-river') {
   return render(
-    <MemoryRouter initialEntries={[`/discover/${workId}`]}>
+    <MemoryRouter initialEntries={[`/detail/${workId}`]}>
       <Routes>
-        <Route path="/discover/:workId" element={<WorkDetailPage repository={repository} />} />
-        <Route path="/discover" element={<h1>作品墙</h1>} />
+        <Route path="/detail/:workId" element={<WorkDetailPage repository={repository} />} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
 describe('work detail page', () => {
-  test('renders the stored timeline snapshot through the shared preview player and records one view', async () => {
+  test('renders an immersive player with navigation and records one view', async () => {
     const repository = repositoryWith(buildDemoWorks())
     const view = renderDetail(repository)
 
     expect(await screen.findByRole('heading', { name: '霜河渡' })).toBeVisible()
     expect(screen.getByRole('region', { name: '成片播放器' })).toBeVisible()
     expect(screen.getByRole('img', { name: '分镜 01' })).toHaveAttribute('src', '/demo/shot-river.png')
-    expect(screen.getByRole('link', { name: '无线画布' })).toHaveAttribute(
-      'href',
-      '/discover/creator/%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83',
+    await userEvent.click(screen.getByRole('button', { name: '立即观看' }))
+    expect(screen.getByRole('button', { name: '暂停' })).toBeVisible()
+    expect(screen.getByRole('link', { name: '上一个作品' })).toBeVisible()
+    expect(screen.getByRole('link', { name: '下一个作品' })).toBeVisible()
+    expect(screen.getByRole('link', { name: '查看制作过程' })).toHaveAttribute(
+      'href', '/detail/demo-work-frost-river/process',
     )
     expect(screen.getByLabelText('329 次浏览')).toBeVisible()
     expect(repository.recordView).toHaveBeenCalledTimes(1)
 
     view.rerender(
-      <MemoryRouter initialEntries={['/discover/demo-work-frost-river']}>
+      <MemoryRouter initialEntries={['/detail/demo-work-frost-river']}>
         <Routes>
-          <Route path="/discover/:workId" element={<WorkDetailPage repository={repository} />} />
+          <Route path="/detail/:workId" element={<WorkDetailPage repository={repository} />} />
         </Routes>
       </MemoryRouter>,
     )
@@ -101,13 +103,13 @@ describe('work detail page', () => {
     expect(repository.toggleFavorite).toHaveBeenCalledTimes(1)
   })
 
-  test('prioritizes same-tag published recommendations and excludes the current work', async () => {
+  test('renders an eleven-thumbnail recommendation strip', async () => {
     const works = buildDemoWorks()
     renderDetail(repositoryWith(works), 'demo-work-frost-river')
 
     const related = await screen.findByRole('region', { name: '相关推荐' })
-    expect(within(related).getByRole('article', { name: '雨巷回声' })).toBeVisible()
-    expect(within(related).queryByRole('article', { name: '霜河渡' })).not.toBeInTheDocument()
+    expect(within(related).getAllByRole('link', { name: /查看推荐作品/ })).toHaveLength(11)
+    expect(within(related).getAllByRole('img', { name: '雨巷回声' }).length).toBeGreaterThan(0)
   })
 
   test.each([
@@ -119,6 +121,6 @@ describe('work detail page', () => {
     renderDetail(repositoryWith(works), workId)
 
     expect(await screen.findByRole('heading', { name: '作品暂不可用' })).toBeVisible()
-    expect(screen.getByRole('link', { name: '返回作品墙' })).toHaveAttribute('href', '/discover')
+    expect(screen.getByRole('link', { name: '返回首页' })).toHaveAttribute('href', '/')
   })
 })

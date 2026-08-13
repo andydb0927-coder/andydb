@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Send, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
@@ -118,6 +118,9 @@ export function AgentsPage({
   const [enablementVersion, setEnablementVersion] = useState(0)
   const [skillCategory, setSkillCategory] = useState<SkillCategory>('全部')
   const [skillQuery, setSkillQuery] = useState('')
+  const [creativePrompt, setCreativePrompt] = useState('')
+  const [selectedModel, setSelectedModel] = useState('seedance-2.5')
+  const [generationMode, setGenerationMode] = useState('smart')
   const [runningSkillId, setRunningSkillId] = useState<string>()
   const [result, setResult] = useState<{
     skill: AgentSkillDefinition
@@ -256,6 +259,46 @@ export function AgentsPage({
         <h1>Skill 全开，故事走起</h1>
         <p>浏览并筛选本地创作 Skill；全部能力使用确定性逻辑，不调用外部 LibTV、不消耗积分，也不会上传项目数据。</p>
       </header>
+
+      <section className="agent-creation-composer" role="region" aria-label="Skill 创作输入">
+        <div className="agent-creation-composer__intro">
+          <Sparkles aria-hidden="true" />
+          <div><strong>让 Skill 接住你的灵感</strong><span>先选择模型与生成模式，再描述希望完成的内容。</span></div>
+        </div>
+        <textarea
+          aria-label="描述创作目标"
+          rows={3}
+          value={creativePrompt}
+          placeholder="例如：用三个镜头讲述雨夜重逢，保持角色和环境连续性……"
+          onChange={(event) => setCreativePrompt(event.target.value)}
+        />
+        <div className="agent-creation-composer__controls">
+          <label>
+            <span>选择模型</span>
+            <select aria-label="选择模型" value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
+              <option value="seedance-2.5">Seedance 2.5</option>
+              <option value="minimax-h3">MiniMax H3</option>
+              <option value="local-demo">本地演示模型</option>
+            </select>
+          </label>
+          <label>
+            <span>生成模式</span>
+            <select aria-label="生成模式" value={generationMode} onChange={(event) => setGenerationMode(event.target.value)}>
+              <option value="smart">智能生成</option>
+              <option value="fast">快速生成</option>
+              <option value="precise">精细生成</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => setFeedback(creativePrompt.trim()
+              ? `已准备 ${selectedModel} · ${generationMode} 的本地创作任务`
+              : '请先描述创作目标')}
+          >
+            <Send aria-hidden="true" />开始创作
+          </button>
+        </div>
+      </section>
 
       <section className="agent-catalog-tools" role="region" aria-label="Skill 分类与搜索">
         <div className="agent-catalog-tabs" aria-label="Skill 分类">

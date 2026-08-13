@@ -22,7 +22,7 @@ describe('creator challenges', () => {
     expect(screen.getByText('1,286 人参与')).toBeVisible()
     expect(screen.getByRole('link', { name: '查看 LibTV Skill 导演大师赛' })).toHaveAttribute(
       'href',
-      '/challenges/director-master',
+      '/activity/director-master',
     )
 
     await user.click(screen.getByRole('button', { name: '已颁奖' }))
@@ -30,17 +30,23 @@ describe('creator challenges', () => {
     expect(screen.getByRole('heading', { name: '「故事的种子」AI 短片征集' })).toBeVisible()
   })
 
-  test('opens a local detail placeholder for a known challenge', () => {
+  test('opens a complete local activity landing page for a known challenge', () => {
     render(
-      <MemoryRouter initialEntries={['/challenges/director-master']}>
+      <MemoryRouter initialEntries={['/activity/director-master']}>
         <Routes>
-          <Route path="/challenges/:challengeId" element={<ChallengeDetailPage />} />
+          <Route path="/activity/:challengeId" element={<ChallengeDetailPage />} />
         </Routes>
       </MemoryRouter>,
     )
 
     expect(screen.getByRole('heading', { name: 'LibTV Skill 导演大师赛' })).toBeVisible()
-    expect(screen.getByText('详情占位')).toBeVisible()
+    expect(screen.getByRole('link', { name: '去创作' })).toHaveAttribute('href', '/projects/new')
+    expect(screen.getByRole('region', { name: '活动日历' })).toBeVisible()
+    expect(screen.getByRole('region', { name: '活动赛道' })).toBeVisible()
+    expect(screen.getByRole('region', { name: '参赛指引' })).toBeVisible()
+    expect(screen.getByRole('region', { name: '分级奖项' })).toBeVisible()
+    expect(screen.getByText('最佳导演奖')).toBeVisible()
+    expect(screen.queryByText('详情占位')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回挑战赛' })).toHaveAttribute('href', '/challenges')
   })
 })

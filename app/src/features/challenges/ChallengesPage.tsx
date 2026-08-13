@@ -90,7 +90,7 @@ export function ChallengesPage() {
               <Link
                 aria-label={`查看 ${challenge.title}`}
                 className="challenge-card__link focus-visible"
-                to={`/challenges/${challenge.id}`}
+                to={`/activity/${challenge.id}`}
               >
                 查看详情 <ArrowUpRight aria-hidden="true" />
               </Link>

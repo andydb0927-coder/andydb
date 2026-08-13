@@ -45,6 +45,20 @@ function setup() {
 }
 
 describe('Agents page', () => {
+  test('adds the Liblib model and generation-mode selectors to the Skill input area', async () => {
+    const user = userEvent.setup()
+    setup()
+
+    const model = await screen.findByRole('combobox', { name: '选择模型' })
+    const mode = screen.getByRole('combobox', { name: '生成模式' })
+    expect(model).toHaveValue('seedance-2.5')
+    expect(mode).toHaveValue('smart')
+    await user.selectOptions(model, 'minimax-h3')
+    await user.selectOptions(mode, 'precise')
+    expect(model).toHaveValue('minimax-h3')
+    expect(mode).toHaveValue('precise')
+  })
+
   test('shows Liblib-style Skill cards and filters them by category and search', async () => {
     const user = userEvent.setup()
     setup()
