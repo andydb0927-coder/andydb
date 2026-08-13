@@ -53,6 +53,12 @@ const CreatorProfilePage = lazy(() =>
 const AgentsPage = lazy(() =>
   import('../features/agent/AgentsPage').then((m) => ({ default: m.AgentsPage })),
 )
+const ChallengesPage = lazy(() =>
+  import('../features/challenges/ChallengesPage').then((m) => ({ default: m.ChallengesPage })),
+)
+const ChallengeDetailPage = lazy(() =>
+  import('../features/challenges/ChallengeDetailPage').then((m) => ({ default: m.ChallengeDetailPage })),
+)
 
 function RouteLoading() {
   return (
@@ -83,6 +89,8 @@ export const routes: RouteObject[] = [
       { path: '/discover/:workId', element: withSuspense(<WorkDetailPage />) },
       { path: '/models', element: withSuspense(<ModelsPage />) },
       { path: '/agents', element: withSuspense(<AgentsPage />) },
+      { path: '/challenges', element: withSuspense(<ChallengesPage />) },
+      { path: '/challenges/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
       { path: '/account', element: withSuspense(<AccountPage />) },
     ],
   },

@@ -35,6 +35,7 @@ export const platformNavigation = [
   { to: '/discover', label: '发现与作品', icon: Compass, end: false },
   { to: '/models', label: '模型能力', icon: Cpu, end: false },
   { to: '/agents', label: 'Agent 技能', icon: Bot, end: false },
+  { to: '/challenges', label: '创作者挑战赛', icon: Trophy, end: false },
   { to: '/account', label: '本地工作区', icon: UserRound, end: false },
 ] as const
 
@@ -43,7 +44,7 @@ const homeNavigation = [
   { to: '/projects', label: '项目', icon: FolderKanban, end: true },
   { to: '/agents', label: 'Skills', icon: Sparkles, end: false },
   {
-    to: '/discover?tag=精选画布',
+    to: '/challenges',
     label: '创作者挑战赛',
     icon: Trophy,
     end: false,

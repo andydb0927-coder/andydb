@@ -5,6 +5,9 @@ import { routes } from './router'
 it.each([
   ['/', '创建你的第一部短片'],
   ['/projects', '全部项目'],
+  ['/agents', 'Skill 全开，故事走起'],
+  ['/challenges', '创作者挑战赛'],
+  ['/challenges/director-master', 'LibTV Skill 导演大师赛'],
   ['/project/demo-project', '项目画布'],
   ['/project/demo-project/preview', '成片预览'],
   ['/discover', '发现与作品'],

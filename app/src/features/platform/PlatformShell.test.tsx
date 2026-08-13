@@ -59,7 +59,7 @@ describe('platform shell', () => {
     expect(within(homeNavigation).getByRole('link', { name: 'Skills' })).toHaveAttribute('href', '/agents')
     expect(within(homeNavigation).getByRole('link', { name: '创作者挑战赛' })).toHaveAttribute(
       'href',
-      '/discover?tag=精选画布',
+      '/challenges',
     )
     expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/#create-project')
@@ -79,6 +79,10 @@ describe('platform shell', () => {
     expect(within(platformNavigation).getByRole('link', { name: '故事设定' })).toHaveAttribute('href', '/story')
     expect(within(platformNavigation).getByRole('link', { name: '剪辑项目' })).toHaveAttribute('href', '/editor')
     expect(within(platformNavigation).getByRole('link', { name: '交付与发布' })).toHaveAttribute('href', '/delivery')
+    expect(within(platformNavigation).getByRole('link', { name: '创作者挑战赛' })).toHaveAttribute(
+      'href',
+      '/challenges',
+    )
   })
 
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {
