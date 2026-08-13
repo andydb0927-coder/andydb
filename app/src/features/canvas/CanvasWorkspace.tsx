@@ -20,7 +20,9 @@ export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
   | 'nodes'
   | 'models'
+  | 'toolbox'
   | 'assets'
+  | 'characters'
   | 'history'
   | 'shortcuts'
   | 'help'
@@ -49,10 +51,12 @@ const jobCopy: Record<JobStatus, string> = {
 const panelCopy: Record<WorkspacePanel, string> = {
   nodes: '节点',
   models: '模型设置',
+  toolbox: '工具箱',
   assets: '资产',
+  characters: '角色库',
   history: '历史',
   shortcuts: '快捷键',
-  help: '帮助',
+  help: '教程',
 }
 
 interface CanvasStoryboardViewProps {
@@ -202,8 +206,15 @@ export function WorkspaceSidePanel({
         </ul>
       ) : null}
 
-      {panel === 'models' ? (
+      {panel === 'models' || panel === 'toolbox' ? (
         <CanvasGenerationSettings preferenceStore={generationPreferenceStore} />
+      ) : null}
+
+      {panel === 'toolbox' ? (
+        <div className="workspace-side-panel__help">
+          <p>工具箱集中管理生成模型；节点分组、连线显隐和画布吸附仍保留为画布级操作。</p>
+          <p>所有生成设置只保存在本机，不会消耗 Liblib 积分。</p>
+        </div>
       ) : null}
 
       {panel === 'assets' ? (
@@ -222,6 +233,24 @@ export function WorkspaceSidePanel({
           ))}
           {!assetRows.length ? <p>当前项目还没有素材。</p> : null}
         </div>
+      ) : null}
+
+      {panel === 'characters' ? (
+        <ul className="workspace-side-panel__list">
+          {project.nodes
+            .filter((node) => node.kind === 'character' || node.kind === 'character-card')
+            .map((node) => (
+              <li key={node.id}>
+                <button type="button" onClick={() => onSelectNode(node.id)}>
+                  <strong>{node.title}</strong>
+                  <span>{kindCopy[node.kind]}</span>
+                </button>
+              </li>
+            ))}
+          {!project.nodes.some(
+            (node) => node.kind === 'character' || node.kind === 'character-card',
+          ) ? <p>当前项目还没有角色节点。</p> : null}
+        </ul>
       ) : null}
 
       {panel === 'history' ? (

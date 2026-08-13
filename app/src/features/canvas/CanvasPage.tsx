@@ -46,6 +46,7 @@ import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapt
 import type { MembershipPlanId } from '../membership/membership-model'
 import { MembershipRepository } from '../membership/membership-repository'
 import type {
+  CanvasCreation,
   CanvasGroup,
   CreativeCardKind,
   GenerationJob,
@@ -84,6 +85,10 @@ import {
   type ContextCreatableKind,
 } from './CanvasContextMenu'
 import { CanvasTopBar } from './CanvasTopBar'
+import {
+  CanvasNodeTypePicker,
+  type QuickNodeType,
+} from './CanvasNodeTypePicker'
 import {
   CanvasAgentPanel,
   CanvasStoryboardView,
@@ -133,6 +138,12 @@ type CanvasWorkflowRepository = Pick<
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 type CanvasNodePosition = Project['nodes'][number]['position']
 
+interface CanvasPoint {
+  flowPosition: CanvasNodePosition
+  anchor: { x: number; y: number }
+  bounds: { width: number; height: number }
+}
+
 interface DragPreviewState {
   projectId?: string
   positions: Record<string, CanvasNodePosition>
@@ -150,6 +161,14 @@ interface PendingPlacement {
   position: CanvasNodePosition
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
+}
+
+interface NodeTypePickerState {
+  projectId: string
+  position: CanvasNodePosition
+  anchor: { x: number; y: number }
+  bounds: { width: number; height: number }
+  returnFocusTo?: HTMLElement
 }
 
 interface CanvasContextMenuState {
@@ -361,6 +380,7 @@ export function CanvasPage({
   const undo = useProjectStore((state) => state.undo)
   const redo = useProjectStore((state) => state.redo)
   const persistActive = useProjectStore((state) => state.persistActive)
+  const renameProject = useProjectStore((state) => state.renameProject)
   const connectNodes = useProjectStore((state) => state.connectNodes)
   const disconnectNodes = useProjectStore((state) => state.disconnectNodes)
   const createCanvasContent = useProjectStore(
@@ -411,6 +431,8 @@ export function CanvasPage({
     useState<PendingRemoteGeneration>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
+  const [nodeTypePicker, setNodeTypePicker] =
+    useState<NodeTypePickerState>()
   const [contextMenu, setContextMenu] =
     useState<CanvasContextMenuState>()
   const [editingCard, setEditingCard] = useState<EditingCard>()
@@ -496,6 +518,7 @@ export function CanvasPage({
     setPendingRemoteGeneration(undefined)
     setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
+    setNodeTypePicker(undefined)
     setContextMenu(undefined)
     setEditingCard(undefined)
     createdNodeFocusRef.current = undefined
@@ -1454,6 +1477,56 @@ export function CanvasPage({
     [contextMenu?.returnFocusTo],
   )
 
+  const closeNodeTypePicker = useCallback((restoreFocus = true) => {
+    const returnFocusTo = nodeTypePicker?.returnFocusTo
+    setNodeTypePicker(undefined)
+    if (!restoreFocus) return
+    queueMicrotask(() => {
+      if (returnFocusTo?.isConnected) returnFocusTo.focus()
+      else viewportRef.current?.focus()
+    })
+  }, [nodeTypePicker?.returnFocusTo])
+
+  const openNodeTypePicker = useCallback(
+    (
+      point: CanvasPoint,
+      returnFocusTo?: HTMLElement,
+    ) => {
+      if (!project || !point || pendingPlacement || editingCard) return
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
+      setContextMenu(undefined)
+      setNodeTypePicker({
+        projectId: project.id,
+        position: point.flowPosition,
+        anchor: point.anchor,
+        bounds: point.bounds,
+        returnFocusTo,
+      })
+      setActiveTool('select')
+    },
+    [
+      cancelConnection,
+      connectionTool.phase,
+      editingCard,
+      pendingPlacement,
+      project,
+    ],
+  )
+
+  const openNodeTypePickerFromDock = useCallback(
+    (trigger: HTMLButtonElement) => {
+      const rect = viewportRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const point = canvasPoint(
+        rect.left + rect.width / 2,
+        rect.top + Math.min(rect.height * 0.56, rect.height - 220),
+      )
+      if (!point) return
+      openNodeTypePicker(point, trigger)
+    },
+    [canvasPoint, openNodeTypePicker],
+  )
+
   const beginPlacement = useCallback(
     (
       kind: ContextCreatableKind,
@@ -1485,7 +1558,7 @@ export function CanvasPage({
       targetNodeId?: string,
       returnFocusTo?: HTMLElement,
     ) => {
-      if (!project || pendingPlacement || editingCard) return
+      if (!project || pendingPlacement || nodeTypePicker || editingCard) return
       const point = canvasPoint(clientX, clientY)
       if (!point) return
       if (connectionTool.phase !== 'idle') cancelConnection(false)
@@ -1524,6 +1597,7 @@ export function CanvasPage({
       canvasPoint,
       connectionTool.phase,
       editingCard,
+      nodeTypePicker,
       pendingPlacement,
       project,
       selectOnlyNode,
@@ -1537,6 +1611,130 @@ export function CanvasPage({
     placementTriggerRef.current = null
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }, [])
+
+  const createQuickNode = useCallback(
+    (type: QuickNodeType) => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (
+        !nodeTypePicker ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        nodeTypePicker.projectId !== currentProject.id
+      ) {
+        return
+      }
+
+      const numberedTitle = (label: string) => {
+        const count = currentProject.nodes.filter((node) =>
+          node.title.startsWith(label),
+        ).length
+        return `${label} ${String(count + 1).padStart(2, '0')}`
+      }
+
+      let creation: CanvasCreation
+      if (type === 'script-generator') {
+        creation = buildCreativeCardCreation(
+          currentProject,
+          {
+            kind: 'script',
+            title: numberedTitle('故事脚本'),
+            scenes: '场一：从这里开始搭建故事结构',
+            dialogue: '',
+            shotNotes: '双击画布创建的本地故事脚本节点',
+          },
+          nodeTypePicker.position,
+        )
+      } else if (type === 'character-turnaround') {
+        creation = buildCreativeCardCreation(
+          currentProject,
+          {
+            kind: 'character-card',
+            title: numberedTitle('角色三视图'),
+            name: '新角色',
+            appearance: '等待补充正面、侧面与背面外貌锚点',
+            wardrobe: '',
+            relationships: '',
+          },
+          nodeTypePicker.position,
+        )
+      } else if (type === 'worldview') {
+        creation = buildCreativeCardCreation(
+          currentProject,
+          {
+            kind: 'worldview',
+            title: nextCreativeCardTitle(currentProject, 'worldview'),
+            background: '等待补充故事发生的时代、地点与社会背景',
+            artStyle: '等待补充整体美术风格',
+            rules: '',
+          },
+          nodeTypePicker.position,
+        )
+      } else if (type === 'image') {
+        const createdAt = new Date().toISOString()
+        creation = {
+          node: {
+            id: crypto.randomUUID(),
+            kind: 'image',
+            title: nextNodeTitle(currentProject, 'image'),
+            position: nodeTypePicker.position,
+            versions: [{
+              id: crypto.randomUUID(),
+              createdAt,
+              prompt: '待补充图片素材或图片生成提示',
+            }],
+            activeVersionId: '',
+            sourceChanged: false,
+          },
+        }
+        creation.node.activeVersionId = creation.node.versions[0].id
+      } else {
+        const quickConfig: Record<
+          Exclude<QuickNodeType, 'script-generator' | 'character-turnaround' | 'worldview' | 'image'>,
+          { kind: 'text' | 'storyboard' | 'video'; title: string; content: string }
+        > = {
+          'reference-video': {
+            kind: 'video',
+            title: numberedTitle('全能参考生视频'),
+            content: 'SD2.5 全能参考生视频：等待补充人物、场景与动作参考',
+          },
+          'audio-video': {
+            kind: 'video',
+            title: numberedTitle('音频生视频'),
+            content: 'SD2.5 音频生视频：等待补充音频与节奏说明',
+          },
+          text: {
+            kind: 'text',
+            title: nextNodeTitle(currentProject, 'text'),
+            content: '双击画布创建的自由文本节点',
+          },
+          storyboard: {
+            kind: 'storyboard',
+            title: nextNodeTitle(currentProject, 'storyboard'),
+            content: '等待补充分镜构图与画面提示',
+          },
+          video: {
+            kind: 'video',
+            title: nextNodeTitle(currentProject, 'video'),
+            content: '等待补充视频生成提示',
+          },
+        }
+        const config = quickConfig[type]
+        creation = buildCanvasCreation(currentProject, {
+          ...config,
+          position: nodeTypePicker.position,
+        })
+      }
+
+      createdNodeFocusRef.current = creation.node.id
+      setFocusRequestVersion((version) => version + 1)
+      createCanvasContent(creation)
+      selectOnlyNode(creation.node.id)
+      setNodeTypePicker(undefined)
+      setActiveTool('select')
+      setGenerationFeedback(`已创建“${creation.node.title}”，可继续编辑或建立连线。`)
+    },
+    [createCanvasContent, nodeTypePicker, projectId, selectOnlyNode],
+  )
 
   const finishCardEditing = useCallback(
     (editor: EditingCard, restoreFocus = true) => {
@@ -1582,6 +1780,7 @@ export function CanvasPage({
       if (tool === 'select') {
         if (editingCard) cancelCardEditing()
         else if (pendingPlacement) cancelPlacement()
+        else if (nodeTypePicker) closeNodeTypePicker()
         else setActiveTool('select')
       }
     },
@@ -1589,8 +1788,10 @@ export function CanvasPage({
       cancelConnection,
       cancelCardEditing,
       cancelPlacement,
+      closeNodeTypePicker,
       connectionTool.phase,
       editingCard,
+      nodeTypePicker,
       pendingPlacement,
       project,
     ],
@@ -1608,6 +1809,7 @@ export function CanvasPage({
         event.shiftKey ||
         !project ||
         pendingPlacement ||
+        nodeTypePicker ||
         editingCard ||
         nodeListOpen ||
         deleteCandidateId ||
@@ -1646,6 +1848,7 @@ export function CanvasPage({
     editingCard,
     handleToolChange,
     nodeListOpen,
+    nodeTypePicker,
     pendingPlacement,
     project,
   ])
@@ -1662,6 +1865,7 @@ export function CanvasPage({
         event.shiftKey ||
         !project ||
         pendingPlacement ||
+        nodeTypePicker ||
         nodeListOpen ||
         deleteCandidateId ||
         nativeConnectionActiveRef.current ||
@@ -1692,6 +1896,7 @@ export function CanvasPage({
   }, [
     deleteCandidateId,
     nodeListOpen,
+    nodeTypePicker,
     pendingPlacement,
     project,
     toggleConnectionsVisibility,
@@ -1711,6 +1916,7 @@ export function CanvasPage({
         !project ||
         !flowInstance ||
         pendingPlacement ||
+        nodeTypePicker ||
         editingCard
       ) {
         return
@@ -1718,15 +1924,9 @@ export function CanvasPage({
       if (event.detail < 2) return
       const point = canvasPoint(event.clientX, event.clientY)
       if (!point) return
-      beginPlacement('text', 'free-generation', {
-        projectId: project.id,
-        ...point,
-        clipboardText: '',
-        returnFocusTo: viewportRef.current ?? undefined,
-      })
+      openNodeTypePicker(point, viewportRef.current ?? undefined)
     },
     [
-      beginPlacement,
       cancelConnection,
       canvasPoint,
       closeContextMenu,
@@ -1734,6 +1934,8 @@ export function CanvasPage({
       contextMenu,
       flowInstance,
       editingCard,
+      nodeTypePicker,
+      openNodeTypePicker,
       pendingPlacement,
       project,
     ],
@@ -2037,6 +2239,7 @@ export function CanvasPage({
         agentOpen={agentOpen}
         onUndo={undo}
         onRedo={redo}
+        onRenameProject={renameProject}
         onOpenNodeList={openNodeList}
         onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
@@ -2127,7 +2330,7 @@ export function CanvasPage({
           activeTool={activeTool}
           connectionsVisible={connectionsVisible}
           disabled={!project}
-          draftOpen={Boolean(pendingPlacement || editingCard)}
+          draftOpen={Boolean(pendingPlacement || nodeTypePicker || editingCard)}
           groupAction={
             selectedCanvasGroup
               ? 'ungroup'
@@ -2136,6 +2339,7 @@ export function CanvasPage({
                 : 'disabled'
           }
           onGroupAction={handleGroupAction}
+          onAddNode={openNodeTypePickerFromDock}
           onOpenPanel={setWorkspacePanel}
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
@@ -2164,6 +2368,14 @@ export function CanvasPage({
             }}
             onPaste={pasteContextText}
             onClose={closeContextMenu}
+          />
+        ) : null}
+        {nodeTypePicker && project ? (
+          <CanvasNodeTypePicker
+            anchor={nodeTypePicker.anchor}
+            bounds={nodeTypePicker.bounds}
+            onClose={closeNodeTypePicker}
+            onSelect={createQuickNode}
           />
         ) : null}
         <CanvasViewControls

@@ -4,24 +4,50 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasToolbar } from './CanvasToolbar'
 
-test('moves node creation out of the persistent mode toolbar', () => {
+test('exposes the nine-item Liblib creation dock', async () => {
+  const user = userEvent.setup()
   const onToolChange = vi.fn()
+  const onAddNode = vi.fn()
+  const onOpenPanel = vi.fn()
   render(
     <CanvasToolbar
       activeTool="select"
       draftOpen={false}
       connectionsVisible
+      onAddNode={onAddNode}
+      onOpenPanel={onOpenPanel}
       onToolChange={onToolChange}
       onToggleConnections={vi.fn()}
     />,
   )
 
   expect(screen.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
-  expect(screen.getByText('双击画布 自由生成节点')).toBeVisible()
+  const primaryDock = screen.getByRole('group', { name: 'Liblib 画布工具坞' })
+  expect(
+    Array.from(primaryDock.querySelectorAll('button')).map((button) =>
+      button.getAttribute('aria-label'),
+    ),
+  ).toEqual([
+    '添加节点',
+    '移动',
+    '连线',
+    '打开工具箱',
+    '素材库',
+    '角色库',
+    '历史记录',
+    '快捷键',
+    '教程',
+  ])
+
+  await user.click(screen.getByRole('button', { name: '添加节点' }))
+  expect(onAddNode).toHaveBeenCalledOnce()
+  await user.click(screen.getByRole('button', { name: '角色库' }))
+  expect(onOpenPanel).toHaveBeenCalledWith('characters')
+  await user.click(screen.getByRole('button', { name: '移动' }))
+  expect(onToolChange).toHaveBeenCalledWith('select', expect.any(HTMLButtonElement))
   for (const label of ['剧本卡', '角色卡', '世界观卡', '文本', '图片', '分镜', '视频']) {
     expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
   }
-  expect(onToolChange).not.toHaveBeenCalled()
 })
 
 test('enables Connect and activates Group only for a valid selection', async () => {

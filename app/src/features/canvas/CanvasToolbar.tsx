@@ -1,14 +1,13 @@
 import {
   CircleHelp,
-  Cpu,
-  Eye,
-  EyeOff,
   FolderOpen,
-  Group,
+  Hand,
   History,
   Keyboard,
-  MousePointer2,
+  Plus,
   Unplug,
+  UsersRound,
+  Wrench,
 } from 'lucide-react'
 
 import { FloatingPanel } from '../../ui/FloatingPanel'
@@ -31,6 +30,7 @@ export interface CanvasToolbarProps {
   disabled?: boolean
   draftOpen: boolean
   groupAction?: 'disabled' | 'group' | 'ungroup'
+  onAddNode?(trigger: HTMLButtonElement): void
   onGroupAction?(): void
   onOpenPanel?(panel: WorkspacePanel): void
   onToggleConnections(): void
@@ -43,69 +43,100 @@ export function CanvasToolbar({
   disabled = false,
   draftOpen,
   groupAction = 'disabled',
+  onAddNode,
   onGroupAction,
   onOpenPanel,
   onToggleConnections,
   onToolChange,
 }: CanvasToolbarProps) {
-  const connectDisabled = disabled || draftOpen
-  const groupDisabled =
-    disabled || draftOpen || groupAction === 'disabled'
+  const interactionDisabled = disabled || draftOpen
+  const groupDisabled = interactionDisabled || groupAction === 'disabled'
   const groupLabel = groupAction === 'ungroup' ? '取消分组' : '分组'
 
   return (
     <FloatingPanel className="canvas-mode-bar" role="toolbar" aria-label="画布模式工具">
-      <span className="canvas-mode-bar__hint">
-        <MousePointer2 aria-hidden="true" />
-        双击画布 自由生成节点
-      </span>
-      <button
-        type="button"
-        className={activeTool === 'connect' ? 'canvas-mode-bar__active' : undefined}
-        aria-label="连线"
-        aria-pressed={activeTool === 'connect'}
-        disabled={connectDisabled}
-        title={draftOpen ? '请先完成或取消当前节点' : '连线'}
-        onClick={(event) => onToolChange('connect', event.currentTarget)}
-      >
-        <Unplug aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        aria-label={groupLabel}
-        aria-pressed={false}
-        disabled={groupDisabled}
-        title={
-          draftOpen
-            ? '请先完成或取消当前节点'
-            : groupAction === 'disabled'
-              ? '请先选择至少两个节点'
-              : groupLabel
-        }
-        onClick={onGroupAction}
-      >
-        <Group aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="canvas-mode-bar__visibility-toggle"
-        aria-label={connectionsVisible ? '隐藏连线' : '显示连线'}
-        aria-pressed={connectionsVisible}
-        disabled={disabled}
-        title={connectionsVisible ? '隐藏连线' : '显示连线'}
-        onClick={onToggleConnections}
-      >
-        {connectionsVisible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
-      </button>
-      {onOpenPanel ? (
-        <div className="canvas-mode-bar__resources" aria-label="工作区资源">
-          <button type="button" aria-label="打开模型设置" onClick={() => onOpenPanel('models')}><Cpu aria-hidden="true" /></button>
-          <button type="button" aria-label="打开资产" onClick={() => onOpenPanel('assets')}><FolderOpen aria-hidden="true" /></button>
-          <button type="button" aria-label="打开历史" onClick={() => onOpenPanel('history')}><History aria-hidden="true" /></button>
-          <button type="button" aria-label="打开快捷键" onClick={() => onOpenPanel('shortcuts')}><Keyboard aria-hidden="true" /></button>
-          <button type="button" aria-label="打开帮助" onClick={() => onOpenPanel('help')}><CircleHelp aria-hidden="true" /></button>
-        </div>
-      ) : null}
+      <div className="canvas-mode-bar__primary" role="group" aria-label="Liblib 画布工具坞">
+        <button
+          type="button"
+          aria-label="添加节点"
+          disabled={interactionDisabled}
+          title={draftOpen ? '请先完成或取消当前节点' : '添加节点'}
+          onClick={(event) => onAddNode?.(event.currentTarget)}
+        >
+          <Plus aria-hidden="true" />
+          <span>添加节点</span>
+        </button>
+        <button
+          type="button"
+          className={activeTool === 'select' ? 'canvas-mode-bar__active' : undefined}
+          aria-label="移动"
+          aria-pressed={activeTool === 'select'}
+          disabled={disabled}
+          onClick={(event) => onToolChange('select', event.currentTarget)}
+        >
+          <Hand aria-hidden="true" />
+          <span>移动</span>
+        </button>
+        <button
+          type="button"
+          className={activeTool === 'connect' ? 'canvas-mode-bar__active' : undefined}
+          aria-label="连线"
+          aria-pressed={activeTool === 'connect'}
+          disabled={interactionDisabled}
+          title={draftOpen ? '请先完成或取消当前节点' : '连线'}
+          onClick={(event) => onToolChange('connect', event.currentTarget)}
+        >
+          <Unplug aria-hidden="true" />
+          <span>连线</span>
+        </button>
+        <button type="button" aria-label="打开工具箱" onClick={() => onOpenPanel?.('toolbox')}>
+          <Wrench aria-hidden="true" />
+          <span>工具箱</span>
+        </button>
+        <button type="button" aria-label="素材库" onClick={() => onOpenPanel?.('assets')}>
+          <FolderOpen aria-hidden="true" />
+          <span>素材库</span>
+        </button>
+        <button type="button" aria-label="角色库" onClick={() => onOpenPanel?.('characters')}>
+          <UsersRound aria-hidden="true" />
+          <span>角色库</span>
+        </button>
+        <button type="button" aria-label="历史记录" onClick={() => onOpenPanel?.('history')}>
+          <History aria-hidden="true" />
+          <span>历史</span>
+        </button>
+        <button type="button" aria-label="快捷键" onClick={() => onOpenPanel?.('shortcuts')}>
+          <Keyboard aria-hidden="true" />
+          <span>快捷键</span>
+        </button>
+        <button type="button" aria-label="教程" onClick={() => onOpenPanel?.('help')}>
+          <CircleHelp aria-hidden="true" />
+          <span>教程</span>
+        </button>
+      </div>
+      <div className="canvas-mode-bar__secondary" aria-label="画布辅助操作">
+        <button
+          type="button"
+          aria-label={groupLabel}
+          aria-pressed={false}
+          disabled={groupDisabled}
+          title={groupDisabled ? '请先选择至少两个节点' : groupLabel}
+          onClick={onGroupAction}
+        >
+          {groupLabel}
+        </button>
+        <button
+          type="button"
+          className="canvas-mode-bar__visibility-toggle"
+          aria-label={connectionsVisible ? '隐藏连线' : '显示连线'}
+          aria-pressed={connectionsVisible}
+          disabled={disabled}
+          title={connectionsVisible ? '隐藏连线' : '显示连线'}
+          onClick={onToggleConnections}
+        >
+          {connectionsVisible ? '隐藏连线' : '显示连线'}
+        </button>
+      </div>
     </FloatingPanel>
   )
 }

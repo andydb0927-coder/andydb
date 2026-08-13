@@ -21,6 +21,7 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
         agentOpen={false}
         onUndo={vi.fn()}
         onRedo={vi.fn()}
+        onRenameProject={vi.fn()}
         onOpenNodeList={vi.fn()}
         onModeChange={onModeChange}
         onToggleAgent={onToggleAgent}
@@ -51,6 +52,7 @@ test('keeps publish and share actions explicitly local-only', async () => {
         agentOpen={false}
         onUndo={vi.fn()}
         onRedo={vi.fn()}
+        onRenameProject={vi.fn()}
         onOpenNodeList={vi.fn()}
         onModeChange={vi.fn()}
         onToggleAgent={vi.fn()}
@@ -58,5 +60,45 @@ test('keeps publish and share actions explicitly local-only', async () => {
     </MemoryRouter>,
   )
   await user.click(screen.getByRole('button', { name: '发布与分享' }))
-  expect(screen.getByRole('menu')).toHaveTextContent('本地演示不执行外部发布')
+  const menu = screen.getByRole('menu', { name: '发布与分享菜单' })
+  expect(menu).toHaveTextContent('发布作品')
+  expect(menu).toHaveTextContent('分享链接')
+  expect(menu).toHaveTextContent('预览')
+  expect(menu).toHaveTextContent('导出')
+  expect(menu).toHaveTextContent('本地演示不执行外部发布')
+})
+
+test('edits the project title and exposes local membership controls', async () => {
+  const user = userEvent.setup()
+  const onRenameProject = vi.fn()
+  render(
+    <MemoryRouter>
+      <CanvasTopBar
+        projectId="project-1"
+        projectTitle="工作台演示"
+        saveStatus="saved"
+        canUndo
+        canRedo={false}
+        mode="workflow"
+        agentOpen={false}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onRenameProject={onRenameProject}
+        onOpenNodeList={vi.fn()}
+        onModeChange={vi.fn()}
+        onToggleAgent={vi.fn()}
+      />
+    </MemoryRouter>,
+  )
+
+  await user.click(screen.getByRole('button', { name: '编辑项目名' }))
+  const title = screen.getByRole('textbox', { name: '项目名' })
+  await user.clear(title)
+  await user.type(title, '雨夜电影计划{Enter}')
+  expect(onRenameProject).toHaveBeenCalledWith('雨夜电影计划')
+
+  expect(screen.getByRole('button', { name: '积分超市' })).toBeVisible()
+  expect(screen.getByRole('button', { name: /会员中心/ })).toHaveTextContent('限时4.0折')
+  expect(screen.getByText('120 积分')).toBeVisible()
+  expect(screen.getByRole('button', { name: '用户头像' })).toBeVisible()
 })

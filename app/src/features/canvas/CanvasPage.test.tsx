@@ -688,7 +688,8 @@ describe('creative canvas', () => {
     expect(
       await screen.findByRole('heading', { name: '雨夜追寻' }),
     ).toBeVisible()
-    expect(screen.getByRole('link', { name: '预览' })).toHaveAttribute(
+    await user.click(screen.getByRole('button', { name: '发布与分享' }))
+    expect(screen.getByRole('menuitem', { name: '预览' })).toHaveAttribute(
       'href',
       '/project/project-canvas/preview',
     )
@@ -2655,16 +2656,19 @@ describe('creative canvas', () => {
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
     ).toEqual([
+      '添加节点',
+      '移动',
       '连线',
+      '打开工具箱',
+      '素材库',
+      '角色库',
+      '历史记录',
+      '快捷键',
+      '教程',
       '分组',
       '隐藏连线',
-      '打开模型设置',
-      '打开资产',
-      '打开历史',
-      '打开快捷键',
-      '打开帮助',
     ])
-    expect(within(toolbar).getByText('双击画布 自由生成节点')).toBeVisible()
+    expect(within(toolbar).getByRole('group', { name: 'Liblib 画布工具坞' })).toBeVisible()
   })
 
   test('opens the blank-canvas context menu and returns focus after Escape', async () => {
@@ -2718,23 +2722,48 @@ describe('creative canvas', () => {
     }
   })
 
-  test('opens a free-generation draft by double-clicking the blank canvas', async () => {
+  test('chooses a free-generation type and creates it at the double-click point', async () => {
     const user = userEvent.setup()
     renderCanvas()
     const { screenToFlowPosition } = initializeFlow({ x: 640, y: 360 })
 
     doubleClickPane(500, 320)
-    expect(screen.getByRole('dialog', { name: '自由生成节点' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
     expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 500, y: 320 })
-    await user.type(screen.getByLabelText('文字内容'), '雨夜站台，自由生成电影感开场')
-    await user.click(screen.getByRole('button', { name: '确认创建' }))
+    await user.click(screen.getByRole('button', { name: '文本' }))
 
     expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
       kind: 'text',
       position: { x: 640, y: 360 },
-      versions: [{ prompt: '雨夜站台，自由生成电影感开场' }],
+      versions: [{ prompt: '双击画布创建的自由文本节点' }],
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('maps Liblib quick types onto existing undoable node models', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 580, y: 410 })
+
+    const cases = [
+      { button: '故事脚本生成', kind: 'script', title: '故事脚本' },
+      { button: '角色三视图', kind: 'character-card', title: '角色三视图' },
+      { button: '全能参考生视频 SD2.5', kind: 'video', title: '全能参考生视频' },
+      { button: '音频生视频 SD2.5', kind: 'video', title: '音频生视频' },
+      { button: '世界观卡', kind: 'worldview', title: '世界观卡' },
+    ] as const
+
+    for (const item of cases) {
+      doubleClickPane(500, 320)
+      await user.click(screen.getByRole('button', { name: item.button }))
+      expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+        kind: item.kind,
+        title: expect.stringContaining(item.title),
+        position: { x: 580, y: 410 },
+      })
+    }
+
+    expect(useProjectStore.getState().past).toHaveLength(cases.length)
   })
 
   test('adds a node from the context menu without the removed creation dock', async () => {
@@ -3277,9 +3306,9 @@ describe('canvas top bar', () => {
     initializeFlow()
     const pastBefore = useProjectStore.getState().past
 
-    await user.click(screen.getByRole('button', { name: '打开资产' }))
+    await user.click(screen.getByRole('button', { name: '素材库' }))
     expect(screen.getByRole('complementary', { name: '资产' })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: '打开快捷键' }))
+    await user.click(screen.getByRole('button', { name: '快捷键' }))
     expect(screen.queryByRole('complementary', { name: '资产' })).not.toBeInTheDocument()
     expect(screen.getByRole('complementary', { name: '快捷键' })).toBeVisible()
 

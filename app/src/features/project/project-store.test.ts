@@ -160,6 +160,19 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('renames the active project in one undoable history entry', () => {
+    const original = useProjectStore.getState().activeProject!
+
+    useProjectStore.getState().renameProject('  雨夜电影计划  ')
+
+    expect(useProjectStore.getState().activeProject?.title).toBe('雨夜电影计划')
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+    expect(useProjectStore.getState().past).toEqual([original])
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject?.title).toBe(original.title)
+  })
+
   test('groups two existing nodes in one history entry and supports undo and redo', () => {
     const original = useProjectStore.getState().activeProject!
     const groupId = useProjectStore.getState().groupNodes(['rain-audio', 'shot-1', 'shot-1'])

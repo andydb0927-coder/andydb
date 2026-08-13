@@ -43,6 +43,7 @@ interface ProjectStore {
   saveStatus: PersistenceStatus
   past: Project[]
   future: Project[]
+  renameProject: (title: string) => void
   addNode: (node: CanvasNode) => void
   createCanvasContent: (creation: CanvasCreation) => void
   updateNode: (nodeId: string, changes: NodeUpdates) => void
@@ -256,6 +257,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     saveStatus: 'saved',
     past: [],
     future: [],
+
+    renameProject: (title) => {
+      const normalized = title.trim()
+      if (!normalized || normalized.length > 60) return
+      commit((project) =>
+        project.title === normalized
+          ? project
+          : withUpdatedTimestamp({ ...project, title: normalized }),
+      )
+    },
 
     addNode: (node) => {
       commit((project) =>
