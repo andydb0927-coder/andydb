@@ -3459,10 +3459,28 @@ select {
   white-space: nowrap;
 }
 
-.community-card__title > span,
+.community-card__creator,
 .community-metrics {
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+.community-card__creator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  text-decoration: none;
+}
+
+.community-card__creator:hover,
+.work-detail__header a:not(.work-detail__back) {
+  color: var(--text-primary);
+}
+
+.community-card__creator svg {
+  width: 14px;
+  height: 14px;
 }
 
 .community-tags {
@@ -3585,6 +3603,89 @@ select {
 
 .work-detail__related h2 {
   margin-bottom: var(--space-4);
+  font-size: 1.125rem;
+}
+
+.creator-profile__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.creator-profile__identity {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.creator-profile__identity p,
+.creator-profile__title h1 {
+  margin: 0;
+}
+
+.creator-profile__identity > p:last-child {
+  color: var(--text-muted);
+}
+
+.creator-profile__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.creator-profile__title h1 {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  letter-spacing: -0.04em;
+}
+
+.creator-profile__title svg {
+  width: 24px;
+  height: 24px;
+  color: var(--focus-ring);
+}
+
+.creator-profile__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.creator-profile__metrics > div {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: rgb(23 25 30 / 72%);
+}
+
+.creator-profile__metrics dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.creator-profile__metrics dt svg {
+  width: 14px;
+  height: 14px;
+}
+
+.creator-profile__metrics dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.creator-profile__tags {
+  margin-bottom: var(--space-7);
+}
+
+.creator-profile__works > h2 {
+  margin: 0 0 var(--space-4);
   font-size: 1.125rem;
 }
 
@@ -5344,6 +5445,15 @@ select {
 
   .work-detail__header {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .creator-profile__header,
+  .creator-profile__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .creator-profile__header {
     gap: var(--space-3);
   }
 

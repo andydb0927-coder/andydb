@@ -19,12 +19,15 @@ export function WorkCard({ work }: { work: PublishedWork }) {
       <div className="community-card__body">
         <div className="community-card__title">
           <h2>{work.title}</h2>
-          <span>
+          <Link
+            className="community-card__creator focus-visible"
+            to={`/discover/creator/${encodeURIComponent(work.author)}`}
+          >
             {work.author}
             {work.authorVerified ? (
               <BadgeCheck aria-label={`${work.author} 已认证`} />
             ) : null}
-          </span>
+          </Link>
         </div>
         <ul className="community-tags" aria-label={`${work.title} 标签`}>
           {work.tags.map((tag) => <li key={tag}>{tag}</li>)}

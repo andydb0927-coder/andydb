@@ -28,7 +28,7 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to community after the delivery center phase', () => {
+  test('advances to collaboration after the community phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
@@ -39,7 +39,8 @@ describe('platform task catalogue', () => {
     expect(defaultPlatformTaskStatuses['workflow-templates']).toBe('completed')
     expect(defaultPlatformTaskStatuses['professional-timeline']).toBe('completed')
     expect(defaultPlatformTaskStatuses['export-publish-share']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['community-works']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['community-works']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['collaboration-membership']).toBe('in-progress')
     expect(
       platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
     ).toBe('/story')

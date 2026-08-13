@@ -15,6 +15,10 @@ describe('community work card', () => {
     )
 
     expect(screen.getByLabelText(`${work.author} 已认证`)).toBeVisible()
+    expect(screen.getByRole('link', { name: new RegExp(`^${work.author}`) })).toHaveAttribute(
+      'href',
+      `/discover/creator/${encodeURIComponent(work.author)}`,
+    )
     expect(screen.getByLabelText(`${work.metrics.likes} 次点赞`)).toBeVisible()
     expect(
       screen.getByRole('link', { name: `查看 ${work.title} 的创作过程` }),

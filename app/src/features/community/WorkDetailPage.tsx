@@ -148,7 +148,10 @@ export function WorkDetailPage({
         <div>
           <p className="platform-page__eyebrow">PUBLISHED SNAPSHOT</p>
           <h1>{work.title}</h1>
-          <p>由 {work.author} 发布 · 本地作品快照</p>
+          <p>
+            由 <Link to={`/discover/creator/${encodeURIComponent(work.author)}`}>{work.author}</Link>{' '}
+            发布 · 本地作品快照
+          </p>
         </div>
       </header>
 

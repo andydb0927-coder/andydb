@@ -109,8 +109,8 @@ export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'workflow-templates': 'completed',
   'professional-timeline': 'completed',
   'export-publish-share': 'completed',
-  'community-works': 'in-progress',
-  'collaboration-membership': 'pending',
+  'community-works': 'completed',
+  'collaboration-membership': 'in-progress',
   'agent-skill-cli': 'pending',
 }
 

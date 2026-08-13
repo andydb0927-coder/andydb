@@ -47,6 +47,9 @@ const MyWorksPage = lazy(() =>
 const WorkDetailPage = lazy(() =>
   import('../features/community/WorkDetailPage').then((m) => ({ default: m.WorkDetailPage })),
 )
+const CreatorProfilePage = lazy(() =>
+  import('../features/community/CreatorProfilePage').then((m) => ({ default: m.CreatorProfilePage })),
+)
 const AgentsPage = lazy(() =>
   import('../features/agent/AgentsPage').then((m) => ({ default: m.AgentsPage })),
 )
@@ -76,6 +79,7 @@ export const routes: RouteObject[] = [
       { path: '/workflows', element: withSuspense(<WorkflowsPage />) },
       { path: '/discover', element: withSuspense(<DiscoverPage />) },
       { path: '/discover/mine', element: withSuspense(<MyWorksPage />) },
+      { path: '/discover/creator/:author', element: withSuspense(<CreatorProfilePage />) },
       { path: '/discover/:workId', element: withSuspense(<WorkDetailPage />) },
       { path: '/models', element: withSuspense(<ModelsPage />) },
       { path: '/agents', element: withSuspense(<AgentsPage />) },

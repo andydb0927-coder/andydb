@@ -70,6 +70,10 @@ describe('work detail page', () => {
     expect(await screen.findByRole('heading', { name: '霜河渡' })).toBeVisible()
     expect(screen.getByRole('region', { name: '成片播放器' })).toBeVisible()
     expect(screen.getByRole('img', { name: '分镜 01' })).toHaveAttribute('src', '/demo/shot-river.png')
+    expect(screen.getByRole('link', { name: '无线画布' })).toHaveAttribute(
+      'href',
+      '/discover/creator/%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83',
+    )
     expect(screen.getByLabelText('329 次浏览')).toBeVisible()
     expect(repository.recordView).toHaveBeenCalledTimes(1)
 
