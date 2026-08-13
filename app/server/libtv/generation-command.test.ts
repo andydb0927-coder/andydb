@@ -133,7 +133,9 @@ function body(overrides: Partial<LibTvGenerateBody> = {}): LibTvGenerateBody {
     selection: {
       projectUuid: remoteProjectUuid,
       projectName: '低成本验收',
+      imageModelKey: 'image-key',
       imageModelName: 'Image Model',
+      videoModelKey: 'video-key',
       videoModelName: 'Video Model',
     },
     request: {
@@ -268,6 +270,12 @@ describe('LibTV generation preflight', () => {
   test('rejects a model name not present in the selected catalog before any CLI call', async () => {
     await expectRejectedWithoutRunnerCall(
       body({ selection: { ...body().selection, imageModelName: 'Unlisted Image Model' } }),
+    )
+  })
+
+  test('rejects a model key and name pair that does not identify the same catalog model', async () => {
+    await expectRejectedWithoutRunnerCall(
+      body({ selection: { ...body().selection, imageModelKey: 'unknown-image-key' } }),
     )
   })
 

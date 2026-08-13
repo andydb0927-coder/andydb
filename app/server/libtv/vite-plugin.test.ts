@@ -70,7 +70,9 @@ function generationBody(): Record<string, unknown> {
     selection: {
       projectUuid: '11111111-2222-3333-4444-555555555555',
       projectName: '低成本验收',
+      imageModelKey: 'image-key',
       imageModelName: 'Image Model',
+      videoModelKey: 'video-key',
       videoModelName: 'Video Model',
     },
     request: {

@@ -4,7 +4,9 @@ export const LIBTV_PROJECT_UUID_PATTERN =
 export interface LibTvProviderSelection {
   projectUuid: string
   projectName: string
+  imageModelKey: string
   imageModelName: string
+  videoModelKey: string
   videoModelName: string
 }
 

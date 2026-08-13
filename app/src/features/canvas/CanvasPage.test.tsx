@@ -241,7 +241,9 @@ const libtvPreferenceStore: GenerationProviderPreferenceStore = {
     selection: {
       projectUuid: '11111111-2222-3333-4444-555555555555',
       projectName: '低成本验收画布',
+      imageModelKey: 'image-key',
       imageModelName: 'Image Model',
+      videoModelKey: 'video-key',
       videoModelName: 'Video Model',
     },
   }),
@@ -906,6 +908,36 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     await user.click(screen.getByRole('button', { name: '重生成' }))
     provider = { provider: 'demo' }
+    await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
+
+    expect(start).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'LibTV 配置已变更，请重新发起生成',
+    )
+  })
+
+  test('rejects confirmation when only the pinned LibTV model key changed', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>()
+    let provider = libtvPreferenceStore.read()
+    const preferenceStore: GenerationProviderPreferenceStore = {
+      read: () => provider,
+      write: vi.fn(),
+    }
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      generationPreferenceStore: preferenceStore,
+    })
+
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
+    await user.click(screen.getByRole('button', { name: '重生成' }))
+    if (provider.provider === 'libtv') {
+      provider = {
+        provider: 'libtv',
+        selection: { ...provider.selection, imageModelKey: 'image-key-replaced' },
+      }
+    }
     await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
 
     expect(start).not.toHaveBeenCalled()

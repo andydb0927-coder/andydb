@@ -28,12 +28,13 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to models and generation after the canvas workflow phase', () => {
+  test('advances to assets and history after stable real-generation model binding', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
     expect(defaultPlatformTaskStatuses['canvas-workflow']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['models-generation']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['models-generation']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['assets-history']).toBe('in-progress')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })

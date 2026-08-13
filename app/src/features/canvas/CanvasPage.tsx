@@ -194,7 +194,9 @@ function sameSelection(
   return (
     left.projectUuid === right.projectUuid &&
     left.projectName === right.projectName &&
+    left.imageModelKey === right.imageModelKey &&
     left.imageModelName === right.imageModelName &&
+    left.videoModelKey === right.videoModelKey &&
     left.videoModelName === right.videoModelName
   )
 }

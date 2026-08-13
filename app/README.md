@@ -21,7 +21,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 | `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run build` | TypeScript 检查 + 生产构建（输出到 `dist/`） |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
-| `npm run test:run` | 全量 Vitest 单测（当前 790 项） |
+| `npm run test:run` | 全量 Vitest 单测（当前 796 项） |
 | `npm run e2e` | Playwright Chromium E2E（当前 26 项） |
 
 ## 功能地图

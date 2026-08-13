@@ -234,14 +234,18 @@ function currentSelection(
   if (preference.provider !== 'libtv' ||
     !LIBTV_PROJECT_UUID_PATTERN.test(preference.selection.projectUuid) ||
     !nonBlankString(preference.selection.projectName) ||
+    !nonBlankString(preference.selection.imageModelKey) ||
     !nonBlankString(preference.selection.imageModelName) ||
+    !nonBlankString(preference.selection.videoModelKey) ||
     !nonBlankString(preference.selection.videoModelName)) {
     throw new Error('请先在模型能力页启用 LibTV 实际生成。')
   }
   return {
     projectUuid: preference.selection.projectUuid,
     projectName: preference.selection.projectName,
+    imageModelKey: preference.selection.imageModelKey,
     imageModelName: preference.selection.imageModelName,
+    videoModelKey: preference.selection.videoModelKey,
     videoModelName: preference.selection.videoModelName,
   }
 }

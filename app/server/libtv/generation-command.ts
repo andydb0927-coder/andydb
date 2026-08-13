@@ -141,8 +141,16 @@ function preflight(input: unknown, catalog: LibTvCatalog): ValidGeneration {
     !LIBTV_PROJECT_UUID_PATTERN.test(selection.projectUuid) ||
     !selectedProject ||
     selectedProject.name !== selection.projectName ||
-    !catalog.imageModels.some((model) => model.modelName === selection.imageModelName) ||
-    !catalog.videoModels.some((model) => model.modelName === selection.videoModelName)
+    !catalog.imageModels.some(
+      (model) =>
+        model.modelKey === selection.imageModelKey &&
+        model.modelName === selection.imageModelName,
+    ) ||
+    !catalog.videoModels.some(
+      (model) =>
+        model.modelKey === selection.videoModelKey &&
+        model.modelName === selection.videoModelName,
+    )
   ) {
     invalidRequest()
   }
@@ -182,7 +190,9 @@ function parseSelection(value: unknown): LibTvProviderSelection {
     !isRecord(value) ||
     typeof value.projectUuid !== 'string' ||
     typeof value.projectName !== 'string' ||
+    typeof value.imageModelKey !== 'string' ||
     typeof value.imageModelName !== 'string' ||
+    typeof value.videoModelKey !== 'string' ||
     typeof value.videoModelName !== 'string'
   ) {
     invalidRequest()
@@ -190,7 +200,9 @@ function parseSelection(value: unknown): LibTvProviderSelection {
   return {
     projectUuid: value.projectUuid,
     projectName: value.projectName,
+    imageModelKey: value.imageModelKey,
     imageModelName: value.imageModelName,
+    videoModelKey: value.videoModelKey,
     videoModelName: value.videoModelName,
   }
 }

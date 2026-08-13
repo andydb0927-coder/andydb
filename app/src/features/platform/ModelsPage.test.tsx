@@ -9,7 +9,9 @@ import { ModelsPage } from './ModelsPage'
 const selection = {
   projectUuid: '11111111-2222-3333-4444-555555555555',
   projectName: '低成本验收',
+  imageModelKey: 'image-key',
   imageModelName: 'Image Model',
+  videoModelKey: 'video-key',
   videoModelName: 'Video Model',
 }
 
@@ -72,11 +74,11 @@ async function chooseCompleteLibTvSelection(user: ReturnType<typeof userEvent.se
   )
   await user.selectOptions(
     screen.getByRole('combobox', { name: '图片模型' }),
-    selection.imageModelName,
+    selection.imageModelKey,
   )
   await user.selectOptions(
     screen.getByRole('combobox', { name: '视频模型' }),
-    selection.videoModelName,
+    selection.videoModelKey,
   )
 }
 
@@ -183,6 +185,49 @@ describe('ModelsPage', () => {
     expect(write).toHaveBeenCalledWith({ provider: 'libtv', selection })
     expect(screen.getByRole('status')).toHaveTextContent('已启用 LibTV 实际生成')
     expect(enable).toHaveFocus()
+  })
+
+  test('selects and persists the exact stable key when catalog models share a name', async () => {
+    const user = userEvent.setup()
+    const { store, write } = createStore()
+    const duplicateNameCatalog: LibTvCatalog = {
+      ...catalog,
+      imageModels: [
+        { modelKey: 'image-key-old', modelName: '同名图片模型' },
+        { modelKey: 'image-key-new', modelName: '同名图片模型' },
+      ],
+    }
+    render(
+      <ModelsPage
+        catalogLoader={() => Promise.resolve(duplicateNameCatalog)}
+        preferenceStore={store}
+      />,
+    )
+    await screen.findByRole('combobox', { name: '远程画布' })
+
+    await user.click(screen.getByRole('radio', { name: 'LibTV 实际生成' }))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '远程画布' }),
+      selection.projectUuid,
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '图片模型' }),
+      'image-key-new',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '视频模型' }),
+      selection.videoModelKey,
+    )
+    await user.click(screen.getByRole('button', { name: '启用 LibTV 实际生成' }))
+
+    expect(write).toHaveBeenCalledWith({
+      provider: 'libtv',
+      selection: {
+        ...selection,
+        imageModelKey: 'image-key-new',
+        imageModelName: '同名图片模型',
+      },
+    })
   })
 
   test('switches back to Demo only through its explicit persisted action', async () => {

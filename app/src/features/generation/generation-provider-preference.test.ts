@@ -48,7 +48,9 @@ class ThrowingWriteStorage extends MemoryStorage {
 const completeSelection = {
   projectUuid: '11111111-2222-3333-4444-555555555555',
   projectName: '低成本验收',
+  imageModelKey: 'image-key',
   imageModelName: 'Image Model',
+  videoModelKey: 'video-key',
   videoModelName: 'Video Model',
 }
 
@@ -89,10 +91,24 @@ describe('generation provider preference', () => {
       selection: {
         projectUuid: '11111111-2222-3333-4444-555555555555',
         projectName: '低成本验收',
+        imageModelKey: 'image-key',
         imageModelName: 'Image Model',
+        videoModelKey: 'video-key',
         videoModelName: 'Video Model',
       },
     })
+  })
+
+  test('falls back to Demo when a persisted LibTV selection is not pinned by model keys', () => {
+    const store = createGenerationProviderPreferenceStore(storage)
+    const { imageModelKey: _imageModelKey, videoModelKey: _videoModelKey, ...legacySelection } =
+      completeSelection
+    storage.setItem(
+      GENERATION_PROVIDER_KEY,
+      JSON.stringify({ provider: 'libtv', selection: legacySelection }),
+    )
+
+    expect(store.read()).toEqual({ provider: 'demo' })
   })
 
   test('falls back to demo when a LibTV selection has a blank model name', () => {
@@ -130,6 +146,16 @@ describe('generation provider preference', () => {
       { provider: 'demo' },
     ],
     [
+      'a blank image model key',
+      { ...completeSelection, imageModelKey: '  ' },
+      { provider: 'demo' },
+    ],
+    [
+      'a non-string video model key',
+      { ...completeSelection, videoModelKey: { key: 'video-key' } },
+      { provider: 'demo' },
+    ],
+    [
       'a non-string image model name',
       { ...completeSelection, imageModelName: null },
       { provider: 'demo' },
@@ -144,7 +170,9 @@ describe('generation provider preference', () => {
       {
         projectUuid: ' 11111111-2222-3333-4444-555555555555 ',
         projectName: ' 低成本验收 ',
+        imageModelKey: ' image-key ',
         imageModelName: ' Image Model ',
+        videoModelKey: ' video-key ',
         videoModelName: ' Video Model ',
       },
       {
@@ -152,7 +180,9 @@ describe('generation provider preference', () => {
         selection: {
           projectUuid: '11111111-2222-3333-4444-555555555555',
           projectName: '低成本验收',
+          imageModelKey: 'image-key',
           imageModelName: 'Image Model',
+          videoModelKey: 'video-key',
           videoModelName: 'Video Model',
         },
       },

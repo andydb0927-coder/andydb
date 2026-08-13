@@ -24,7 +24,9 @@ function readPreference(value: unknown): GenerationProviderPreference {
     selection?: {
       projectUuid?: unknown
       projectName?: unknown
+      imageModelKey?: unknown
       imageModelName?: unknown
+      videoModelKey?: unknown
       videoModelName?: unknown
     }
   }
@@ -36,13 +38,17 @@ function readPreference(value: unknown): GenerationProviderPreference {
 
   const projectUuid = normalizeString(preference.selection.projectUuid)
   const projectName = normalizeString(preference.selection.projectName)
+  const imageModelKey = normalizeString(preference.selection.imageModelKey)
   const imageModelName = normalizeString(preference.selection.imageModelName)
+  const videoModelKey = normalizeString(preference.selection.videoModelKey)
   const videoModelName = normalizeString(preference.selection.videoModelName)
   if (
     !projectUuid ||
     !LIBTV_PROJECT_UUID_PATTERN.test(projectUuid) ||
     !projectName ||
+    !imageModelKey ||
     !imageModelName ||
+    !videoModelKey ||
     !videoModelName
   ) {
     return demoPreference
@@ -50,7 +56,14 @@ function readPreference(value: unknown): GenerationProviderPreference {
 
   return {
     provider: 'libtv',
-    selection: { projectUuid, projectName, imageModelName, videoModelName },
+    selection: {
+      projectUuid,
+      projectName,
+      imageModelKey,
+      imageModelName,
+      videoModelKey,
+      videoModelName,
+    },
   }
 }
 

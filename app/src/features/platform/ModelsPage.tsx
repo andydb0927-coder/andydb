@@ -52,9 +52,19 @@ export function ModelsPage({
       ? initialPreference.selection.projectUuid
       : '',
   )
+  const [imageModelKey, setImageModelKey] = useState(
+    initialPreference.provider === 'libtv'
+      ? initialPreference.selection.imageModelKey
+      : '',
+  )
   const [imageModelName, setImageModelName] = useState(
     initialPreference.provider === 'libtv'
       ? initialPreference.selection.imageModelName
+      : '',
+  )
+  const [videoModelKey, setVideoModelKey] = useState(
+    initialPreference.provider === 'libtv'
+      ? initialPreference.selection.videoModelKey
       : '',
   )
   const [videoModelName, setVideoModelName] = useState(
@@ -102,20 +112,22 @@ export function ModelsPage({
   const selectedProject = catalog?.projects.find(
     (project) => project.uuid === projectUuid,
   )
-  const imageModelIsCurrent = catalog?.imageModels.some(
-    (model) => model.modelName === imageModelName,
-  ) ?? false
-  const videoModelIsCurrent = catalog?.videoModels.some(
-    (model) => model.modelName === videoModelName,
-  ) ?? false
+  const selectedImageModel = catalog?.imageModels.find(
+    (model) =>
+      model.modelKey === imageModelKey && model.modelName === imageModelName,
+  )
+  const selectedVideoModel = catalog?.videoModels.find(
+    (model) =>
+      model.modelKey === videoModelKey && model.modelName === videoModelName,
+  )
   const canEnableLibTv = Boolean(
     catalogState === 'ready' &&
     catalog?.cliInstalled &&
     catalog.authenticated &&
     catalog.writesEnabled &&
     selectedProject &&
-    imageModelIsCurrent &&
-    videoModelIsCurrent,
+    selectedImageModel &&
+    selectedVideoModel,
   )
 
   function updateProvider(provider: DraftProvider) {
@@ -129,14 +141,21 @@ export function ModelsPage({
       setSavedStatus('已启用 Demo 本地演示')
       return
     }
-    if (!canEnableLibTv || !selectedProject) return
+    if (
+      !canEnableLibTv ||
+      !selectedProject ||
+      !selectedImageModel ||
+      !selectedVideoModel
+    ) return
     preferenceStore.write({
       provider: 'libtv',
       selection: {
         projectUuid: selectedProject.uuid,
         projectName: selectedProject.name,
-        imageModelName,
-        videoModelName,
+        imageModelKey: selectedImageModel.modelKey,
+        imageModelName: selectedImageModel.modelName,
+        videoModelKey: selectedVideoModel.modelKey,
+        videoModelName: selectedVideoModel.modelName,
       },
     })
     setSavedStatus('已启用 LibTV 实际生成')
@@ -243,15 +262,21 @@ export function ModelsPage({
             <select
               aria-label="图片模型"
               disabled={!catalog}
-              value={imageModelName}
+              value={imageModelKey}
               onChange={(event) => {
-                setImageModelName(event.target.value)
+                const model = catalog?.imageModels.find(
+                  (candidate) => candidate.modelKey === event.target.value,
+                )
+                setImageModelKey(model?.modelKey ?? '')
+                setImageModelName(model?.modelName ?? '')
                 setSavedStatus(undefined)
               }}
             >
               <option value="">请选择图片模型</option>
               {catalog?.imageModels.map((model) => (
-                <option key={model.modelKey} value={model.modelName}>{model.modelName}</option>
+                <option key={model.modelKey} value={model.modelKey}>
+                  {modelOptionLabel(model, catalog.imageModels)}
+                </option>
               ))}
             </select>
           </label>
@@ -260,15 +285,21 @@ export function ModelsPage({
             <select
               aria-label="视频模型"
               disabled={!catalog}
-              value={videoModelName}
+              value={videoModelKey}
               onChange={(event) => {
-                setVideoModelName(event.target.value)
+                const model = catalog?.videoModels.find(
+                  (candidate) => candidate.modelKey === event.target.value,
+                )
+                setVideoModelKey(model?.modelKey ?? '')
+                setVideoModelName(model?.modelName ?? '')
                 setSavedStatus(undefined)
               }}
             >
               <option value="">请选择视频模型</option>
               {catalog?.videoModels.map((model) => (
-                <option key={model.modelKey} value={model.modelName}>{model.modelName}</option>
+                <option key={model.modelKey} value={model.modelKey}>
+                  {modelOptionLabel(model, catalog.videoModels)}
+                </option>
               ))}
             </select>
           </label>
@@ -356,6 +387,20 @@ function LiveModelCard({
       </dl>
     </article>
   )
+}
+
+function modelOptionLabel(
+  model: LibTvModelSummary,
+  models: readonly LibTvModelSummary[],
+) {
+  const duplicateName = models.some(
+    (candidate) =>
+      candidate.modelKey !== model.modelKey &&
+      candidate.modelName === model.modelName,
+  )
+  return duplicateName
+    ? `${model.modelName} · ${model.modelKey.slice(0, 8)}`
+    : model.modelName
 }
 
 function safeReadPreference(
