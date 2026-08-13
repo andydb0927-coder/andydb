@@ -4,8 +4,7 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasToolbar } from './CanvasToolbar'
 
-test('exposes all three structured card tools as usable actions', async () => {
-  const user = userEvent.setup()
+test('moves node creation out of the persistent mode toolbar', () => {
   const onToolChange = vi.fn()
   render(
     <CanvasToolbar
@@ -17,16 +16,12 @@ test('exposes all three structured card tools as usable actions', async () => {
     />,
   )
 
-  for (const label of ['剧本卡', '角色卡', '世界观卡']) {
-    const tool = screen.getByRole('button', { name: label })
-    expect(tool).toBeEnabled()
-    await user.click(tool)
-    expect(onToolChange).toHaveBeenLastCalledWith(label === '剧本卡'
-      ? 'script'
-      : label === '角色卡'
-        ? 'character-card'
-        : 'worldview', tool)
+  expect(screen.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
+  expect(screen.getByText('双击画布 自由生成节点')).toBeVisible()
+  for (const label of ['剧本卡', '角色卡', '世界观卡', '文本', '图片', '分镜', '视频']) {
+    expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
   }
+  expect(onToolChange).not.toHaveBeenCalled()
 })
 
 test('enables Connect and activates Group only for a valid selection', async () => {

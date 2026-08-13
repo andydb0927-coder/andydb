@@ -50,7 +50,11 @@ async function createCinematicProject(page: Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
-async function clickBlankCanvas(page: Page, reverse = false) {
+async function openAddNodeAtBlank(
+  page: Page,
+  label: '剧本卡' | '角色卡' | '世界观卡',
+  reverse = false,
+) {
   const point = await page.locator('.react-flow__pane').evaluate(
     (pane, fromBottomRight) => {
       const rect = pane.getBoundingClientRect()
@@ -68,7 +72,7 @@ async function clickBlankCanvas(page: Page, reverse = false) {
           if (!target) continue
           if (
             target.closest(
-              '.react-flow__node, .canvas-toolbar, .director-composer, .canvas-placement-hint, .react-flow__controls',
+              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
             )
           ) {
             continue
@@ -80,12 +84,13 @@ async function clickBlankCanvas(page: Page, reverse = false) {
     },
     reverse,
   )
-  await page.mouse.click(point.x, point.y)
+  await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加节点' }).click()
+  await page.getByRole('menuitem', { name: label }).click()
 }
 
 async function createScriptCard(page: Page) {
-  await page.getByRole('button', { name: '剧本卡' }).click()
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '剧本卡')
   const dialog = page.getByRole('dialog', { name: '创建剧本卡' })
   await dialog.getByLabel('标题').fill('雨夜重逢')
   await dialog.getByLabel('分场').fill('场一：河岸夜外')
@@ -97,8 +102,7 @@ async function createScriptCard(page: Page) {
 }
 
 async function createCharacterCard(page: Page) {
-  await page.getByRole('button', { name: '角色卡' }).click()
-  await clickBlankCanvas(page, true)
+  await openAddNodeAtBlank(page, '角色卡', true)
   const dialog = page.getByRole('dialog', { name: '创建角色卡' })
   await dialog.getByLabel('标题').fill('林渊角色卡')
   await dialog.getByLabel('姓名').fill('林渊')
@@ -111,8 +115,7 @@ async function createCharacterCard(page: Page) {
 }
 
 async function createWorldviewCard(page: Page) {
-  await page.getByRole('button', { name: '世界观卡' }).click()
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '世界观卡')
   const dialog = page.getByRole('dialog', { name: '创建世界观卡' })
   await dialog.getByLabel('标题').fill('潮汐城世界观')
   await dialog.getByLabel('背景').fill('每年雨季老城会被河水淹没三天')

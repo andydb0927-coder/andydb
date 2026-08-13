@@ -31,6 +31,7 @@ export interface NodeDraftFormValue {
 
 export interface NodeDraftPanelProps {
   kind: CreatableNodeKind
+  presentation?: 'add-node' | 'free-generation' | 'upload'
   initialTitle: string
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
@@ -54,6 +55,7 @@ const contentLabels: Record<CreatableNodeKind, string> = {
 
 export function NodeDraftPanel({
   kind,
+  presentation = 'add-node',
   initialTitle,
   anchor,
   bounds,
@@ -177,6 +179,18 @@ export function NodeDraftPanel({
     : submitting
       ? '创建中…'
       : '确认创建'
+  const heading =
+    presentation === 'free-generation'
+      ? '自由生成节点'
+      : presentation === 'upload'
+        ? '上传图片到画布'
+        : `创建${kindCopy[kind]}节点`
+  const eyebrow =
+    presentation === 'free-generation'
+      ? '双击画布 · 自由生成'
+      : presentation === 'upload'
+        ? '右键画布 · 上传素材'
+        : '右键画布 · 添加节点'
 
   return (
     <FloatingPanel
@@ -193,8 +207,8 @@ export function NodeDraftPanel({
       >
         <div className="node-draft-panel__heading">
           <div>
-            <span>放置新节点</span>
-            <h2 id={headingId}>创建{kindCopy[kind]}节点</h2>
+            <span>{eyebrow}</span>
+            <h2 id={headingId}>{heading}</h2>
           </div>
           <kbd>Esc</kbd>
         </div>

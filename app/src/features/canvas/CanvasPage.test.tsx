@@ -79,9 +79,24 @@ interface FlowPropsFixture {
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
   snapToGrid?: boolean
-  onPaneClick?(event: { clientX: number; clientY: number }): void
+  onPaneClick?(event: { clientX: number; clientY: number; detail?: number }): void
+  onPaneContextMenu?(event: {
+    clientX: number
+    clientY: number
+    preventDefault(): void
+  }): void
   onNodeClick?(
     event: { target?: EventTarget | null },
+    node: FlowNodeFixture,
+  ): void
+  onNodeContextMenu?(
+    event: {
+      clientX: number
+      clientY: number
+      preventDefault(): void
+      stopPropagation(): void
+      currentTarget?: EventTarget | null
+    },
     node: FlowNodeFixture,
   ): void
   onEdgeClick?(
@@ -304,6 +319,31 @@ function initializeFlow(
 
 function clickPane(clientX = 420, clientY = 300) {
   act(() => latestFlowProps?.onPaneClick?.({ clientX, clientY }))
+}
+
+function contextMenuPane(clientX = 420, clientY = 300) {
+  const preventDefault = vi.fn()
+  act(() => latestFlowProps?.onPaneContextMenu?.({ clientX, clientY, preventDefault }))
+  return preventDefault
+}
+
+function doubleClickPane(clientX = 420, clientY = 300) {
+  act(() => latestFlowProps?.onPaneClick?.({ clientX, clientY, detail: 2 }))
+}
+
+function chooseContextNode(
+  label: '剧本卡' | '角色卡' | '世界观卡' | '文本' | '图片' | '分镜' | '视频',
+  clientX = 420,
+  clientY = 300,
+) {
+  contextMenuPane(clientX, clientY)
+  act(() => screen.getByRole('menuitem', { name: '添加节点' }).click())
+  act(() => screen.getByRole('menuitem', { name: label }).click())
+}
+
+function chooseContextUpload(clientX = 420, clientY = 300) {
+  contextMenuPane(clientX, clientY)
+  act(() => screen.getByRole('menuitem', { name: '上传' }).click())
 }
 
 beforeEach(() => {
@@ -1110,7 +1150,7 @@ describe('creative canvas', () => {
     }
   })
 
-  test('reloads toolbar-created image content from real Dexie persistence', async () => {
+  test('reloads context-uploaded image content from real Dexie persistence', async () => {
     const user = userEvent.setup()
     const database = new WirelessCanvasDatabase(
       `wireless-canvas-toolbar-image-${crypto.randomUUID()}`,
@@ -1121,8 +1161,7 @@ describe('creative canvas', () => {
 
     try {
       initializeFlow({ x: 612, y: 428 })
-      await user.click(screen.getByRole('button', { name: '图片' }))
-      clickPane(360, 280)
+      chooseContextUpload(360, 280)
       await user.upload(
         screen.getByLabelText('本地图片'),
         new File(['durable-image-bytes'], 'durable.png', {
@@ -1788,10 +1827,7 @@ describe('creative canvas', () => {
     )
     await user.click(connect)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
@@ -1860,12 +1896,12 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toEqual([])
   })
 
-  test('prioritizes one connection error over an active placement hint', async () => {
-    const user = userEvent.setup()
+  test('keeps one concrete connection error while a context draft is open', () => {
     renderCanvas()
+    initializeFlow()
 
-    await user.click(screen.getByRole('button', { name: '文本' }))
-    expect(screen.getByRole('status')).toHaveTextContent('点击画布放置文本节点')
+    chooseContextNode('文本')
+    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
 
     act(() => {
       latestFlowProps?.onConnectEnd?.({}, {
@@ -1894,10 +1930,7 @@ describe('creative canvas', () => {
     clickPane()
 
     expect(screen.queryByText('请选择目标节点')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(useProjectStore.getState().past).toEqual([])
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
     await waitFor(() => expect(connect).toHaveFocus())
@@ -1936,8 +1969,7 @@ describe('creative canvas', () => {
     expect(connect).toHaveAttribute('aria-pressed', 'false')
 
     initializeFlow()
-    await user.click(screen.getByRole('button', { name: '视频' }))
-    clickPane()
+    chooseContextNode('视频')
     const cancel = screen.getByRole('button', { name: '取消' })
     cancel.focus()
     await user.keyboard('l')
@@ -1994,10 +2026,7 @@ describe('creative canvas', () => {
 
       expect(nativeHandle).toHaveFocus()
       expect(connect).toHaveAttribute('aria-pressed', 'false')
-      expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
+      expect(connect).toHaveAttribute('aria-pressed', 'false')
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
       expect(
         latestFlowProps?.nodes.some(
@@ -2278,8 +2307,7 @@ describe('creative canvas', () => {
     renderCanvas()
     initializeFlow()
 
-    await user.click(screen.getByRole('button', { name: '视频' }))
-    clickPane()
+    chooseContextNode('视频')
     expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBeVisible()
 
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
@@ -2336,20 +2364,19 @@ describe('creative canvas', () => {
     )
   })
 
-  test('switches from connection selection to a creation tool without stealing focus', async () => {
+  test('switches from connection selection to context creation without stale state', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    initializeFlow()
     const connect = screen.getByRole('button', { name: '连线' })
-    const text = screen.getByRole('button', { name: '文本' })
 
     await user.click(connect)
     await user.click(screen.getByRole('button', { name: '角色参考' }))
     expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
-    await user.click(text)
+    chooseContextNode('文本')
 
-    expect(screen.getByRole('status')).toHaveTextContent('点击画布放置文本节点')
-    expect(text).toHaveAttribute('aria-pressed', 'true')
-    expect(text).toHaveFocus()
+    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+    expect(screen.getByLabelText('标题')).toHaveFocus()
     expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(useProjectStore.getState().past).toEqual([])
   })
@@ -2381,10 +2408,7 @@ describe('creative canvas', () => {
 
     expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
     expect(screen.queryByText('请选择目标节点')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(switchProject).toHaveFocus()
     expect(useProjectStore.getState().past).toEqual([])
   })
@@ -2596,20 +2620,13 @@ describe('creative canvas', () => {
   test('offers canvas tools and the connection visibility control', () => {
     renderCanvas()
 
-    const toolbar = screen.getByRole('toolbar', { name: '创作工具' })
+    expect(screen.queryByRole('toolbar', { name: '创作工具' })).not.toBeInTheDocument()
+    const toolbar = screen.getByRole('toolbar', { name: '画布模式工具' })
     expect(
       within(toolbar)
         .getAllByRole('button')
         .map((button) => button.getAttribute('aria-label')),
     ).toEqual([
-      '选择',
-      '剧本卡',
-      '角色卡',
-      '世界观卡',
-      '文本',
-      '图片',
-      '分镜',
-      '视频',
       '连线',
       '分组',
       '隐藏连线',
@@ -2618,6 +2635,128 @@ describe('creative canvas', () => {
       '打开快捷键',
       '打开帮助',
     ])
+    expect(within(toolbar).getByText('双击画布 自由生成节点')).toBeVisible()
+  })
+
+  test('opens the blank-canvas context menu and returns focus after Escape', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+
+    expect(contextMenuPane()).toHaveBeenCalledOnce()
+    expect(screen.getByRole('menu', { name: '画布快捷菜单' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '上传' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
+    await waitFor(() => expect(canvas).toHaveFocus())
+  })
+
+  test('pastes available clipboard text into one undoable node at the menu point', async () => {
+    const user = userEvent.setup()
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+      navigator,
+      'clipboard',
+    )
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: vi.fn().mockResolvedValue('雨夜剪贴板文本') },
+    })
+
+    try {
+      renderCanvas()
+      initializeFlow({ x: 688, y: 412 })
+      contextMenuPane(470, 330)
+
+      const paste = screen.getByRole('menuitem', { name: '粘贴' })
+      await waitFor(() => expect(paste).toBeEnabled())
+      await user.click(paste)
+
+      expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+        kind: 'text',
+        position: { x: 688, y: 412 },
+        versions: [{ prompt: '雨夜剪贴板文本' }],
+      })
+      expect(useProjectStore.getState().past).toHaveLength(1)
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard')
+      }
+    }
+  })
+
+  test('opens a free-generation draft by double-clicking the blank canvas', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const { screenToFlowPosition } = initializeFlow({ x: 640, y: 360 })
+
+    doubleClickPane(500, 320)
+    expect(screen.getByRole('dialog', { name: '自由生成节点' })).toBeVisible()
+    expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 500, y: 320 })
+    await user.type(screen.getByLabelText('文字内容'), '雨夜站台，自由生成电影感开场')
+    await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'text',
+      position: { x: 640, y: 360 },
+      versions: [{ prompt: '雨夜站台，自由生成电影感开场' }],
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+  })
+
+  test('adds a node from the context menu without the removed creation dock', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 520, y: 340 })
+
+    contextMenuPane(440, 300)
+    await user.click(screen.getByRole('menuitem', { name: '添加节点' }))
+    await user.click(screen.getByRole('menuitem', { name: '分镜' }))
+    expect(screen.getByRole('dialog', { name: '创建分镜节点' })).toBeVisible()
+    await user.type(screen.getByLabelText('画面提示词'), '低机位，雨水掠过站台')
+    await user.click(screen.getByRole('button', { name: '确认创建' }))
+
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'storyboard',
+      position: { x: 520, y: 340 },
+    })
+  })
+
+  test('saves the right-clicked node asset to the local library and restores node focus', async () => {
+    const user = userEvent.setup()
+    const save = vi.fn().mockResolvedValue(undefined)
+    renderCanvas({
+      libraryRepository: {
+        list: vi.fn().mockResolvedValue([]),
+        save,
+      },
+    })
+    initializeFlow()
+    const character = screen.getByRole('button', { name: '角色参考' })
+    const node = latestFlowProps!.nodes.find(({ id }) => id === 'character')!
+
+    act(() => latestFlowProps?.onNodeContextMenu?.({
+      clientX: 300,
+      clientY: 240,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: character,
+    }, node))
+
+    const saveAction = screen.getByRole('menuitem', { name: '保存到我的资产' })
+    expect(saveAction).toBeEnabled()
+    await user.click(saveAction)
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    expect(save.mock.calls[0][0]).toMatchObject({
+      id: 'asset-character',
+      name: '角色参考',
+      kind: 'image',
+    })
+    await waitFor(() => expect(character).toHaveFocus())
   })
 
   test.each([
@@ -2649,8 +2788,7 @@ describe('creative canvas', () => {
       })
       initializeFlow({ x: 360, y: 280 })
 
-      await user.click(screen.getByRole('button', { name: toolLabel }))
-      clickPane(360, 280)
+      chooseContextNode(toolLabel, 360, 280)
       expect(screen.getByRole('dialog', { name: dialogName })).toBeVisible()
       for (const [label, value] of fields) {
         await user.type(screen.getByLabelText(label), value)
@@ -2682,8 +2820,7 @@ describe('creative canvas', () => {
     })
     initializeFlow({ x: 480, y: 320 })
 
-    await user.click(screen.getByRole('button', { name: '世界观卡' }))
-    clickPane(480, 320)
+    chooseContextNode('世界观卡', 480, 320)
     await user.clear(screen.getByLabelText('标题'))
     await user.type(screen.getByLabelText('标题'), '潮汐城世界观')
     await user.type(screen.getByLabelText('背景'), '雨季淹城三天')
@@ -2765,16 +2902,12 @@ describe('creative canvas', () => {
     )
   })
 
-  test('creates nodes from the toolbar at the converted pane position', async () => {
+  test('creates nodes from the context menu at the converted pane position', async () => {
     const user = userEvent.setup()
     const save = vi.fn().mockResolvedValue(undefined)
     renderCanvas({ repository: { load: async () => undefined, save } })
     const { screenToFlowPosition } = initializeFlow()
-    const storyboardTool = screen.getByRole('button', { name: '分镜' })
-
-    await user.click(storyboardTool)
-    expect(storyboardTool).toHaveAttribute('aria-pressed', 'true')
-    clickPane()
+    chooseContextNode('分镜')
 
     expect(
       screen.getByRole('dialog', { name: '创建分镜节点' }),
@@ -2795,10 +2928,7 @@ describe('creative canvas', () => {
       versions: [{ prompt: '远景，雨夜河岸' }],
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
-    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '创建分镜节点' })).not.toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '分镜 03' })).toHaveFocus()
@@ -2818,8 +2948,7 @@ describe('creative canvas', () => {
       renderCanvas()
       initializeFlow({ x: 100, y: 200 })
 
-      await user.click(screen.getByRole('button', { name: toolLabel }))
-      clickPane(160, 220)
+      chooseContextNode(toolLabel, 160, 220)
       await user.type(screen.getByLabelText(fieldLabel), prompt)
       await user.click(screen.getByRole('button', { name: '确认创建' }))
 
@@ -2831,13 +2960,12 @@ describe('creative canvas', () => {
     },
   )
 
-  test('creates an image node and asset from the toolbar', async () => {
+  test('creates an image node and asset from the Upload context action', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow({ x: 240, y: 360 })
 
-    await user.click(screen.getByRole('button', { name: '图片' }))
-    clickPane(240, 360)
+    chooseContextUpload(240, 360)
     await user.upload(
       screen.getByLabelText('本地图片'),
       new File(['image'], 'reference.png', { type: 'image/png' }),
@@ -2858,41 +2986,31 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
-  test('cancels placement without history and returns focus to its tool', async () => {
+  test('cancels context placement without history and returns focus to the canvas', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow()
-    const textTool = screen.getByRole('button', { name: '文本' })
-
-    await user.click(textTool)
-    clickPane()
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+    chooseContextNode('文本')
     expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
     await user.keyboard('{Escape}')
 
     expect(screen.queryByRole('dialog', { name: '创建文本节点' })).not.toBeInTheDocument()
     expect(useProjectStore.getState().past).toEqual([])
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
-    expect(screen.getByRole('button', { name: '选择' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    expect(textTool).toHaveFocus()
+    expect(canvas).toHaveFocus()
   })
 
-  test('ignores node clicks and a second pane click while placing one draft', async () => {
-    const user = userEvent.setup()
+  test('ignores node clicks and a second pane double click while editing one draft', () => {
     renderCanvas()
     initializeFlow()
 
-    await user.click(screen.getByRole('button', { name: '视频' }))
+    chooseContextNode('视频')
+    const firstDialog = screen.getByRole('dialog', { name: '创建视频节点' })
     act(() => {
       latestFlowProps?.onNodeClick?.({}, latestFlowProps.nodes[0])
     })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-
-    clickPane(420, 300)
-    const firstDialog = screen.getByRole('dialog', { name: '创建视频节点' })
-    clickPane(900, 640)
+    doubleClickPane(900, 640)
     expect(screen.getAllByRole('dialog', { name: '创建视频节点' })).toHaveLength(1)
     expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBe(firstDialog)
   })
@@ -2915,8 +3033,7 @@ describe('creative canvas', () => {
       </MemoryRouter>,
     )
     initializeFlow()
-    await user.click(screen.getByRole('button', { name: '文本' }))
-    clickPane()
+    chooseContextNode('文本')
     expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: '切换到项目 B' }))

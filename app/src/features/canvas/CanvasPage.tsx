@@ -78,6 +78,10 @@ import {
   CanvasToolbar,
   type CanvasTool,
 } from './CanvasToolbar'
+import {
+  CanvasContextMenu,
+  type ContextCreatableKind,
+} from './CanvasContextMenu'
 import { CanvasTopBar } from './CanvasTopBar'
 import {
   CanvasAgentPanel,
@@ -141,9 +145,20 @@ interface NodeMeasurementState {
 interface PendingPlacement {
   projectId: string
   kind: CreatableNodeKind | CreativeCardKind
+  entry: 'add-node' | 'free-generation' | 'upload'
   position: CanvasNodePosition
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
+}
+
+interface CanvasContextMenuState {
+  projectId: string
+  anchor: { x: number; y: number }
+  bounds: { width: number; height: number }
+  flowPosition: CanvasNodePosition
+  targetNodeId?: string
+  clipboardText: string
+  returnFocusTo?: HTMLElement
 }
 
 interface EditingCard {
@@ -262,18 +277,6 @@ function buildGenerationRequest(
   }
 }
 
-function isCreatableTool(
-  tool: CanvasTool,
-): tool is CreatableNodeKind | CreativeCardKind {
-  return (
-    isCreativeCardKind(tool) ||
-    tool === 'text' ||
-    tool === 'image' ||
-    tool === 'storyboard' ||
-    tool === 'video'
-  )
-}
-
 function downstreamConsumers(project: Project, nodeId: string) {
   const outgoing = new Map<string, string[]>()
   for (const edge of project.edges) {
@@ -317,7 +320,8 @@ function findCanvasNodeControl(
 
 export interface CanvasPageProps {
   repository?: CanvasRepository
-  libraryRepository?: Pick<AssetLibraryRepository, 'list'>
+  libraryRepository?: Pick<AssetLibraryRepository, 'list'> &
+    Partial<Pick<AssetLibraryRepository, 'save'>>
   generationAdapter?: GenerationAdapter
   generationPreferenceStore?: GenerationProviderPreferenceStore
   workflowRepository?: CanvasWorkflowRepository
@@ -406,6 +410,8 @@ export function CanvasPage({
     useState<PendingRemoteGeneration>()
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement>()
+  const [contextMenu, setContextMenu] =
+    useState<CanvasContextMenuState>()
   const [editingCard, setEditingCard] = useState<EditingCard>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
@@ -419,7 +425,7 @@ export function CanvasPage({
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const nativeConnectionActiveRef = useRef(false)
-  const placementTriggerRef = useRef<HTMLButtonElement>(null)
+  const placementTriggerRef = useRef<HTMLElement>(null)
   const connectionTriggerRef = useRef<HTMLElement>(null)
   const createdNodeFocusRef = useRef<string | undefined>(undefined)
   const deleteTriggerRef = useRef<HTMLElement>(null)
@@ -489,6 +495,7 @@ export function CanvasPage({
     setPendingRemoteGeneration(undefined)
     setSelectedEdgeId(undefined)
     setPendingPlacement(undefined)
+    setContextMenu(undefined)
     setEditingCard(undefined)
     createdNodeFocusRef.current = undefined
     setFocusRequestVersion((version) => version + 1)
@@ -1407,6 +1414,121 @@ export function CanvasPage({
     if (connectionTool.phase !== 'idle') cancelConnection(false)
   }, [cancelConnection, connectionTool.phase])
 
+  const canvasPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!flowInstance) return undefined
+      const viewport = viewportRef.current
+      const rect = viewport?.getBoundingClientRect()
+      const hasMeasuredBounds = Boolean(
+        rect && rect.width > 0 && rect.height > 0,
+      )
+      const bounds = hasMeasuredBounds
+        ? { width: rect!.width, height: rect!.height }
+        : {
+            width: window.innerWidth,
+            height: Math.max(0, window.innerHeight - 56),
+          }
+      return {
+        flowPosition: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+        anchor: {
+          x: clientX - (hasMeasuredBounds ? rect!.left : 0),
+          y: clientY - (hasMeasuredBounds ? rect!.top : 0),
+        },
+        bounds,
+      }
+    },
+    [flowInstance],
+  )
+
+  const closeContextMenu = useCallback(
+    (restoreFocus = true) => {
+      const returnFocusTo = contextMenu?.returnFocusTo
+      setContextMenu(undefined)
+      if (!restoreFocus) return
+      queueMicrotask(() => {
+        if (returnFocusTo?.isConnected) returnFocusTo.focus()
+        else viewportRef.current?.focus()
+      })
+    },
+    [contextMenu?.returnFocusTo],
+  )
+
+  const beginPlacement = useCallback(
+    (
+      kind: ContextCreatableKind,
+      entry: PendingPlacement['entry'],
+      source: CanvasContextMenuState,
+    ) => {
+      placementTriggerRef.current =
+        source.returnFocusTo?.isConnected
+          ? source.returnFocusTo
+          : viewportRef.current
+      setContextMenu(undefined)
+      setPendingPlacement({
+        projectId: source.projectId,
+        kind,
+        entry,
+        position: source.flowPosition,
+        anchor: source.anchor,
+        bounds: source.bounds,
+      })
+      setActiveTool('select')
+    },
+    [],
+  )
+
+  const openContextMenu = useCallback(
+    (
+      clientX: number,
+      clientY: number,
+      targetNodeId?: string,
+      returnFocusTo?: HTMLElement,
+    ) => {
+      if (!project || pendingPlacement || editingCard) return
+      const point = canvasPoint(clientX, clientY)
+      if (!point) return
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
+      if (targetNodeId) {
+        setSelectedEdgeId(undefined)
+        selectOnlyNode(targetNodeId)
+      }
+      const nextMenu: CanvasContextMenuState = {
+        projectId: project.id,
+        ...point,
+        targetNodeId,
+        clipboardText: '',
+        returnFocusTo: returnFocusTo ?? viewportRef.current ?? undefined,
+      }
+      setContextMenu(nextMenu)
+
+      const clipboard = navigator.clipboard
+      if (!clipboard?.readText) return
+      try {
+        void clipboard.readText().then(
+          (text) => {
+            setContextMenu((current) =>
+              current === nextMenu
+                ? { ...current, clipboardText: text }
+                : current,
+            )
+          },
+          () => undefined,
+        )
+      } catch {
+        // Clipboard permission and support vary by browser; disabled is safe.
+      }
+    },
+    [
+      cancelConnection,
+      canvasPoint,
+      connectionTool.phase,
+      editingCard,
+      pendingPlacement,
+      project,
+      selectOnlyNode,
+    ],
+  )
+
   const cancelPlacement = useCallback((restoreFocus = true) => {
     const trigger = placementTriggerRef.current
     setPendingPlacement(undefined)
@@ -1460,12 +1582,7 @@ export function CanvasPage({
         if (editingCard) cancelCardEditing()
         else if (pendingPlacement) cancelPlacement()
         else setActiveTool('select')
-        return
       }
-      if (!isCreatableTool(tool) || pendingPlacement) return
-
-      placementTriggerRef.current = trigger
-      setActiveTool(tool)
     },
     [
       cancelConnection,
@@ -1513,7 +1630,7 @@ export function CanvasPage({
       }
 
       const trigger = viewportRef.current?.querySelector<HTMLButtonElement>(
-        '.canvas-toolbar button[aria-label="连线"]',
+        '.canvas-mode-bar button[aria-label="连线"]',
       )
       if (!trigger || trigger.disabled) return
       event.preventDefault()
@@ -1580,8 +1697,11 @@ export function CanvasPage({
   ])
 
   const handlePaneClick = useCallback(
-    (event: ReactMouseEvent<Element>) => {
+    (event: ReactMouseEvent<Element> | MouseEvent) => {
       setSelectedEdgeId(undefined)
+      if (contextMenu) {
+        closeContextMenu(false)
+      }
       if (connectionTool.phase !== 'idle') {
         cancelConnection()
         return
@@ -1589,43 +1709,28 @@ export function CanvasPage({
       if (
         !project ||
         !flowInstance ||
-        !isCreatableTool(activeTool) ||
         pendingPlacement ||
         editingCard
       ) {
         return
       }
-
-      const viewport = viewportRef.current
-      const rect = viewport?.getBoundingClientRect()
-      const hasMeasuredBounds = Boolean(rect && rect.width > 0 && rect.height > 0)
-      const bounds = hasMeasuredBounds
-        ? { width: rect!.width, height: rect!.height }
-        : {
-            width: window.innerWidth,
-            height: Math.max(0, window.innerHeight - 56),
-          }
-      const offsetLeft = hasMeasuredBounds ? rect!.left : 0
-      const offsetTop = hasMeasuredBounds ? rect!.top : 0
-
-      setPendingPlacement({
+      if (event.detail < 2) return
+      const point = canvasPoint(event.clientX, event.clientY)
+      if (!point) return
+      beginPlacement('text', 'free-generation', {
         projectId: project.id,
-        kind: activeTool,
-        position: flowInstance.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        }),
-        anchor: {
-          x: event.clientX - offsetLeft,
-          y: event.clientY - offsetTop,
-        },
-        bounds,
+        ...point,
+        clipboardText: '',
+        returnFocusTo: viewportRef.current ?? undefined,
       })
     },
     [
-      activeTool,
+      beginPlacement,
       cancelConnection,
+      canvasPoint,
+      closeContextMenu,
       connectionTool.phase,
+      contextMenu,
       flowInstance,
       editingCard,
       pendingPlacement,
@@ -1714,6 +1819,101 @@ export function CanvasPage({
     [editingCard, finishCardEditing, projectId, updateCreativeCard],
   )
 
+  const contextNodeId = contextMenu?.targetNodeId ?? primaryNodeId
+  const contextNode = project?.nodes.find(({ id }) => id === contextNodeId)
+  const contextVersion = contextNode?.versions.find(
+    ({ id }) => id === contextNode.activeVersionId,
+  )
+  const contextAsset = project?.assets.find(
+    ({ id }) => id === contextVersion?.assetId,
+  )
+  const canSaveContextAsset = Boolean(contextAsset && libraryRepository.save)
+
+  const saveContextAsset = useCallback(() => {
+    const currentProject = useProjectStore.getState().activeProject
+    const nodeId = contextMenu?.targetNodeId ?? primaryNodeId
+    const node = currentProject?.nodes.find(({ id }) => id === nodeId)
+    const version = node?.versions.find(({ id }) => id === node.activeVersionId)
+    const asset = currentProject?.assets.find(({ id }) => id === version?.assetId)
+    const save = libraryRepository.save
+    closeContextMenu()
+    if (!currentProject || !node || !asset || !save) {
+      setGenerationFeedback('当前节点没有可保存的素材。')
+      return
+    }
+    void save.call(
+      libraryRepository,
+      deriveLibraryRecord(currentProject, asset),
+    ).then(
+      () => setGenerationFeedback(`已将“${node.title}”保存到我的资产。`),
+      () => setGenerationFeedback('保存到我的资产失败，请稍后重试。'),
+    )
+  }, [
+    closeContextMenu,
+    contextMenu?.targetNodeId,
+    libraryRepository,
+    primaryNodeId,
+  ])
+
+  const pasteContextText = useCallback(
+    (text: string) => {
+      const source = contextMenu
+      const currentProject = useProjectStore.getState().activeProject
+      const content = text.trim()
+      if (
+        !source ||
+        !content ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        source.projectId !== currentProject.id
+      ) {
+        closeContextMenu()
+        return
+      }
+      const creation = buildCanvasCreation(currentProject, {
+        kind: 'text',
+        title: nextNodeTitle(currentProject, 'text'),
+        content,
+        position: source.flowPosition,
+      })
+      createdNodeFocusRef.current = creation.node.id
+      setFocusRequestVersion((version) => version + 1)
+      createCanvasContent(creation)
+      selectOnlyNode(creation.node.id)
+      setContextMenu(undefined)
+      setGenerationFeedback('已从剪贴板创建文本节点。')
+    },
+    [closeContextMenu, contextMenu, createCanvasContent, projectId, selectOnlyNode],
+  )
+
+  const handlePaneContextMenu = useCallback(
+    (event: ReactMouseEvent<Element> | MouseEvent) => {
+      event.preventDefault()
+      openContextMenu(
+        event.clientX,
+        event.clientY,
+        undefined,
+        viewportRef.current ?? undefined,
+      )
+    },
+    [openContextMenu],
+  )
+
+  const handleNodeContextMenu = useCallback(
+    (event: ReactMouseEvent<Element>, node: CreativeFlowNode) => {
+      event.preventDefault()
+      event.stopPropagation()
+      const returnFocusTo = findCanvasNodeControl(viewportRef.current, node.id)
+      openContextMenu(
+        event.clientX,
+        event.clientY,
+        node.id,
+        returnFocusTo ?? viewportRef.current ?? undefined,
+      )
+    },
+    [openContextMenu],
+  )
+
   const openNodeList = useCallback((trigger: HTMLButtonElement) => {
     nodeListTriggerRef.current = trigger
     nodeListSelectionMadeRef.current = false
@@ -1751,24 +1951,6 @@ export function CanvasPage({
     project && deleteCandidate
       ? downstreamConsumers(project, deleteCandidate.id)
       : []
-  const placementHint =
-    project && isCreatableTool(activeTool) && !pendingPlacement
-      ? `点击画布放置${
-          activeTool === 'script'
-            ? '剧本卡'
-            : activeTool === 'character-card'
-              ? '角色卡'
-              : activeTool === 'worldview'
-                ? '世界观卡'
-                : activeTool === 'text'
-                  ? '文本'
-                  : activeTool === 'image'
-                    ? '图片'
-                    : activeTool === 'storyboard'
-                      ? '分镜'
-                      : '视频'
-        }节点`
-      : undefined
   const connectionHint =
     connectionTool.phase === 'selecting-source'
       ? '请选择来源节点'
@@ -1777,7 +1959,7 @@ export function CanvasPage({
         : undefined
   const canvasHint =
     connectionFeedback ?? connectionHint ?? generationFeedback ??
-    groupFeedback ?? visibilityFeedback ?? placementHint
+    groupFeedback ?? visibilityFeedback
   const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
 
   const cancelDelete = () => {
@@ -1837,6 +2019,11 @@ export function CanvasPage({
     })
   }
 
+  const changeWorkspaceMode = (mode: WorkspaceMode) => {
+    if (contextMenu) closeContextMenu(false)
+    setWorkspaceMode(mode)
+  }
+
   return (
     <main className={`canvas-page${agentOpen ? ' canvas-page--agent-open' : ''}`}>
       <CanvasTopBar
@@ -1850,16 +2037,12 @@ export function CanvasPage({
         onUndo={undo}
         onRedo={redo}
         onOpenNodeList={openNodeList}
-        onModeChange={setWorkspaceMode}
+        onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
       />
       <div
         ref={viewportRef}
-        className={`canvas-page__viewport${
-          isCreatableTool(activeTool)
-            ? ' canvas-page__viewport--placing'
-            : ''
-        }`}
+        className="canvas-page__viewport"
         role="region"
         aria-label="项目画布"
         tabIndex={-1}
@@ -1887,6 +2070,8 @@ export function CanvasPage({
           onConnectStart={handleConnectStart}
           onConnectEnd={handleConnectEnd}
           onPaneClick={handlePaneClick}
+          onPaneContextMenu={handlePaneContextMenu}
+          onNodeContextMenu={handleNodeContextMenu}
           onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}
           onNodeClick={(event, node) => {
             const target = event.target
@@ -1949,6 +2134,32 @@ export function CanvasPage({
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
         />
+        {contextMenu && project ? (
+          <CanvasContextMenu
+            anchor={contextMenu.anchor}
+            bounds={contextMenu.bounds}
+            targetNodeTitle={
+              contextMenu.targetNodeId ? contextNode?.title : undefined
+            }
+            canSaveAsset={canSaveContextAsset}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            clipboardText={contextMenu.clipboardText}
+            onUpload={() => beginPlacement('image', 'upload', contextMenu)}
+            onSaveAsset={saveContextAsset}
+            onAddNode={(kind) => beginPlacement(kind, 'add-node', contextMenu)}
+            onUndo={() => {
+              closeContextMenu()
+              undo()
+            }}
+            onRedo={() => {
+              closeContextMenu()
+              redo()
+            }}
+            onPaste={pasteContextText}
+            onClose={closeContextMenu}
+          />
+        ) : null}
         <CanvasViewControls
           minimapVisible={minimapVisible}
           snapToGrid={snapToGrid}
@@ -1986,6 +2197,7 @@ export function CanvasPage({
           <NodeDraftPanel
             key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
             kind={pendingPlacement.kind}
+            presentation={pendingPlacement.entry}
             initialTitle={nextNodeTitle(project, pendingPlacement.kind)}
             anchor={pendingPlacement.anchor}
             bounds={pendingPlacement.bounds}

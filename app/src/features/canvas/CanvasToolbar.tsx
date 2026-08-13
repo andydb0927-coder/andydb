@@ -1,40 +1,28 @@
 import {
-  BookOpenText,
   CircleHelp,
-  Clapperboard,
-  Contact,
   Eye,
   EyeOff,
-  Film,
   FolderOpen,
   Group,
-  Globe2,
   History,
-  Image,
   Keyboard,
   MousePointer2,
-  Plus,
-  Type,
   Unplug,
 } from 'lucide-react'
 
 import { FloatingPanel } from '../../ui/FloatingPanel'
 import type { WorkspacePanel } from './CanvasWorkspace'
 
-const tools = [
-  { id: 'select', label: '选择', icon: MousePointer2 },
-  { id: 'script', label: '剧本卡', icon: BookOpenText },
-  { id: 'character-card', label: '角色卡', icon: Contact },
-  { id: 'worldview', label: '世界观卡', icon: Globe2 },
-  { id: 'text', label: '文本', icon: Type },
-  { id: 'image', label: '图片', icon: Image },
-  { id: 'storyboard', label: '分镜', icon: Clapperboard },
-  { id: 'video', label: '视频', icon: Film },
-  { id: 'connect', label: '连线', icon: Unplug },
-  { id: 'group', label: '分组', icon: Group },
-] as const
-
-export type CanvasTool = (typeof tools)[number]['id']
+export type CanvasTool =
+  | 'select'
+  | 'connect'
+  | 'script'
+  | 'character-card'
+  | 'worldview'
+  | 'text'
+  | 'image'
+  | 'storyboard'
+  | 'video'
 
 export interface CanvasToolbarProps {
   activeTool: CanvasTool
@@ -59,44 +47,47 @@ export function CanvasToolbar({
   onToggleConnections,
   onToolChange,
 }: CanvasToolbarProps) {
-  return (
-    <FloatingPanel className="canvas-toolbar" role="toolbar" aria-label="创作工具">
-      <span className="canvas-toolbar__section-label"><Plus aria-hidden="true" />添加节点</span>
-      {tools.map(({ id, label, icon: Icon }) => {
-        const isGroup = id === 'group'
-        const toolDisabled =
-          disabled ||
-          (isGroup && groupAction === 'disabled') ||
-          (draftOpen && id !== 'select')
-        const actionLabel =
-          isGroup && groupAction === 'ungroup' ? '取消分组' : label
-        const title = draftOpen && id !== 'select'
-            ? '请先完成或取消当前节点'
-            : isGroup && groupAction === 'disabled'
-              ? '请先选择至少两个节点'
-              : actionLabel
+  const connectDisabled = disabled || draftOpen
+  const groupDisabled =
+    disabled || draftOpen || groupAction === 'disabled'
+  const groupLabel = groupAction === 'ungroup' ? '取消分组' : '分组'
 
-        return (
-          <button
-            key={id}
-            type="button"
-            className={activeTool === id ? 'canvas-toolbar__active' : undefined}
-            aria-label={actionLabel}
-            aria-pressed={isGroup ? false : activeTool === id}
-            disabled={toolDisabled}
-            title={title}
-            onClick={(event) => {
-              if (isGroup) onGroupAction?.()
-              else onToolChange(id, event.currentTarget)
-            }}
-          >
-            <Icon aria-hidden="true" />
-          </button>
-        )
-      })}
+  return (
+    <FloatingPanel className="canvas-mode-bar" role="toolbar" aria-label="画布模式工具">
+      <span className="canvas-mode-bar__hint">
+        <MousePointer2 aria-hidden="true" />
+        双击画布 自由生成节点
+      </span>
       <button
         type="button"
-        className="canvas-toolbar__visibility-toggle"
+        className={activeTool === 'connect' ? 'canvas-mode-bar__active' : undefined}
+        aria-label="连线"
+        aria-pressed={activeTool === 'connect'}
+        disabled={connectDisabled}
+        title={draftOpen ? '请先完成或取消当前节点' : '连线'}
+        onClick={(event) => onToolChange('connect', event.currentTarget)}
+      >
+        <Unplug aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label={groupLabel}
+        aria-pressed={false}
+        disabled={groupDisabled}
+        title={
+          draftOpen
+            ? '请先完成或取消当前节点'
+            : groupAction === 'disabled'
+              ? '请先选择至少两个节点'
+              : groupLabel
+        }
+        onClick={onGroupAction}
+      >
+        <Group aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="canvas-mode-bar__visibility-toggle"
         aria-label={connectionsVisible ? '隐藏连线' : '显示连线'}
         aria-pressed={connectionsVisible}
         disabled={disabled}
@@ -106,7 +97,7 @@ export function CanvasToolbar({
         {connectionsVisible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
       </button>
       {onOpenPanel ? (
-        <div className="canvas-toolbar__resources" aria-label="工作区资源">
+        <div className="canvas-mode-bar__resources" aria-label="工作区资源">
           <button type="button" aria-label="打开资产" onClick={() => onOpenPanel('assets')}><FolderOpen aria-hidden="true" /></button>
           <button type="button" aria-label="打开历史" onClick={() => onOpenPanel('history')}><History aria-hidden="true" /></button>
           <button type="button" aria-label="打开快捷键" onClick={() => onOpenPanel('shortcuts')}><Keyboard aria-hidden="true" /></button>

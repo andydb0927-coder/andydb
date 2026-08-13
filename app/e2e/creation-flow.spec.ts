@@ -10,11 +10,11 @@ async function createCinematicProject(page: import('@playwright/test').Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
-async function clickBlankCanvas(
+async function findBlankCanvasPoint(
   page: import('@playwright/test').Page,
   fromBottomRight = false,
 ) {
-  const point = await page.locator('.react-flow__pane').evaluate(
+  return page.locator('.react-flow__pane').evaluate(
     (pane, reverse) => {
       const rect = pane.getBoundingClientRect()
       const xs: number[] = []
@@ -32,7 +32,7 @@ async function clickBlankCanvas(
           if (!target) continue
           if (
             target.closest(
-              '.react-flow__node, .canvas-toolbar, .director-composer, .canvas-placement-hint, .react-flow__controls',
+              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
             )
           ) {
             continue
@@ -45,8 +45,23 @@ async function clickBlankCanvas(
     },
     fromBottomRight,
   )
+}
 
-  await page.mouse.click(point.x, point.y)
+async function openAddNodeAtBlank(
+  page: import('@playwright/test').Page,
+  label: '文本' | '图片' | '分镜' | '视频',
+  fromBottomRight = false,
+) {
+  const point = await findBlankCanvasPoint(page, fromBottomRight)
+  await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加节点' }).click()
+  await page.getByRole('menuitem', { name: label }).click()
+}
+
+async function openUploadAtBlank(page: import('@playwright/test').Page) {
+  const point = await findBlankCanvasPoint(page, true)
+  await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '上传' }).click()
 }
 
 test('creator completes the minimum short-film loop', async ({ page }) => {
@@ -284,7 +299,7 @@ for (const width of [721, 720]) {
   })
 }
 
-test('creates canvas nodes with keyboard, persistence, drag, and 200% reachability', async ({
+test('creates canvas nodes with Liblib context interactions, persistence, drag, and 200% reachability', async ({
   page,
 }) => {
   const browserErrors: string[] = []
@@ -294,25 +309,20 @@ test('creates canvas nodes with keyboard, persistence, drag, and 200% reachabili
   page.on('pageerror', (error) => browserErrors.push(error.message))
   await createCinematicProject(page)
 
-  const toolbar = page.getByRole('toolbar', { name: '创作工具' })
-  const selectTool = toolbar.getByRole('button', { name: '选择', exact: true })
-  const textTool = toolbar.getByRole('button', { name: '文本', exact: true })
-  await textTool.focus()
-  await page.keyboard.press('Enter')
-  await expect(textTool).toHaveAttribute('aria-pressed', 'true')
-  await clickBlankCanvas(page)
-  const textDialog = page.getByRole('dialog', { name: '创建文本节点' })
+  await expect(page.getByRole('toolbar', { name: '创作工具' })).toHaveCount(0)
+  await expect(page.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
+  const freePoint = await findBlankCanvasPoint(page)
+  await page.mouse.dblclick(freePoint.x, freePoint.y)
+  const textDialog = page.getByRole('dialog', { name: '自由生成节点' })
   await textDialog.getByLabel('文字内容').fill('雨落在旧车站的独白')
   await textDialog.getByLabel('文字内容').press('Control+Enter')
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })
   await expect(textNode).toBeVisible()
   await expect(textNode).toBeFocused()
   await expect(page.getByLabel('文本 01操作')).toBeVisible()
-  await expect(selectTool).toHaveAttribute('aria-pressed', 'true')
 
-  await toolbar.getByRole('button', { name: '图片', exact: true }).click()
-  await clickBlankCanvas(page)
-  const imageDialog = page.getByRole('dialog', { name: '创建图片节点' })
+  await openUploadAtBlank(page)
+  const imageDialog = page.getByRole('dialog', { name: '上传图片到画布' })
   await imageDialog
     .getByLabel('本地图片')
     .setInputFiles('public/demo/character-lin-yuan.png')
@@ -321,10 +331,8 @@ test('creates canvas nodes with keyboard, persistence, drag, and 200% reachabili
   const imageNode = page.getByRole('button', { name: '图片 01', exact: true })
   await expect(imageNode).toBeVisible()
   await expect(imageNode.locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/)
-  await expect(selectTool).toHaveAttribute('aria-pressed', 'true')
 
-  await toolbar.getByRole('button', { name: '分镜', exact: true }).click()
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '分镜')
   const storyboardDialog = page.getByRole('dialog', { name: '创建分镜节点' })
   await storyboardDialog.getByLabel('画面提示词').fill('近景，雨滴落在袖口')
   await storyboardDialog.getByRole('button', { name: '确认创建' }).click()
@@ -332,8 +340,7 @@ test('creates canvas nodes with keyboard, persistence, drag, and 200% reachabili
     page.getByRole('button', { name: '分镜 02', exact: true }),
   ).toBeVisible()
 
-  await toolbar.getByRole('button', { name: '视频', exact: true }).click()
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '视频')
   const videoDialog = page.getByRole('dialog', { name: '创建视频节点' })
   await videoDialog.getByLabel('视频提示词').fill('镜头缓慢推向人物')
   await videoDialog.getByRole('button', { name: '确认创建' }).click()
@@ -346,13 +353,11 @@ test('creates canvas nodes with keyboard, persistence, drag, and 200% reachabili
   await page.getByRole('button', { name: '重做' }).click()
   await expect(videoNode).toBeVisible()
 
-  await textTool.focus()
-  await page.keyboard.press('Enter')
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '文本')
   await expect(page.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: '创建文本节点' })).toBeHidden()
-  await expect(textTool).toBeFocused()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeFocused()
   await expect(
     page.getByRole('button', { name: '文本 02', exact: true }),
   ).toBeHidden()
@@ -404,8 +409,7 @@ test('creates canvas nodes with keyboard, persistence, drag, and 200% reachabili
   ).toBe(persistedTransform)
 
   await page.setViewportSize({ width: 721, height: 778 })
-  await toolbar.getByRole('button', { name: '文本', exact: true }).click()
-  await clickBlankCanvas(page, true)
+  await openAddNodeAtBlank(page, '文本', true)
   const zoomDialog = page.getByRole('dialog', { name: '创建文本节点' })
   await zoomDialog.getByLabel('标题').fill('')
   await zoomDialog.getByRole('button', { name: '确认创建' }).click()

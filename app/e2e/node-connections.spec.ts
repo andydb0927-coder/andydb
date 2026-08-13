@@ -31,7 +31,7 @@ async function findBlankCanvasPoint(
           if (!target) continue
           if (
             target.closest(
-              '.react-flow__node, .canvas-toolbar, .director-composer, .canvas-placement-hint, .react-flow__controls',
+              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
             )
           ) {
             continue
@@ -51,6 +51,17 @@ async function clickBlankCanvas(
 ) {
   const point = await findBlankCanvasPoint(page, fromBottomRight)
   await page.mouse.click(point.x, point.y)
+}
+
+async function openAddNodeAtBlank(
+  page: import('@playwright/test').Page,
+  label: '文本' | '图片' | '分镜' | '视频',
+  fromBottomRight = false,
+) {
+  const point = await findBlankCanvasPoint(page, fromBottomRight)
+  await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加节点' }).click()
+  await page.getByRole('menuitem', { name: label }).click()
 }
 
 async function readCanvasZoom(page: import('@playwright/test').Page) {
@@ -97,7 +108,7 @@ async function measureEdgeHitBand(
           document
             .elementFromPoint(x, y)
             ?.closest(
-              '.react-flow__node, .canvas-toolbar, .director-composer, .react-flow__controls, .dependency-edge__delete',
+              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls, .dependency-edge__delete',
             ),
         )
       const diagnostics: Array<Record<string, unknown>> = []
@@ -553,9 +564,7 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   await expect(characterVideoEdge).toHaveCount(1)
   await expect(characterVideoEdge).toBeVisible()
 
-  const toolbar = page.getByRole('toolbar', { name: '创作工具' })
-  await toolbar.getByRole('button', { name: '文本', exact: true }).click()
-  await clickBlankCanvas(page)
+  await openAddNodeAtBlank(page, '文本')
   const textDialog = page.getByRole('dialog', { name: '创建文本节点' })
   await textDialog.getByLabel('文字内容').fill('雨夜车站的旁白')
   await textDialog.getByRole('button', { name: '确认创建' }).click()
@@ -828,7 +837,6 @@ test('cancels active toolbar choices before native handle drags', async ({
   ).toBeVisible()
 
   const connect = page.getByRole('button', { name: '连线', exact: true })
-  const select = page.getByRole('button', { name: '选择' })
   const videoTarget = page.getByRole('button', { name: '连接到视频 01' })
   const characterVideo = page.getByLabel('角色参考 → 视频 01', {
     exact: true,
@@ -843,7 +851,6 @@ test('cancels active toolbar choices before native handle drags', async ({
   )
   await expect(characterVideo).toHaveCount(1)
   await expect(connect).toHaveAttribute('aria-pressed', 'false')
-  await expect(select).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status')).toHaveCount(0)
   await expect(page.locator('.creative-node--connection-source')).toHaveCount(0)
   await page.getByRole('button', { name: '撤销' }).click()
@@ -862,7 +869,6 @@ test('cancels active toolbar choices before native handle drags', async ({
   await expect(sceneVideo).toHaveCount(1)
   await expect(characterVideo).toBeHidden()
   await expect(connect).toHaveAttribute('aria-pressed', 'false')
-  await expect(select).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status')).toHaveCount(0)
   await expect(page.locator('.creative-node--connection-source')).toHaveCount(0)
   await page.getByRole('button', { name: '撤销' }).click()

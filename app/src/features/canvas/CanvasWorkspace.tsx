@@ -236,6 +236,8 @@ export function WorkspaceSidePanel({
         <dl className="workspace-shortcuts">
           <div><dt>连接节点</dt><dd>L</dd></div>
           <div><dt>隐藏/显示连线</dt><dd>H</dd></div>
+          <div><dt>画布快捷菜单</dt><dd>右键</dd></div>
+          <div><dt>自由生成节点</dt><dd>双击空白处</dd></div>
           <div><dt>撤销</dt><dd>⌘ Z</dd></div>
           <div><dt>重做</dt><dd>⌘ ⇧ Z</dd></div>
           <div><dt>平移画布</dt><dd>Space</dd></div>
@@ -245,7 +247,7 @@ export function WorkspaceSidePanel({
 
       {panel === 'help' ? (
         <div className="workspace-side-panel__help">
-          <p>从“添加节点”创建内容，再通过连线建立生成依赖。</p>
+          <p>双击空白画布自由生成，或右键选择“添加节点”创建指定内容。</p>
           <p>选择节点后可使用节点动作或右侧 Agent 继续创作。</p>
           <p>当前为本地演示工作台，不会调用 Liblib、发布内容或消耗积分。</p>
         </div>
