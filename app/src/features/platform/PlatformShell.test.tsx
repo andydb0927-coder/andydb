@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 
 import { PlatformShell } from './PlatformShell'
 
@@ -18,6 +18,10 @@ function renderWorkspaceShell() {
 }
 
 describe('platform shell', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   test('marks the current canvas and collapses its workspace rail', async () => {
     const user = userEvent.setup()
     renderWorkspaceShell()
@@ -34,5 +38,30 @@ describe('platform shell', () => {
       'true',
     )
     expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
+  })
+
+  test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {
+    const user = userEvent.setup()
+    const { container } = renderWorkspaceShell()
+
+    expect(screen.queryByRole('complementary', { name: '平台完善路线图' })).not.toBeInTheDocument()
+    expect(container.querySelector('.platform-shell')).not.toHaveClass('platform-shell--tasks-open')
+
+    await user.click(screen.getByRole('button', { name: '打开阶段任务' }))
+
+    expect(screen.getByRole('complementary', { name: '平台完善路线图' })).toBeVisible()
+    expect(container.querySelector('.platform-shell')).toHaveClass('platform-shell--tasks-open')
+  })
+
+  test('closes the task drawer with Escape and restores focus to its trigger', async () => {
+    const user = userEvent.setup()
+    renderWorkspaceShell()
+
+    const trigger = screen.getByRole('button', { name: '打开阶段任务' })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('complementary', { name: '平台完善路线图' })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 })

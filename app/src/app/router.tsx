@@ -1,38 +1,76 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 
-import { ProjectLauncherPage } from '../features/launcher/ProjectLauncherPage'
-import { CanvasPage } from '../features/canvas/CanvasPage'
-import { PreviewPage } from '../features/timeline/PreviewPage'
 import { PlatformShell } from '../features/platform/PlatformShell'
-import { AssetsHistoryPage } from '../features/platform/AssetsHistoryPage'
-import { WorkflowsPage } from '../features/platform/WorkflowsPage'
-import { DiscoverPage } from '../features/platform/DiscoverPage'
-import { ModelsPage } from '../features/platform/ModelsPage'
-import { AccountPage } from '../features/platform/AccountPage'
-import { MyWorksPage } from '../features/community/MyWorksPage'
-import { WorkDetailPage } from '../features/community/WorkDetailPage'
-import { AgentsPage } from '../features/agent/AgentsPage'
+import '../styles/global.css'
+
+// 路由级代码分割：每个页面独立 chunk，控制首屏主包体积
+const ProjectLauncherPage = lazy(() =>
+  import('../features/launcher/ProjectLauncherPage').then((m) => ({ default: m.ProjectLauncherPage })),
+)
+const CanvasPage = lazy(() =>
+  import('../features/canvas/CanvasPage').then((m) => ({ default: m.CanvasPage })),
+)
+const PreviewPage = lazy(() =>
+  import('../features/timeline/PreviewPage').then((m) => ({ default: m.PreviewPage })),
+)
+const AssetsHistoryPage = lazy(() =>
+  import('../features/platform/AssetsHistoryPage').then((m) => ({ default: m.AssetsHistoryPage })),
+)
+const WorkflowsPage = lazy(() =>
+  import('../features/platform/WorkflowsPage').then((m) => ({ default: m.WorkflowsPage })),
+)
+const DiscoverPage = lazy(() =>
+  import('../features/platform/DiscoverPage').then((m) => ({ default: m.DiscoverPage })),
+)
+const ModelsPage = lazy(() =>
+  import('../features/platform/ModelsPage').then((m) => ({ default: m.ModelsPage })),
+)
+const AccountPage = lazy(() =>
+  import('../features/platform/AccountPage').then((m) => ({ default: m.AccountPage })),
+)
+const MyWorksPage = lazy(() =>
+  import('../features/community/MyWorksPage').then((m) => ({ default: m.MyWorksPage })),
+)
+const WorkDetailPage = lazy(() =>
+  import('../features/community/WorkDetailPage').then((m) => ({ default: m.WorkDetailPage })),
+)
+const AgentsPage = lazy(() =>
+  import('../features/agent/AgentsPage').then((m) => ({ default: m.AgentsPage })),
+)
+
+function RouteLoading() {
+  return (
+    <div className="route-loading" role="status">
+      <p>正在加载页面…</p>
+    </div>
+  )
+}
+
+function withSuspense(node: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{node}</Suspense>
+}
 
 export const routes: RouteObject[] = [
   {
     element: <PlatformShell />,
     children: [
-      { index: true, element: <ProjectLauncherPage /> },
-      { path: '/assets', element: <AssetsHistoryPage /> },
-      { path: '/workflows', element: <WorkflowsPage /> },
-      { path: '/discover', element: <DiscoverPage /> },
-      { path: '/discover/mine', element: <MyWorksPage /> },
-      { path: '/discover/:workId', element: <WorkDetailPage /> },
-      { path: '/models', element: <ModelsPage /> },
-      { path: '/agents', element: <AgentsPage /> },
-      { path: '/account', element: <AccountPage /> },
+      { index: true, element: withSuspense(<ProjectLauncherPage />) },
+      { path: '/assets', element: withSuspense(<AssetsHistoryPage />) },
+      { path: '/workflows', element: withSuspense(<WorkflowsPage />) },
+      { path: '/discover', element: withSuspense(<DiscoverPage />) },
+      { path: '/discover/mine', element: withSuspense(<MyWorksPage />) },
+      { path: '/discover/:workId', element: withSuspense(<WorkDetailPage />) },
+      { path: '/models', element: withSuspense(<ModelsPage />) },
+      { path: '/agents', element: withSuspense(<AgentsPage />) },
+      { path: '/account', element: withSuspense(<AccountPage />) },
     ],
   },
   {
     element: <PlatformShell mode="workspace" />,
     children: [
-      { path: '/project/:projectId', element: <CanvasPage /> },
-      { path: '/project/:projectId/preview', element: <PreviewPage /> },
+      { path: '/project/:projectId', element: withSuspense(<CanvasPage />) },
+      { path: '/project/:projectId/preview', element: withSuspense(<PreviewPage />) },
     ],
   },
 ]

@@ -1,0 +1,8 @@
+[build]
+  command = "npm --prefix app run build"
+  publish = "app/dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

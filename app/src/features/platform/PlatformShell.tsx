@@ -1,7 +1,9 @@
-import { Bot, Clapperboard, Compass, Cpu, FolderOpen, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
+import { Bot, Clapperboard, ClipboardList, Compass, Cpu, FolderOpen, PanelsTopLeft, Sparkles, UserRound } from 'lucide-react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
+
+import { PlatformTaskDrawer } from './PlatformTaskDrawer'
 
 export type PlatformShellMode = 'standard' | 'workspace'
 
@@ -18,11 +20,27 @@ export const platformNavigation = [
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {
   const { projectId } = useParams<{ projectId: string }>()
   const [collapsed, setCollapsed] = useState(false)
+  const [tasksOpen, setTasksOpen] = useState(false)
+  const taskTriggerRef = useRef<HTMLButtonElement>(null)
   const canvasPath = projectId ? `/project/${projectId}` : '/'
+
+  const closeTasks = useCallback(() => {
+    setTasksOpen(false)
+    taskTriggerRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (!tasksOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeTasks()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [closeTasks, tasksOpen])
 
   return (
     <div
-      className={`platform-shell platform-shell--${mode}${collapsed ? ' platform-shell--collapsed' : ''}`}
+      className={`platform-shell platform-shell--${mode}${collapsed ? ' platform-shell--collapsed' : ''}${tasksOpen ? ' platform-shell--tasks-open' : ''}`}
     >
       <aside className="platform-shell__rail">
         <button
@@ -66,10 +84,23 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
             </NavLink>
           ))}
         </nav>
+        <button
+          ref={taskTriggerRef}
+          aria-controls="platform-task-drawer"
+          aria-expanded={tasksOpen}
+          aria-label={tasksOpen ? '关闭阶段任务' : '打开阶段任务'}
+          className="platform-shell__task-trigger focus-visible"
+          type="button"
+          onClick={() => (tasksOpen ? closeTasks() : setTasksOpen(true))}
+        >
+          <ClipboardList aria-hidden="true" />
+          <span>阶段任务</span>
+        </button>
       </aside>
       <div className="platform-shell__content">
         <Outlet />
       </div>
+      {tasksOpen ? <PlatformTaskDrawer onRequestClose={closeTasks} /> : null}
     </div>
   )
 }

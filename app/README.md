@@ -21,7 +21,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 | `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run build` | TypeScript 检查 + 生产构建（输出到 `dist/`） |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
-| `npm run test:run` | 全量 Vitest 单测（当前 747 项） |
+| `npm run test:run` | 全量 Vitest 单测（当前 765 项） |
 | `npm run e2e` | Playwright Chromium E2E（当前 26 项） |
 
 ## 功能地图
@@ -59,4 +59,47 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 - 不包含真实 FFmpeg/WASM 视频合成；导出为时间线 JSON/EDL + 预览录制
 - 共享链接携带完整 JSON，大体积素材建议改用项目包文件导入
 - 协作/会员为本地模拟（UI 已标注），无真实账号、支付或多人实时协作
-- 构建存在主包 >500 kB 的既有提示，可通过路由级动态导入优化
+- 页面已使用路由级动态导入；首次进入尚未加载的页面时会短暂显示中文加载状态
+
+## 部署上线
+
+项目是使用 `BrowserRouter` 的纯前端 SPA。托管平台应从仓库根目录执行构建，并发布
+`app/dist`：
+
+```bash
+npm --prefix app ci
+npm --prefix app run test:run
+npm --prefix app run build
+```
+
+### Vercel
+
+1. 导入仓库，项目根目录保持为仓库根目录。
+2. 根目录 `vercel.json` 已将构建命令设为 `npm --prefix app run build`，将
+   `outputDirectory` 设为 `app/dist`。
+3. 部署；`rewrites` 会把包括深层路由在内的所有请求回退到 `/index.html`。
+
+### Netlify
+
+1. 从仓库根目录创建站点。
+2. 根目录 `netlify.toml` 已将构建命令设为 `npm --prefix app run build`，发布目录设为
+   `app/dist`。
+3. 部署；`[[redirects]]` 使用 `from = "/*"`、`to = "/index.html"`、`status = 200`
+   提供 SPA fallback。
+
+SPA fallback 是 `BrowserRouter` 深层链接正常工作的必要条件。例如直接访问或刷新
+`/discover` 时，静态托管必须返回 `index.html`，再由前端路由渲染对应页面，而不是返回
+托管平台的 404 页面。
+
+### 环境变量
+
+- `WIRELESS_CANVAS_ENABLE_LIBTV_WRITES`：LibTV 服务端写入门禁，仅值为 `1` 时开启，默认关闭。
+- 该变量只对 Vite dev/preview 的 LibTV 服务端桥接中间件有意义。纯静态托管没有该
+  中间件，不应通过设置此变量来尝试启用 LibTV 写入。
+
+### 静态托管已知限制
+
+- LibTV 桥接（`/api/libtv/*`）与 workspace CLI（`/api/workspace/*`）是 dev/preview
+  中间件，在 Vercel、Netlify 等纯静态托管不可用。
+- 前端已对这些 API 不可用的情况优雅降级，并显示可操作的中文错误；本地 IndexedDB、
+  Demo 生成、画布编辑和其他纯前端能力仍可使用。
