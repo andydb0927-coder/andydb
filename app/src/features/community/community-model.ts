@@ -24,6 +24,7 @@ export interface PublishedWork {
   projectId: string
   title: string
   author: string
+  authorVerified?: boolean
   tags: string[]
   coverUrl: string
   durationSeconds: number
@@ -131,6 +132,7 @@ export function createPublishedWork(
     projectId: project.id,
     title: normalizedText(input.title, project.title),
     author: normalizedText(input.author, '本地创作者'),
+    authorVerified: existing?.authorVerified ?? false,
     tags: normalizeWorkTags(input.tags),
     coverUrl,
     durationSeconds: getTimelineDuration(timeline),

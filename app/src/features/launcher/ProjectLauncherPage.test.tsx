@@ -11,6 +11,8 @@ import {
 import type { Project } from '../project/model'
 import { useProjectStore } from '../project/project-store'
 import { makeProjectFixture } from '../../test/fixtures'
+import { buildDemoWorks } from '../community/demo-works'
+import { buildHomeContentSeed } from '../home/home-content'
 import {
   ProjectLauncherPage,
   type RecipeParser,
@@ -25,6 +27,20 @@ function makeRepository(recent: Project[] = []) {
     }),
     load: vi.fn(async (projectId: string) => projects.get(projectId)),
     listRecent: vi.fn(async () => recent),
+  }
+}
+
+function makeHomeContentRepository() {
+  return {
+    ensureSeed: vi.fn().mockResolvedValue(true),
+    list: vi.fn().mockResolvedValue(buildHomeContentSeed()),
+  }
+}
+
+function makeCommunityRepository() {
+  return {
+    ensureDemoWorks: vi.fn().mockResolvedValue(true),
+    listPublished: vi.fn().mockResolvedValue(buildDemoWorks()),
   }
 }
 
@@ -44,11 +60,15 @@ function renderLauncher({
   parseRecipe = vi.fn<RecipeParser>().mockResolvedValue(undefined),
   strictMode = false,
   initialEntry = '/',
+  homeContentRepository = makeHomeContentRepository(),
+  communityRepository = makeCommunityRepository(),
 }: {
   repository?: ReturnType<typeof makeRepository>
   parseRecipe?: RecipeParser
   strictMode?: boolean
   initialEntry?: string
+  homeContentRepository?: ReturnType<typeof makeHomeContentRepository>
+  communityRepository?: ReturnType<typeof makeCommunityRepository>
 } = {}) {
   const routes: RouteObject[] = [
     {
@@ -57,6 +77,8 @@ function renderLauncher({
         <ProjectLauncherPage
           repository={repository}
           parseRecipe={parseRecipe}
+          homeContentRepository={homeContentRepository}
+          communityRepository={communityRepository}
         />
       ),
     },
@@ -96,6 +118,22 @@ afterEach(() => {
 })
 
 describe('project launcher', () => {
+  test('opens a locally seeded mode with its canvas hint persisted', async () => {
+    const user = userEvent.setup()
+    const { repository } = renderLauncher()
+
+    await user.click(
+      await screen.findByRole('button', { name: /逐帧拉片/ }),
+    )
+
+    expect(await screen.findByRole('heading', { name: '项目画布' })).toBeVisible()
+    expect(repository.save).toHaveBeenCalledTimes(1)
+    expect(repository.save.mock.calls[0][0]).toMatchObject({
+      title: '逐帧拉片',
+      intent: expect.stringContaining('逐帧拉片模式'),
+    })
+  })
+
   test('preselects a workflow from the URL without creating a project', async () => {
     const { repository } = renderLauncher({
       initialEntry: '/?recipe=brand-atmosphere',

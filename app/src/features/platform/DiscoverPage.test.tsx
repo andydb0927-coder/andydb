@@ -82,9 +82,19 @@ describe('discover works wall', () => {
       '霜河渡',
       '屋顶来信',
       '雨巷回声',
+      '汽水盛夏',
+      '机甲苏醒时',
+      '一分钟读懂光影',
+      '纸月亮便利店',
+      '山岚入茶',
     ])
     await user.click(screen.getByRole('radio', { name: '最热' }))
     expect(screen.getAllByRole('article').map((card) => card.getAttribute('aria-label'))).toEqual([
+      '机甲苏醒时',
+      '山岚入茶',
+      '汽水盛夏',
+      '纸月亮便利店',
+      '一分钟读懂光影',
       '屋顶来信',
       '霜河渡',
       '雨巷回声',

@@ -51,8 +51,13 @@ export class CommunityRepository implements CommunityWorkRepository {
 
   async ensureDemoWorks(): Promise<boolean> {
     return this.database.transaction('rw', this.database.publishedWorks, async () => {
-      if ((await this.database.publishedWorks.count()) > 0) return false
-      await this.database.publishedWorks.bulkAdd(buildDemoWorks())
+      const seeds = buildDemoWorks()
+      const existing = await this.database.publishedWorks.bulkGet(
+        seeds.map(({ id }) => id),
+      )
+      const missing = seeds.filter((_, index) => !existing[index])
+      if (missing.length === 0) return false
+      await this.database.publishedWorks.bulkAdd(missing)
       return true
     })
   }

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
-import { ProjectRepository } from '../project/project-repository'
+import {
+  ProjectRepository,
+  WirelessCanvasDatabase,
+} from '../project/project-repository'
 import {
   buildExampleProject,
   buildRecipeProject,
@@ -17,10 +20,27 @@ import { useProjectStore } from '../project/project-store'
 import { Button } from '../../ui/Button'
 import { StatusText } from '../../ui/StatusText'
 import { RecipeRow, type RecipeId } from './RecipeRow'
+import {
+  PlatformHomeSections,
+  type HomePromptRequest,
+} from '../home/PlatformHomeSections'
+import {
+  HomeContentRepository,
+  type PlatformHomeContentRepository,
+} from '../home/home-content-repository'
+import {
+  CommunityRepository,
+  type CommunityWorkRepository,
+} from '../community/community-repository'
 
 type LauncherRepository = Pick<
   ProjectRepository,
   'save' | 'load' | 'listRecent'
+>
+
+type LauncherCommunityRepository = Pick<
+  CommunityWorkRepository,
+  'ensureDemoWorks' | 'listPublished'
 >
 
 export type RecipeParser = (
@@ -40,6 +60,7 @@ type RetryOperation =
   | { kind: 'blank' }
   | { kind: 'recent'; projectId: string }
   | { kind: 'example' }
+  | { kind: 'prompt'; request: HomePromptRequest }
 
 type RecentProjectsState =
   | { status: 'loading' }
@@ -52,7 +73,10 @@ interface LauncherOperation {
   abortController: AbortController
 }
 
-const defaultRepository = new ProjectRepository()
+const defaultDatabase = new WirelessCanvasDatabase()
+const defaultRepository = new ProjectRepository(defaultDatabase)
+const defaultHomeContentRepository = new HomeContentRepository(defaultDatabase)
+const defaultCommunityRepository = new CommunityRepository(defaultDatabase)
 
 function defaultParseRecipe(
   _recipeId: RecipeId,
@@ -84,11 +108,15 @@ function readableError(error: unknown): string {
 export interface ProjectLauncherPageProps {
   repository?: LauncherRepository
   parseRecipe?: RecipeParser
+  homeContentRepository?: PlatformHomeContentRepository
+  communityRepository?: LauncherCommunityRepository
 }
 
 export function ProjectLauncherPage({
   repository = defaultRepository,
   parseRecipe = defaultParseRecipe,
+  homeContentRepository = defaultHomeContentRepository,
+  communityRepository = defaultCommunityRepository,
 }: ProjectLauncherPageProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -309,6 +337,26 @@ export function ProjectLauncherPage({
     }
   }
 
+  const openPromptCanvas = async (request: HomePromptRequest) => {
+    const operation = beginOperation(`prompt:${request.key}`)
+    if (!operation) return
+    setLauncherState({ status: 'creating' })
+    try {
+      await persistAndOpen(
+        createProject(request.title, request.prompt),
+        operation,
+      )
+    } catch (error) {
+      if (!isCurrentOperation(operation)) return
+      finishOperation(operation)
+      setLauncherState({
+        status: 'failed',
+        message: readableError(error),
+        operation: { kind: 'prompt', request },
+      })
+    }
+  }
+
   const retryFailedOperation = () => {
     if (launcherState.status !== 'failed') return
 
@@ -324,6 +372,9 @@ export function ProjectLauncherPage({
         break
       case 'example':
         void openExampleProject()
+        break
+      case 'prompt':
+        void openPromptCanvas(launcherState.operation.request)
         break
     }
   }
@@ -348,7 +399,18 @@ export function ProjectLauncherPage({
         </nav>
       </header>
 
-      <section className="launcher-hero" aria-labelledby="launcher-title">
+      <PlatformHomeSections
+        contentRepository={homeContentRepository}
+        communityRepository={communityRepository}
+        disabled={isBusy}
+        onStartPrompt={(request) => void openPromptCanvas(request)}
+      />
+
+      <section
+        id="create-project"
+        className="launcher-hero launcher-create"
+        aria-labelledby="launcher-title"
+      >
         <p className="launcher-eyebrow">AI CINEMATIC CANVAS</p>
         <h1 id="launcher-title">创建你的第一部短片</h1>
         <p className="launcher-intro">

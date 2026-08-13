@@ -18,6 +18,7 @@ function createRepositories() {
   databaseNames.push(name)
   const database = new WirelessCanvasDatabase(name)
   return {
+    database,
     community: new CommunityRepository(database),
     projects: new ProjectRepository(database),
     timelines: new TimelineRepository(database),
@@ -54,7 +55,7 @@ describe('community repository', () => {
     expect(await community.listMine()).toEqual([])
   })
 
-  test('seeds demo works only for an empty table and remains idempotent', async () => {
+  test('seeds all fixed demo works and remains idempotent', async () => {
     const { community } = createRepositories()
 
     expect(await community.ensureDemoWorks()).toBe(true)
@@ -63,6 +64,21 @@ describe('community repository', () => {
     const works = await community.listPublished({ query: '', tag: 'all', sort: 'latest' })
     expect(works).toHaveLength(buildDemoWorks().length)
     expect(new Set(works.map(({ id }) => id)).size).toBe(works.length)
+  })
+
+  test('supplements missing demo ids without overwriting existing interaction data', async () => {
+    const { community, database } = createRepositories()
+    const existing = {
+      ...buildDemoWorks()[0],
+      metrics: { views: 999, likes: 88, favorites: 77 },
+    }
+    await database.publishedWorks.put(existing)
+
+    expect(await community.ensureDemoWorks()).toBe(true)
+    const works = await community.listPublished({ query: '', tag: 'all', sort: 'latest' })
+    expect(works).toHaveLength(buildDemoWorks().length)
+    expect((await community.get(existing.id))?.metrics).toEqual(existing.metrics)
+    expect(await community.ensureDemoWorks()).toBe(false)
   })
 
   test('publishes one snapshot per project and preserves metrics on republish', async () => {

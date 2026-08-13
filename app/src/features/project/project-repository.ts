@@ -10,6 +10,7 @@ import type { TimelineProject } from '../timeline/timeline-project'
 import type { PublishedWork } from '../community/community-model'
 import type { Collaborator, ChangeComment } from '../collaboration/collaboration-model'
 import type { MembershipSubscription } from '../membership/membership-model'
+import type { HomeContentRecord } from '../home/home-content'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -20,6 +21,7 @@ export class WirelessCanvasDatabase extends Dexie {
   collaborators!: Table<Collaborator, string>
   changeComments!: Table<ChangeComment, string>
   membership!: Table<MembershipSubscription, string>
+  homeContent!: Table<HomeContentRecord, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -59,6 +61,17 @@ export class WirelessCanvasDatabase extends Dexie {
       collaborators: 'id, projectId, role, updatedAt',
       changeComments: 'id, projectId, targetType, targetId, status, createdAt',
       membership: 'id, plan, status, updatedAt',
+    })
+    this.version(8).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
+      workflowRuns: 'id, projectId, updatedAt, status',
+      timelineProjects: 'id, projectId, updatedAt',
+      publishedWorks: 'id, &projectId, status, publishedAt, updatedAt',
+      collaborators: 'id, projectId, role, updatedAt',
+      changeComments: 'id, projectId, targetType, targetId, status, createdAt',
+      membership: 'id, plan, status, updatedAt',
+      homeContent: 'id, kind, category, order',
     })
   }
 }

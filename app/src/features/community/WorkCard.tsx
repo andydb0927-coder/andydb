@@ -1,4 +1,4 @@
-import { Bookmark, Eye, Heart } from 'lucide-react'
+import { BadgeCheck, Bookmark, Eye, Heart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import type { PublishedWork } from './community-model'
@@ -19,7 +19,12 @@ export function WorkCard({ work }: { work: PublishedWork }) {
       <div className="community-card__body">
         <div className="community-card__title">
           <h2>{work.title}</h2>
-          <span>{work.author}</span>
+          <span>
+            {work.author}
+            {work.authorVerified ? (
+              <BadgeCheck aria-label={`${work.author} 已认证`} />
+            ) : null}
+          </span>
         </div>
         <ul className="community-tags" aria-label={`${work.title} 标签`}>
           {work.tags.map((tag) => <li key={tag}>{tag}</li>)}
@@ -29,6 +34,13 @@ export function WorkCard({ work }: { work: PublishedWork }) {
           <span aria-label={`${work.metrics.likes} 次点赞`}><Heart aria-hidden="true" />{work.metrics.likes}</span>
           <span aria-label={`${work.metrics.favorites} 次收藏`}><Bookmark aria-hidden="true" />{work.metrics.favorites}</span>
         </div>
+        <Link
+          className="community-card__process focus-visible"
+          to={`/discover/${work.id}`}
+          aria-label={`查看 ${work.title} 的创作过程`}
+        >
+          查看创作过程
+        </Link>
       </div>
     </article>
   )
