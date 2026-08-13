@@ -258,7 +258,7 @@ export function AccountPage({
           </p>
           <p className="account-space__storage">本地数据约 {readableLocalBytes(localBytes)}</p>
           <div className="account-space__links">
-            <Link to="/">打开项目空间</Link>
+            <Link to="/projects">打开项目空间</Link>
             <Link to="/assets">打开素材库</Link>
           </div>
           <div className="account-space__boundary">

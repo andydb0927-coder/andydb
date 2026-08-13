@@ -8,7 +8,7 @@ import { PlatformTaskDrawer } from './PlatformTaskDrawer'
 export type PlatformShellMode = 'standard' | 'workspace'
 
 export const platformNavigation = [
-  { to: '/', label: '项目空间', icon: PanelsTopLeft, end: true },
+  { to: '/projects', label: '项目空间', icon: PanelsTopLeft, end: true },
   { to: '/assets', label: '素材与历史', icon: FolderOpen, end: false },
   { to: '/workflows', label: '工作流与模板', icon: Sparkles, end: false },
   { to: '/discover', label: '发现与作品', icon: Compass, end: false },

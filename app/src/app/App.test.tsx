@@ -4,6 +4,7 @@ import { routes } from './router'
 
 it.each([
   ['/', '创建你的第一部短片'],
+  ['/projects', '全部项目'],
   ['/project/demo-project', '项目画布'],
   ['/project/demo-project/preview', '成片预览'],
   ['/discover', '发现与作品'],

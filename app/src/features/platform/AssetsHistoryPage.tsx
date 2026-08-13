@@ -467,7 +467,7 @@ export function AssetsHistoryPage({
           <section className="platform-page__empty" role="alert">
             <h2>无法读取本地项目</h2>
             <p>请返回项目空间继续创作，或稍后重试。</p>
-            <Link to="/">返回项目空间</Link>
+            <Link to="/projects">返回项目空间</Link>
           </section>
         ) : null}
 

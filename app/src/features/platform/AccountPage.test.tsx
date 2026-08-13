@@ -124,7 +124,7 @@ test('presents an honest local identity, personal space, and persisted device pr
   expect(screen.getByText('云账户：未连接')).toBeVisible()
   expect(screen.getByText('团队空间：未接入')).toBeVisible()
   expect(screen.getByText(/本地数据约/)).toBeVisible()
-  expect(screen.getByRole('link', { name: '打开项目空间' })).toHaveAttribute('href', '/')
+  expect(screen.getByRole('link', { name: '打开项目空间' })).toHaveAttribute('href', '/projects')
   expect(screen.getByRole('link', { name: '打开素材库' })).toHaveAttribute('href', '/assets')
   expect(screen.getByRole('link', { name: '查看 Agent 与 CLI' })).toHaveAttribute('href', '/agents')
 

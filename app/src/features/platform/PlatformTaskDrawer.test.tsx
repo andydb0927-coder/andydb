@@ -26,8 +26,8 @@ describe('platform task drawer', () => {
     renderDrawer()
 
     expect(screen.getByRole('complementary', { name: '平台完善路线图' })).toBeVisible()
-    expect(screen.getByText('2 / 13 已完成')).toBeVisible()
-    expect(screen.getByText(/当前阶段：/)).toHaveTextContent('当前阶段：项目首页')
+    expect(screen.getByText('3 / 13 已完成')).toBeVisible()
+    expect(screen.getByText(/当前阶段：/)).toHaveTextContent('当前阶段：画布与工作流')
     expect(screen.getAllByRole('listitem')).toHaveLength(13)
     expect(screen.getByRole('link', { name: '打开 平台骨架' })).toHaveAttribute('href', '/')
   })
@@ -39,13 +39,13 @@ describe('platform task drawer', () => {
     const first = renderDrawer(storage)
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: '更新 账号与空间 状态' }),
+      screen.getByRole('combobox', { name: '更新 画布与工作流 状态' }),
       'completed',
     )
-    expect(screen.getByText('2 / 13 已完成')).toBeVisible()
+    expect(screen.getByText('4 / 13 已完成')).toBeVisible()
     first.unmount()
 
     renderDrawer(storage)
-    expect(screen.getByRole('combobox', { name: '更新 账号与空间 状态' })).toHaveValue('completed')
+    expect(screen.getByRole('combobox', { name: '更新 画布与工作流 状态' })).toHaveValue('completed')
   })
 })

@@ -400,7 +400,11 @@ describe('project launcher', () => {
     })
 
     expect(example).toHaveAttribute('href', '/project/project-frost-river')
-    expect(within(recentRegion).getAllByRole('link')).toHaveLength(1)
+    expect(within(recentRegion).getAllByRole('link')).toHaveLength(2)
+    expect(within(recentRegion).getByRole('link', { name: '查看全部项目' })).toHaveAttribute(
+      'href',
+      '/projects',
+    )
   })
 
   test('loads recent projects after StrictMode replays mount effects', async () => {

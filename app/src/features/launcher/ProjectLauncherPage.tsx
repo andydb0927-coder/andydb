@@ -505,9 +505,13 @@ export function ProjectLauncherPage({
       <section className="launcher-recent" aria-labelledby="recent-title">
         <div className="launcher-recent__heading">
           <h2 id="recent-title">最近项目</h2>
-          <span>
-            {recentProjectsState.status === 'loading' ? '正在读取' : '继续创作'}
-          </span>
+          {recentProjectsState.status === 'loading' ? (
+            <span>正在读取</span>
+          ) : (
+            <Link className="launcher-header__link focus-visible" to="/projects">
+              查看全部项目
+            </Link>
+          )}
         </div>
         <div className="launcher-recent__list">
           {recentProjectsState.status === 'failed' ? (

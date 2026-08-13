@@ -40,6 +40,21 @@ describe('platform shell', () => {
     expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
   })
 
+  test('keeps the platform home and project space as separate destinations', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<PlatformShell />}>
+            <Route index element={<h1>平台首页</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: '创作画布' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: '项目空间' })).toHaveAttribute('href', '/projects')
+  })
+
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {
     const user = userEvent.setup()
     const { container } = renderWorkspaceShell()

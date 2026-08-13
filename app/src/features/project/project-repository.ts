@@ -11,6 +11,10 @@ import type { PublishedWork } from '../community/community-model'
 import type { Collaborator, ChangeComment } from '../collaboration/collaboration-model'
 import type { MembershipSubscription } from '../membership/membership-model'
 import type { HomeContentRecord } from '../home/home-content'
+import type {
+  ProjectFolder,
+  ProjectLocation,
+} from '../projects/project-space-model'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -22,6 +26,8 @@ export class WirelessCanvasDatabase extends Dexie {
   changeComments!: Table<ChangeComment, string>
   membership!: Table<MembershipSubscription, string>
   homeContent!: Table<HomeContentRecord, string>
+  projectFolders!: Table<ProjectFolder, string>
+  projectLocations!: Table<ProjectLocation, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -73,6 +79,19 @@ export class WirelessCanvasDatabase extends Dexie {
       membership: 'id, plan, status, updatedAt',
       homeContent: 'id, kind, category, order',
     })
+    this.version(9).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
+      workflowRuns: 'id, projectId, updatedAt, status',
+      timelineProjects: 'id, projectId, updatedAt',
+      publishedWorks: 'id, &projectId, status, publishedAt, updatedAt',
+      collaborators: 'id, projectId, role, updatedAt',
+      changeComments: 'id, projectId, targetType, targetId, status, createdAt',
+      membership: 'id, plan, status, updatedAt',
+      homeContent: 'id, kind, category, order',
+      projectFolders: 'id, &normalizedName, updatedAt',
+      projectLocations: 'projectId, folderId, updatedAt',
+    })
   }
 }
 
@@ -111,5 +130,9 @@ export class ProjectRepository {
 
   async listRecent(limit: number): Promise<Project[]> {
     return this.database.projects.orderBy('updatedAt').reverse().limit(limit).toArray()
+  }
+
+  async listAll(): Promise<Project[]> {
+    return this.database.projects.orderBy('updatedAt').reverse().toArray()
   }
 }

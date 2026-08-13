@@ -20,7 +20,7 @@ export const platformTasks = [
     order: 3,
     title: '项目首页',
     description: '最近项目、模板启动、恢复与项目管理',
-    targetPath: '/',
+    targetPath: '/projects',
   },
   {
     id: 'canvas-workflow',
@@ -101,8 +101,8 @@ export type PlatformTaskStatuses = Record<PlatformTaskId, PlatformTaskStatus>
 export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'platform-shell': 'completed',
   'account-space': 'completed',
-  'project-home': 'in-progress',
-  'canvas-workflow': 'pending',
+  'project-home': 'completed',
+  'canvas-workflow': 'in-progress',
   'models-generation': 'pending',
   'assets-history': 'pending',
   'creative-cards': 'pending',

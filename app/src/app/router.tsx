@@ -8,6 +8,9 @@ import '../styles/global.css'
 const ProjectLauncherPage = lazy(() =>
   import('../features/launcher/ProjectLauncherPage').then((m) => ({ default: m.ProjectLauncherPage })),
 )
+const ProjectsPage = lazy(() =>
+  import('../features/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })),
+)
 const CanvasPage = lazy(() =>
   import('../features/canvas/CanvasPage').then((m) => ({ default: m.CanvasPage })),
 )
@@ -56,6 +59,7 @@ export const routes: RouteObject[] = [
     element: <PlatformShell />,
     children: [
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
+      { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/assets', element: withSuspense(<AssetsHistoryPage />) },
       { path: '/workflows', element: withSuspense(<WorkflowsPage />) },
       { path: '/discover', element: withSuspense(<DiscoverPage />) },

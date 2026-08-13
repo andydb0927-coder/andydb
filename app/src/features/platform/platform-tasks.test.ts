@@ -28,10 +28,11 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to project home after the account and space phase', () => {
+  test('advances to canvas workflow after the project home phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['project-home']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['canvas-workflow']).toBe('in-progress')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })
