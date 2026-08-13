@@ -2472,6 +2472,12 @@ select {
   background: rgb(255 255 255 / 7%);
 }
 
+.creative-node-actions .creative-node-actions__primary {
+  border-color: rgb(169 162 255 / 40%);
+  color: white;
+  background: rgb(114 104 240 / 24%);
+}
+
 .creative-node-actions .creative-node-actions__danger {
   color: var(--status-error);
 }
@@ -6979,6 +6985,16 @@ select {
     left: auto;
   }
 
+  .creative-node-actions:has(button[data-action='add-to-timeline']) {
+    display: grid;
+    width: min(288px, calc(100vw - 32px));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .creative-node-actions button[data-action='add-to-timeline'] {
+    grid-column: 1 / -1;
+  }
+
   .director-composer {
     left: var(--space-4);
     width: 260px;
@@ -7776,10 +7792,13 @@ select {
 
   .canvas-top-bar__identity .canvas-top-bar__menu-wrap,
   .canvas-top-bar__actions > button:first-child,
-  .canvas-top-bar__actions > a,
   .canvas-top-bar__actions > button:not([aria-label='Agent']),
   .canvas-top-bar__actions > .canvas-top-bar__menu-wrap {
     display: none;
+  }
+
+  .canvas-top-bar__actions > a {
+    padding: 0 var(--space-2);
   }
 
   .canvas-top-bar__modes button {

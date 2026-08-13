@@ -676,6 +676,9 @@ describe('creative canvas', () => {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
     expect(screen.getByRole('button', { name: '加入时间线' })).toBeVisible()
+    expect(
+      within(screen.getByLabelText('分镜 02操作')).getAllByRole('button')[0],
+    ).toHaveTextContent('加入时间线')
   })
 
   test('renders text and image kinds with compatible actions in canvas and node list', async () => {

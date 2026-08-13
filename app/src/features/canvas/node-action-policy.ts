@@ -29,8 +29,8 @@ export function primaryActionsForNode(
 
   return (kind === 'video' || kind === 'storyboard') && hasAsset
     ? [
-        ...existingPrimaryActions,
         { action: 'add-to-timeline', label: '加入时间线' },
+        ...existingPrimaryActions,
       ]
     : [...existingPrimaryActions]
 }

@@ -85,6 +85,12 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
             <button
               key={action}
               type="button"
+              className={
+                action === 'add-to-timeline'
+                  ? 'creative-node-actions__primary'
+                  : undefined
+              }
+              data-action={action}
               onClick={(event) => data.onAction(action, event.currentTarget)}
             >
               <ActionIcon aria-hidden="true" />
