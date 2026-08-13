@@ -6,6 +6,14 @@ async function createCinematicProject(page: import('@playwright/test').Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
+async function openPreview(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: '发布与分享' }).click()
+  await page
+    .getByRole('menu', { name: '发布与分享菜单' })
+    .getByRole('menuitem', { name: '预览' })
+    .click()
+}
+
 async function findBlankCanvasPoint(
   page: import('@playwright/test').Page,
   fromBottomRight = false,
@@ -711,7 +719,7 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
     page.getByRole('button', { name: '文本 01', exact: true }),
   ).toBeHidden()
 
-  await page.getByRole('link', { name: '预览' }).click()
+  await openPreview(page)
   await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
   await expect(
     page.getByRole('list', { name: '主视频轨' }).getByRole('listitem'),

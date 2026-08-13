@@ -1615,7 +1615,7 @@ select {
 
 .node-draft-panel {
   position: absolute;
-  z-index: 15;
+  z-index: 45;
   padding: var(--space-4);
 }
 
@@ -7135,6 +7135,7 @@ select {
 
 .canvas-top-bar__actions > button,
 .canvas-top-bar__actions > .canvas-top-bar__menu-wrap > button {
+  padding: 0 var(--space-2);
   white-space: nowrap;
 }
 
@@ -7251,6 +7252,7 @@ select {
 
 .canvas-mode-bar .canvas-mode-bar__visibility-toggle {
   width: 64px;
+  border-left-color: rgb(255 255 255 / 18%);
   font-size: 0.625rem;
 }
 
@@ -7944,6 +7946,14 @@ select {
   right: 352px;
 }
 
+@media (max-width: 1350px) {
+  .canvas-top-bar__commerce,
+  .canvas-top-bar__balance,
+  .canvas-top-bar__avatar {
+    display: none !important;
+  }
+}
+
 @media (max-width: 1050px) {
   .canvas-top-bar {
     grid-template-columns: minmax(200px, 1fr) auto auto;
@@ -7989,11 +7999,29 @@ select {
     z-index: 35;
     right: var(--space-2);
     bottom: var(--space-2);
-    left: var(--space-2);
+    left: auto;
     display: flex;
-    width: auto;
-    max-width: none;
+    width: min(240px, calc(100% - 16px));
+    max-width: 240px;
+    overflow: hidden;
     transform: none;
+  }
+
+  .canvas-mode-bar__primary {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .canvas-mode-bar__primary::-webkit-scrollbar {
+    display: none;
+  }
+
+  .canvas-mode-bar__secondary {
+    z-index: 1;
+    flex: 0 0 auto;
+    background: rgb(20 22 27 / 98%);
   }
 
   .canvas-view-controls {

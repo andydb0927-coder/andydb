@@ -252,7 +252,7 @@ test('creates, links, edits, and reloads structured creative cards', async ({
   await expect(page.getByLabel('雨夜重逢 → 林渊角色卡', { exact: true })).toBeVisible()
   await expect(page.getByLabel('林渊角色卡 → 潮汐城世界观', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: '打开资产' }).click()
+  await page.getByRole('button', { name: '素材库' }).click()
   const assets = page.getByRole('complementary', { name: '资产' })
   await expect(assets.getByText('潮汐城参考.png', { exact: true })).toBeVisible()
   expect(browserErrors).toEqual([])

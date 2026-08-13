@@ -6,6 +6,14 @@ async function createCinematicProject(page: import('@playwright/test').Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
+async function openPreview(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: '发布与分享' }).click()
+  await page
+    .getByRole('menu', { name: '发布与分享菜单' })
+    .getByRole('menuitem', { name: '预览' })
+    .click()
+}
+
 async function findBlankCanvasPoint(
   page: import('@playwright/test').Page,
   fromBottomRight = false,
@@ -83,7 +91,7 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   ).toBeVisible()
   await page.getByRole('button', { name: '加入时间线' }).click()
 
-  await page.getByRole('link', { name: '预览' }).click()
+  await openPreview(page)
   await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
   await page.getByRole('button', { name: '将视频 02 前移' }).click()
   await expect(
@@ -303,7 +311,7 @@ for (const width of [721, 720]) {
       ),
     ).toContain('加入时间线')
     await primaryAction.click()
-    await page.getByRole('link', { name: '预览' }).click()
+    await openPreview(page)
     await expect(
       page.getByRole('list', { name: '主视频轨' }).getByRole('listitem'),
     ).toContainText('视频 01')
@@ -324,9 +332,18 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await expect(page.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
   const freePoint = await findBlankCanvasPoint(page)
   await page.mouse.dblclick(freePoint.x, freePoint.y)
-  const textDialog = page.getByRole('dialog', { name: '自由生成节点' })
-  await textDialog.getByLabel('文字内容').fill('雨落在旧车站的独白')
-  await textDialog.getByLabel('文字内容').press('Control+Enter')
+  const typePicker = page.getByRole('dialog', { name: '选择节点类型' })
+  await expect(typePicker).toBeVisible()
+  await expect(
+    typePicker.getByRole('button', { name: '故事脚本生成', exact: true }),
+  ).toBeFocused()
+  await expect(
+    typePicker.getByRole('button', { name: '全能参考生视频 SD2.5' }),
+  ).toBeVisible()
+  await expect(
+    typePicker.getByRole('button', { name: '音频生视频 SD2.5' }),
+  ).toBeVisible()
+  await typePicker.getByRole('button', { name: '文本', exact: true }).click()
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })
   await expect(textNode).toBeVisible()
   await expect(textNode).toBeFocused()
