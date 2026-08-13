@@ -138,7 +138,9 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
     selection: {
       projectUuid: remoteProject.uuid,
       projectName: remoteProject.name,
+      imageModelKey: 'controlled-image',
       imageModelName,
+      videoModelKey: 'controlled-video',
       videoModelName,
     },
     request: {
