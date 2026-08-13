@@ -193,15 +193,13 @@ function readWorkspacePreferences() {
     const stored = JSON.parse(localStorage.getItem(workspacePreferencesKey) ?? '{}') as {
       minimapVisible?: unknown
       snapToGrid?: unknown
-      connectionsVisible?: unknown
     }
     return {
       minimapVisible: stored.minimapVisible === true,
       snapToGrid: stored.snapToGrid === true,
-      connectionsVisible: stored.connectionsVisible !== false,
     }
   } catch {
-    return { minimapVisible: false, snapToGrid: false, connectionsVisible: true }
+    return { minimapVisible: false, snapToGrid: false }
   }
 }
 
@@ -400,9 +398,7 @@ export function CanvasPage({
     phase: 'idle',
   })
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
-  const [connectionsVisible, setConnectionsVisible] = useState(
-    () => readWorkspacePreferences().connectionsVisible,
-  )
+  const [connectionsVisible, setConnectionsVisible] = useState(true)
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
@@ -486,7 +482,7 @@ export function CanvasPage({
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
-    setConnectionsVisible(readWorkspacePreferences().connectionsVisible)
+    setConnectionsVisible(true)
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
@@ -508,9 +504,9 @@ export function CanvasPage({
   useEffect(() => {
     localStorage.setItem(
       workspacePreferencesKey,
-      JSON.stringify({ minimapVisible, snapToGrid, connectionsVisible }),
+      JSON.stringify({ minimapVisible, snapToGrid }),
     )
-  }, [connectionsVisible, minimapVisible, snapToGrid])
+  }, [minimapVisible, snapToGrid])
 
   useEffect(() => {
     let active = true
@@ -672,6 +668,26 @@ export function CanvasPage({
       padding: 0.4,
     })
   }, [flowInstance, focusNodeId, project, selectOnlyNode])
+
+  const hasProject = Boolean(project)
+
+  useEffect(() => {
+    if (!agentOpen || workspaceMode !== 'workflow' || !flowInstance || !hasProject) {
+      return
+    }
+
+    let innerFrame = 0
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => {
+        void flowInstance.fitView({ duration: 220, padding: 0.18 })
+      })
+    })
+
+    return () => {
+      cancelAnimationFrame(outerFrame)
+      if (innerFrame) cancelAnimationFrame(innerFrame)
+    }
+  }, [agentOpen, flowInstance, hasProject, workspaceMode])
 
   const removeSelectedNode = useCallback((nodeId: string) => {
     setSelectedNodeIds((current) => {

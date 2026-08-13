@@ -169,6 +169,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
   const primaryAction = page
     .getByLabel('角色参考操作')
     .getByRole('button', { name: '生成视频' })
+  await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
   const workflowPanelBox = await page
     .getByRole('complementary', { name: '工作流运行面板' })
@@ -229,24 +230,34 @@ for (const width of [721, 720]) {
       .getByRole('button', { name: '加入时间线' })
     await expect(primaryAction).toBeVisible()
 
+    const agentToggle = page.getByRole('button', { name: 'Agent', exact: true })
+    await agentToggle.click()
+    await expect(agentToggle).toHaveAttribute('aria-pressed', 'true')
+    const agentPanel = page.getByRole('complementary', {
+      name: 'Agent 工作区',
+    })
+    await expect(agentPanel).toBeVisible()
+    await page.getByRole('button', { name: 'Fit View' }).click()
+    await page.waitForTimeout(300)
+
     const nodeBox = await generatedNode.boundingBox()
     const actionBox = await primaryAction.boundingBox()
-    const composerBox = await page.locator('.director-composer').boundingBox()
+    const agentBox = await agentPanel.boundingBox()
     expect(nodeBox).not.toBeNull()
     expect(actionBox).not.toBeNull()
-    expect(composerBox).not.toBeNull()
+    expect(agentBox).not.toBeNull()
     expect(nodeBox!.x).toBeGreaterThanOrEqual(0)
     expect(nodeBox!.y).toBeGreaterThanOrEqual(0)
     expect(nodeBox!.x + nodeBox!.width).toBeLessThanOrEqual(width)
     expect(nodeBox!.y + nodeBox!.height).toBeLessThanOrEqual(778)
-    const overlapsDirector =
-      nodeBox!.x < composerBox!.x + composerBox!.width &&
-      nodeBox!.x + nodeBox!.width > composerBox!.x &&
-      nodeBox!.y < composerBox!.y + composerBox!.height &&
-      nodeBox!.y + nodeBox!.height > composerBox!.y
+    const overlapsAgent =
+      nodeBox!.x < agentBox!.x + agentBox!.width &&
+      nodeBox!.x + nodeBox!.width > agentBox!.x &&
+      nodeBox!.y < agentBox!.y + agentBox!.height &&
+      nodeBox!.y + nodeBox!.height > agentBox!.y
     expect(
-      overlapsDirector,
-      `generated node=${JSON.stringify(nodeBox)}, director=${JSON.stringify(composerBox)}`,
+      overlapsAgent,
+      `generated node=${JSON.stringify(nodeBox)}, agent=${JSON.stringify(agentBox)}`,
     ).toBe(false)
     expect(actionBox!.x).toBeGreaterThanOrEqual(0)
     expect(actionBox!.y).toBeGreaterThanOrEqual(0)

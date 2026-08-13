@@ -6967,8 +6967,13 @@ select {
     z-index: 13;
   }
 
+  .react-flow__node.selected {
+    z-index: 30 !important;
+  }
+
   .creative-node-actions,
   .creative-node-actions[data-placement='before'] {
+    z-index: 31;
     top: var(--space-2);
     right: var(--space-2);
     left: auto;
@@ -7288,7 +7293,7 @@ select {
 .canvas-toolbar .canvas-toolbar__visibility-toggle {
   margin-top: 0;
   margin-left: var(--space-1);
-  border-top-color: transparent;
+  border-top-color: rgb(255 255 255 / 16%);
   border-left-color: rgb(255 255 255 / 16%);
 }
 
@@ -7831,8 +7836,13 @@ select {
   }
 
   .selection-context-bar {
-    top: var(--space-2);
+    top: auto;
+    bottom: 72px;
     max-width: calc(100% - 24px);
     overflow-x: auto;
+  }
+
+  .canvas-page--agent-open .selection-context-bar {
+    display: none;
   }
 }

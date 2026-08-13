@@ -273,21 +273,25 @@ async function expectDeleteActionInsideViewport(
   viewport: { width: number; height: number },
 ) {
   const actionBox = await deleteAction.boundingBox()
-  const composerBox = await page.locator('.director-composer').boundingBox()
+  const agentPanel = page.getByRole('complementary', { name: 'Agent 工作区' })
+  const agentBox = (await agentPanel.count()) > 0
+    ? await agentPanel.boundingBox()
+    : null
   expect(actionBox).not.toBeNull()
-  expect(composerBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
   expect(actionBox!.width).toBeGreaterThanOrEqual(32)
   expect(actionBox!.height).toBeGreaterThanOrEqual(32)
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height)
-  expect(
-    actionBox!.x < composerBox!.x + composerBox!.width &&
-      actionBox!.x + actionBox!.width > composerBox!.x &&
-      actionBox!.y < composerBox!.y + composerBox!.height &&
-      actionBox!.y + actionBox!.height > composerBox!.y,
-  ).toBe(false)
+  if (agentBox) {
+    expect(
+      actionBox!.x < agentBox.x + agentBox.width &&
+        actionBox!.x + actionBox!.width > agentBox.x &&
+        actionBox!.y < agentBox.y + agentBox.height &&
+        actionBox!.y + actionBox!.height > agentBox.y,
+    ).toBe(false)
+  }
   const centerHit = await page.evaluate(
     ({ x, y }) =>
       document
@@ -412,6 +416,9 @@ test('preserves hidden connection data for H and the real L handle flow', async 
 
   await createCinematicProject(page)
   const originalEdge = page.getByLabel('角色参考 → 分镜 01', { exact: true })
+  const agentToggle = page.getByRole('button', { name: 'Agent', exact: true })
+  await agentToggle.click()
+  await expect(agentToggle).toHaveAttribute('aria-pressed', 'true')
   const directorInput = page.getByLabel('告诉我下一步要做什么')
   const canvas = page.getByRole('region', { name: '项目画布' })
 
@@ -422,6 +429,9 @@ test('preserves hidden connection data for H and the real L handle flow', async 
     'aria-pressed',
     'true',
   )
+
+  await page.getByRole('button', { name: '关闭 Agent' }).click()
+  await expect(agentToggle).toHaveAttribute('aria-pressed', 'false')
 
   await canvas.focus()
   await page.keyboard.press('h')

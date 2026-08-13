@@ -2302,7 +2302,7 @@ describe('creative canvas', () => {
     )
   })
 
-  test('persists connection visibility when the active project changes', async () => {
+  test('resets connection visibility when the active project changes', async () => {
     const user = userEvent.setup()
     const projectB = {
       ...makeCanvasProject(),
@@ -2326,10 +2326,10 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
 
     expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
-    expect(latestFlowProps?.edges[0].data?.visible).toBe(false)
-    expect(screen.getByRole('button', { name: '显示连线' })).toHaveAttribute(
+    expect(latestFlowProps?.edges[0].data?.visible).toBe(true)
+    expect(screen.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
       'aria-pressed',
-      'false',
+      'true',
     )
   })
 
@@ -3091,6 +3091,20 @@ describe('canvas top bar', () => {
     await user.click(screen.getByRole('button', { name: '关闭 Agent' }))
     expect(screen.queryByRole('complementary', { name: 'Agent 工作区' })).not.toBeInTheDocument()
     await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  test('fits the workflow after opening the Agent so selected actions remain reachable', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const { fitView } = initializeFlow()
+
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
+
+    await waitFor(() =>
+      expect(fitView).toHaveBeenCalledWith(
+        expect.objectContaining({ duration: 220, padding: 0.18 }),
+      ),
+    )
   })
 
   test('switches to a derived storyboard and returns to the selected source node', async () => {
