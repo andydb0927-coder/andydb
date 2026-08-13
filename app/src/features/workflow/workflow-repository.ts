@@ -28,4 +28,14 @@ export class WorkflowRepository {
         right.id.localeCompare(left.id),
     )
   }
+
+  async listAll(): Promise<WorkflowRun[]> {
+    const runs = await this.database.workflowRuns.toArray()
+    return runs.sort(
+      (left, right) =>
+        right.updatedAt.localeCompare(left.updatedAt) ||
+        right.createdAt.localeCompare(left.createdAt) ||
+        right.id.localeCompare(left.id),
+    )
+  }
 }

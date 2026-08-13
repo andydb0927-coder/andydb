@@ -78,6 +78,42 @@ describe('workflow repository', () => {
     ).toEqual(['newer', 'older'])
   })
 
+  test('lists runs across projects with newest updates first', async () => {
+    const repository = createRepository()
+    const base = makeProjectFixture()
+    const oldest = {
+      ...buildWorkflowRun(base, ['shot-1'], 'serial'),
+      id: 'oldest',
+      createdAt: '2026-08-13T07:00:00.000Z',
+      updatedAt: '2026-08-13T08:00:00.000Z',
+    }
+    const newest = {
+      ...buildWorkflowRun(base, ['shot-1'], 'parallel'),
+      id: 'newest',
+      projectId: 'project-other',
+      createdAt: '2026-08-13T08:00:00.000Z',
+      updatedAt: '2026-08-13T10:00:00.000Z',
+    }
+    const middle = {
+      ...newest,
+      id: 'middle',
+      projectId: base.id,
+      updatedAt: '2026-08-13T09:00:00.000Z',
+    }
+
+    await Promise.all([
+      repository.save(oldest),
+      repository.save(newest),
+      repository.save(middle),
+    ])
+
+    expect((await repository.listAll()).map(({ id }) => id)).toEqual([
+      'newest',
+      'middle',
+      'oldest',
+    ])
+  })
+
   test('opens a version 3 database without losing projects or library schema', async () => {
     const name = `wireless-canvas-workflow-legacy-${crypto.randomUUID()}`
     databaseNames.push(name)

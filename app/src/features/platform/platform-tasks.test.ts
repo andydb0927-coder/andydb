@@ -28,7 +28,7 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to workflow templates after the story bible phase', () => {
+  test('advances to professional timeline after the workflow center phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
@@ -36,10 +36,14 @@ describe('platform task catalogue', () => {
     expect(defaultPlatformTaskStatuses['models-generation']).toBe('completed')
     expect(defaultPlatformTaskStatuses['assets-history']).toBe('completed')
     expect(defaultPlatformTaskStatuses['creative-cards']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['workflow-templates']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['workflow-templates']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['professional-timeline']).toBe('in-progress')
     expect(
       platformTasks.find((task) => task.id === 'creative-cards')?.targetPath,
     ).toBe('/story')
+    expect(
+      platformTasks.find((task) => task.id === 'workflow-templates')?.targetPath,
+    ).toBe('/workflows')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })
