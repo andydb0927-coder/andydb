@@ -2338,7 +2338,6 @@ select {
 
 .dependency-edge__interaction {
   stroke: transparent;
-  vector-effect: non-scaling-stroke;
   pointer-events: stroke;
 }
 

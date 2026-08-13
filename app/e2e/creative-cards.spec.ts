@@ -124,7 +124,47 @@ async function createWorldviewCard(page: Page) {
   ).toBeVisible()
 }
 
+async function fitCreatedCardsIntoView(page: Page, titles: string[]) {
+  await page.getByRole('button', { name: 'Fit View', exact: true }).click()
+  await page.locator('.react-flow__viewport').evaluate(
+    (viewport) =>
+      new Promise<void>((resolve) => {
+        let previousTransform = viewport.getAttribute('style')
+        let stableFrames = 0
+        const waitForStableTransform = () => {
+          const transform = viewport.getAttribute('style')
+          stableFrames = transform === previousTransform ? stableFrames + 1 : 0
+          previousTransform = transform
+          if (stableFrames >= 3) {
+            resolve()
+            return
+          }
+          requestAnimationFrame(waitForStableTransform)
+        }
+        requestAnimationFrame(waitForStableTransform)
+      }),
+  )
+
+  const canvas = page.locator('.react-flow')
+  for (const title of titles) {
+    const node = page.getByRole('button', { name: title, exact: true })
+    await expect.poll(async () => {
+      const canvasBox = await canvas.boundingBox()
+      const nodeBox = await node.boundingBox()
+      return Boolean(
+        canvasBox &&
+          nodeBox &&
+          nodeBox.x >= canvasBox.x &&
+          nodeBox.y >= canvasBox.y &&
+          nodeBox.x + nodeBox.width <= canvasBox.x + canvasBox.width &&
+          nodeBox.y + nodeBox.height <= canvasBox.y + canvasBox.height,
+      )
+    }).toBe(true)
+  }
+}
+
 async function connectCards(page: Page, source: string, target: string) {
+  await fitCreatedCardsIntoView(page, [source, target])
   await page.getByRole('button', { name: '连线', exact: true }).click()
   await page.getByRole('button', { name: source, exact: true }).click()
   await page.getByRole('button', { name: target, exact: true }).click()

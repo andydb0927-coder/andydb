@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { useSyncExternalStore, type PropsWithChildren } from 'react'
 import { Position } from '@xyflow/react'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -15,6 +17,10 @@ const flowStore = vi.hoisted(() => ({
 }))
 
 const bezierPath = vi.hoisted(() => ({ labelX: 50, labelY: 50 }))
+const canvasStyles = readFileSync(
+  resolve(process.cwd(), 'src/styles/global.css'),
+  'utf8',
+)
 
 vi.mock('@xyflow/react', () => ({
   BaseEdge: ({
@@ -133,10 +139,12 @@ test.each([
     expect(
       Number(interaction?.getAttribute('stroke-width')),
     ).toBeCloseTo(graphStrokeWidth, 8)
-    expect(interaction).toHaveAttribute(
-      'vector-effect',
-      'non-scaling-stroke',
-    )
+    expect(interaction).not.toHaveAttribute('vector-effect')
+    const interactionRule = canvasStyles.match(
+      /\.dependency-edge__interaction\s*\{([^}]*)\}/,
+    )?.[1]
+    expect(interactionRule).toBeDefined()
+    expect(interactionRule).not.toMatch(/vector-effect/)
   },
 )
 

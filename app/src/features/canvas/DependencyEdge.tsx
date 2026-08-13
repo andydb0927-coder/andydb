@@ -141,7 +141,6 @@ export function DependencyEdge({
           fill="none"
           stroke="transparent"
           strokeWidth={interactionStrokeWidth}
-          vectorEffect="non-scaling-stroke"
           pointerEvents="stroke"
           className="react-flow__edge-interaction dependency-edge__interaction"
         />
