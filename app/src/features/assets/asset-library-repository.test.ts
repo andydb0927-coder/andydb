@@ -120,4 +120,69 @@ describe('asset library repository', () => {
       createdAt: fixture.createdAt,
     })
   })
+
+  test('deletes an unreferenced library record and treats a repeated delete as missing', async () => {
+    const { library } = createRepositories()
+    const record = (await library.importFile(
+      new File(['unused'], 'unused.png', { type: 'image/png' }),
+    )).record
+
+    await expect(library.deleteUnreferenced(record.id)).resolves.toEqual({
+      status: 'deleted',
+    })
+    await expect(library.deleteUnreferenced(record.id)).resolves.toEqual({
+      status: 'missing',
+    })
+    await expect(library.list()).resolves.toEqual([])
+  })
+
+  test('refuses deletion while any project history references the asset', async () => {
+    const { library, projects } = createRepositories()
+    const project = makeProjectFixture()
+    await projects.save(project)
+
+    await expect(
+      library.deleteUnreferenced(project.assets[0].id),
+    ).resolves.toEqual({
+      status: 'referenced',
+      projectIds: [project.id],
+    })
+    await expect(library.load(project.assets[0].id)).resolves.toBeDefined()
+    await expect(projects.load(project.id)).resolves.toEqual(project)
+  })
+
+  test('protects a historical version reference even when the asset snapshot is absent', async () => {
+    const { library, projects } = createRepositories()
+    const record = (await library.importFile(
+      new File(['history-only'], 'history.png', { type: 'image/png' }),
+    )).record
+    const fixture = makeProjectFixture()
+    const project: typeof fixture = {
+      ...fixture,
+      assets: [],
+      nodes: fixture.nodes.map((node, index) =>
+        index === 0
+          ? {
+              ...node,
+              versions: [
+                ...node.versions,
+                {
+                  id: 'version-history-only',
+                  createdAt: '2026-08-12T08:00:00.000Z',
+                  prompt: '仅历史引用',
+                  assetId: record.id,
+                },
+              ],
+            }
+          : node,
+      ),
+    }
+    await projects.save(project)
+
+    await expect(library.deleteUnreferenced(record.id)).resolves.toEqual({
+      status: 'referenced',
+      projectIds: [project.id],
+    })
+    await expect(library.load(record.id)).resolves.toEqual(record)
+  })
 })

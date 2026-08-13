@@ -39,7 +39,10 @@ const audioRecord: LibraryAssetRecord = {
 }
 
 type PageRepository = Pick<ProjectRepository, 'listRecent' | 'load' | 'save'>
-type PageLibraryRepository = Pick<AssetLibraryRepository, 'list' | 'importFile'>
+type PageLibraryRepository = Pick<
+  AssetLibraryRepository,
+  'list' | 'importFile' | 'deleteUnreferenced'
+>
 
 function createProjectRepository(...projects: Project[]) {
   const storedProjects = new Map(projects.map((project) => [project.id, project]))
@@ -60,6 +63,7 @@ function libraryRepositoryWith(...records: LibraryAssetRecord[]) {
   return {
     list: vi.fn().mockResolvedValue(records),
     importFile: vi.fn(),
+    deleteUnreferenced: vi.fn(),
   } satisfies PageLibraryRepository
 }
 
@@ -179,6 +183,37 @@ describe('assets and history page', () => {
     expect(screen.getByRole('article', { name: '雨夜.png' })).toBeVisible()
   })
 
+  test('does not resurrect a deleted import when an older library snapshot resolves later', async () => {
+    const user = userEvent.setup()
+    const initialList = createDeferred<LibraryAssetRecord[]>()
+    const uploadedRecord = { ...imageRecord, name: '雨夜.png' }
+    const libraryRepository = libraryRepositoryWith()
+    vi.mocked(libraryRepository.list).mockReturnValue(initialList.promise)
+    vi.mocked(libraryRepository.importFile).mockResolvedValue({
+      status: 'created',
+      record: uploadedRecord,
+    })
+    vi.mocked(libraryRepository.deleteUnreferenced).mockResolvedValue({
+      status: 'deleted',
+    })
+    renderAssetsPage({ libraryRepository })
+
+    await user.upload(
+      screen.getByLabelText('上传本地素材'),
+      new File(['rain'], '雨夜.png', { type: 'image/png' }),
+    )
+    await user.click(await screen.findByRole('button', {
+      name: '删除素材：雨夜.png',
+    }))
+    await user.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(screen.queryByRole('article', { name: '雨夜.png' })).not.toBeInTheDocument()
+
+    await act(async () => initialList.resolve([uploadedRecord, audioRecord]))
+
+    expect(await screen.findByRole('article', { name: '环境声.wav' })).toBeVisible()
+    expect(screen.queryByRole('article', { name: '雨夜.png' })).not.toBeInTheDocument()
+  })
+
   test('keeps an uploaded record when the initial library request rejects later', async () => {
     const user = userEvent.setup()
     const initialList = createDeferred<LibraryAssetRecord[]>()
@@ -276,6 +311,48 @@ describe('assets and history page', () => {
     ).not.toBeInTheDocument()
   })
 
+  test('deletes an unreferenced material only after explicit confirmation', async () => {
+    const user = userEvent.setup()
+    const libraryRepository = libraryRepositoryWith(imageRecord)
+    vi.mocked(libraryRepository.deleteUnreferenced).mockResolvedValue({
+      status: 'deleted',
+    })
+    renderAssetsPage({ libraryRepository })
+
+    const deleteButton = await screen.findByRole('button', {
+      name: '删除素材：雨夜参考',
+    })
+    await user.click(deleteButton)
+    expect(screen.getByRole('dialog', { name: '删除素材 雨夜参考' })).toBeVisible()
+    expect(libraryRepository.deleteUnreferenced).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '确认删除' }))
+
+    expect(libraryRepository.deleteUnreferenced).toHaveBeenCalledWith(imageRecord.id)
+    expect(screen.queryByRole('article', { name: imageRecord.name })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('已删除 雨夜参考')
+  })
+
+  test('keeps a referenced material and reports the number of affected projects', async () => {
+    const user = userEvent.setup()
+    const libraryRepository = libraryRepositoryWith(imageRecord)
+    vi.mocked(libraryRepository.deleteUnreferenced).mockResolvedValue({
+      status: 'referenced',
+      projectIds: ['project-a', 'project-b'],
+    })
+    renderAssetsPage({ libraryRepository })
+
+    await user.click(await screen.findByRole('button', {
+      name: '删除素材：雨夜参考',
+    }))
+    await user.click(screen.getByRole('button', { name: '确认删除' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '有 2 个项目正在引用 雨夜参考，未删除',
+    )
+    expect(screen.getByRole('article', { name: imageRecord.name })).toBeVisible()
+  })
+
   test('keeps loaded history visible when the library fails to load', async () => {
     const project = makeProjectFixture()
     const libraryRepository = libraryRepositoryWith()
@@ -361,6 +438,47 @@ describe('assets and history page', () => {
     expect(
       screen.getByRole('link', { name: '在画布中查看 河岸寻人' }),
     ).toHaveAttribute('href', '/project/project-frost-river?focus=shot-1')
+  })
+
+  test('shows every node version newest first with active and historical provenance', async () => {
+    const project = makeProjectFixture()
+    const node = project.nodes[0]
+    const historicalVersion = {
+      id: 'version-history-old',
+      createdAt: '2026-08-05T06:00:00.000Z',
+      prompt: '旧版河岸远景',
+      assetId: project.assets[0].id,
+      generationJobId: 'job-history-old',
+    }
+    const currentVersion = {
+      ...node.versions[0],
+      createdAt: '2026-08-06T08:00:00.000Z',
+      prompt: '当前河岸近景',
+    }
+    const projectWithHistory: Project = {
+      ...project,
+      nodes: [
+        {
+          ...node,
+          versions: [historicalVersion, currentVersion],
+          activeVersionId: currentVersion.id,
+        },
+        ...project.nodes.slice(1),
+      ],
+    }
+    renderAssetsPage({
+      repository: createProjectRepository(projectWithHistory).repository,
+    })
+
+    const nodeItem = (await screen.findByText(node.title)).closest('li')
+    expect(nodeItem).not.toBeNull()
+    const versionItems = within(nodeItem!).getAllByRole('listitem')
+    expect(versionItems).toHaveLength(2)
+    expect(versionItems[0]).toHaveTextContent('当前河岸近景')
+    expect(versionItems[0]).toHaveTextContent('当前')
+    expect(versionItems[1]).toHaveTextContent('旧版河岸远景')
+    expect(versionItems[1]).toHaveTextContent('历史')
+    expect(versionItems[1]).toHaveTextContent('生成任务：job-history-old')
   })
 
   test('resolves project asset references to rich catalog metadata and falls back to snapshots', async () => {

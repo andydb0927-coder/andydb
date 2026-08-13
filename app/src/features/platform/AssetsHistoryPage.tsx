@@ -1,7 +1,8 @@
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
+import { AssetDeleteDialog } from '../assets/AssetDeleteDialog'
 import { attachLibraryAssetToProject } from '../assets/attach-library-asset'
 import type { LibraryAssetRecord } from '../assets/library-model'
 import type { Project } from '../project/model'
@@ -13,7 +14,10 @@ import { useProjectStore } from '../project/project-store'
 
 export interface AssetsHistoryPageProps {
   repository?: Pick<ProjectRepository, 'listRecent' | 'load' | 'save'>
-  libraryRepository?: Pick<AssetLibraryRepository, 'list' | 'importFile'>
+  libraryRepository?: Pick<
+    AssetLibraryRepository,
+    'list' | 'importFile' | 'deleteUnreferenced'
+  >
 }
 
 type LoadState =
@@ -40,6 +44,15 @@ interface PendingCanvasOpen {
   projectId: string
   nodeId: string
 }
+
+interface PendingAssetDelete {
+  record: LibraryAssetRecord
+  trigger: HTMLButtonElement
+}
+
+type DeleteFeedback =
+  | { kind: 'success'; message: string }
+  | { kind: 'error'; message: string }
 
 const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
@@ -141,6 +154,11 @@ export function AssetsHistoryPage({
   const [attachingAssetId, setAttachingAssetId] = useState<string>()
   const [attachError, setAttachError] = useState<string>()
   const [pendingCanvasOpen, setPendingCanvasOpen] = useState<PendingCanvasOpen>()
+  const [pendingAssetDelete, setPendingAssetDelete] =
+    useState<PendingAssetDelete>()
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteFeedback, setDeleteFeedback] = useState<DeleteFeedback>()
+  const deletedAssetIdsRef = useRef(new Set<string>())
 
   useEffect(() => {
     let active = true
@@ -165,12 +183,15 @@ export function AssetsHistoryPage({
       .list()
       .then((records) => {
         if (!active) return
+        const availableRecords = records.filter(
+          (record) => !deletedAssetIdsRef.current.has(record.id),
+        )
         setLibraryLoadState((current) => ({
           status: 'loaded',
           records:
             current.status === 'loaded'
-              ? mergeLibraryRecords(current.records, records)
-              : records,
+              ? mergeLibraryRecords(current.records, availableRecords)
+              : availableRecords,
         }))
       })
       .catch(() => {
@@ -189,7 +210,10 @@ export function AssetsHistoryPage({
     }
   }, [libraryRepository])
 
-  const projects = loadState.status === 'loaded' ? loadState.projects : []
+  const projects = useMemo(
+    () => loadState.status === 'loaded' ? loadState.projects : [],
+    [loadState],
+  )
 
   useEffect(() => {
     if (projects.length === 0) return
@@ -208,8 +232,11 @@ export function AssetsHistoryPage({
     () => projects.find((candidate) => candidate.id === selectedProjectId),
     [projects, selectedProjectId],
   )
-  const libraryRecords =
-    libraryLoadState.status === 'loaded' ? libraryLoadState.records : []
+  const libraryRecords = useMemo(
+    () =>
+      libraryLoadState.status === 'loaded' ? libraryLoadState.records : [],
+    [libraryLoadState],
+  )
   const libraryRecordsById = useMemo(
     () => new Map(libraryRecords.map((record) => [record.id, record])),
     [libraryRecords],
@@ -232,6 +259,7 @@ export function AssetsHistoryPage({
     setImportState({ status: 'busy' })
     try {
       const result = await libraryRepository.importFile(file)
+      deletedAssetIdsRef.current.delete(result.record.id)
       setLibraryLoadState((current) => {
         if (current.status !== 'loaded') {
           return { status: 'loaded', records: [result.record] }
@@ -312,12 +340,60 @@ export function AssetsHistoryPage({
     await openSavedAsset(saved)
   }
 
+  const deleteAsset = async () => {
+    if (!pendingAssetDelete || deleteBusy) return
+    const { record, trigger } = pendingAssetDelete
+    setDeleteBusy(true)
+    setDeleteFeedback(undefined)
+    try {
+      const result = await libraryRepository.deleteUnreferenced(record.id)
+      if (result.status === 'referenced') {
+        setPendingAssetDelete(undefined)
+        setDeleteFeedback({
+          kind: 'error',
+          message: `有 ${result.projectIds.length} 个项目正在引用 ${record.name}，未删除`,
+        })
+        queueMicrotask(() => {
+          if (trigger.isConnected) trigger.focus()
+        })
+        return
+      }
+
+      deletedAssetIdsRef.current.add(record.id)
+      setLibraryLoadState((current) =>
+        current.status === 'loaded'
+          ? {
+              ...current,
+              records: current.records.filter(
+                (candidate) => candidate.id !== record.id,
+              ),
+            }
+          : current,
+      )
+      setPendingAssetDelete(undefined)
+      setDeleteFeedback({
+        kind: 'success',
+        message:
+          result.status === 'deleted'
+            ? `已删除 ${record.name}`
+            : `${record.name} 已不在素材库中`,
+      })
+    } catch {
+      setDeleteFeedback({
+        kind: 'error',
+        message: `无法删除 ${record.name}，请重试`,
+      })
+    } finally {
+      setDeleteBusy(false)
+    }
+  }
+
   return (
     <main className="platform-page">
       <header className="platform-page__header">
         <p className="platform-page__eyebrow">LOCAL CREATIVE RECORD</p>
         <h1>素材与历史</h1>
-        <p>从已保存项目读取素材、当前版本与任务记录。</p>
+        <p>从已保存项目读取素材、完整版本与任务记录。</p>
       </header>
 
       <div className="platform-page__body">
@@ -398,6 +474,18 @@ export function AssetsHistoryPage({
               {attachError}
             </p>
           ) : null}
+          {deleteFeedback ? (
+            <p
+              className={`platform-library__feedback${
+                deleteFeedback.kind === 'error'
+                  ? ' platform-library__feedback--error'
+                  : ''
+              }`}
+              role={deleteFeedback.kind === 'error' ? 'alert' : 'status'}
+            >
+              {deleteFeedback.message}
+            </p>
+          ) : null}
           {libraryLoadState.status === 'loaded' && libraryLoadState.warning ? (
             <p className="platform-library__feedback platform-library__feedback--warning" role="status">
               {libraryLoadState.warning}
@@ -433,26 +521,47 @@ export function AssetsHistoryPage({
                       <span>尺寸：{recordDimensions(record)}</span>
                     ) : null}
                   </div>
-                  {record.kind === 'audio' ? (
-                    <p>将在专业剪辑阶段使用</p>
-                  ) : project ? (
+                  <div className="platform-library__card-actions">
+                    {record.kind === 'audio' ? (
+                      <p>将在专业剪辑阶段使用</p>
+                    ) : project ? (
+                      <button
+                        type="button"
+                        aria-busy={attachingAssetId === record.id}
+                        disabled={
+                          attachingAssetId !== undefined ||
+                          pendingAssetDelete !== undefined ||
+                          (pendingCanvasOpen !== undefined &&
+                            pendingCanvasOpen.recordId !== record.id)
+                        }
+                        onClick={() => void attachAsset(record)}
+                      >
+                        {pendingCanvasOpen?.recordId === record.id
+                          ? `重试打开 ${pendingCanvasOpen.recordName} 的画布`
+                          : `添加 ${record.name} 到项目并打开画布`}
+                      </button>
+                    ) : (
+                      <p>创建项目后可添加到画布</p>
+                    )}
                     <button
                       type="button"
-                      aria-busy={attachingAssetId === record.id}
+                      aria-label={`删除素材：${record.name}`}
+                      className="platform-library__delete"
                       disabled={
                         attachingAssetId !== undefined ||
-                        (pendingCanvasOpen !== undefined &&
-                          pendingCanvasOpen.recordId !== record.id)
+                        pendingAssetDelete !== undefined
                       }
-                      onClick={() => void attachAsset(record)}
+                      onClick={(event) => {
+                        setDeleteFeedback(undefined)
+                        setPendingAssetDelete({
+                          record,
+                          trigger: event.currentTarget,
+                        })
+                      }}
                     >
-                      {pendingCanvasOpen?.recordId === record.id
-                        ? `重试打开 ${pendingCanvasOpen.recordName} 的画布`
-                        : `添加 ${record.name} 到项目并打开画布`}
+                      删除素材
                     </button>
-                  ) : (
-                    <p>创建项目后可添加到画布</p>
-                  )}
+                  </div>
                 </article>
               ))}
             </div>
@@ -549,28 +658,61 @@ export function AssetsHistoryPage({
             <section className="platform-section" aria-labelledby="version-list-title">
               <div className="platform-section__heading">
                 <div>
-                  <p>当前版本</p>
-                  <h2 id="version-list-title">节点来源</h2>
+                  <p>版本历史</p>
+                  <h2 id="version-list-title">节点版本来源</h2>
                 </div>
-                <span>{project.nodes.length} 个节点</span>
+                <span>
+                  {project.nodes.reduce((count, node) => count + node.versions.length, 0)} 个版本
+                </span>
               </div>
-              <ul className="platform-record-list">
-                {project.nodes.map((node) => {
-                  const version = node.versions.find(
-                    (candidate) => candidate.id === node.activeVersionId,
-                  )
-                  return (
-                    <li key={node.id}>
-                      <div>
-                        <strong>{node.title}</strong>
-                        <span>{version?.prompt ?? '尚无版本提示词'}</span>
-                      </div>
+              <ul className="platform-record-list platform-version-history">
+                {project.nodes.map((node) => (
+                  <li className="platform-version-history__node" key={node.id}>
+                    <div className="platform-version-history__node-heading">
+                      <strong>{node.title}</strong>
                       <Link to={`/project/${project.id}?focus=${node.id}`}>
                         在画布中查看 {node.title}
                       </Link>
-                    </li>
-                  )
-                })}
+                    </div>
+                    {node.versions.length > 0 ? (
+                      <ol className="platform-version-history__versions">
+                        {node.versions
+                          .map((version, index) => ({ version, index }))
+                          .sort((left, right) =>
+                            right.version.createdAt.localeCompare(left.version.createdAt) ||
+                            left.index - right.index,
+                          )
+                          .map(({ version }) => {
+                            const record = version.assetId
+                              ? libraryRecordsById.get(version.assetId)
+                              : undefined
+                            return (
+                              <li key={version.id}>
+                                <div className="platform-version-history__version-heading">
+                                  <strong>{version.id}</strong>
+                                  <span>
+                                    {version.id === node.activeVersionId ? '当前' : '历史'}
+                                  </span>
+                                </div>
+                                <p>{version.prompt || '尚无版本提示词'}</p>
+                                <span>创建时间：{readableCreatedAt(version.createdAt)}</span>
+                                {version.assetId ? (
+                                  <span>素材：{record?.name ?? version.assetId}</span>
+                                ) : (
+                                  <span>未关联素材</span>
+                                )}
+                                {version.generationJobId ? (
+                                  <span>生成任务：{version.generationJobId}</span>
+                                ) : null}
+                              </li>
+                            )
+                          })}
+                      </ol>
+                    ) : (
+                      <p>此节点尚无版本。</p>
+                    )}
+                  </li>
+                ))}
               </ul>
             </section>
 
@@ -610,6 +752,15 @@ export function AssetsHistoryPage({
           </>
         ) : null}
       </div>
+      {pendingAssetDelete ? (
+        <AssetDeleteDialog
+          assetName={pendingAssetDelete.record.name}
+          busy={deleteBusy}
+          returnFocusTo={pendingAssetDelete.trigger}
+          onCancel={() => setPendingAssetDelete(undefined)}
+          onConfirm={() => void deleteAsset()}
+        />
+      ) : null}
     </main>
   )
 }

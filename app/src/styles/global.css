@@ -3777,6 +3777,75 @@ select {
   opacity: 0.62;
 }
 
+.platform-library__card-actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.platform-library__card-actions > p {
+  min-height: 38px;
+  margin: 0;
+}
+
+.platform-library__card-actions > button {
+  margin-top: 0;
+}
+
+.platform-library__card-actions .platform-library__delete {
+  margin-top: 0;
+  border-color: rgb(226 127 120 / 30%);
+  color: #ffc2be;
+  background: rgb(226 127 120 / 10%);
+}
+
+.platform-version-history__node {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.platform-version-history__node-heading,
+.platform-version-history__version-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.platform-version-history__versions {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-version-history__versions > li {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.platform-version-history__versions p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.platform-version-history__versions span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.platform-version-history__version-heading > span {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  color: #d8d5ff;
+  background: rgb(114 104 240 / 18%);
+}
+
 .platform-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

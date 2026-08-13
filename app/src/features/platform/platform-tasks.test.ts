@@ -28,13 +28,14 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('advances to assets and history after stable real-generation model binding', () => {
+  test('advances to structured creative cards after asset lifecycle history', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
     expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
     expect(defaultPlatformTaskStatuses['project-home']).toBe('completed')
     expect(defaultPlatformTaskStatuses['canvas-workflow']).toBe('completed')
     expect(defaultPlatformTaskStatuses['models-generation']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['assets-history']).toBe('in-progress')
+    expect(defaultPlatformTaskStatuses['assets-history']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['creative-cards']).toBe('in-progress')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })
