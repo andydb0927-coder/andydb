@@ -8,6 +8,9 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   page.on('pageerror', (error) => browserErrors.push(error.message))
 
   await page.goto('/')
+  await expect(page.getByRole('navigation', { name: '首页导航' })).toBeVisible()
+  await page.getByRole('link', { name: '项目', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '全部项目' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: '平台导航' })).toBeVisible()
   await page.getByRole('link', { name: '工作流与模板' }).click()
   await page.getByRole('link', { name: '使用电影感叙事' }).click()
