@@ -111,7 +111,7 @@ export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'export-publish-share': 'completed',
   'community-works': 'completed',
   'collaboration-membership': 'completed',
-  'agent-skill-cli': 'in-progress',
+  'agent-skill-cli': 'completed',
 }
 
 export function isPlatformTaskId(value: string): value is PlatformTaskId {

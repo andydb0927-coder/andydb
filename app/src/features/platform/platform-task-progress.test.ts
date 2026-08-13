@@ -48,7 +48,7 @@ describe('platform task progress persistence', () => {
     expect(snapshot.statuses['export-publish-share']).toBe('completed')
     expect(snapshot.statuses['community-works']).toBe('completed')
     expect(snapshot.statuses['collaboration-membership']).toBe('completed')
-    expect(snapshot.statuses['agent-skill-cli']).toBe('in-progress')
+    expect(snapshot.statuses['agent-skill-cli']).toBe('completed')
   })
 
   test('persists known task statuses and removes unknown task ids', () => {

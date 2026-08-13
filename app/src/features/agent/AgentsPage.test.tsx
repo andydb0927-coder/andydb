@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, test, vi } from 'vitest'
 
 import { makeProjectFixture } from '../../test/fixtures'
+import { AgentSkillRegistry, type AgentSkillDefinition } from './agent-skill'
 import { AgentsPage } from './AgentsPage'
 
 function setup() {
@@ -21,17 +22,26 @@ function setup() {
       else disabled.add(id)
     }),
   }
+  const workspaceClient = {
+    loadManifest: vi.fn().mockResolvedValue({
+      namespace: 'wireless-canvas.workspace',
+      commands: [
+        { id: 'workspace.project.export', description: '导出无线画布项目 JSON' },
+      ],
+    }),
+  }
   render(
     <MemoryRouter>
       <AgentsPage
         repository={repository}
         timelineRepository={timelineRepository}
         enablementStore={enablementStore}
+        workspaceClient={workspaceClient}
         environment={{ now: () => '2026-08-13T10:00:00.000Z', randomId: () => 'result-node' }}
       />
     </MemoryRouter>,
   )
-  return { project, repository, enablementStore }
+  return { project, repository, enablementStore, workspaceClient }
 }
 
 describe('Agents page', () => {
@@ -66,5 +76,58 @@ describe('Agents page', () => {
     expect(saved.id).toBe(project.id)
     expect(saved.nodes.at(-1)).toMatchObject({ id: 'result-node', kind: 'text' })
     expect(await screen.findByText('结果已写入画布文本节点')).toBeVisible()
+    expect(within(result).getByRole('button', { name: '已写入画布' })).toBeDisabled()
+    expect(repository.save).toHaveBeenCalledTimes(1)
+  })
+
+  test('shows the same-origin workspace CLI manifest without executing a command', async () => {
+    const { workspaceClient } = setup()
+
+    const panel = await screen.findByRole('region', { name: '本地工作区 CLI' })
+    expect(within(panel).getByText('CLI 桥接已连接')).toBeVisible()
+    expect(within(panel).getByText('workspace.project.export')).toBeVisible()
+    expect(workspaceClient.loadManifest).toHaveBeenCalledTimes(1)
+  })
+
+  test('cancels one asynchronous skill and blocks cross-skill duplicate execution', async () => {
+    const project = makeProjectFixture()
+    const repository = { listRecent: vi.fn().mockResolvedValue([project]), save: vi.fn() }
+    let resolveSlow!: (value: { title: string; summary: string; content: string; format: 'text' }) => void
+    const slow: AgentSkillDefinition = {
+      id: 'test.slow', version: 1, name: '慢速技能', description: '异步测试', category: 'maintenance', outputMode: 'card-or-node',
+      inputSchema: { type: 'object', properties: {} },
+      execute: () => new Promise((resolve) => { resolveSlow = resolve }),
+    }
+    const other: AgentSkillDefinition = {
+      ...slow,
+      id: 'test.other',
+      name: '其他技能',
+      execute: () => ({ title: '其他', summary: '其他', content: '其他', format: 'text' }),
+    }
+    const runtime = { definitions: [slow, other], registry: new AgentSkillRegistry([slow, other]) }
+    render(
+      <MemoryRouter>
+        <AgentsPage
+          repository={repository}
+          timelineRepository={{ load: vi.fn().mockResolvedValue(undefined) }}
+          enablementStore={{ isEnabled: () => true, setEnabled: vi.fn() }}
+          runtime={runtime}
+          workspaceClient={{ loadManifest: vi.fn().mockRejectedValue(new Error('PRIVATE network')) }}
+        />
+      </MemoryRouter>,
+    )
+
+    const slowCard = await screen.findByRole('article', { name: '慢速技能' })
+    const otherCard = screen.getByRole('article', { name: '其他技能' })
+    await userEvent.click(within(slowCard).getByRole('button', { name: '运行技能' }))
+    expect(within(otherCard).getByRole('button', { name: '运行技能' })).toBeDisabled()
+    await userEvent.click(within(slowCard).getByRole('button', { name: '取消执行' }))
+    resolveSlow({ title: '过期', summary: '过期', content: '过期', format: 'text' })
+
+    expect(await screen.findByText('技能执行已取消')).toBeVisible()
+    expect(screen.queryByRole('region', { name: '技能执行结果' })).not.toBeInTheDocument()
+    const cliPanel = await screen.findByRole('region', { name: '本地工作区 CLI' })
+    expect(within(cliPanel).getByText('当前构建未启用本地 CLI 桥接')).toBeVisible()
+    expect(cliPanel).not.toHaveTextContent('PRIVATE')
   })
 })

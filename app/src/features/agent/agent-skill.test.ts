@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest'
 
 import { makeProjectFixture } from '../../test/fixtures'
 import {
+  AgentSkillExecutionCancelledError,
+  AgentSkillOutputError,
   AgentSkillRegistry,
   AgentSkillValidationError,
   createSkillEnablementStore,
@@ -64,6 +66,41 @@ describe('Agent skill registry', () => {
     await expect(
       registry.execute('test.echo', { message: 'a', private: 'x' }, context),
     ).rejects.toThrow('不支持的字段')
+  })
+
+  test('rejects malformed plugin output with a stable output error', async () => {
+    const invalid = {
+      ...skill,
+      id: 'test.invalid-output',
+      execute: () => ({ title: ' ', summary: '摘要', content: '正文', format: 'text' as const }),
+    }
+
+    await expect(
+      new AgentSkillRegistry([invalid]).execute(
+        invalid.id,
+        { message: '你好' },
+        { project: makeProjectFixture() },
+      ),
+    ).rejects.toBeInstanceOf(AgentSkillOutputError)
+  })
+
+  test('discards an asynchronous result when its signal is cancelled', async () => {
+    let resolveResult!: (value: Awaited<ReturnType<AgentSkillDefinition['execute']>>) => void
+    const pendingSkill: AgentSkillDefinition = {
+      ...skill,
+      id: 'test.pending',
+      execute: () => new Promise((resolve) => { resolveResult = resolve }),
+    }
+    const controller = new AbortController()
+    const execution = new AgentSkillRegistry([pendingSkill]).execute(
+      pendingSkill.id,
+      { message: '你好' },
+      { project: makeProjectFixture(), signal: controller.signal },
+    )
+
+    controller.abort()
+    resolveResult({ title: '过期', summary: '过期', content: '过期', format: 'text' })
+    await expect(execution).rejects.toBeInstanceOf(AgentSkillExecutionCancelledError)
   })
 })
 

@@ -5100,7 +5100,8 @@ select {
 }
 
 .agent-skill-card,
-.agent-result-card {
+.agent-result-card,
+.agent-cli-status {
   padding: var(--space-5);
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 14px;
@@ -5196,11 +5197,43 @@ select {
 
 .agent-result-card > div { display: flex; align-items: center; gap: var(--space-3); }
 .agent-result-card a { display: inline-flex; align-items: center; text-decoration: none; }
+.agent-cli-status {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.agent-cli-status h2 { margin: var(--space-1) 0 0; }
+.agent-cli-status p { margin: 0; color: var(--text-muted); line-height: 1.55; }
+.agent-cli-status strong { color: var(--text-primary); }
+.agent-cli-status ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-cli-status li {
+  display: grid;
+  grid-template-columns: minmax(210px, auto) 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: rgb(0 0 0 / 16%);
+}
+
+.agent-cli-status code { color: var(--focus-ring); overflow-wrap: anywhere; }
 .agent-feedback { color: var(--text-secondary); }
 .director-composer__skills-link { color: var(--focus-ring); font-size: 0.75rem; }
 
 @media (max-width: 760px) {
   .agent-skill-grid { grid-template-columns: 1fr; }
+  .agent-cli-status { grid-template-columns: 1fr; }
+  .agent-cli-status li { grid-template-columns: 1fr; }
 }
 
 .membership-gate {

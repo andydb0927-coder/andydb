@@ -2,7 +2,7 @@
 
 ## Agent 技能与本地插件
 
-技能契约位于 `app/src/features/agent/agent-skill.ts`。每个技能必须提供稳定 id、名称、描述、版本、输入 schema 和执行函数，并返回标题、摘要、正文与格式。执行函数只能使用显式 `input` 和只读 `AgentSkillContext`；禁止在技能内部读取全局 store、发起网络请求或调用生成 provider。
+技能契约位于 `app/src/features/agent/agent-skill.ts`。每个技能必须提供稳定 id、名称、描述、版本、输入 schema 和执行函数，并返回非空标题、摘要、正文与受支持格式。执行函数只能使用显式 `input` 和只读 `AgentSkillContext`；禁止在技能内部读取全局 store、发起网络请求或调用生成 provider。异步技能应监听 `context.signal`，并在耗时工作中尽早停止；注册表会在开始前与结果返回后再次检查取消状态。
 
 加载点是 `app/src/features/agent/skill-loader.ts` 的 `loadAgentSkillPlugins()`：
 
@@ -15,9 +15,9 @@ const runtime = loadAgentSkillPlugins([
 ])
 ```
 
-内置技能始终先加载；重复 plugin id 或 skill id 会在启动时失败。当前没有从任意磁盘路径动态执行代码，新增插件应通过受版本控制的显式 import 接入。每个技能至少要测试：schema 默认值、非法输入、确定性输出和无副作用边界。
+内置技能始终先加载；重复 plugin id 或 skill id 会在启动时失败。当前没有从任意磁盘路径动态执行代码，新增插件应通过受版本控制的显式 import 接入。每个技能至少要测试：schema 默认值、非法输入、非法输出、取消后的过期结果丢弃、确定性输出和无副作用边界。
 
-启停状态由 `createSkillEnablementStore()` 保存到 localStorage，只保存禁用 id，不保存项目内容。结果写入画布时使用 `appendSkillResultNode()`，以新文本节点追加，不覆盖既有节点。
+启停状态由 `createSkillEnablementStore()` 保存到 localStorage，只保存禁用 id，不保存项目内容。结果绑定执行时的项目，写入画布时使用 `appendSkillResultNode()`，以新文本节点追加，不覆盖既有节点；页面成功写入后会锁定入口，避免同一结果被重复写入。
 
 ## 真实生成提供方
 

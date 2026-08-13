@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
@@ -6,14 +6,22 @@ import type { Project } from '../project/model'
 import { TimelineRepository } from '../timeline/timeline-repository'
 import type { TimelineProjectRepository } from '../timeline/timeline-repository'
 import {
+  AgentSkillExecutionCancelledError,
+  AgentSkillOutputError,
+  AgentSkillValidationError,
   createSkillEnablementStore,
   type AgentSkillDefinition,
   type AgentSkillInput,
   type AgentSkillResult,
   type SkillEnablementStore,
 } from './agent-skill'
-import { defaultAgentSkillRuntime } from './skill-loader'
+import { defaultAgentSkillRuntime, type AgentSkillRuntime } from './skill-loader'
 import { appendSkillResultNode, type SkillResultEnvironment } from './skill-result-node'
+import {
+  defaultWorkspaceManifestClient,
+  type WorkspaceManifestClient,
+  type WorkspaceManifestSummary,
+} from './workspace-manifest-client'
 
 type AgentProjectRepository = Pick<ProjectRepository, 'listRecent' | 'save'>
 
@@ -22,13 +30,13 @@ export interface AgentsPageProps {
   timelineRepository?: Pick<TimelineProjectRepository, 'load'>
   enablementStore?: SkillEnablementStore
   environment?: SkillResultEnvironment
+  runtime?: AgentSkillRuntime
+  workspaceClient?: WorkspaceManifestClient
 }
 
 const database = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(database)
 const defaultTimelineRepository = new TimelineRepository(database)
-const { definitions: agentSkills, registry: agentSkillRegistry } = defaultAgentSkillRuntime
-
 function initialInput(definition: AgentSkillDefinition): AgentSkillInput {
   return Object.fromEntries(
     Object.entries(definition.inputSchema.properties).flatMap(([key, property]) =>
@@ -42,10 +50,14 @@ export function AgentsPage({
   timelineRepository = defaultTimelineRepository,
   enablementStore: suppliedEnablementStore,
   environment,
+  runtime = defaultAgentSkillRuntime,
+  workspaceClient = defaultWorkspaceManifestClient,
 }: AgentsPageProps) {
+  const agentSkills = runtime.definitions
+  const agentSkillRegistry = runtime.registry
   const enablementStore = useMemo(
     () => suppliedEnablementStore ?? createSkillEnablementStore(localStorage, agentSkills),
-    [suppliedEnablementStore],
+    [agentSkills, suppliedEnablementStore],
   )
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
@@ -54,8 +66,20 @@ export function AgentsPage({
   )
   const [enablementVersion, setEnablementVersion] = useState(0)
   const [runningSkillId, setRunningSkillId] = useState<string>()
-  const [result, setResult] = useState<{ skill: AgentSkillDefinition; value: AgentSkillResult }>()
+  const [result, setResult] = useState<{
+    skill: AgentSkillDefinition
+    value: AgentSkillResult
+    projectId: string
+  }>()
+  const [writeStatus, setWriteStatus] = useState<'idle' | 'saving' | 'written'>('idle')
   const [feedback, setFeedback] = useState<string>()
+  const [cliState, setCliState] = useState<
+    { status: 'loading' } |
+    { status: 'ready'; manifest: WorkspaceManifestSummary } |
+    { status: 'unavailable' }
+  >({ status: 'loading' })
+  const abortControllerRef = useRef<AbortController | undefined>(undefined)
+  const runTokenRef = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -67,35 +91,96 @@ export function AgentsPage({
     return () => { active = false }
   }, [repository])
 
+  useEffect(() => {
+    let active = true
+    setCliState({ status: 'loading' })
+    void workspaceClient.loadManifest().then((manifest) => {
+      if (active) setCliState({ status: 'ready', manifest })
+    }).catch(() => {
+      if (active) setCliState({ status: 'unavailable' })
+    })
+    return () => { active = false }
+  }, [workspaceClient])
+
+  useEffect(() => () => {
+    runTokenRef.current += 1
+    abortControllerRef.current?.abort()
+  }, [])
+
   const selectedProject = projects.find(({ id }) => id === selectedProjectId)
 
   const runSkill = async (skill: AgentSkillDefinition) => {
-    if (!selectedProject || !enablementStore.isEnabled(skill.id)) return
+    if (runningSkillId || !selectedProject || !enablementStore.isEnabled(skill.id)) return
+    const projectAtStart = selectedProject
+    const controller = new AbortController()
+    const token = runTokenRef.current + 1
+    runTokenRef.current = token
+    abortControllerRef.current = controller
     setRunningSkillId(skill.id)
+    setResult(undefined)
+    setWriteStatus('idle')
     setFeedback(undefined)
     try {
-      const timeline = await timelineRepository.load(selectedProject.id)
+      const timeline = await timelineRepository.load(projectAtStart.id)
+      if (controller.signal.aborted) throw new AgentSkillExecutionCancelledError()
       const value = await agentSkillRegistry.execute(
         skill.id,
         inputs[skill.id] ?? {},
-        { project: selectedProject, timeline },
+        { project: projectAtStart, timeline, signal: controller.signal },
       )
-      setResult({ skill, value })
+      if (token === runTokenRef.current && !controller.signal.aborted) {
+        setResult({ skill, value, projectId: projectAtStart.id })
+      }
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : '技能执行失败')
+      if (token === runTokenRef.current) {
+        if (controller.signal.aborted || error instanceof AgentSkillExecutionCancelledError) {
+          setFeedback('技能执行已取消')
+        } else if (
+          error instanceof AgentSkillValidationError ||
+          error instanceof AgentSkillOutputError
+        ) {
+          setFeedback(error.message)
+        } else {
+          setFeedback('技能执行失败')
+        }
+      }
     } finally {
-      setRunningSkillId(undefined)
+      if (token === runTokenRef.current) {
+        abortControllerRef.current = undefined
+        setRunningSkillId(undefined)
+      }
     }
   }
 
+  const cancelSkill = () => {
+    abortControllerRef.current?.abort()
+  }
+
+  const selectProject = (projectId: string) => {
+    runTokenRef.current += 1
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = undefined
+    setRunningSkillId(undefined)
+    setResult(undefined)
+    setWriteStatus('idle')
+    setFeedback(undefined)
+    setSelectedProjectId(projectId)
+  }
+
   const writeResult = async () => {
-    if (!selectedProject || !result) return
+    if (
+      !selectedProject || !result || result.projectId !== selectedProject.id ||
+      writeStatus !== 'idle'
+    ) return
+    setWriteStatus('saving')
     try {
       const next = appendSkillResultNode(selectedProject, result.value, environment)
       await repository.save(next)
       setProjects((current) => current.map((project) => project.id === next.id ? next : project))
+      setWriteStatus('written')
       setFeedback('结果已写入画布文本节点')
     } catch {
+      setWriteStatus('idle')
       setFeedback('无法写入本地项目')
     }
   }
@@ -104,13 +189,13 @@ export function AgentsPage({
     <main className="platform-page agents-page">
       <header className="platform-page__header">
         <p className="platform-page__eyebrow">LOCAL AGENT · SKILL REGISTRY</p>
-        <h1>Agent 技能中心</h1>
+        <h1>Agent、Skill 与 CLI</h1>
         <p>五个内置技能均使用本地确定性逻辑；不调用外部 LibTV、不消耗积分，也不会上传项目数据。</p>
       </header>
 
       <label className="platform-page__project-picker">
         执行项目
-        <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
+        <select value={selectedProjectId} onChange={(event) => selectProject(event.target.value)}>
           {projects.length ? null : <option value="">暂无本地项目</option>}
           {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
         </select>
@@ -173,16 +258,47 @@ export function AgentsPage({
                   </label>
                 ))}
               </div>
-              <button
-                type="button"
-                disabled={!enabled || !selectedProject || runningSkillId === skill.id}
-                onClick={() => void runSkill(skill)}
-              >
-                {runningSkillId === skill.id ? '执行中…' : '运行技能'}
-              </button>
+              {runningSkillId === skill.id ? (
+                <button type="button" onClick={cancelSkill}>取消执行</button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!enabled || !selectedProject || Boolean(runningSkillId)}
+                  onClick={() => void runSkill(skill)}
+                >
+                  运行技能
+                </button>
+              )}
             </article>
           )
         })}
+      </section>
+
+      <section className="agent-cli-status" role="region" aria-labelledby="agent-cli-heading">
+        <div>
+          <p className="platform-page__eyebrow">SAME-ORIGIN WORKSPACE BRIDGE</p>
+          <h2 id="agent-cli-heading">本地工作区 CLI</h2>
+        </div>
+        {cliState.status === 'loading' ? <p role="status">正在检测本地 CLI 桥接…</p> : null}
+        {cliState.status === 'ready' ? (
+          <div>
+            <strong>CLI 桥接已连接</strong>
+            <ul>
+              {cliState.manifest.commands.map((command) => (
+                <li key={command.id}>
+                  <code>{command.id}</code>
+                  <span>{command.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {cliState.status === 'unavailable' ? (
+          <div>
+            <strong>当前构建未启用本地 CLI 桥接</strong>
+            <p>技能仍可在浏览器内本地运行；CLI 命令只在已启动工作区桥接的开发或预览环境显示。</p>
+          </div>
+        ) : null}
       </section>
 
       {result ? (
@@ -192,8 +308,14 @@ export function AgentsPage({
           <p>{result.value.summary}</p>
           <pre>{result.value.content}</pre>
           <div>
-            <button type="button" disabled={!selectedProject} onClick={() => void writeResult()}>写入画布节点</button>
-            {selectedProject ? <Link to={`/project/${selectedProject.id}`}>打开项目画布</Link> : null}
+            <button
+              type="button"
+              disabled={!selectedProject || selectedProject.id !== result.projectId || writeStatus !== 'idle'}
+              onClick={() => void writeResult()}
+            >
+              {writeStatus === 'saving' ? '写入中…' : writeStatus === 'written' ? '已写入画布' : '写入画布节点'}
+            </button>
+            <Link to={`/project/${result.projectId}`}>打开项目画布</Link>
           </div>
         </section>
       ) : null}

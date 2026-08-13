@@ -25,6 +25,7 @@ export interface AgentSkillInputSchema {
 export interface AgentSkillContext {
   project: Project
   timeline?: TimelineProject
+  signal?: AbortSignal
 }
 
 export interface AgentSkillResult {
@@ -50,6 +51,24 @@ export interface AgentSkillDefinition {
 
 export class AgentSkillValidationError extends Error {
   readonly code = 'SKILL_INPUT_INVALID'
+}
+
+export class AgentSkillExecutionCancelledError extends Error {
+  readonly code = 'SKILL_EXECUTION_CANCELLED'
+
+  constructor() {
+    super('技能执行已取消')
+    this.name = 'AgentSkillExecutionCancelledError'
+  }
+}
+
+export class AgentSkillOutputError extends Error {
+  readonly code = 'SKILL_OUTPUT_INVALID'
+
+  constructor() {
+    super('技能输出结构无效')
+    this.name = 'AgentSkillOutputError'
+  }
 }
 
 export class AgentSkillRegistry {
@@ -80,7 +99,34 @@ export class AgentSkillRegistry {
     if (!definition) {
       throw new AgentSkillValidationError(`未知技能：${id}`)
     }
-    return definition.execute(validateInput(input, definition.inputSchema), context)
+    if (context.signal?.aborted) throw new AgentSkillExecutionCancelledError()
+    const output: unknown = await definition.execute(
+      validateInput(input, definition.inputSchema),
+      context,
+    )
+    if (context.signal?.aborted) throw new AgentSkillExecutionCancelledError()
+    return validateOutput(output)
+  }
+}
+
+function validateOutput(output: unknown): AgentSkillResult {
+  if (typeof output !== 'object' || output === null) {
+    throw new AgentSkillOutputError()
+  }
+  const candidate = output as Partial<Record<keyof AgentSkillResult, unknown>>
+  if (
+    typeof candidate.title !== 'string' || candidate.title.trim() === '' ||
+    typeof candidate.summary !== 'string' || candidate.summary.trim() === '' ||
+    typeof candidate.content !== 'string' || candidate.content.trim() === '' ||
+    (candidate.format !== 'text' && candidate.format !== 'markdown')
+  ) {
+    throw new AgentSkillOutputError()
+  }
+  return {
+    title: candidate.title,
+    summary: candidate.summary,
+    content: candidate.content,
+    format: candidate.format,
   }
 }
 
