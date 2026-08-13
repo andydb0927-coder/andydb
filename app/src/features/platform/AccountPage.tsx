@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+
+import {
+  createLocalAccountPreferenceStore,
+  LOCAL_ACCOUNT_PREFERENCES_KEY,
+  type LocalAccountPreferenceStore,
+} from '../account/local-account-preferences'
 
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
 import type { Collaborator, CollaboratorRole } from '../collaboration/collaboration-model'
@@ -33,6 +39,7 @@ export interface AccountPageProps {
   membershipStore?: MembershipStore
   collaborationStore?: CollaborationStore
   packageStore?: PackageStore
+  preferenceStore?: LocalAccountPreferenceStore
   onCopy?(value: string): Promise<void>
   onDownload?(value: LocalProjectPackage | LocalWorkspacePackage, filename: string): void
 }
@@ -42,6 +49,7 @@ const defaultRepository = new ProjectRepository(database)
 const defaultMembershipStore = new MembershipRepository(database)
 const defaultCollaborationStore = new CollaborationRepository(database)
 const defaultPackageStore = new ProjectPackageRepository(database)
+const defaultPreferenceStore = createLocalAccountPreferenceStore()
 
 const roleCopy: Record<CollaboratorRole, string> = {
   owner: '所有者', editor: '编辑者', viewer: '只读',
@@ -52,11 +60,18 @@ async function copyToClipboard(value: string) {
   await navigator.clipboard.writeText(value)
 }
 
+function readableLocalBytes(value: number) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / 1024 ** 2).toFixed(1)} MB`
+}
+
 export function AccountPage({
   repository = defaultRepository,
   membershipStore = defaultMembershipStore,
   collaborationStore = defaultCollaborationStore,
   packageStore = defaultPackageStore,
+  preferenceStore = defaultPreferenceStore,
   onCopy = copyToClipboard,
   onDownload = downloadJson,
 }: AccountPageProps) {
@@ -68,18 +83,37 @@ export function AccountPage({
   const [collaboratorName, setCollaboratorName] = useState('')
   const [collaboratorRole, setCollaboratorRole] = useState<'editor' | 'viewer'>('editor')
   const [feedback, setFeedback] = useState<string>()
+  const [preferences, setPreferences] = useState(() => preferenceStore.read())
+  const [displayName, setDisplayName] = useState(() => preferences.displayName)
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     const records = await repository.listRecent(100)
     setProjects(records)
     setSelectedProjectId((current) => current || records[0]?.id || '')
-  }
+  }, [repository])
 
   useEffect(() => {
     void Promise.all([loadProjects(), membershipStore.get().then(setSubscription)]).catch(() => {
       setFeedback('无法读取本地工作区')
     })
-  }, [membershipStore, repository])
+  }, [loadProjects, membershipStore])
+
+  useEffect(() => {
+    const next = preferenceStore.read()
+    setPreferences(next)
+    setDisplayName(next.displayName)
+  }, [preferenceStore])
+
+  useEffect(() => {
+    const syncPreferences = (event: StorageEvent) => {
+      if (event.key !== LOCAL_ACCOUNT_PREFERENCES_KEY) return
+      const next = preferenceStore.read()
+      setPreferences(next)
+      setDisplayName(next.displayName)
+    }
+    window.addEventListener('storage', syncPreferences)
+    return () => window.removeEventListener('storage', syncPreferences)
+  }, [preferenceStore])
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -104,6 +138,20 @@ export function AccountPage({
     nodes: projects.reduce((total, project) => total + project.nodes.length, 0),
     assets: projects.reduce((total, project) => total + project.assets.length, 0),
   }), [projects])
+  const localBytes = useMemo(
+    () => new TextEncoder().encode(JSON.stringify(projects)).byteLength,
+    [projects],
+  )
+
+  const savePreferences = (
+    next: Pick<typeof preferences, 'displayName' | 'aiWatermark' | 'inAppNotifications'>,
+    message: string,
+  ) => {
+    const saved = preferenceStore.write(next)
+    setPreferences(saved)
+    setDisplayName(saved.displayName)
+    setFeedback(message)
+  }
 
   const changePlan = async (plan: Exclude<MembershipPlanId, 'free'>) => {
     try {
@@ -166,10 +214,93 @@ export function AccountPage({
   return (
     <main className="platform-page account-page">
       <header className="platform-page__header">
-        <p className="platform-page__eyebrow">LOCAL WORKSPACE · 本地模拟</p>
-        <h1>本地工作区</h1>
-        <p>会员、角色、评论和分享均只保存在当前浏览器；无账号后端、云同步或真实支付。</p>
+        <p className="platform-page__eyebrow">ACCOUNT & SPACE · 本地模式</p>
+        <h1>账户与本地空间</h1>
+        <p>身份偏好、会员、角色、评论和分享只保存在当前浏览器；未连接云账户、实时团队或真实支付。</p>
       </header>
+
+      <div className="account-identity-grid">
+        <section className="platform-section account-identity" aria-labelledby="local-identity-title">
+          <div className="platform-section__heading">
+            <div><p>LOCAL IDENTITY</p><h2 id="local-identity-title">本地身份</h2></div>
+            <span className="account-local-status">本地模式</span>
+          </div>
+          <div className="account-profile">
+            <span className="account-profile__avatar" aria-hidden="true">
+              {preferences.displayName.slice(0, 1).toLocaleUpperCase()}
+            </span>
+            <div><strong>{preferences.displayName}</strong><span>当前设备创作者</span></div>
+          </div>
+          <label className="account-profile__field">
+            本地创作者名称
+            <input value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} />
+          </label>
+          <button
+            className="account-secondary-action"
+            type="button"
+            onClick={() => savePreferences({ ...preferences, displayName }, '本地身份已保存')}
+          >
+            保存本地身份
+          </button>
+          <ul className="account-capability-list">
+            <li><span>云账户</span><strong>云账户：未连接</strong></li>
+            <li><span>认证数据</span><strong>不保存邮箱、密码或令牌</strong></li>
+          </ul>
+        </section>
+
+        <section className="platform-section account-space" aria-labelledby="local-space-title">
+          <div className="platform-section__heading">
+            <div><p>PERSONAL SPACE</p><h2 id="local-space-title">个人本地空间</h2></div>
+            <strong>当前空间</strong>
+          </div>
+          <p className="account-space__summary">
+            {projects.length} 个项目 · {stats.nodes} 个节点 · {stats.assets} 个素材
+          </p>
+          <p className="account-space__storage">本地数据约 {readableLocalBytes(localBytes)}</p>
+          <div className="account-space__links">
+            <Link to="/">打开项目空间</Link>
+            <Link to="/assets">打开素材库</Link>
+          </div>
+          <div className="account-space__boundary">
+            <strong>团队空间：未接入</strong>
+            <p>需要服务端身份、成员权限和云端项目隔离后才能启用。</p>
+          </div>
+        </section>
+      </div>
+
+      <section className="platform-section account-preferences" aria-labelledby="preferences-title">
+        <div className="platform-section__heading">
+          <div><p>DEVICE PREFERENCES</p><h2 id="preferences-title">设备创作偏好</h2></div>
+          <Link to="/agents">查看 Agent 与 CLI</Link>
+        </div>
+        <div className="account-preference-list">
+          <label>
+            <input
+              type="checkbox"
+              aria-label="生成内容默认添加 AI 标识"
+              checked={preferences.aiWatermark}
+              onChange={(event) => savePreferences(
+                { ...preferences, aiWatermark: event.currentTarget.checked },
+                'AI 标识偏好已保存',
+              )}
+            />
+            <span><strong>生成内容默认添加 AI 标识</strong><small>仅保存偏好；真实生成器接入时读取。</small></span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              aria-label="显示站内任务状态提醒"
+              checked={preferences.inAppNotifications}
+              onChange={(event) => savePreferences(
+                { ...preferences, inAppNotifications: event.currentTarget.checked },
+                '站内提醒偏好已保存',
+              )}
+            />
+            <span><strong>显示站内任务状态提醒</strong><small>不申请系统通知权限，不向外部发送消息。</small></span>
+          </label>
+        </div>
+        <p className="account-boundary-note">Access key 未生成；当前 CLI 仅通过本地工作区桥接运行。</p>
+      </section>
 
       <section className="account-summary" aria-label="我的项目统计">
         <div><span>项目</span><strong>{projects.length} 个本地项目</strong></div>

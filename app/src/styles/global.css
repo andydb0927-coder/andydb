@@ -3843,6 +3843,174 @@ select {
   gap: var(--space-3);
 }
 
+.account-identity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.account-identity,
+.account-space {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.account-local-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(100 208 158 / 28%);
+  border-radius: 999px;
+  color: var(--status-success);
+  background: rgb(100 208 158 / 8%);
+  font-size: 0.75rem;
+}
+
+.account-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.account-profile__avatar {
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgb(169 162 255 / 32%);
+  border-radius: 50%;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), #3c375f);
+  font-weight: 750;
+}
+
+.account-profile > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.account-profile > div span,
+.account-space__storage,
+.account-space__boundary p,
+.account-preference-list small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.account-profile__field {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.account-profile__field input {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface-node);
+}
+
+.account-secondary-action {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(169 162 255 / 32%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(114 104 240 / 14%);
+  cursor: pointer;
+}
+
+.account-capability-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-capability-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  font-size: 0.75rem;
+}
+
+.account-capability-list li span {
+  color: var(--text-muted);
+}
+
+.account-space__summary,
+.account-space__storage,
+.account-space__boundary p {
+  margin: 0;
+}
+
+.account-space__summary {
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.account-space__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.account-space__links a,
+.account-preferences .platform-section__heading a {
+  color: var(--focus-ring);
+}
+
+.account-space__boundary {
+  padding: var(--space-3);
+  border: 1px dashed rgb(255 255 255 / 14%);
+  border-radius: 8px;
+}
+
+.account-space__boundary p {
+  margin-top: var(--space-1);
+  line-height: 1.5;
+}
+
+.account-preference-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.account-preference-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.account-preference-list input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+  accent-color: var(--accent);
+}
+
+.account-preference-list span {
+  display: grid;
+  gap: var(--space-1);
+}
+
 .account-summary > div {
   display: grid;
   gap: var(--space-2);
@@ -4174,6 +4342,10 @@ select {
 .collaboration-comments button:disabled { opacity: .48; cursor: not-allowed; }
 
 @media (max-width: 720px) {
+  .account-identity-grid,
+  .account-preference-list {
+    grid-template-columns: 1fr;
+  }
   .account-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .membership-matrix { display: block; overflow-x: auto; }
   .collaborator-list li { align-items: stretch; flex-direction: column; }

@@ -100,8 +100,8 @@ export type PlatformTaskStatuses = Record<PlatformTaskId, PlatformTaskStatus>
 
 export const defaultPlatformTaskStatuses: PlatformTaskStatuses = {
   'platform-shell': 'completed',
-  'account-space': 'in-progress',
-  'project-home': 'pending',
+  'account-space': 'completed',
+  'project-home': 'in-progress',
   'canvas-workflow': 'pending',
   'models-generation': 'pending',
   'assets-history': 'pending',

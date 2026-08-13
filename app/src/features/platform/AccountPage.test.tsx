@@ -6,6 +6,7 @@ import { expect, test, vi } from 'vitest'
 import { makeProjectFixture } from '../../test/fixtures'
 import { createFreeSubscription, subscribe } from '../membership/membership-model'
 import { serializeProjectPackage, type LocalProjectPackage } from '../collaboration/project-package'
+import type { LocalAccountPreferenceStore } from '../account/local-account-preferences'
 import { AccountPage } from './AccountPage'
 
 function setup() {
@@ -91,4 +92,53 @@ test('manages collaborators and project package backup without network calls', a
   expect(dependencies.packageStore.importProject).toHaveBeenCalledWith(
     expect.objectContaining({ kind: 'wireless-canvas-project' }),
   )
+})
+
+test('presents an honest local identity, personal space, and persisted device preferences', async () => {
+  const user = userEvent.setup()
+  const dependencies = setup()
+  const preferenceStore: LocalAccountPreferenceStore = {
+    read: vi.fn().mockReturnValue({
+      version: 1,
+      displayName: '本机创作者',
+      aiWatermark: true,
+      inAppNotifications: true,
+    }),
+    write: vi.fn().mockImplementation((value) => ({
+      version: 1,
+      ...value,
+      displayName: value.displayName.trim() || '本机创作者',
+      updatedAt: '2026-08-13T09:00:00.000Z',
+    })),
+  }
+
+  render(
+    <MemoryRouter>
+      <AccountPage {...dependencies} preferenceStore={preferenceStore} />
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('heading', { name: '本地身份' })).toBeVisible()
+  expect(screen.getByText('本地模式')).toBeVisible()
+  expect(screen.getByRole('heading', { name: '个人本地空间' })).toBeVisible()
+  expect(screen.getByText('云账户：未连接')).toBeVisible()
+  expect(screen.getByText('团队空间：未接入')).toBeVisible()
+  expect(screen.getByText(/本地数据约/)).toBeVisible()
+  expect(screen.getByRole('link', { name: '打开项目空间' })).toHaveAttribute('href', '/')
+  expect(screen.getByRole('link', { name: '打开素材库' })).toHaveAttribute('href', '/assets')
+  expect(screen.getByRole('link', { name: '查看 Agent 与 CLI' })).toHaveAttribute('href', '/agents')
+
+  await user.clear(screen.getByRole('textbox', { name: '本地创作者名称' }))
+  await user.type(screen.getByRole('textbox', { name: '本地创作者名称' }), ' 安迪导演 ')
+  await user.click(screen.getByRole('button', { name: '保存本地身份' }))
+
+  expect(preferenceStore.write).toHaveBeenCalledWith(expect.objectContaining({
+    displayName: ' 安迪导演 ',
+  }))
+  expect(await screen.findByText('本地身份已保存')).toBeVisible()
+
+  await user.click(screen.getByRole('checkbox', { name: '生成内容默认添加 AI 标识' }))
+  expect(preferenceStore.write).toHaveBeenLastCalledWith(expect.objectContaining({
+    aiWatermark: false,
+  }))
 })

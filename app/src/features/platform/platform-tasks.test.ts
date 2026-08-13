@@ -28,10 +28,10 @@ describe('platform task catalogue', () => {
     ])
   })
 
-  test('starts the next sequential phase without overstating later completion', () => {
+  test('advances to project home after the account and space phase', () => {
     expect(defaultPlatformTaskStatuses['platform-shell']).toBe('completed')
-    expect(defaultPlatformTaskStatuses['account-space']).toBe('in-progress')
-    expect(defaultPlatformTaskStatuses['project-home']).toBe('pending')
+    expect(defaultPlatformTaskStatuses['account-space']).toBe('completed')
+    expect(defaultPlatformTaskStatuses['project-home']).toBe('in-progress')
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
 })

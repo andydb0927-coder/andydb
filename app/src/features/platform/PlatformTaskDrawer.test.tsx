@@ -26,8 +26,8 @@ describe('platform task drawer', () => {
     renderDrawer()
 
     expect(screen.getByRole('complementary', { name: '平台完善路线图' })).toBeVisible()
-    expect(screen.getByText('1 / 13 已完成')).toBeVisible()
-    expect(screen.getByText(/当前阶段：/)).toHaveTextContent('当前阶段：账号与空间')
+    expect(screen.getByText('2 / 13 已完成')).toBeVisible()
+    expect(screen.getByText(/当前阶段：/)).toHaveTextContent('当前阶段：项目首页')
     expect(screen.getAllByRole('listitem')).toHaveLength(13)
     expect(screen.getByRole('link', { name: '打开 平台骨架' })).toHaveAttribute('href', '/')
   })

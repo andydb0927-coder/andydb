@@ -37,7 +37,8 @@ describe('platform task progress persistence', () => {
     const snapshot = createPlatformTaskProgressStore(storage).read()
 
     expect(snapshot.statuses['platform-shell']).toBe('completed')
-    expect(snapshot.statuses['account-space']).toBe('in-progress')
+    expect(snapshot.statuses['account-space']).toBe('completed')
+    expect(snapshot.statuses['project-home']).toBe('in-progress')
   })
 
   test('persists known task statuses and removes unknown task ids', () => {
