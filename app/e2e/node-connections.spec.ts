@@ -121,7 +121,8 @@ async function measureEdgeHitBand(
       const path = element as SVGPathElement
       const matrix = path.getScreenCTM()
       const length = path.getTotalLength()
-      if (!matrix || length === 0) {
+      const zoom = Math.abs(matrix?.a ?? 0)
+      if (!matrix || length === 0 || zoom === 0) {
         throw new Error('Dependency edge path is not measurable')
       }
 
@@ -148,26 +149,25 @@ async function measureEdgeHitBand(
         const screenPoint = new DOMPoint(pathPoint.x, pathPoint.y).matrixTransform(
           matrix,
         )
-        const screenBefore = new DOMPoint(before.x, before.y).matrixTransform(
-          matrix,
-        )
-        const screenAfter = new DOMPoint(after.x, after.y).matrixTransform(matrix)
-        const tangentX = screenAfter.x - screenBefore.x
-        const tangentY = screenAfter.y - screenBefore.y
+        const tangentX = after.x - before.x
+        const tangentY = after.y - before.y
         const tangentLength = Math.hypot(tangentX, tangentY)
         if (tangentLength === 0) continue
         const normalX = -tangentY / tangentLength
         const normalY = tangentX / tangentLength
 
         for (const direction of [1, -1]) {
-          const at11 = {
-            x: screenPoint.x + normalX * 11 * direction,
-            y: screenPoint.y + normalY * 11 * direction,
+          // Convert the screen-pixel probe distance into graph space before
+          // applying the React Flow viewport matrix.
+          const screenOffsetPoint = (screenPixels: number) => {
+            const transformed = new DOMPoint(
+              pathPoint.x + normalX * (screenPixels / zoom) * direction,
+              pathPoint.y + normalY * (screenPixels / zoom) * direction,
+            ).matrixTransform(matrix)
+            return { x: transformed.x, y: transformed.y }
           }
-          const at13 = {
-            x: screenPoint.x + normalX * 13 * direction,
-            y: screenPoint.y + normalY * 13 * direction,
-          }
+          const at11 = screenOffsetPoint(11)
+          const at13 = screenOffsetPoint(13)
           const centerEdge = edgeAt(screenPoint.x, screenPoint.y)
           const edge11 = edgeAt(at11.x, at11.y)
           const edge13 = edgeAt(at13.x, at13.y)
@@ -182,7 +182,13 @@ async function measureEdgeHitBand(
             return { at11, at13, edge11, edge13 }
           }
           if (diagnostics.length < 10) {
-            diagnostics.push({ centerEdge, edge11, edge13, hasAdjacentEdge })
+            diagnostics.push({
+              centerEdge,
+              edge11,
+              edge13,
+              hasAdjacentEdge,
+              zoom,
+            })
           }
         }
       }

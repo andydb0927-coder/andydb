@@ -148,7 +148,10 @@ async function createWorldviewCard(page: Page) {
 }
 
 async function fitCreatedCardsIntoView(page: Page, titles: string[]) {
-  await page.getByRole('button', { name: 'Fit View', exact: true }).click()
+  const fitView = page.getByRole('button', { name: '适配画布', exact: true })
+  await fitView.scrollIntoViewIfNeeded()
+  await expect(fitView).toBeInViewport()
+  await fitView.click()
   await page.locator('.react-flow__viewport').evaluate(
     (viewport) =>
       new Promise<void>((resolve) => {

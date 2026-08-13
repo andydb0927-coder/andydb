@@ -22,7 +22,7 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
 
   await page.getByRole('link', { name: '预览' }).click()
   await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
-  await page.getByRole('link', { name: '项目' }).click()
+  await page.getByRole('link', { name: '项目', exact: true }).click()
   await expect(page.getByRole('heading', { name: '全部项目' })).toBeVisible()
 
   expect(browserErrors).toEqual([])
