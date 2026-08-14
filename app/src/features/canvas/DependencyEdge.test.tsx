@@ -87,6 +87,7 @@ test('renders the selected edge delete action at the path label point', async ()
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete,
+        onInsert: vi.fn(),
       }}
     />,
   )
@@ -121,6 +122,7 @@ test.each([
           sourceChanged: false,
           ariaLabel: '角色参考 → 分镜 01',
           onDelete: vi.fn(),
+          onInsert: vi.fn(),
         }}
       />,
     )
@@ -183,6 +185,7 @@ test('inverse-scales the selected delete action at minZoom', () => {
         sourceChanged: false,
         ariaLabel: '角色参考 → 视频 01',
         onDelete: vi.fn(),
+        onInsert: vi.fn(),
       }}
     />,
   )
@@ -212,11 +215,95 @@ test('does not render the edge delete action until selected', () => {
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete: vi.fn(),
+        onInsert: vi.fn(),
       }}
     />,
   )
 
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
+
+test('reveals an insert action at the bezier midpoint on hover without changing the hit path', async () => {
+  const user = userEvent.setup()
+  const onInsert = vi.fn()
+  const { container } = render(
+    <DependencyEdge
+      id="edge-a-b"
+      source="a"
+      target="b"
+      sourceX={0}
+      sourceY={0}
+      targetX={100}
+      targetY={100}
+      sourcePosition={Position.Right}
+      targetPosition={Position.Left}
+      selected={false}
+      data={{
+        visible: true,
+        sourceChanged: false,
+        ariaLabel: '角色参考 → 分镜 01',
+        onDelete: vi.fn(),
+        onInsert,
+      }}
+    />,
+  )
+
+  expect(
+    screen.queryByRole('button', { name: '在连接“角色参考 → 分镜 01”中插入节点' }),
+  ).not.toBeInTheDocument()
+  await user.hover(container.querySelector('.dependency-edge__interaction')!)
+  const insert = screen.getByRole('button', {
+    name: '在连接“角色参考 → 分镜 01”中插入节点',
+  })
+  expect(insert.style.transform).toContain('translate(50px, 50px)')
+  await user.click(insert)
+
+  expect(onInsert).toHaveBeenCalledWith(
+    'edge-a-b',
+    { x: 50, y: 50 },
+    insert,
+  )
+  expect(container.querySelector('.dependency-edge__interaction')).toHaveAttribute(
+    'stroke-width',
+    '24',
+  )
+  expect(screen.getByTestId('dependency-visible-path')).toHaveAttribute(
+    'd',
+    'M0 0L100 100',
+  )
+})
+
+test('gives the selected-edge delete action priority over the hover insert action', async () => {
+  const user = userEvent.setup()
+  const { container } = render(
+    <DependencyEdge
+      id="edge-a-b"
+      source="a"
+      target="b"
+      sourceX={0}
+      sourceY={0}
+      targetX={100}
+      targetY={100}
+      sourcePosition={Position.Right}
+      targetPosition={Position.Left}
+      selected
+      data={{
+        visible: true,
+        sourceChanged: false,
+        ariaLabel: '角色参考 → 分镜 01',
+        onDelete: vi.fn(),
+        onInsert: vi.fn(),
+      }}
+    />,
+  )
+
+  await user.hover(container.querySelector('.dependency-edge__interaction')!)
+  expect(
+    screen.queryByRole('button', { name: /中插入节点/ }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: '删除连接：角色参考 → 分镜 01' }),
+  ).toBeVisible()
 })
 
 test('does not render paths, hit area, or delete action when hidden', () => {
@@ -237,6 +324,7 @@ test('does not render paths, hit area, or delete action when hidden', () => {
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete: vi.fn(),
+        onInsert: vi.fn(),
       }}
     />,
   )
@@ -269,6 +357,7 @@ test('can update from visible to hidden without changing Hook order', () => {
         sourceChanged: false,
         ariaLabel: '角色参考 → 分镜 01',
         onDelete: vi.fn(),
+        onInsert: vi.fn(),
       }}
     />,
   )
@@ -282,6 +371,7 @@ test('can update from visible to hidden without changing Hook order', () => {
           sourceChanged: false,
           ariaLabel: '角色参考 → 分镜 01',
           onDelete: vi.fn(),
+          onInsert: vi.fn(),
         }}
       />,
     ),
@@ -329,6 +419,7 @@ test('keeps the full delete control inside a 721 by 778 viewport after pan and z
         sourceChanged: false,
         ariaLabel: '角色参考 → 视频 01',
         onDelete: vi.fn(),
+        onInsert: vi.fn(),
       }}
     />,
   )

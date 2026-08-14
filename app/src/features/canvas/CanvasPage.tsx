@@ -185,6 +185,10 @@ interface NodeTypePickerState {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
   returnFocusTo?: HTMLElement
+  edgeInsertions?: Array<{
+    edgeId: string
+    position: CanvasNodePosition
+  }>
 }
 
 interface CanvasContextMenuState {
@@ -434,6 +438,9 @@ export function CanvasPage({
   const createConnectedCanvasContent = useProjectStore(
     (state) => state.createConnectedCanvasContent,
   )
+  const insertCanvasContentIntoEdges = useProjectStore(
+    (state) => state.insertCanvasContentIntoEdges,
+  )
   const updateCreativeCard = useProjectStore(
     (state) => state.updateCreativeCard,
   )
@@ -448,7 +455,10 @@ export function CanvasPage({
     () => new Set(),
   )
   const [primaryNodeId, setPrimaryNodeId] = useState<string>()
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string>()
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const selectedEdgeId = [...selectedEdgeIds].at(-1)
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([])
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlanId>('free')
   const [dragPreview, setDragPreview] = useState<DragPreviewState>({
@@ -531,7 +541,7 @@ export function CanvasPage({
       )
       const memberIds = group.nodeIds.filter((nodeId) => liveNodeIds.has(nodeId))
       if (memberIds.length < 2) return
-      setSelectedEdgeId(undefined)
+      setSelectedEdgeIds(new Set())
       setSelectedNodeIds(new Set(memberIds))
       setPrimaryNodeId(memberIds.at(-1))
     },
@@ -574,7 +584,7 @@ export function CanvasPage({
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
     setPendingRemoteGeneration(undefined)
-    setSelectedEdgeId(undefined)
+    setSelectedEdgeIds(new Set())
     setPendingPlacement(undefined)
     setNodeTypePicker(undefined)
     setContextMenu(undefined)
@@ -615,7 +625,7 @@ export function CanvasPage({
 
   const toggleConnectionsVisibility = useCallback(() => {
     const nextConnectionsVisible = !connectionsVisible
-    if (!nextConnectionsVisible) setSelectedEdgeId(undefined)
+    if (!nextConnectionsVisible) setSelectedEdgeIds(new Set())
     setGroupFeedback(undefined)
     setConnectionsVisible(nextConnectionsVisible)
     setVisibilityFeedback(
@@ -1107,7 +1117,7 @@ export function CanvasPage({
     (targetNodeId: string, trigger: HTMLButtonElement) => {
       if (connectionTool.phase !== 'idle') cancelConnection(false)
       imageReferenceTriggerRef.current = trigger
-      setSelectedEdgeId(undefined)
+      setSelectedEdgeIds(new Set())
       setConnectionFeedback(undefined)
       setGenerationFeedback(undefined)
       setImageReferenceTargetId(targetNodeId)
@@ -1521,7 +1531,11 @@ export function CanvasPage({
       const current = useProjectStore.getState().activeProject
       const edge = current?.edges.find(({ id }) => id === edgeId)
       if (!edge || !disconnectNodes(edgeId)) return
-      setSelectedEdgeId(undefined)
+      setSelectedEdgeIds((currentSelection) => {
+        const next = new Set(currentSelection)
+        next.delete(edgeId)
+        return next
+      })
       queueMicrotask(() => {
         const source = findCanvasNodeControl(
           viewportRef.current,
@@ -1532,6 +1546,91 @@ export function CanvasPage({
       })
     },
     [disconnectNodes],
+  )
+
+  const openEdgeInsertionPicker = useCallback(
+    (
+      edgeId: string,
+      midpoint: CanvasNodePosition,
+      trigger: HTMLButtonElement,
+    ) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const viewportBounds = viewportRef.current?.getBoundingClientRect()
+      if (
+        !currentProject ||
+        currentProject.id !== projectId ||
+        !viewportBounds ||
+        pendingPlacement ||
+        editingCard ||
+        imageReferenceTargetId
+      ) return
+      const batchEdgeIds =
+        selectedEdgeIds.has(edgeId) && selectedEdgeIds.size > 1
+          ? [...selectedEdgeIds]
+          : [edgeId]
+      const nodesById = new Map(currentProject.nodes.map((node) => [node.id, node]))
+      const edgeInsertions = batchEdgeIds.flatMap((candidateId) => {
+        const edge = currentProject.edges.find(({ id }) => id === candidateId)
+        if (!edge) return []
+        if (candidateId === edgeId) {
+          return [{ edgeId: candidateId, position: midpoint }]
+        }
+        const source = nodesById.get(edge.sourceNodeId)
+        const target = nodesById.get(edge.targetNodeId)
+        if (!source || !target) return []
+        const measured =
+          nodeMeasurements.projectId === currentProject.id
+            ? nodeMeasurements.measurements
+            : {}
+        const sourceWidth = measured[source.id]?.width ?? 280
+        const sourceHeight = measured[source.id]?.height ?? 180
+        const targetWidth = measured[target.id]?.width ?? 280
+        const targetHeight = measured[target.id]?.height ?? 180
+        return [{
+          edgeId: candidateId,
+          position: {
+            x:
+              (source.position.x +
+                sourceWidth / 2 +
+                target.position.x +
+                targetWidth / 2) /
+              2,
+            y:
+              (source.position.y +
+                sourceHeight / 2 +
+                target.position.y +
+                targetHeight / 2) /
+              2,
+          },
+        }]
+      })
+      if (edgeInsertions.length === 0) return
+      const triggerBounds = trigger.getBoundingClientRect()
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
+      setContextMenu(undefined)
+      setNodeTypePicker({
+        projectId: currentProject.id,
+        position: midpoint,
+        anchor: {
+          x: triggerBounds.left + triggerBounds.width / 2 - viewportBounds.left,
+          y: triggerBounds.top + triggerBounds.height / 2 - viewportBounds.top,
+        },
+        bounds: { width: viewportBounds.width, height: viewportBounds.height },
+        returnFocusTo: trigger,
+        edgeInsertions,
+      })
+      setActiveTool('select')
+    },
+    [
+      cancelConnection,
+      connectionTool.phase,
+      editingCard,
+      imageReferenceTargetId,
+      nodeMeasurements,
+      pendingPlacement,
+      projectId,
+      selectedEdgeIds,
+    ],
   )
 
   const flowEdges = useMemo<DependencyFlowEdge[]>(
@@ -1549,7 +1648,7 @@ export function CanvasPage({
           source: edge.sourceNodeId,
           target: edge.targetNodeId,
           type: 'dependency',
-          selected: edge.id === selectedEdgeId,
+          selected: selectedEdgeIds.has(edge.id),
           hidden: !connectionsVisible,
           focusable: connectionsVisible,
           selectable: connectionsVisible,
@@ -1560,32 +1659,37 @@ export function CanvasPage({
             sourceChanged: edge.sourceChanged ?? false,
             ariaLabel,
             onDelete: disconnectEdge,
+            onInsert: openEdgeInsertionPicker,
           },
         }
       }),
-    [connectionsVisible, disconnectEdge, project, selectedEdgeId],
+    [
+      connectionsVisible,
+      disconnectEdge,
+      openEdgeInsertionPicker,
+      project,
+      selectedEdgeIds,
+    ],
   )
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange<DependencyFlowEdge>[]) => {
-      let nextSelectedEdgeId = selectedEdgeId
       for (const change of changes) {
-        if (change.type === 'select') {
-          if (change.selected) nextSelectedEdgeId = change.id
-          else if (nextSelectedEdgeId === change.id) {
-            nextSelectedEdgeId = undefined
-          }
-        }
-        if (change.type === 'remove') {
-          disconnectEdge(change.id)
-          if (nextSelectedEdgeId === change.id) {
-            nextSelectedEdgeId = undefined
-          }
-        }
+        if (change.type === 'remove') disconnectEdge(change.id)
       }
-      setSelectedEdgeId(nextSelectedEdgeId)
+      setSelectedEdgeIds((current) => {
+        const next = new Set(current)
+        for (const change of changes) {
+          if (change.type === 'select') {
+            if (change.selected) next.add(change.id)
+            else next.delete(change.id)
+          }
+          if (change.type === 'remove') next.delete(change.id)
+        }
+        return next
+      })
     },
-    [disconnectEdge, selectedEdgeId],
+    [disconnectEdge],
   )
 
   const handleNodesChange = useCallback(
@@ -1744,7 +1848,7 @@ export function CanvasPage({
       if (duplicatedIds.length === 0) return
       setSelectedNodeIds(new Set(duplicatedIds))
       setPrimaryNodeId(duplicatedIds.at(-1))
-      setSelectedEdgeId(undefined)
+      setSelectedEdgeIds(new Set())
       setGroupFeedback(
         `已创建 ${duplicatedIds.length} 个节点副本`,
       )
@@ -1908,7 +2012,7 @@ export function CanvasPage({
       if (!point) return
       if (connectionTool.phase !== 'idle') cancelConnection(false)
       if (targetNodeId) {
-        setSelectedEdgeId(undefined)
+        setSelectedEdgeIds(new Set())
         selectOnlyNode(targetNodeId)
       }
       const nextMenu: CanvasContextMenuState = {
@@ -1940,15 +2044,14 @@ export function CanvasPage({
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }, [])
 
-  const createQuickNodeAt = useCallback(
+  const buildQuickNodeCreation = useCallback(
     (
+      currentProject: Project,
       type: QuickNodeType,
       position: CanvasNodePosition,
       entry: 'picker' | 'context',
+      dependencyContext?: { sourceTitle: string; targetTitle: string },
     ) => {
-      const currentProject = useProjectStore.getState().activeProject
-      if (!currentProject || currentProject.id !== projectId) return undefined
-
       const numberedTitle = (label: string) => {
         const count = currentProject.nodes.filter((node) =>
           node.title.startsWith(label),
@@ -2114,6 +2217,53 @@ export function CanvasPage({
         }
       }
 
+      if (
+        dependencyContext &&
+        (creation.node.kind === 'image' ||
+          creation.node.kind === 'storyboard' ||
+          creation.node.kind === 'video')
+      ) {
+        const contextualPrompt =
+          `承接“${dependencyContext.sourceTitle}”并输出至` +
+          `“${dependencyContext.targetTitle}”的生成上下文`
+        creation = {
+          ...creation,
+          node: {
+            ...creation.node,
+            versions: creation.node.versions.map((version) =>
+              version.id === creation.node.activeVersionId
+                ? {
+                    ...version,
+                    prompt: version.prompt
+                      ? `${version.prompt}\n${contextualPrompt}`
+                      : contextualPrompt,
+                  }
+                : version,
+            ),
+          },
+        }
+      }
+
+      return creation
+    },
+    [],
+  )
+
+  const createQuickNodeAt = useCallback(
+    (
+      type: QuickNodeType,
+      position: CanvasNodePosition,
+      entry: 'picker' | 'context',
+    ) => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (!currentProject || currentProject.id !== projectId) return undefined
+      const creation = buildQuickNodeCreation(
+        currentProject,
+        type,
+        position,
+        entry,
+      )
+
       createdNodeFocusRef.current = creation.node.id
       setFocusRequestVersion((version) => version + 1)
       createCanvasContent(creation)
@@ -2122,7 +2272,12 @@ export function CanvasPage({
       setGenerationFeedback(`已创建“${creation.node.title}”，可继续编辑或建立连线。`)
       return creation.node.id
     },
-    [createCanvasContent, projectId, selectOnlyNode],
+    [
+      buildQuickNodeCreation,
+      createCanvasContent,
+      projectId,
+      selectOnlyNode,
+    ],
   )
 
   const createQuickNode = useCallback(
@@ -2134,10 +2289,66 @@ export function CanvasPage({
         !currentProject ||
         picker.projectId !== currentProject.id
       ) return
+      if (picker.edgeInsertions) {
+        let stagedProject = currentProject
+        const insertions = picker.edgeInsertions.flatMap((target) => {
+          const edge = currentProject.edges.find(
+            ({ id }) => id === target.edgeId,
+          )
+          if (!edge) return []
+          const source = currentProject.nodes.find(
+            ({ id }) => id === edge.sourceNodeId,
+          )
+          const destination = currentProject.nodes.find(
+            ({ id }) => id === edge.targetNodeId,
+          )
+          if (!source || !destination) return []
+          const creation = buildQuickNodeCreation(
+            stagedProject,
+            type,
+            target.position,
+            'picker',
+            { sourceTitle: source.title, targetTitle: destination.title },
+          )
+          stagedProject = {
+            ...stagedProject,
+            assets: creation.asset
+              ? [...stagedProject.assets, creation.asset]
+              : stagedProject.assets,
+            nodes: [...stagedProject.nodes, creation.node],
+          }
+          return [{
+            edgeId: edge.id,
+            creation,
+            incomingEdgeId: crypto.randomUUID(),
+            outgoingEdgeId: crypto.randomUUID(),
+          }]
+        })
+        if (insertions.length !== picker.edgeInsertions.length) return
+        const createdNodeIds = insertCanvasContentIntoEdges(insertions)
+        if (createdNodeIds.length !== insertions.length) return
+        const lastNodeId = createdNodeIds.at(-1)
+        createdNodeFocusRef.current = lastNodeId
+        setFocusRequestVersion((version) => version + 1)
+        setSelectedNodeIds(new Set(createdNodeIds))
+        setPrimaryNodeId(lastNodeId)
+        setSelectedEdgeIds(new Set())
+        setActiveTool('select')
+        setGenerationFeedback(
+          `已在 ${createdNodeIds.length} 条连线中插入节点；撤销一次可恢复原连接。`,
+        )
+        setNodeTypePicker(undefined)
+        return
+      }
       if (!createQuickNodeAt(type, picker.position, 'picker')) return
       setNodeTypePicker(undefined)
     },
-    [createQuickNodeAt, nodeTypePicker],
+    [
+      buildQuickNodeCreation,
+      createQuickNodeAt,
+      insertCanvasContentIntoEdges,
+      nodeTypePicker,
+    ],
   )
 
   const createContextNode = useCallback(
@@ -2417,7 +2628,7 @@ export function CanvasPage({
         if (duplicatedIds.length === 0) return
         setSelectedNodeIds(new Set(duplicatedIds))
         setPrimaryNodeId(duplicatedIds.at(-1))
-        setSelectedEdgeId(undefined)
+        setSelectedEdgeIds(new Set())
         setGroupFeedback(
           `已复制 ${duplicatedIds.length} 个节点及关联连线`,
         )
@@ -2500,7 +2711,7 @@ export function CanvasPage({
 
   const handlePaneClick = useCallback(
     (event: ReactMouseEvent<Element> | MouseEvent) => {
-      setSelectedEdgeId(undefined)
+      setSelectedEdgeIds(new Set())
       if (contextMenu) {
         closeContextMenu(false)
       }
@@ -2899,7 +3110,7 @@ export function CanvasPage({
   const openWorkspaceNode = (nodeId: string) => {
     setWorkspaceMode('workflow')
     setWorkspacePanel(undefined)
-    setSelectedEdgeId(undefined)
+    setSelectedEdgeIds(new Set())
     selectOnlyNode(nodeId)
     queueMicrotask(() => {
       void flowInstance?.fitView({
@@ -3020,7 +3231,17 @@ export function CanvasPage({
           onPaneClick={handlePaneClick}
           onPaneContextMenu={handlePaneContextMenu}
           onNodeContextMenu={handleNodeContextMenu}
-          onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}
+          onEdgeClick={(event, edge) => {
+            setSelectedEdgeIds((current) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey) {
+                const next = new Set(current)
+                if (next.has(edge.id)) next.delete(edge.id)
+                else next.add(edge.id)
+                return next
+              }
+              return new Set([edge.id])
+            })
+          }}
           onNodeClick={(event, node) => {
             const target = event.target
             if (
@@ -3031,7 +3252,7 @@ export function CanvasPage({
             ) {
               return
             }
-            setSelectedEdgeId(undefined)
+            setSelectedEdgeIds(new Set())
             handleNodeSelection(node.id)
           }}
           onInit={setFlowInstance}

@@ -356,6 +356,34 @@ async function clickEdgePath(
   await page.mouse.click(point.x, point.y)
 }
 
+async function hoverEdgePath(
+  edge: import('@playwright/test').Locator,
+  page: import('@playwright/test').Page,
+) {
+  const point = await edge
+    .locator('.dependency-edge__interaction')
+    .evaluate((element) => {
+      const path = element as SVGPathElement
+      const edgeGroup = path.closest('.react-flow__edge')
+      const matrix = path.getScreenCTM()
+      const length = path.getTotalLength()
+      if (!edgeGroup || !matrix || length === 0) {
+        throw new Error('Dependency edge path is not measurable')
+      }
+      for (let index = 2; index <= 18; index += 1) {
+        const point = path.getPointAtLength((length * index) / 20)
+        const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+        if (document.elementFromPoint(screenPoint.x, screenPoint.y)?.closest(
+          '.react-flow__edge',
+        ) === edgeGroup) {
+          return { x: screenPoint.x, y: screenPoint.y }
+        }
+      }
+      throw new Error('No unobstructed dependency edge hover point found')
+    })
+  await page.mouse.move(point.x, point.y)
+}
+
 async function expectDeleteActionInsideViewport(
   page: import('@playwright/test').Page,
   deleteAction: import('@playwright/test').Locator,
@@ -851,6 +879,41 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
     'false',
   )
   await expect(page.getByRole('status')).toHaveCount(0)
+})
+
+test('inserts a contextual media node from the edge midpoint and undoes the graph replacement once', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await createCinematicProject(page)
+  const originalLabel = '场景设定 → 分镜 01'
+  const originalEdge = page.getByLabel(originalLabel, { exact: true })
+
+  await hoverEdgePath(originalEdge, page)
+  const insert = page.getByRole('button', {
+    name: `在连接“${originalLabel}”中插入节点`,
+  })
+  await expect(insert).toBeVisible()
+  await insert.click()
+  await expect(page.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
+  await page.getByRole('button', { name: '视频', exact: true }).click()
+
+  await expect(originalEdge).toHaveCount(0)
+  await expect(
+    page.getByLabel('场景设定 → 视频 01', { exact: true }),
+  ).toHaveCount(1)
+  await expect(
+    page.getByLabel('视频 01 → 分镜 01', { exact: true }),
+  ).toHaveCount(1)
+  await expect(
+    page.getByText(/承接“场景设定”并输出至“分镜 01”/),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(page.getByLabel(originalLabel, { exact: true })).toHaveCount(1)
+  await expect(
+    page.getByRole('button', { name: '视频 01', exact: true }),
+  ).toHaveCount(0)
 })
 
 test('keeps edge hit and delete targets screen-sized at Fit View and minZoom', async ({

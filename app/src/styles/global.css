@@ -3144,6 +3144,40 @@ select {
   height: 16px;
 }
 
+.dependency-edge__insert {
+  position: absolute;
+  z-index: 15;
+  display: grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  color: #f6f7fb;
+  background: rgb(31 33 39 / 96%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 36%);
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.dependency-edge__insert:hover {
+  border-color: rgb(130 116 255 / 80%);
+  background: rgb(80 66 184 / 98%);
+}
+
+.dependency-edge__insert:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.dependency-edge__insert svg {
+  width: 17px;
+  height: 17px;
+}
+
 .react-flow__controls {
   right: var(--space-4);
   bottom: var(--space-4);

@@ -112,7 +112,9 @@ function clampPickerPosition(
 ) {
   const gutter = 12
   const width = Math.min(520, Math.max(0, bounds.width - gutter * 2))
-  const estimatedHeight = 430
+  // Reserve the full three-row picker height so an edge midpoint near the
+  // lower half of the canvas cannot place the final media choices off-screen.
+  const estimatedHeight = Math.min(560, Math.max(0, bounds.height - gutter * 2))
   return {
     left: Math.min(
       Math.max(gutter, anchor.x - width / 2),

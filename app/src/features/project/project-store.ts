@@ -39,6 +39,13 @@ type NodeUpdates = Partial<
   Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged' | 'modelProviderId'>
 >
 
+export interface CanvasEdgeInsertion {
+  edgeId: string
+  creation: CanvasCreation
+  incomingEdgeId: string
+  outgoingEdgeId: string
+}
+
 interface ProjectStore {
   projectsById: Record<string, Project>
   activeProjectId?: string
@@ -54,6 +61,9 @@ interface ProjectStore {
     creation: CanvasCreation,
     edgeId: string,
   ) => boolean
+  insertCanvasContentIntoEdges: (
+    insertions: readonly CanvasEdgeInsertion[],
+  ) => string[]
   updateNode: (nodeId: string, changes: NodeUpdates) => void
   updateCreativeCard: (nodeId: string, draft: CreativeCardDraft) => void
   updateNodePositions: (
@@ -365,6 +375,90 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         })
       })
       return created
+    },
+
+    insertCanvasContentIntoEdges: (insertions) => {
+      let createdNodeIds: string[] = []
+      commit((project) => {
+        if (insertions.length === 0) return project
+
+        const requestedEdgeIds = new Set<string>()
+        const createdIds = new Set<string>()
+        const createdAssetIds = new Set<string>()
+        const replacementEdgeIds = new Set<string>()
+        const existingNodeIds = new Set(project.nodes.map(({ id }) => id))
+        const existingAssetIds = new Set(project.assets.map(({ id }) => id))
+        const existingEdgeIds = new Set(project.edges.map(({ id }) => id))
+        for (const insertion of insertions) {
+          const { edgeId, creation, incomingEdgeId, outgoingEdgeId } = insertion
+          if (
+            requestedEdgeIds.has(edgeId) ||
+            !existingEdgeIds.has(edgeId) ||
+            createdIds.has(creation.node.id) ||
+            existingNodeIds.has(creation.node.id) ||
+            replacementEdgeIds.has(incomingEdgeId) ||
+            replacementEdgeIds.has(outgoingEdgeId) ||
+            incomingEdgeId === outgoingEdgeId ||
+            (existingEdgeIds.has(incomingEdgeId) && incomingEdgeId !== edgeId) ||
+            (existingEdgeIds.has(outgoingEdgeId) && outgoingEdgeId !== edgeId) ||
+            (creation.asset !== undefined &&
+              (createdAssetIds.has(creation.asset.id) ||
+                existingAssetIds.has(creation.asset.id)))
+          ) {
+            return project
+          }
+          requestedEdgeIds.add(edgeId)
+          createdIds.add(creation.node.id)
+          replacementEdgeIds.add(incomingEdgeId)
+          replacementEdgeIds.add(outgoingEdgeId)
+          if (creation.asset) createdAssetIds.add(creation.asset.id)
+        }
+
+        const originals = new Map(
+          project.edges
+            .filter(({ id }) => requestedEdgeIds.has(id))
+            .map((edge) => [edge.id, edge]),
+        )
+        if (originals.size !== insertions.length) return project
+
+        const replacementEdges = insertions.flatMap((insertion) => {
+          const original = originals.get(insertion.edgeId)!
+          const sourceChanged = original.sourceChanged ?? false
+          return [
+            {
+              id: insertion.incomingEdgeId,
+              sourceNodeId: original.sourceNodeId,
+              targetNodeId: insertion.creation.node.id,
+              sourceChanged,
+            },
+            {
+              id: insertion.outgoingEdgeId,
+              sourceNodeId: insertion.creation.node.id,
+              targetNodeId: original.targetNodeId,
+              sourceChanged,
+            },
+          ]
+        })
+        createdNodeIds = insertions.map(({ creation }) => creation.node.id)
+        return withUpdatedTimestamp({
+          ...project,
+          assets: [
+            ...project.assets,
+            ...insertions.flatMap(({ creation }) =>
+              creation.asset ? [creation.asset] : [],
+            ),
+          ],
+          nodes: [
+            ...project.nodes,
+            ...insertions.map(({ creation }) => creation.node),
+          ],
+          edges: [
+            ...project.edges.filter(({ id }) => !requestedEdgeIds.has(id)),
+            ...replacementEdges,
+          ],
+        })
+      })
+      return createdNodeIds
     },
 
     updateNode: (nodeId, changes) => {

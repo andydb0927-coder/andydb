@@ -6,6 +6,7 @@ import {
   appendNodeVersion,
   createProject,
   type Asset,
+  type CanvasCreation,
   type CanvasNode,
   type DependencyEdge,
 } from './model'
@@ -160,6 +161,120 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('inserts canvas content into one dependency edge as one undoable graph transaction', () => {
+    const before = structuredClone(useProjectStore.getState().activeProject!)
+    const creation: CanvasCreation = {
+      node: {
+        id: 'inserted-image',
+        kind: 'image',
+        title: '插入图片 01',
+        position: { x: 320, y: 240 },
+        versions: [{
+          id: 'inserted-image-version',
+          createdAt: '2026-08-15T08:00:00.000Z',
+          prompt: '承接河岸寻人并输出至雨声音轨',
+        }],
+        activeVersionId: 'inserted-image-version',
+        sourceChanged: false,
+      },
+    }
+
+    expect(
+      useProjectStore.getState().insertCanvasContentIntoEdges([{
+        edgeId: 'edge-shot-to-audio',
+        creation,
+        incomingEdgeId: 'edge-shot-to-image',
+        outgoingEdgeId: 'edge-image-to-audio',
+      }]),
+    ).toEqual(['inserted-image'])
+
+    expect(useProjectStore.getState().activeProject?.edges).toEqual([
+      {
+        id: 'edge-shot-to-image',
+        sourceNodeId: 'shot-1',
+        targetNodeId: 'inserted-image',
+        sourceChanged: false,
+      },
+      {
+        id: 'edge-image-to-audio',
+        sourceNodeId: 'inserted-image',
+        targetNodeId: 'rain-audio',
+        sourceChanged: false,
+      },
+    ])
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+  })
+
+  test('inserts one node per selected edge atomically and restores every original edge with one undo', () => {
+    const project = makeProjectFixture()
+    const thirdNode: CanvasNode = {
+      id: 'delivery',
+      kind: 'video',
+      title: '交付视频',
+      position: { x: 920, y: 240 },
+      versions: [],
+      activeVersionId: '',
+      sourceChanged: false,
+    }
+    const batchProject = {
+      ...project,
+      nodes: [...project.nodes, thirdNode],
+      edges: [
+        ...project.edges,
+        {
+          id: 'edge-audio-to-delivery',
+          sourceNodeId: 'rain-audio',
+          targetNodeId: 'delivery',
+        },
+      ],
+    }
+    useProjectStore.setState({
+      projectsById: { [batchProject.id]: batchProject },
+      activeProjectId: batchProject.id,
+      activeProject: batchProject,
+      past: [],
+      future: [],
+    })
+    const before = structuredClone(batchProject)
+    const creation = (id: string, x: number): CanvasCreation => ({
+      node: {
+        id,
+        kind: 'video',
+        title: id,
+        position: { x, y: 240 },
+        versions: [],
+        activeVersionId: '',
+        sourceChanged: false,
+      },
+    })
+
+    expect(
+      useProjectStore.getState().insertCanvasContentIntoEdges([
+        {
+          edgeId: 'edge-shot-to-audio',
+          creation: creation('insert-a', 320),
+          incomingEdgeId: 'edge-shot-a',
+          outgoingEdgeId: 'edge-a-audio',
+        },
+        {
+          edgeId: 'edge-audio-to-delivery',
+          creation: creation('insert-b', 720),
+          incomingEdgeId: 'edge-audio-b',
+          outgoingEdgeId: 'edge-b-delivery',
+        },
+      ]),
+    ).toEqual(['insert-a', 'insert-b'])
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+  })
+
   test('marks an image target changed when a canvas media reference is connected', () => {
     const project = makeProjectFixture()
     const target: CanvasNode = {

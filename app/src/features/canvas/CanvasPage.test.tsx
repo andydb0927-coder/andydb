@@ -59,6 +59,11 @@ interface FlowPropsFixture {
       sourceChanged: boolean
       ariaLabel: string
       onDelete(edgeId: string): void
+      onInsert(
+        edgeId: string,
+        midpoint: { x: number; y: number },
+        trigger: HTMLButtonElement,
+      ): void
     }
   }>
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>
@@ -2193,6 +2198,59 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.timeline).toEqual(
       originalTimeline,
     )
+  })
+
+  test('inserts contextual media nodes into all selected edges through the shared picker as one undo step', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    activate(project)
+    renderCanvas()
+    const first = latestFlowProps!.edges.find(
+      ({ id }) => id === 'character-scene',
+    )!
+    const second = latestFlowProps!.edges.find(
+      ({ id }) => id === 'scene-storyboard',
+    )!
+    const trigger = document.createElement('button')
+    document.body.append(trigger)
+
+    act(() => latestFlowProps?.onEdgesChange([
+      { type: 'select', id: first.id, selected: true },
+      { type: 'select', id: second.id, selected: true },
+    ]))
+    expect(
+      latestFlowProps?.edges.filter(({ selected }) => selected).map(({ id }) => id),
+    ).toEqual([first.id, second.id])
+
+    act(() => {
+      latestFlowProps?.edges
+        .find(({ id }) => id === first.id)
+        ?.data?.onInsert(first.id, { x: 250, y: 145 }, trigger)
+    })
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '视频' }))
+
+    const current = useProjectStore.getState().activeProject!
+    const inserted = current.nodes.filter(
+      ({ id }) => !project.nodes.some((node) => node.id === id),
+    )
+    expect(inserted).toHaveLength(2)
+    expect(inserted.map(({ position }) => position)).toContainEqual({ x: 250, y: 145 })
+    expect(inserted.every(({ kind }) => kind === 'video')).toBe(true)
+    expect(inserted.map((node) => node.versions[0]?.prompt)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('角色参考'),
+        expect.stringContaining('场景设定'),
+      ]),
+    )
+    expect(current.edges).toHaveLength(project.edges.length + 2)
+    expect(current.edges.some(({ id }) => id === first.id)).toBe(false)
+    expect(current.edges.some(({ id }) => id === second.id)).toBe(false)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => useProjectStore.getState().undo())
+    expect(useProjectStore.getState().activeProject).toEqual(project)
+    trigger.remove()
   })
 
   test('routes keyboard edge removal through the same one-step disconnect command', async () => {

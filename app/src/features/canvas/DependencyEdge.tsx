@@ -5,7 +5,8 @@ import {
   type EdgeProps,
   useStore,
 } from '@xyflow/react'
-import { Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { DependencyFlowEdge } from './edge-types'
 
@@ -94,6 +95,61 @@ function DependencyEdgeDeleteAction({
   )
 }
 
+function DependencyEdgeInsertAction({
+  id,
+  labelX,
+  labelY,
+  data,
+  onKeepOpen,
+  onScheduleClose,
+}: {
+  id: string
+  labelX: number
+  labelY: number
+  data: NonNullable<DependencyFlowEdge['data']>
+  onKeepOpen(): void
+  onScheduleClose(): void
+}) {
+  const viewport = useStore((state) => state.transform)
+  const domNode = useStore((state) => state.domNode)
+  const viewportWidth = useStore((state) => state.width)
+  const viewportHeight = useStore((state) => state.height)
+  const rect = domNode?.getBoundingClientRect()
+  const bounds = rect
+    ? {
+        left: rect.left,
+        top: rect.top,
+        right: rect.left + (viewportWidth || rect.width),
+        bottom: rect.top + (viewportHeight || rect.height),
+      }
+    : undefined
+  const [insertX, insertY] = bounds
+    ? clampLabelToContainer(labelX, labelY, viewport, bounds)
+    : [labelX, labelY]
+  const zoom = viewport[2] > 0 ? viewport[2] : 1
+
+  return (
+    <button
+      type="button"
+      className="dependency-edge__insert nodrag nopan"
+      aria-label={`在连接“${data.ariaLabel}”中插入节点`}
+      style={{
+        transform: `translate(${insertX}px, ${insertY}px) scale(${1 / zoom}) translate(-50%, -50%)`,
+      }}
+      onMouseEnter={onKeepOpen}
+      onMouseLeave={onScheduleClose}
+      onFocus={onKeepOpen}
+      onBlur={onScheduleClose}
+      onClick={(event) => {
+        event.stopPropagation()
+        data.onInsert(id, { x: labelX, y: labelY }, event.currentTarget)
+      }}
+    >
+      <Plus aria-hidden="true" />
+    </button>
+  )
+}
+
 export function DependencyEdge({
   id,
   sourceX,
@@ -108,6 +164,24 @@ export function DependencyEdge({
 }: EdgeProps<DependencyFlowEdge>) {
   const visible = data?.visible ?? true
   const viewportZoom = useStore((state) => state.transform[2])
+  const [insertVisible, setInsertVisible] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  )
+  const keepInsertOpen = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    setInsertVisible(true)
+  }
+  const scheduleInsertClose = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => setInsertVisible(false), 120)
+  }
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    },
+    [],
+  )
   if (visible === false) return null
 
   const interactionStrokeWidth =
@@ -123,7 +197,11 @@ export function DependencyEdge({
 
   return (
     <>
-      <g className="dependency-edge__paths">
+      <g
+        className="dependency-edge__paths"
+        onMouseEnter={keepInsertOpen}
+        onMouseLeave={scheduleInsertClose}
+      >
         <BaseEdge
           id={id}
           path={path}
@@ -145,6 +223,18 @@ export function DependencyEdge({
           className="react-flow__edge-interaction dependency-edge__interaction"
         />
       </g>
+      {insertVisible && !selected && data ? (
+        <EdgeLabelRenderer>
+          <DependencyEdgeInsertAction
+            id={id}
+            labelX={labelX}
+            labelY={labelY}
+            data={data}
+            onKeepOpen={keepInsertOpen}
+            onScheduleClose={scheduleInsertClose}
+          />
+        </EdgeLabelRenderer>
+      ) : null}
       {selected && data ? (
         <EdgeLabelRenderer>
           <DependencyEdgeDeleteAction
