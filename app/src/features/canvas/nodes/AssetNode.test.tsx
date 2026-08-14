@@ -1,5 +1,5 @@
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -83,4 +83,78 @@ test('exposes connection mode and selected-source state on the real node shell',
     'creative-node--connection-mode',
     'creative-node--connection-source',
   )
+})
+
+test('keeps image nodes folded until they become the current selection', async () => {
+  const user = userEvent.setup()
+  const onSetActiveResult = vi.fn()
+  const baseData = {
+    node: {
+      id: 'image-node',
+      kind: 'image' as const,
+      title: 'L1',
+      position: { x: 0, y: 0 },
+      versions: [{ id: 'v1', createdAt: '2026-08-14T00:00:00.000Z', prompt: '雾中茶山', assetId: 'asset-1' }],
+      activeVersionId: 'v1',
+      activeResultId: 'result-1',
+      imageResults: [
+        { id: 'result-1', assetId: 'asset-1' },
+        { id: 'result-2', assetId: 'asset-2' },
+        { id: 'result-3', assetId: 'asset-3' },
+        { id: 'result-4', assetId: 'asset-4' },
+      ],
+      sourceChanged: false,
+    },
+    asset: { id: 'asset-1', kind: 'image' as const, url: '/one.png', mimeType: 'image/png', width: 1456, height: 816 },
+    imageResults: [1, 2, 3, 4].map((number) => ({
+      id: `result-${number}`,
+      asset: { id: `asset-${number}`, kind: 'image' as const, url: `/${number}.png`, mimeType: 'image/png', width: 1456, height: 816 },
+    })),
+    selected: false,
+    contextual: false,
+    actionsPlacement: 'after' as const,
+    connectionMode: false,
+    connectionSource: false,
+    focusOnMount: false,
+    focusRequestVersion: 0,
+    onAction: vi.fn(),
+    onSelect: vi.fn(),
+    onHandleActivate: vi.fn(),
+    onFocusComplete: vi.fn(),
+    onDelete: vi.fn(),
+    onSetActiveResult,
+  }
+
+  const renderWith = (data: typeof baseData) => (
+    <div style={{ width: 900, height: 700 }}>
+      <ReactFlowProvider>
+        <ReactFlow
+          nodes={[{ id: 'image-node', type: 'image', position: { x: 0, y: 0 }, initialWidth: 360, initialHeight: 620, data }]}
+          edges={[]}
+          nodeTypes={{ image: AssetNode }}
+        />
+      </ReactFlowProvider>
+    </div>
+  )
+  const view = render(renderWith(baseData))
+
+  expect(screen.getByText('1456 × 816')).toBeVisible()
+  expect(screen.getByRole('button', { name: '查看 4 张结果' })).toBeVisible()
+  expect(screen.queryByRole('region', { name: 'L1 生成参数' })).not.toBeInTheDocument()
+
+  view.rerender(renderWith({ ...baseData, selected: true, contextual: true }))
+  const generation = screen.getByRole('region', { name: 'L1 生成参数' })
+  expect(within(generation).getByLabelText('提示词')).toHaveValue('雾中茶山')
+  expect(within(generation).getByRole('button', { name: '模型 Style Image V8.2' })).toBeVisible()
+  expect(within(generation).getByText('预计成本 15')).toBeVisible()
+
+  await user.click(screen.getByRole('button', { name: '查看 4 张结果' }))
+  const results = screen.getByRole('region', { name: 'L1 的 4 张结果' })
+  expect(within(results).getAllByRole('img')).toHaveLength(4)
+  await user.click(within(results).getByRole('button', { name: '将结果 2 设为主图' }))
+  expect(screen.getByRole('alertdialog', { name: '设为主图' })).toHaveTextContent(
+    '下游引用将使用新的主图',
+  )
+  await user.click(screen.getByRole('button', { name: '确认设为主图' }))
+  expect(onSetActiveResult).toHaveBeenCalledWith('result-2')
 })

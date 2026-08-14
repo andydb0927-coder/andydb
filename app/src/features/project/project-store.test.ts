@@ -160,6 +160,83 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('persists the active image result, updates the active version, and invalidates downstream consumers', async () => {
+    const repository = createRepository()
+    const project = makeProjectFixture()
+    const resultAsset: Asset = {
+      id: 'asset-shot-river-v2',
+      kind: 'image',
+      url: '/demo/shot-rooftop.png',
+      mimeType: 'image/png',
+      width: 1920,
+      height: 1080,
+    }
+    const withResults: typeof project = {
+      ...project,
+      assets: [...project.assets, resultAsset],
+      nodes: project.nodes.map((node) =>
+        node.id === 'shot-1'
+          ? {
+              ...node,
+              activeResultId: 'shot-result-1',
+              imageResults: [
+                { id: 'shot-result-1', assetId: 'asset-shot-river-v1' },
+                { id: 'shot-result-2', assetId: resultAsset.id },
+              ],
+            }
+          : node,
+      ),
+    }
+    useProjectStore.setState({
+      projectsById: { [withResults.id]: withResults },
+      activeProjectId: withResults.id,
+      activeProject: withResults,
+      past: [],
+      future: [],
+    })
+
+    useProjectStore.getState().setActiveImageResult('shot-1', 'shot-result-2')
+
+    const switched = useProjectStore.getState().activeProject!
+    const source = switched.nodes.find(({ id }) => id === 'shot-1')!
+    expect(source.activeResultId).toBe('shot-result-2')
+    expect(
+      source.versions.find(({ id }) => id === source.activeVersionId)?.assetId,
+    ).toBe(resultAsset.id)
+    expect(switched.nodes.find(({ id }) => id === 'rain-audio')?.sourceChanged).toBe(true)
+    expect(switched.edges[0].sourceChanged).toBe(true)
+    expect(useProjectStore.getState().past).toEqual([withResults])
+
+    await useProjectStore.getState().persistActive(repository)
+    useProjectStore.setState({
+      projectsById: {},
+      activeProjectId: undefined,
+      activeProject: undefined,
+      past: [],
+      future: [],
+    })
+    expect(await useProjectStore.getState().hydrate(withResults.id, repository)).toBe(true)
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.activeResultId,
+    ).toBe('shot-result-2')
+  })
+
+  test('rotates an image node as one undoable direct modification', () => {
+    useProjectStore.getState().rotateImageNode('shot-1')
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.rotationQuarterTurns,
+    ).toBe(1)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.rotationQuarterTurns,
+    ).toBeUndefined()
+  })
+
   test('renames the active project in one undoable history entry', () => {
     const original = useProjectStore.getState().activeProject!
 

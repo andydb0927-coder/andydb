@@ -383,8 +383,15 @@ export function CanvasPage({
   const renameProject = useProjectStore((state) => state.renameProject)
   const connectNodes = useProjectStore((state) => state.connectNodes)
   const disconnectNodes = useProjectStore((state) => state.disconnectNodes)
+  const setActiveImageResult = useProjectStore(
+    (state) => state.setActiveImageResult,
+  )
+  const rotateImageNode = useProjectStore((state) => state.rotateImageNode)
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
+  )
+  const createConnectedCanvasContent = useProjectStore(
+    (state) => state.createConnectedCanvasContent,
   )
   const updateCreativeCard = useProjectStore(
     (state) => state.updateCreativeCard,
@@ -1135,6 +1142,12 @@ export function CanvasPage({
       )
       const job = selectNodeGenerationJob(node, project.jobs)
       const selected = selectedNodeIds.has(node.id)
+      const imageResults = node.imageResults?.flatMap((result) => {
+        const resultAsset = project.assets.find(({ id }) => id === result.assetId)
+        return resultAsset?.kind === 'image'
+          ? [{ id: result.id, asset: resultAsset }]
+          : []
+      })
 
       return {
         id: node.id,
@@ -1144,6 +1157,7 @@ export function CanvasPage({
         data: {
           node,
           asset,
+          imageResults,
           job,
           selected,
           contextual: node.id === primaryNodeId,
@@ -1154,7 +1168,13 @@ export function CanvasPage({
           focusOnMount: node.id === createdNodeFocusRef.current,
           focusRequestVersion,
           actionsPlacement:
-            node.position.x === rightmostX ? 'before' : 'after',
+            (asset?.kind === 'image' &&
+              (node.kind === 'image' ||
+                node.kind === 'character' ||
+                node.kind === 'scene')) ||
+            node.position.x === rightmostX
+              ? 'before'
+              : 'after',
           onSelect: () => handleNodeSelection(node.id),
           onHandleActivate: (type, trigger) =>
             handleConnectionHandleActivate(node.id, type, trigger),
@@ -1164,6 +1184,12 @@ export function CanvasPage({
             setFocusRequestVersion((version) => version + 1)
           },
           onDelete: (trigger) => requestDelete(node.id, trigger),
+          onSetActiveResult: (resultId) =>
+            setActiveImageResult(node.id, resultId),
+          onLocalImageGenerate: () =>
+            setGenerationFeedback(
+              `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
+            ),
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
@@ -1178,6 +1204,7 @@ export function CanvasPage({
     project,
     requestDelete,
     selectedNodeIds,
+    setActiveImageResult,
   ])
 
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -2199,17 +2226,26 @@ export function CanvasPage({
     const sourceNode = currentProject?.nodes.find(({ id }) => id === primaryNodeId)
     if (!currentProject || currentProject.id !== projectId || !sourceNode) return
     const creation = buildCanvasCreation(currentProject, {
-      kind: 'text',
-      title: `${tool}配置`,
+      kind: 'storyboard',
+      title: tool,
       content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
       position: {
         x: sourceNode.position.x + 360,
         y: sourceNode.position.y + 40,
       },
     })
-    createCanvasContent(creation)
+    if (
+      !createConnectedCanvasContent(
+        sourceNode.id,
+        creation,
+        crypto.randomUUID(),
+      )
+    ) {
+      setGenerationFeedback('无法创建工具节点，请重新选择来源节点。')
+      return
+    }
     selectOnlyNode(creation.node.id)
-    setGenerationFeedback(`已创建“${tool}配置”节点；尚未触发外部生成。`)
+    setGenerationFeedback(`已创建“${tool}”工具节点并建立连接；尚未触发外部生成。`)
   }
 
   const closeAgent = () => {
@@ -2386,10 +2422,14 @@ export function CanvasPage({
           onToggleSnap={() => setSnapToGrid((enabled) => !enabled)}
           onFitView={() => void flowInstance?.fitView({ duration: 260, padding: 0.16 })}
         />
-        <SelectionContextBar
-          node={selectedWorkspaceNode}
-          onCreateToolNode={createImageToolNode}
-        />
+        {project ? (
+          <SelectionContextBar
+            project={project}
+            node={selectedWorkspaceNode}
+            onCreateToolNode={createImageToolNode}
+            onRotateImage={rotateImageNode}
+          />
+        ) : null}
         {canvasHint ? (
           <p
             className={`${

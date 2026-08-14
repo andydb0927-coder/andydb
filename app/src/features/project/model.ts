@@ -70,6 +70,11 @@ export interface Asset {
   durationSeconds?: number
 }
 
+export interface ImageResult {
+  id: string
+  assetId: string
+}
+
 export interface CanvasNode {
   id: string
   kind: NodeKind
@@ -79,6 +84,9 @@ export interface CanvasNode {
   activeVersionId: string
   sourceChanged: boolean
   card?: CreativeCard
+  imageResults?: ImageResult[]
+  activeResultId?: string
+  rotationQuarterTurns?: number
 }
 
 export interface CanvasGroup {

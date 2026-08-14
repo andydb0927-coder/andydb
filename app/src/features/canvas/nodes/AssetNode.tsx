@@ -25,6 +25,7 @@ import type { ReactNode } from 'react'
 import { StatusText } from '../../../ui/StatusText'
 import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
+import { ImageGenerationPanel, ImageResults } from './ImageNodeDetails'
 
 const kindCopy = {
   character: '角色',
@@ -155,6 +156,9 @@ export function CreativeNodeShell({
   const activeVersion = node.versions.find(
     (version) => version.id === node.activeVersionId,
   )
+  const imageMedia =
+    asset?.kind === 'image' &&
+    (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene')
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -194,7 +198,9 @@ export function CreativeNodeShell({
           selected ? ' creative-node--selected' : ''
         }${node.sourceChanged ? ' creative-node--changed' : ''}${
           data.connectionMode ? ' creative-node--connection-mode' : ''
-        }${data.connectionSource ? ' creative-node--connection-source' : ''}`}
+        }${data.connectionSource ? ' creative-node--connection-source' : ''}${
+          imageMedia ? ' creative-node--image-media' : ''
+        }${imageMedia && contextual ? ' creative-node--expanded' : ''}`}
       >
         <Handle
           id="dependency-target"
@@ -227,9 +233,17 @@ export function CreativeNodeShell({
           </span>
           {preview ??
             (asset ? (
-              <img src={asset.url} alt="" className="creative-node__media" />
+              <img
+                src={asset.url}
+                alt=""
+                className="creative-node__media"
+                style={{ transform: `rotate(${(node.rotationQuarterTurns ?? 0) * 90}deg)` }}
+              />
             ) : null)}
-          {!hidePrompt ? (
+          {imageMedia && asset.width && asset.height ? (
+            <span className="creative-node__dimensions">{asset.width} × {asset.height}</span>
+          ) : null}
+          {!hidePrompt && !imageMedia ? (
             <span className="creative-node__prompt">
               {activeVersion?.prompt ?? '尚未生成内容'}
             </span>
@@ -244,6 +258,8 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
+        {imageMedia ? <ImageResults data={data} /> : null}
+        {imageMedia && contextual ? <ImageGenerationPanel data={data} /> : null}
         <Handle
           id="dependency-source"
           type="source"

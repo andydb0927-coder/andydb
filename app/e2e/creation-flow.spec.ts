@@ -101,6 +101,50 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(page.getByText('JSON 已开始下载')).toBeVisible()
 })
 
+test('keeps one image node expanded and persists a confirmed main result', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const scene = page.getByRole('button', { name: '场景设定', exact: true })
+  const character = page.getByRole('button', { name: '角色参考', exact: true })
+  await scene.click()
+  await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toBeVisible()
+  const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
+  await expect(imageTools).toBeVisible()
+  await expect(imageTools.getByRole('button')).toHaveCount(11)
+  const nodeCount = await page.locator('.react-flow__node').count()
+  await imageTools.getByRole('button', { name: '高清' }).click()
+  const toolConfirmation = page.getByRole('alertdialog', {
+    name: '添加高清工具节点',
+  })
+  await expect(toolConfirmation).toContainText('将添加工具节点')
+  await toolConfirmation.getByRole('button', { name: '取消' }).click()
+  await expect(page.locator('.react-flow__node')).toHaveCount(nodeCount)
+
+  await character.click()
+  await expect(page.getByRole('region', { name: '角色参考 生成参数' })).toBeVisible()
+  await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toHaveCount(0)
+
+  await scene.click()
+  await page.getByRole('button', { name: '查看 4 张结果' }).click()
+  const results = page.getByRole('region', { name: '场景设定 的 4 张结果' })
+  await expect(results.getByRole('img')).toHaveCount(4)
+  await results.getByRole('button', { name: '将结果 2 设为主图' }).click()
+  const confirmation = page.getByRole('alertdialog', { name: '设为主图' })
+  await expect(confirmation).toContainText('下游引用将使用新的主图')
+  await confirmation.getByRole('button', { name: '确认设为主图' }).click()
+  await expect(scene.locator('img')).toHaveAttribute('src', '/demo/shot-river.png')
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '场景设定', exact: true }).locator('img'),
+  ).toHaveAttribute('src', '/demo/shot-river.png')
+})
+
 test('keyboard and list view preserve core actions in a strict small layout', async ({
   page,
 }) => {
@@ -223,6 +267,15 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
         blockedByWorkflowPanel: Boolean(target?.closest('.workflow-run-panel')),
         blockedByModeBar: Boolean(target?.closest('.canvas-mode-bar')),
         action: target?.closest('button')?.getAttribute('data-action'),
+        blocker: {
+          tag: target?.tagName,
+          className: target instanceof HTMLElement ? target.className : '',
+          text: target?.textContent?.trim(),
+          parentClassName:
+            target?.parentElement instanceof HTMLElement
+              ? target.parentElement.className
+              : '',
+        },
       }
     },
     {
@@ -235,7 +288,10 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     `primary action=${JSON.stringify(actionBox)}, workflow panel=${JSON.stringify(workflowPanelBox)}`,
   ).toBe(false)
   expect(actionHitTarget.blockedByModeBar).toBe(false)
-  expect(actionHitTarget.action).toBe('generate-video')
+  expect(
+    actionHitTarget.action,
+    `primary action hit target=${JSON.stringify(actionHitTarget)}`,
+  ).toBe('generate-video')
   await primaryAction.click()
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),

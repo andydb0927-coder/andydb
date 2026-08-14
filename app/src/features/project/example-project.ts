@@ -49,6 +49,30 @@ export function buildRecipeProject(
         width: 1600,
         height: 900,
       },
+      {
+        id: 'asset-scene-result-02',
+        kind: 'image',
+        url: '/demo/shot-river.png',
+        mimeType: 'image/png',
+        width: 1600,
+        height: 900,
+      },
+      {
+        id: 'asset-scene-result-03',
+        kind: 'image',
+        url: '/demo/shot-rooftop.png',
+        mimeType: 'image/png',
+        width: 1600,
+        height: 900,
+      },
+      {
+        id: 'asset-scene-result-04',
+        kind: 'image',
+        url: '/demo/character-lin-yuan.png',
+        mimeType: 'image/png',
+        width: 1600,
+        height: 900,
+      },
     ],
     nodes: [
       {
@@ -81,6 +105,13 @@ export function buildRecipeProject(
           },
         ],
         activeVersionId: 'version-scene-reference',
+        activeResultId: 'scene-result-01',
+        imageResults: [
+          { id: 'scene-result-01', assetId: 'asset-scene-reference' },
+          { id: 'scene-result-02', assetId: 'asset-scene-result-02' },
+          { id: 'scene-result-03', assetId: 'asset-scene-result-03' },
+          { id: 'scene-result-04', assetId: 'asset-scene-result-04' },
+        ],
         sourceChanged: false,
       },
       {

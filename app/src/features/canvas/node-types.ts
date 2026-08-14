@@ -30,6 +30,7 @@ export interface CreativeNodeProps {
 
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
   asset?: Asset
+  imageResults?: Array<{ id: string; asset: Asset }>
   actionsPlacement: 'before' | 'after'
   contextual: boolean
   connectionMode: boolean
@@ -40,6 +41,8 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onHandleActivate(type: 'source' | 'target', trigger: HTMLElement): void
   onFocusComplete(): void
   onDelete(trigger: HTMLButtonElement): void
+  onSetActiveResult?(resultId: string): void
+  onLocalImageGenerate?(): void
 }
 
 export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>

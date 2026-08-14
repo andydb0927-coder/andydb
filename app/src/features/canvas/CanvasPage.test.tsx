@@ -3320,18 +3320,25 @@ describe('canvas top bar', () => {
     expect(localStorage.getItem('wireless-canvas:workspace-preferences')).toContain('"snapToGrid":true')
   })
 
-  test('previews an image tool before creating an undoable local configuration node', async () => {
+  test('keeps a multi-angle draft side-effect free before atomically creating its tool node and edge', async () => {
     const user = userEvent.setup()
     renderCanvas()
     await user.click(screen.getByRole('button', { name: '角色参考' }))
     await user.click(screen.getByRole('button', { name: '多角度' }))
 
-    expect(screen.getByRole('dialog', { name: '多角度配置' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: '多角度编辑器' })).toBeVisible()
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
-    await user.click(screen.getByRole('button', { name: '创建配置节点' }))
+    await user.click(screen.getByRole('button', { name: /^生成$/ }))
 
     expect(
-      useProjectStore.getState().activeProject?.nodes.some(({ title }) => title === '多角度配置'),
+      useProjectStore.getState().activeProject?.nodes.some(({ title }) => title === '多角度'),
+    ).toBe(true)
+    expect(
+      useProjectStore.getState().activeProject?.edges.some(
+        ({ sourceNodeId, targetNodeId }) =>
+          sourceNodeId === 'character' &&
+          useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === targetNodeId)?.title === '多角度',
+      ),
     ).toBe(true)
     expect(useProjectStore.getState().past).toHaveLength(1)
     expect(screen.getByRole('status')).toHaveTextContent('尚未触发外部生成')

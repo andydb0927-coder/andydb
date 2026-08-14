@@ -46,11 +46,18 @@ interface ProjectStore {
   renameProject: (title: string) => void
   addNode: (node: CanvasNode) => void
   createCanvasContent: (creation: CanvasCreation) => void
+  createConnectedCanvasContent: (
+    sourceNodeId: string,
+    creation: CanvasCreation,
+    edgeId: string,
+  ) => boolean
   updateNode: (nodeId: string, changes: NodeUpdates) => void
   updateCreativeCard: (nodeId: string, draft: CreativeCardDraft) => void
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
+  setActiveImageResult: (nodeId: string, resultId: string) => void
+  rotateImageNode: (nodeId: string) => void
   groupNodes: (nodeIds: Iterable<string>) => string | undefined
   ungroupNodes: (groupId: string) => boolean
   deleteNode: (nodeId: string) => void
@@ -292,6 +299,46 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
+    createConnectedCanvasContent: (sourceNodeId, { node, asset }, edgeId) => {
+      let created = false
+      commit((project) => {
+        const nodeConflict = project.nodes.some(
+          (candidate) => candidate.id === node.id,
+        )
+        const assetConflict =
+          asset !== undefined &&
+          project.assets.some((candidate) => candidate.id === asset.id)
+        const edgeConflict = project.edges.some(({ id }) => id === edgeId)
+        if (nodeConflict || assetConflict || edgeConflict) return project
+
+        const withNode: Project = {
+          ...project,
+          assets: asset ? [...project.assets, asset] : project.assets,
+          nodes: [...project.nodes, node],
+        }
+        const validation = validateDependencyConnection(
+          withNode,
+          sourceNodeId,
+          node.id,
+        )
+        if (!validation.ok) return project
+        created = true
+        return withUpdatedTimestamp({
+          ...withNode,
+          edges: [
+            ...project.edges,
+            {
+              id: edgeId,
+              sourceNodeId,
+              targetNodeId: node.id,
+              sourceChanged: false,
+            },
+          ],
+        })
+      })
+      return created
+    },
+
     updateNode: (nodeId, changes) => {
       commit((project) => {
         if (!project.nodes.some((node) => node.id === nodeId)) return project
@@ -368,6 +415,85 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             const position = positionsById.get(node.id)
             return position ? { ...node, position } : node
           }),
+        })
+      })
+    },
+
+    setActiveImageResult: (nodeId, resultId) => {
+      commit((project) => {
+        const source = project.nodes.find(({ id }) => id === nodeId)
+        const result = source?.imageResults?.find(({ id }) => id === resultId)
+        const resultAsset = project.assets.find(({ id }) => id === result?.assetId)
+        const activeVersion = source?.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        if (
+          !source ||
+          !result ||
+          !activeVersion ||
+          resultAsset?.kind !== 'image' ||
+          source.activeResultId === resultId
+        ) {
+          return project
+        }
+        const downstream = findDownstream(project, nodeId)
+
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes.map((node) => {
+            if (node.id === nodeId) {
+              return {
+                ...node,
+                activeResultId: resultId,
+                versions: node.versions.map((version) =>
+                  version.id === node.activeVersionId
+                    ? { ...version, assetId: result.assetId }
+                    : version,
+                ),
+              }
+            }
+            return downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node
+          }),
+          edges: project.edges.map((edge) =>
+            downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
+        })
+      })
+    },
+
+    rotateImageNode: (nodeId) => {
+      commit((project) => {
+        const source = project.nodes.find(({ id }) => id === nodeId)
+        if (!source) return project
+        const activeVersion = source.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        const asset = project.assets.find(({ id }) => id === activeVersion?.assetId)
+        if (asset?.kind !== 'image') return project
+        const downstream = findDownstream(project, nodeId)
+
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes.map((node) => {
+            if (node.id === nodeId) {
+              return {
+                ...node,
+                rotationQuarterTurns: ((node.rotationQuarterTurns ?? 0) + 1) % 4,
+              }
+            }
+            return downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node
+          }),
+          edges: project.edges.map((edge) =>
+            downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
         })
       })
     },

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -143,23 +143,87 @@ test('keeps the agent in a named side panel and provides an explicit close actio
   expect(onClose).toHaveBeenCalledOnce()
 })
 
-test('only offers image creation tools for an image selection and requires confirmation', async () => {
+test('offers the exact eleven image actions and confirms only click-to-insert tools', async () => {
   const user = userEvent.setup()
   const onCreateToolNode = vi.fn()
   const { rerender } = render(
-    <SelectionContextBar node={project.nodes[0]} onCreateToolNode={onCreateToolNode} />,
+    <SelectionContextBar project={project} node={project.nodes[0]} onCreateToolNode={onCreateToolNode} onRotateImage={vi.fn()} />,
   )
   expect(screen.queryByRole('toolbar', { name: '图片创作工具' })).not.toBeInTheDocument()
 
   rerender(
-    <SelectionContextBar node={project.nodes[1]} onCreateToolNode={onCreateToolNode} />,
+    <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={onCreateToolNode} onRotateImage={vi.fn()} />,
   )
-  for (const label of ['人像质感', '720°全景', '多角度', '智能打光', '九宫格', '高清', '宫格拆分']) {
+  for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分', '标注', '旋转', '下载', '预览']) {
     expect(screen.getByRole('button', { name: label })).toBeVisible()
   }
-  await user.click(screen.getByRole('button', { name: '多角度' }))
-  expect(screen.getByRole('dialog', { name: '多角度配置' })).toBeVisible()
+
+  await user.click(screen.getByRole('button', { name: '人像质感调节' }))
+  expect(screen.getByRole('menuitem', { name: '人像调节' })).toBeVisible()
+  expect(screen.getByRole('menuitem', { name: '情绪调节' })).toBeDisabled()
+  await user.click(screen.getByRole('menuitem', { name: '人像调节' }))
+  const confirmation = screen.getByRole('alertdialog', { name: '添加人像调节工具节点' })
+  expect(confirmation).toHaveTextContent('将添加工具节点')
   expect(onCreateToolNode).not.toHaveBeenCalled()
-  await user.click(screen.getByRole('button', { name: '创建配置节点' }))
-  expect(onCreateToolNode).toHaveBeenCalledWith('多角度')
+  await user.click(screen.getByRole('button', { name: '确认添加' }))
+  expect(onCreateToolNode).toHaveBeenCalledWith('人像调节')
+})
+
+test('keeps multi-angle, lighting, and annotation changes in drafts until submit', async () => {
+  const user = userEvent.setup()
+  const onCreateToolNode = vi.fn()
+  render(
+    <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={onCreateToolNode} onRotateImage={vi.fn()} />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '多角度' }))
+  const multiAngle = screen.getByRole('dialog', { name: '多角度编辑器' })
+  for (const preset of ['自定义', '鱼眼视角', '倾斜视角', '正面俯拍', '正面仰拍', '全景俯拍', '背面视角']) {
+    expect(within(multiAngle).getByRole('button', { name: preset })).toBeVisible()
+  }
+  expect(within(multiAngle).getByLabelText('水平环绕')).toHaveValue('0')
+  expect(within(multiAngle).getByLabelText('垂直俯仰')).toHaveValue('0')
+  expect(within(multiAngle).getByLabelText('景别缩放')).toHaveValue('5')
+  expect(within(multiAngle).getByText('预计成本 1')).toBeVisible()
+  expect(onCreateToolNode).not.toHaveBeenCalled()
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: '多角度编辑器' })).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: '打光' }))
+  const lighting = screen.getByRole('dialog', { name: '打光编辑器' })
+  for (const field of ['智能模式', '亮度级别', '亮度百分比', '颜色', '主光源', '轮廓光']) {
+    expect(within(lighting).getByLabelText(field)).toBeVisible()
+  }
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '标注' }))
+  const annotation = screen.getByRole('dialog', { name: '标注编辑器' })
+  for (const tool of ['画笔', '框注', '文字', '颜色', '线宽', '撤销', '重做']) {
+    expect(within(annotation).getByLabelText(tool)).toBeVisible()
+  }
+  expect(within(annotation).getByRole('button', { name: '保存标注' })).toBeDisabled()
+  await user.keyboard('{Escape}')
+  expect(onCreateToolNode).not.toHaveBeenCalled()
+})
+
+test('opens the verified nine-grid, split, and canvas-image preview read-only surfaces', async () => {
+  const user = userEvent.setup()
+  render(
+    <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '九宫格' }))
+  const templates = screen.getByRole('menu', { name: '九宫格模板' })
+  expect(within(templates).getAllByRole('menuitem')).toHaveLength(11)
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '宫格切分' }))
+  const split = screen.getByRole('menu', { name: '宫格切分规格' })
+  for (const option of ['4 宫格（2×2）', '9 宫格（3×3）', '16 宫格（4×4）', '25 宫格（5×5）', '自定义']) {
+    expect(within(split).getByRole('menuitem', { name: option })).toBeVisible()
+  }
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '预览' }))
+  expect(screen.getByRole('dialog', { name: '画布图片预览' })).toBeVisible()
 })

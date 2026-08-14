@@ -1,13 +1,24 @@
 import {
+  Brush,
   Bot,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Crosshair,
+  Download,
   Grid3X3,
   Lightbulb,
   Map,
+  Maximize2,
+  Pencil,
+  Redo2,
+  RotateCw,
   Rotate3D,
   ScanLine,
   Sparkles,
+  Square,
+  Type,
+  Undo2,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -375,73 +386,241 @@ export function CanvasAgentPanel({ children, onClose }: CanvasAgentPanelProps) {
   )
 }
 
-const imageTools = [
-  { label: '人像质感', icon: Sparkles, description: '强化人物质感、情绪和面部细节。' },
-  { label: '720°全景', icon: Rotate3D, description: '设置 2:1 全景构图与空间环绕参考。' },
-  { label: '多角度', icon: Rotate3D, description: '调整镜头方向、俯仰和景别。' },
-  { label: '智能打光', icon: Lightbulb, description: '设置亮度、颜色与主光方向。' },
-  { label: '九宫格', icon: Grid3X3, description: '创建多机位与连贯分镜配置。' },
-  { label: '高清', icon: ScanLine, description: '创建 2× 高清增强配置。' },
-  { label: '宫格拆分', icon: Grid3X3, description: '按 2×2、3×3 或自定义网格拆分素材。' },
+const nineGridTemplates = [
+  '多机位九宫格',
+  '剧情推演四宫格',
+  '角色脸部三视图',
+  '角色设定图',
+  '场景设定图',
+  '产品设定图',
+  '25 宫格连贯分镜',
+  '电影级光影校正',
+  '角色三视图',
+  '画面推演 - 3 秒后',
+  '画面推演 - 5 秒前',
 ] as const
 
-interface SelectionContextBarProps {
-  node?: CanvasNode
-  onCreateToolNode(tool: string): void
+const splitOptions = [
+  '4 宫格（2×2）',
+  '9 宫格（3×3）',
+  '16 宫格（4×4）',
+  '25 宫格（5×5）',
+  '自定义',
+] as const
+
+const anglePresets = [
+  '自定义',
+  '鱼眼视角',
+  '倾斜视角',
+  '正面俯拍',
+  '正面仰拍',
+  '全景俯拍',
+  '背面视角',
+] as const
+
+type ImageToolSurface =
+  | 'portrait'
+  | 'multi-angle'
+  | 'lighting'
+  | 'nine-grid'
+  | 'split'
+  | 'annotation'
+  | 'preview'
+
+function activeImageAsset(project: Project, node: CanvasNode) {
+  const version = node.versions.find(({ id }) => id === node.activeVersionId)
+  return project.assets.find(({ id }) => id === version?.assetId)
 }
 
-export function SelectionContextBar({ node, onCreateToolNode }: SelectionContextBarProps) {
-  const [activeTool, setActiveTool] = useState<(typeof imageTools)[number]>()
-  useEffect(() => setActiveTool(undefined), [node?.id])
+function ImageToolDialog({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose(): void
+  children: ReactNode
+}) {
+  return (
+    <section className="canvas-tool-config" role="dialog" aria-modal="false" aria-label={title}>
+      <div className="canvas-tool-config__heading">
+        <h2>{title}</h2>
+        <button type="button" aria-label={`关闭${title}`} onClick={onClose}>
+          <X aria-hidden="true" />
+        </button>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+interface SelectionContextBarProps {
+  project: Project
+  node?: CanvasNode
+  onCreateToolNode(tool: string): void
+  onRotateImage(nodeId: string): void
+}
+
+export function SelectionContextBar({
+  project,
+  node,
+  onCreateToolNode,
+  onRotateImage,
+}: SelectionContextBarProps) {
+  const [surface, setSurface] = useState<ImageToolSurface>()
+  const [pendingTool, setPendingTool] = useState<string>()
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [lightingDirty, setLightingDirty] = useState(false)
   useEffect(() => {
-    if (!activeTool) return
+    setSurface(undefined)
+    setPendingTool(undefined)
+    setLightingDirty(false)
+  }, [node?.id])
+  useEffect(() => {
+    if (!surface && !pendingTool) return
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setActiveTool(undefined)
+      if (event.key !== 'Escape') return
+      setSurface(undefined)
+      setPendingTool(undefined)
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [activeTool])
+  }, [pendingTool, surface])
 
-  if (node?.kind !== 'image' && node?.kind !== 'character' && node?.kind !== 'scene') {
+  const asset = node ? activeImageAsset(project, node) : undefined
+  if (
+    !node ||
+    !['image', 'character', 'scene'].includes(node.kind) ||
+    asset?.kind !== 'image'
+  ) {
     return null
+  }
+
+  const previewItems = project.nodes.flatMap((candidate) => {
+    const candidateAsset = activeImageAsset(project, candidate)
+    return candidateAsset?.kind === 'image'
+      ? [{ node: candidate, asset: candidateAsset }]
+      : []
+  })
+  const openPreview = () => {
+    const index = previewItems.findIndex(({ node: candidate }) => candidate.id === node.id)
+    setPreviewIndex(Math.max(0, index))
+    setSurface('preview')
+  }
+  const requestToolNode = (tool: string) => {
+    setSurface(undefined)
+    setPendingTool(tool)
+  }
+  const downloadCurrent = () => {
+    const anchor = document.createElement('a')
+    anchor.href = asset.url
+    anchor.download = `${node.title}.png`
+    anchor.click()
   }
 
   return (
     <>
       <div className="selection-context-bar floating-panel" role="toolbar" aria-label="图片创作工具">
-        {imageTools.map((tool) => {
-          const Icon = tool.icon
-          return (
-            <button key={tool.label} type="button" onClick={() => setActiveTool(tool)}>
-              <Icon aria-hidden="true" />
-              {tool.label}
-            </button>
-          )
-        })}
+        <button type="button" onClick={() => setSurface('portrait')}><Sparkles aria-hidden="true" />人像质感调节</button>
+        <button type="button" onClick={() => requestToolNode('全景')}><Rotate3D aria-hidden="true" />全景</button>
+        <button type="button" onClick={() => setSurface('multi-angle')}><Rotate3D aria-hidden="true" />多角度</button>
+        <button type="button" onClick={() => setSurface('lighting')}><Lightbulb aria-hidden="true" />打光</button>
+        <button type="button" onClick={() => setSurface('nine-grid')}><Grid3X3 aria-hidden="true" />九宫格</button>
+        <button type="button" onClick={() => requestToolNode('高清')}><ScanLine aria-hidden="true" />高清</button>
+        <button type="button" onClick={() => setSurface('split')}><Grid3X3 aria-hidden="true" />宫格切分</button>
+        <button type="button" onClick={() => setSurface('annotation')}><Pencil aria-hidden="true" />标注</button>
+        <button type="button" title="旋转" onClick={() => onRotateImage(node.id)}><RotateCw aria-hidden="true" />旋转</button>
+        <button type="button" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" />下载</button>
+        <button type="button" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" />预览</button>
       </div>
-      {activeTool ? (
-        <section className="canvas-tool-config" role="dialog" aria-modal="false" aria-label={`${activeTool.label}配置`}>
-          <div className="canvas-tool-config__heading">
-            <h2>{activeTool.label}配置</h2>
-            <button type="button" aria-label="关闭工具配置" onClick={() => setActiveTool(undefined)}><X aria-hidden="true" /></button>
+
+      {surface === 'portrait' ? (
+        <div className="image-tool-menu" role="menu" aria-label="人像质感调节">
+          <button type="button" role="menuitem" onClick={() => requestToolNode('人像调节')}>人像调节</button>
+          <button type="button" role="menuitem" disabled title="该副作用尚未完成实机核对">情绪调节</button>
+        </div>
+      ) : null}
+
+      {surface === 'nine-grid' ? (
+        <div className="image-tool-menu image-tool-menu--long" role="menu" aria-label="九宫格模板">
+          {nineGridTemplates.map((template) => <button key={template} type="button" role="menuitem" disabled>{template}</button>)}
+        </div>
+      ) : null}
+
+      {surface === 'split' ? (
+        <div className="image-tool-menu" role="menu" aria-label="宫格切分规格">
+          {splitOptions.map((option) => <button key={option} type="button" role="menuitem" disabled>{option}</button>)}
+        </div>
+      ) : null}
+
+      {pendingTool ? (
+        <div className="image-tool-confirm" role="alertdialog" aria-modal="true" aria-label={`添加${pendingTool}工具节点`}>
+          <h2>将添加工具节点</h2>
+          <p>“{pendingTool}”会创建本地工具节点并连接“{node.title}”，不会触发真实生成。</p>
+          <div>
+            <button type="button" onClick={() => setPendingTool(undefined)}>取消</button>
+            <button type="button" onClick={() => {
+              onCreateToolNode(pendingTool)
+              setPendingTool(undefined)
+            }}>确认添加</button>
           </div>
-          <p>{activeTool.description}</p>
-          <label>
-            创作描述
-            <textarea defaultValue={`基于“${node.title}”保持主体一致性`} rows={3} />
-          </label>
-          <p className="canvas-tool-config__disclosure">本地配置预览 · 确认前不会修改画布或触发生成</p>
-          <button
-            type="button"
-            className="canvas-tool-config__primary"
-            onClick={() => {
-              onCreateToolNode(activeTool.label)
-              setActiveTool(undefined)
-            }}
-          >
-            创建配置节点
-          </button>
-        </section>
+        </div>
+      ) : null}
+
+      {surface === 'multi-angle' ? (
+        <ImageToolDialog title="多角度编辑器" onClose={() => setSurface(undefined)}>
+          <form onSubmit={(event) => { event.preventDefault(); onCreateToolNode('多角度'); setSurface(undefined) }}>
+            <div className="image-angle-presets">{anglePresets.map((preset) => <button key={preset} type="button" aria-pressed={preset === '自定义'}>{preset}</button>)}</div>
+            <div className="image-direction-pad" aria-label="方向盘"><button type="button">↑</button><button type="button">←</button><span>B · R · L · T</span><button type="button">→</button><button type="button">↓</button></div>
+            <label>水平环绕<input aria-label="水平环绕" type="range" min="0" max="345" step="15" defaultValue="0" /></label>
+            <label>垂直俯仰<input aria-label="垂直俯仰" type="range" min="-90" max="90" step="15" defaultValue="0" /></label>
+            <label>景别缩放<input aria-label="景别缩放" type="range" min="0" max="10" step="5" defaultValue="5" /></label>
+            <label><input type="checkbox" />提示词</label>
+            <div className="canvas-tool-config__footer"><button type="reset">重置参数</button><span>预计成本 1</span><button type="submit">生成</button></div>
+          </form>
+        </ImageToolDialog>
+      ) : null}
+
+      {surface === 'lighting' ? (
+        <ImageToolDialog title="打光编辑器" onClose={() => setSurface(undefined)}>
+          <form onReset={() => setLightingDirty(false)} onSubmit={(event) => { event.preventDefault(); onCreateToolNode('打光'); setSurface(undefined) }}>
+            <label>智能模式<input aria-label="智能模式" type="checkbox" onChange={() => setLightingDirty(true)} /></label>
+            <label>亮度级别<input aria-label="亮度级别" type="range" min="0" max="4" step="1" defaultValue="2" onChange={() => setLightingDirty(true)} /></label>
+            <label>亮度百分比<input aria-label="亮度百分比" type="number" min="10" max="100" defaultValue="50" onChange={() => setLightingDirty(true)} /></label>
+            <label>颜色<input aria-label="颜色" type="color" defaultValue="#ffffff" onChange={() => setLightingDirty(true)} /></label>
+            <label>主光源<select aria-label="主光源" defaultValue="前方" onChange={() => setLightingDirty(true)}>{['左侧', '顶部', '右侧', '前方', '底部', '后方'].map((option) => <option key={option}>{option}</option>)}</select></label>
+            <label>轮廓光<input aria-label="轮廓光" type="checkbox" onChange={() => setLightingDirty(true)} /></label>
+            <div className="canvas-tool-config__footer"><button type="reset">重置参数</button><button type="submit" disabled={!lightingDirty}>生成</button></div>
+          </form>
+        </ImageToolDialog>
+      ) : null}
+
+      {surface === 'annotation' ? (
+        <ImageToolDialog title="标注编辑器" onClose={() => setSurface(undefined)}>
+          <div className="annotation-tools" role="toolbar" aria-label="标注工具">
+            <button type="button" aria-label="画笔" aria-pressed="true"><Brush aria-hidden="true" /></button>
+            <button type="button" aria-label="框注"><Square aria-hidden="true" /></button>
+            <button type="button" aria-label="文字"><Type aria-hidden="true" /></button>
+            <label aria-label="颜色"><input type="color" defaultValue="#ff0000" /></label>
+            <label aria-label="线宽"><input type="range" min="1" max="40" step="1" defaultValue="4" /></label>
+            <button type="button" aria-label="撤销" disabled><Undo2 aria-hidden="true" /></button>
+            <button type="button" aria-label="重做" disabled><Redo2 aria-hidden="true" /></button>
+          </div>
+          <div className="annotation-preview"><img src={asset.url} alt="标注预览" /></div>
+          <button type="button" disabled>保存标注</button>
+        </ImageToolDialog>
+      ) : null}
+
+      {surface === 'preview' && previewItems[previewIndex] ? (
+        <div className="image-preview-dialog" role="dialog" aria-modal="true" aria-label="画布图片预览">
+          <button type="button" aria-label="关闭图片预览" onClick={() => setSurface(undefined)}><X aria-hidden="true" /></button>
+          <figure>
+            <img src={previewItems[previewIndex].asset.url} alt={previewItems[previewIndex].node.title} />
+            <figcaption>{previewItems[previewIndex].node.title}</figcaption>
+          </figure>
+          {previewIndex > 0 ? <button type="button" aria-label="上一张图片" onClick={() => setPreviewIndex((index) => index - 1)}><ChevronLeft aria-hidden="true" /></button> : null}
+          {previewIndex < previewItems.length - 1 ? <button type="button" aria-label="下一张图片" onClick={() => setPreviewIndex((index) => index + 1)}><ChevronRight aria-hidden="true" /></button> : null}
+        </div>
       ) : null}
     </>
   )
