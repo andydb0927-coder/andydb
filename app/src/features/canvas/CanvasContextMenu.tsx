@@ -1,16 +1,15 @@
 import {
+  AudioLines,
   ChevronRight,
-  ClipboardPaste,
-  Contact,
+  Clapperboard,
   Film,
+  FileClock,
   FileText,
-  Globe2,
   Image,
+  Library,
   Plus,
-  Redo2,
-  Save,
+  Sparkles,
   Type,
-  Undo2,
   Upload,
 } from 'lucide-react'
 import {
@@ -22,39 +21,48 @@ import {
 } from 'react'
 
 import { FloatingPanel } from '../../ui/FloatingPanel'
-import type { CreativeCardKind } from '../project/model'
-import type { CreatableNodeKind } from './node-draft'
+import type { QuickNodeType } from './CanvasNodeTypePicker'
 
-export type ContextCreatableKind = CreatableNodeKind | CreativeCardKind
+export type ContextQuickNodeType = Extract<
+  QuickNodeType,
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'smart-edit'
+  | 'director'
+  | 'frame-analysis'
+  | 'audio'
+  | 'script'
+  | 'asset-library'
+>
 
-const nodeTypes: Array<{
-  kind: ContextCreatableKind
+const contextNodeTypes: Array<{
+  type: ContextQuickNodeType
   label: string
+  badge?: string
   icon: typeof FileText
 }> = [
-  { kind: 'script', label: '剧本卡', icon: FileText },
-  { kind: 'character-card', label: '角色卡', icon: Contact },
-  { kind: 'worldview', label: '世界观卡', icon: Globe2 },
-  { kind: 'text', label: '文本', icon: Type },
-  { kind: 'image', label: '图片', icon: Image },
-  { kind: 'storyboard', label: '分镜', icon: FileText },
-  { kind: 'video', label: '视频', icon: Film },
+  { type: 'text', label: '文本', icon: Type },
+  { type: 'image', label: '图片', icon: Image },
+  { type: 'video', label: '视频', icon: Film },
+  { type: 'smart-edit', label: '智能剪辑', badge: 'Beta', icon: Clapperboard },
+  { type: 'director', label: '导演台', badge: 'NEW', icon: Sparkles },
+  { type: 'frame-analysis', label: '逐帧拉片', badge: 'SD2.5', icon: FileClock },
+  { type: 'audio', label: '音频', icon: AudioLines },
+  { type: 'script', label: '脚本', icon: FileText },
+  { type: 'asset-library', label: '素材库', icon: Library },
 ]
+
+type ContextSubmenu = 'nodes' | 'resources'
 
 export interface CanvasContextMenuProps {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
   targetNodeTitle?: string
-  canSaveAsset: boolean
-  canUndo: boolean
-  canRedo: boolean
-  clipboardText: string
+  canUseGenerationHistory: boolean
   onUpload(): void
-  onSaveAsset(): void
-  onAddNode(kind: ContextCreatableKind): void
-  onUndo(): void
-  onRedo(): void
-  onPaste(text: string): void
+  onOpenGenerationHistory(): void
+  onAddNode(type: ContextQuickNodeType): void
   onClose(): void
 }
 
@@ -63,8 +71,8 @@ function clampMenuPosition(
   bounds: CanvasContextMenuProps['bounds'],
 ) {
   const gutter = 8
-  const width = Math.min(244, Math.max(0, bounds.width - gutter * 2))
-  const estimatedHeight = 382
+  const width = Math.min(220, Math.max(0, bounds.width - gutter * 2))
+  const estimatedHeight = 372
   return {
     left: Math.min(
       Math.max(gutter, anchor.x),
@@ -82,23 +90,18 @@ export function CanvasContextMenu({
   anchor,
   bounds,
   targetNodeTitle,
-  canSaveAsset,
-  canUndo,
-  canRedo,
-  clipboardText,
+  canUseGenerationHistory,
   onUpload,
-  onSaveAsset,
+  onOpenGenerationHistory,
   onAddNode,
-  onUndo,
-  onRedo,
-  onPaste,
   onClose,
 }: CanvasContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const firstItemRef = useRef<HTMLButtonElement>(null)
-  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [submenu, setSubmenu] = useState<ContextSubmenu>()
   const position = clampMenuPosition(anchor, bounds)
   const style: CSSProperties = position
+  const submenuOpensLeft = position.left + position.width + 216 > bounds.width - 8
 
   useEffect(() => {
     firstItemRef.current?.focus()
@@ -110,6 +113,7 @@ export function CanvasContextMenu({
         event.target instanceof Node &&
         !menuRef.current?.contains(event.target)
       ) {
+        event.preventDefault()
         onClose()
       }
     }
@@ -124,19 +128,29 @@ export function CanvasContextMenu({
       onClose()
       return
     }
+    if (event.key === 'ArrowLeft' && submenu) {
+      event.preventDefault()
+      setSubmenu(undefined)
+      firstItemRef.current?.focus()
+      return
+    }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
 
     const items = Array.from(
       menuRef.current?.querySelectorAll<HTMLButtonElement>(
         '[role="menuitem"]:not(:disabled)',
       ) ?? [],
-    )
+    ).filter((item) => item.offsetParent !== null)
     if (!items.length) return
     event.preventDefault()
     const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
     const delta = event.key === 'ArrowDown' ? 1 : -1
     items[(currentIndex + delta + items.length) % items.length]?.focus()
   }
+
+  const submenuClassName = `canvas-context-menu__submenu${
+    submenuOpensLeft ? ' canvas-context-menu__submenu--left' : ''
+  }`
 
   return (
     <FloatingPanel
@@ -151,66 +165,95 @@ export function CanvasContextMenu({
         <span>{targetNodeTitle ? 'NODE MENU' : 'CANVAS MENU'}</span>
         <strong>{targetNodeTitle ?? '画布快捷操作'}</strong>
       </div>
-      <button ref={firstItemRef} type="button" role="menuitem" onClick={onUpload}>
-        <Upload aria-hidden="true" />
-        上传
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        disabled={!canSaveAsset}
-        onClick={onSaveAsset}
+
+      <div
+        className="canvas-context-menu__branch"
+        onPointerEnter={() => setSubmenu('nodes')}
       >
-        <Save aria-hidden="true" />
-        保存到我的资产
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        aria-expanded={addMenuOpen}
-        onClick={() => setAddMenuOpen((open) => !open)}
+        <button
+          ref={firstItemRef}
+          type="button"
+          role="menuitem"
+          aria-haspopup="menu"
+          aria-expanded={submenu === 'nodes'}
+          aria-controls="canvas-add-node-submenu"
+          onClick={() => setSubmenu('nodes')}
+        >
+          <Plus aria-hidden="true" />
+          添加节点
+          <ChevronRight aria-hidden="true" />
+        </button>
+        {submenu === 'nodes' ? (
+          <div
+            id="canvas-add-node-submenu"
+            className={submenuClassName}
+            role="menu"
+            aria-label="添加节点子菜单"
+          >
+            {contextNodeTypes.map(({ type, label, badge, icon: Icon }) => (
+              <button
+                key={type}
+                type="button"
+                role="menuitem"
+                aria-label={badge ? `${label} ${badge}` : label}
+                onClick={() => onAddNode(type)}
+              >
+                <Icon aria-hidden="true" />
+                <span>{label}</span>
+                {badge ? <em>{badge}</em> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        className="canvas-context-menu__branch"
+        onPointerEnter={() => setSubmenu('resources')}
       >
-        <Plus aria-hidden="true" />
-        添加节点
-        <ChevronRight aria-hidden="true" className={addMenuOpen ? 'canvas-context-menu__chevron--open' : undefined} />
-      </button>
-      {addMenuOpen ? (
-        <div className="canvas-context-menu__node-types" role="group" aria-label="节点类型">
-          {nodeTypes.map(({ kind, label, icon: Icon }) => (
+        <button
+          type="button"
+          role="menuitem"
+          aria-haspopup="menu"
+          aria-expanded={submenu === 'resources'}
+          aria-controls="canvas-add-resource-submenu"
+          onClick={() => setSubmenu('resources')}
+        >
+          <Library aria-hidden="true" />
+          添加资源
+          <ChevronRight aria-hidden="true" />
+        </button>
+        {submenu === 'resources' ? (
+          <div
+            id="canvas-add-resource-submenu"
+            className={submenuClassName}
+            role="menu"
+            aria-label="添加资源子菜单"
+          >
+            <button type="button" role="menuitem" onClick={onUpload}>
+              <Upload aria-hidden="true" />
+              <span>上传</span>
+            </button>
             <button
-              key={kind}
               type="button"
               role="menuitem"
-              onClick={() => onAddNode(kind)}
+              disabled={!canUseGenerationHistory}
+              aria-describedby={
+                canUseGenerationHistory ? undefined : 'generation-history-disabled-reason'
+              }
+              onClick={onOpenGenerationHistory}
             >
-              <Icon aria-hidden="true" />
-              {label}
+              <FileClock aria-hidden="true" />
+              <span>从生成历史选择</span>
             </button>
-          ))}
-        </div>
-      ) : null}
-      <div className="canvas-context-menu__separator" role="separator" />
-      <button type="button" role="menuitem" aria-label="撤销" disabled={!canUndo} onClick={onUndo}>
-        <Undo2 aria-hidden="true" />
-        撤销
-        <kbd>⌘ Z</kbd>
-      </button>
-      <button type="button" role="menuitem" aria-label="重做" disabled={!canRedo} onClick={onRedo}>
-        <Redo2 aria-hidden="true" />
-        重做
-        <kbd>⌘ ⇧ Z</kbd>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        aria-label="粘贴"
-        disabled={!clipboardText.trim()}
-        onClick={() => onPaste(clipboardText)}
-      >
-        <ClipboardPaste aria-hidden="true" />
-        粘贴
-        <kbd>⌘ V</kbd>
-      </button>
+            {!canUseGenerationHistory ? (
+              <span id="generation-history-disabled-reason" className="canvas-context-menu__reason">
+                暂无可插入的已完成结果
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </FloatingPanel>
   )
 }

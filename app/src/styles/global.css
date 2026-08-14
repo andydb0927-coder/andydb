@@ -7787,7 +7787,7 @@ select {
   max-height: calc(100% - 16px);
   gap: 2px;
   padding: var(--space-2);
-  overflow-y: auto;
+  overflow: visible;
   border-color: rgb(255 255 255 / 12%);
   border-radius: 12px;
   background: rgb(24 26 32 / 98%);
@@ -7857,25 +7857,59 @@ select {
   font-size: 0.625rem;
 }
 
-.canvas-context-menu__chevron--open {
-  transform: rotate(90deg);
+.canvas-context-menu__branch {
+  position: static;
 }
 
-.canvas-context-menu__node-types {
+.canvas-context-menu__submenu {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: calc(100% + 8px);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 208px;
+  max-height: min(372px, calc(100vh - 72px));
   gap: 2px;
-  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  padding: var(--space-2);
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 12px;
+  background: rgb(24 26 32 / 99%);
+  box-shadow: 0 22px 64px rgb(0 0 0 / 48%);
 }
 
-.canvas-context-menu__node-types button {
-  grid-template-columns: 18px minmax(0, 1fr);
+.canvas-context-menu__submenu--left {
+  right: calc(100% + 8px);
+  left: auto;
 }
 
-.canvas-context-menu__separator {
+.canvas-context-menu__submenu button {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+}
+
+.canvas-context-menu__submenu button em {
+  padding: 2px 5px;
+  border-radius: 999px;
+  color: #d8d2ff;
+  background: rgb(114 104 240 / 20%);
+  font-size: 0.5625rem;
+  font-style: normal;
+}
+
+.canvas-context-menu__reason {
+  padding: var(--space-1) var(--space-2) var(--space-2) 28px;
+  color: var(--text-muted);
+  font-size: 0.625rem;
+  line-height: 1.45;
+}
+
+.canvas-context-upload-input {
+  position: fixed;
+  width: 1px;
   height: 1px;
-  margin: var(--space-1) var(--space-2);
-  background: rgb(255 255 255 / 9%);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .canvas-view-controls {

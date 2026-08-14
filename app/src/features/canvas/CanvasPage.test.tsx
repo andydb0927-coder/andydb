@@ -357,7 +357,16 @@ function doubleClickPane(clientX = 420, clientY = 300) {
 }
 
 function chooseContextNode(
-  label: '剧本卡' | '角色卡' | '世界观卡' | '文本' | '图片' | '分镜' | '视频',
+  label:
+    | '文本'
+    | '图片'
+    | '视频'
+    | '智能剪辑 Beta'
+    | '导演台 NEW'
+    | '逐帧拉片 SD2.5'
+    | '音频'
+    | '脚本'
+    | '素材库',
   clientX = 420,
   clientY = 300,
 ) {
@@ -368,6 +377,7 @@ function chooseContextNode(
 
 function chooseContextUpload(clientX = 420, clientY = 300) {
   contextMenuPane(clientX, clientY)
+  act(() => screen.getByRole('menuitem', { name: '添加资源' }).click())
   act(() => screen.getByRole('menuitem', { name: '上传' }).click())
 }
 
@@ -1253,25 +1263,18 @@ describe('creative canvas', () => {
       initializeFlow({ x: 612, y: 428 })
       chooseContextUpload(360, 280)
       await user.upload(
-        screen.getByLabelText('本地图片'),
+        screen.getByLabelText('上传画布图片'),
         new File(['durable-image-bytes'], 'durable.png', {
           type: 'image/png',
         }),
       )
-      await user.clear(screen.getByLabelText('标题'))
-      await user.type(screen.getByLabelText('标题'), '持久图片参考')
-      await user.type(
-        screen.getByLabelText('图片描述（选填）'),
-        '雨夜玻璃窗后的侧脸',
-      )
-      await user.click(screen.getByRole('button', { name: '确认创建' }))
       await waitFor(() => {
         expect(useProjectStore.getState().saveStatus).toBe('saved')
       })
 
       const saved = await repository.load('project-canvas')
       const savedNode = saved?.nodes.find(
-        ({ title }) => title === '持久图片参考',
+        ({ title }) => title === 'durable.png',
       )
       const savedVersion = savedNode?.versions.find(
         ({ id }) => id === savedNode.activeVersionId,
@@ -1280,7 +1283,7 @@ describe('creative canvas', () => {
         ({ id }) => id === savedVersion?.assetId,
       )
       expect(savedNode?.position).toEqual({ x: 612, y: 428 })
-      expect(savedVersion?.prompt).toBe('雨夜玻璃窗后的侧脸')
+      expect(savedVersion?.prompt).toBe('durable.png')
       expect(savedAsset).toMatchObject({
         kind: 'image',
         mimeType: 'image/png',
@@ -1301,7 +1304,7 @@ describe('creative canvas', () => {
       rehydratedView = renderCanvas({ repository })
 
       expect(
-        await screen.findByRole('button', { name: '持久图片参考' }),
+        await screen.findByRole('button', { name: 'durable.png' }),
       ).toBeVisible()
       const rehydrated = useProjectStore.getState().activeProject
       const rehydratedNode = rehydrated?.nodes.find(
@@ -1990,8 +1993,8 @@ describe('creative canvas', () => {
     renderCanvas()
     initializeFlow()
 
-    chooseContextNode('文本')
-    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+    doubleClickPane()
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
 
     act(() => {
       latestFlowProps?.onConnectEnd?.({}, {
@@ -2059,13 +2062,12 @@ describe('creative canvas', () => {
     expect(connect).toHaveAttribute('aria-pressed', 'false')
 
     initializeFlow()
-    chooseContextNode('视频')
-    const cancel = screen.getByRole('button', { name: '取消' })
-    cancel.focus()
+    doubleClickPane()
+    screen.getByRole('button', { name: '故事脚本生成' }).focus()
     await user.keyboard('l')
 
     expect(
-      screen.getByRole('dialog', { name: '创建视频节点' }),
+      screen.getByRole('dialog', { name: '选择节点类型' }),
     ).toBeVisible()
     expect(connect).toHaveAttribute('aria-pressed', 'false')
     expect(useProjectStore.getState().past).toEqual([])
@@ -2387,8 +2389,8 @@ describe('creative canvas', () => {
     editable.remove()
 
     await user.click(screen.getByRole('button', { name: '关闭 Agent' }))
-    chooseContextNode('视频')
-    expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBeVisible()
+    doubleClickPane()
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
     await user.keyboard('h')
     await user.keyboard('d')
     expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
@@ -2616,10 +2618,12 @@ describe('creative canvas', () => {
     expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
     chooseContextNode('文本')
 
-    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
-    expect(screen.getByLabelText('标题')).toHaveFocus()
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'text',
+      position: { x: 777, y: 333 },
+    })
     expect(connect).toHaveAttribute('aria-pressed', 'false')
-    expect(useProjectStore.getState().past).toEqual([])
+    expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
   test('discards connection selection on project switch without restoring old focus', async () => {
@@ -2909,47 +2913,35 @@ describe('creative canvas', () => {
 
     expect(contextMenuPane()).toHaveBeenCalledOnce()
     expect(screen.getByRole('menu', { name: '画布快捷菜单' })).toBeVisible()
-    expect(screen.getByRole('menuitem', { name: '上传' })).toHaveFocus()
-    expect(screen.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: '添加节点' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: '添加资源' })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: '粘贴' })).not.toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
     await waitFor(() => expect(canvas).toHaveFocus())
   })
 
-  test('pastes available clipboard text into one undoable node at the menu point', async () => {
+  test('opens generation history from resources and inserts one completed result at the menu point', async () => {
     const user = userEvent.setup()
-    const clipboardDescriptor = Object.getOwnPropertyDescriptor(
-      navigator,
-      'clipboard',
+    renderCanvas()
+    initializeFlow({ x: 688, y: 412 })
+    contextMenuPane(470, 330)
+    await user.click(screen.getByRole('menuitem', { name: '添加资源' }))
+    await user.click(screen.getByRole('menuitem', { name: '从生成历史选择' }))
+
+    const history = screen.getByRole('complementary', { name: '历史' })
+    await user.click(
+      within(history).getByRole('button', { name: '插入历史结果 分镜 02' }),
     )
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { readText: vi.fn().mockResolvedValue('雨夜剪贴板文本') },
+
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      position: { x: 688, y: 412 },
+      versions: [{ prompt: '分镜 02 创作描述', assetId: 'asset-shot' }],
     })
-
-    try {
-      renderCanvas()
-      initializeFlow({ x: 688, y: 412 })
-      contextMenuPane(470, 330)
-
-      const paste = screen.getByRole('menuitem', { name: '粘贴' })
-      await waitFor(() => expect(paste).toBeEnabled())
-      await user.click(paste)
-
-      expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
-        kind: 'text',
-        position: { x: 688, y: 412 },
-        versions: [{ prompt: '雨夜剪贴板文本' }],
-      })
-      expect(useProjectStore.getState().past).toHaveLength(1)
-    } finally {
-      if (clipboardDescriptor) {
-        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
-      } else {
-        Reflect.deleteProperty(navigator, 'clipboard')
-      }
-    }
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(screen.queryByRole('complementary', { name: '历史' })).not.toBeInTheDocument()
   })
 
   test('chooses a free-generation type and creates it at the double-click point', async () => {
@@ -2996,33 +2988,49 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(cases.length)
   })
 
-  test('adds a node from the context menu without the removed creation dock', async () => {
+  test('creates all nine context node types directly at the converted menu point', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow({ x: 520, y: 340 })
 
-    contextMenuPane(440, 300)
-    await user.click(screen.getByRole('menuitem', { name: '添加节点' }))
-    await user.click(screen.getByRole('menuitem', { name: '分镜' }))
-    expect(screen.getByRole('dialog', { name: '创建分镜节点' })).toBeVisible()
-    await user.type(screen.getByLabelText('画面提示词'), '低机位，雨水掠过站台')
-    await user.click(screen.getByRole('button', { name: '确认创建' }))
+    const cases = [
+      ['文本', 'text', '文本'],
+      ['图片', 'image', '图片'],
+      ['视频', 'video', '视频'],
+      ['智能剪辑 Beta', 'video', '智能剪辑'],
+      ['导演台 NEW', 'script', '导演台'],
+      ['逐帧拉片 SD2.5', 'storyboard', '逐帧拉片'],
+      ['音频', 'text', '音频'],
+      ['脚本', 'script', '脚本'],
+      ['素材库', 'image', '素材库'],
+    ] as const
 
-    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
-      kind: 'storyboard',
-      position: { x: 520, y: 340 },
+    for (const [label, kind, title] of cases) {
+      contextMenuPane(440, 300)
+      await user.click(screen.getByRole('menuitem', { name: '添加节点' }))
+      await user.click(screen.getByRole('menuitem', { name: label }))
+      expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+        kind,
+        title: expect.stringContaining(title),
+        position: { x: 520, y: 340 },
+      })
+      expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
+    }
+
+    const frameAnalysis = useProjectStore
+      .getState()
+      .activeProject?.nodes.find(({ title }) => title.startsWith('逐帧拉片'))
+    expect(frameAnalysis?.videoTool).toEqual({
+      kind: 'frame-analysis',
+      model: 'SD2.5',
+      dimensions: ['分镜', '动态', '音乐'],
     })
+    expect(useProjectStore.getState().past).toHaveLength(cases.length)
   })
 
-  test('saves the right-clicked node asset to the local library and restores node focus', async () => {
+  test('shows the same two groups on a node menu and restores node focus after Escape', async () => {
     const user = userEvent.setup()
-    const save = vi.fn().mockResolvedValue(undefined)
-    renderCanvas({
-      libraryRepository: {
-        list: vi.fn().mockResolvedValue([]),
-        save,
-      },
-    })
+    renderCanvas()
     initializeFlow()
     const character = screen.getByRole('button', { name: '角色参考' })
     const node = latestFlowProps!.nodes.find(({ id }) => id === 'character')!
@@ -3035,40 +3043,38 @@ describe('creative canvas', () => {
       currentTarget: character,
     }, node))
 
-    const saveAction = screen.getByRole('menuitem', { name: '保存到我的资产' })
-    expect(saveAction).toBeEnabled()
-    await user.click(saveAction)
-    await waitFor(() => expect(save).toHaveBeenCalledOnce())
-    expect(save.mock.calls[0][0]).toMatchObject({
-      id: 'asset-character',
-      name: '角色参考',
-      kind: 'image',
-    })
+    expect(screen.getByRole('menuitem', { name: '添加节点' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '添加资源' })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: '保存到我的资产' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
     await waitFor(() => expect(character).toHaveFocus())
   })
 
   test.each([
     [
-      '剧本卡',
-      '创建剧本卡',
+      '故事脚本生成',
+      '故事脚本',
+      '编辑剧本卡',
       [['分场', '场一：雨夜河岸'], ['对白', '林渊：你终于来了。'], ['镜头备注', '远景缓慢推近']],
       'script',
     ],
     [
-      '角色卡',
-      '创建角色卡',
+      '角色三视图',
+      '角色三视图',
+      '编辑角色卡',
       [['姓名', '林渊'], ['外貌锚点', '短发，右眼下有小痣'], ['服化道', '深灰长风衣'], ['关系', '林舟的姐姐']],
       'character-card',
     ],
     [
       '世界观卡',
-      '创建世界观卡',
+      '世界观卡',
+      '编辑世界观卡',
       [['背景', '雨季淹城三天'], ['美术风格', '低饱和蓝绿胶片'], ['规则', '铜铃后不直呼失踪者姓名']],
       'worldview',
     ],
   ] as const)(
-    'creates a structured %s with exact persisted fields',
-    async (toolLabel, dialogName, fields, kind) => {
+    'creates and edits a structured %s with exact persisted fields',
+    async (toolLabel, titlePrefix, dialogName, fields, kind) => {
       const user = userEvent.setup()
       renderCanvas({
         repository: noOpCanvasRepository,
@@ -3076,18 +3082,25 @@ describe('creative canvas', () => {
       })
       initializeFlow({ x: 360, y: 280 })
 
-      chooseContextNode(toolLabel, 360, 280)
-      expect(screen.getByRole('dialog', { name: dialogName })).toBeVisible()
-      for (const [label, value] of fields) {
-        await user.type(screen.getByLabelText(label), value)
-      }
-      await user.click(screen.getByRole('button', { name: '确认创建' }))
-
+      doubleClickPane(360, 280)
+      await user.click(screen.getByRole('button', { name: toolLabel }))
       const created = useProjectStore.getState().activeProject?.nodes.at(-1)
       expect(created).toMatchObject({ kind, position: { x: 360, y: 280 } })
-      expect(created?.card).toBeDefined()
-      expect(created?.versions).toHaveLength(1)
-      expect(useProjectStore.getState().past).toHaveLength(1)
+      await user.click(
+        screen.getByRole('button', { name: new RegExp(`^${titlePrefix}`) }),
+      )
+      await user.click(screen.getByRole('button', { name: '编辑卡片' }))
+      expect(screen.getByRole('dialog', { name: dialogName })).toBeVisible()
+      for (const [label, value] of fields) {
+        await user.clear(screen.getByLabelText(label))
+        await user.type(screen.getByLabelText(label), value)
+      }
+      await user.click(screen.getByRole('button', { name: '确认保存' }))
+
+      const edited = useProjectStore.getState().activeProject?.nodes.at(-1)
+      expect(edited?.card).toBeDefined()
+      expect(edited?.versions).toHaveLength(2)
+      expect(useProjectStore.getState().past).toHaveLength(2)
     },
   )
 
@@ -3108,13 +3121,16 @@ describe('creative canvas', () => {
     })
     initializeFlow({ x: 480, y: 320 })
 
-    chooseContextNode('世界观卡', 480, 320)
+    doubleClickPane(480, 320)
+    await user.click(screen.getByRole('button', { name: '世界观卡' }))
+    await user.click(screen.getByRole('button', { name: /^世界观卡/ }))
+    await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     await user.clear(screen.getByLabelText('标题'))
     await user.type(screen.getByLabelText('标题'), '潮汐城世界观')
     await user.type(screen.getByLabelText('背景'), '雨季淹城三天')
     await user.type(screen.getByLabelText('美术风格'), '低饱和蓝绿胶片')
     await user.selectOptions(screen.getByLabelText('引用图片素材'), imageRecord.id)
-    await user.click(screen.getByRole('button', { name: '确认创建' }))
+    await user.click(screen.getByRole('button', { name: '确认保存' }))
 
     const created = useProjectStore.getState().activeProject?.nodes.at(-1)
     expect(created?.card).toMatchObject({
@@ -3143,7 +3159,7 @@ describe('creative canvas', () => {
       rules: '铜铃后不得直呼失踪者姓名',
       imageAssetId: imageRecord.id,
     })
-    expect(edited?.versions).toHaveLength(2)
+    expect(edited?.versions).toHaveLength(3)
     expect(
       useProjectStore.getState().activeProject?.assets.filter(
         ({ id }) => id === imageRecord.id,
@@ -3152,9 +3168,9 @@ describe('creative canvas', () => {
     await waitFor(() => expect(editTrigger).toHaveFocus())
 
     act(() => useProjectStore.getState().undo())
-    expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.versions).toHaveLength(1)
-    act(() => useProjectStore.getState().redo())
     expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.versions).toHaveLength(2)
+    act(() => useProjectStore.getState().redo())
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.versions).toHaveLength(3)
   })
 
   test('edits a card from the node list and falls back to the canvas node for focus', async () => {
@@ -3191,54 +3207,41 @@ describe('creative canvas', () => {
   })
 
   test('creates nodes from the context menu at the converted pane position', async () => {
-    const user = userEvent.setup()
     const save = vi.fn().mockResolvedValue(undefined)
     renderCanvas({ repository: { load: async () => undefined, save } })
     const { screenToFlowPosition } = initializeFlow()
-    chooseContextNode('分镜')
+    chooseContextNode('逐帧拉片 SD2.5')
 
-    expect(
-      screen.getByRole('dialog', { name: '创建分镜节点' }),
-    ).toBeVisible()
-    expect(screen.getByLabelText('标题')).toHaveValue('分镜 03')
     expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 420, y: 300 })
-    expect(useProjectStore.getState().past).toEqual([])
-
-    await user.type(screen.getByLabelText('画面提示词'), '远景，雨夜河岸')
-    await user.click(screen.getByRole('button', { name: '确认创建' }))
 
     const created = useProjectStore
       .getState()
-      .activeProject?.nodes.find(({ title }) => title === '分镜 03')
+      .activeProject?.nodes.find(({ title }) => title.startsWith('逐帧拉片'))
     expect(created).toMatchObject({
       kind: 'storyboard',
       position: { x: 777, y: 333 },
-      versions: [{ prompt: '远景，雨夜河岸' }],
+      versions: [{ prompt: 'SD2.5 · 分镜 / 动态 / 音乐' }],
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
     expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: '创建分镜节点' })).not.toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '分镜 03' })).toHaveFocus()
+      expect(screen.getByRole('button', { name: /^逐帧拉片/ })).toHaveFocus()
     })
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
     expect(save.mock.calls[0][0].nodes.at(-1)?.id).toBe(created?.id)
   })
 
   test.each([
-    ['text', '文本', '文字内容', '旧站台旁的独白'],
-    ['storyboard', '分镜', '画面提示词', '近景，雨滴落在袖口'],
-    ['video', '视频', '视频提示词', '镜头缓慢推向人物'],
+    ['text', '文本', '右键画布创建的文本节点'],
+    ['video', '视频', '等待补充视频生成提示'],
+    ['video', '智能剪辑 Beta', 'Beta 智能剪辑：等待导入素材并设置剪辑目标'],
   ] as const)(
-    'creates a %s draft with one initial prompt version',
-    async (kind, toolLabel, fieldLabel, prompt) => {
-      const user = userEvent.setup()
+    'creates a %s context node with one initial prompt version',
+    async (kind, toolLabel, prompt) => {
       renderCanvas()
       initializeFlow({ x: 100, y: 200 })
 
       chooseContextNode(toolLabel, 160, 220)
-      await user.type(screen.getByLabelText(fieldLabel), prompt)
-      await user.click(screen.getByRole('button', { name: '确认创建' }))
 
       const created = useProjectStore.getState().activeProject?.nodes.at(-1)
       expect(created?.kind).toBe(kind)
@@ -3250,19 +3253,18 @@ describe('creative canvas', () => {
 
   test('creates an image node and asset from the Upload context action', async () => {
     const user = userEvent.setup()
-    renderCanvas()
+    const save = vi.fn().mockResolvedValue(undefined)
+    renderCanvas({ libraryRepository: { list: vi.fn().mockResolvedValue([]), save } })
     initializeFlow({ x: 240, y: 360 })
 
     chooseContextUpload(240, 360)
     await user.upload(
-      screen.getByLabelText('本地图片'),
+      screen.getByLabelText('上传画布图片'),
       new File(['image'], 'reference.png', { type: 'image/png' }),
     )
-    await user.type(screen.getByLabelText('图片描述（选填）'), '雨夜人物参考')
-    await user.click(screen.getByRole('button', { name: '确认创建' }))
 
     const active = useProjectStore.getState().activeProject!
-    const created = active.nodes.find(({ kind }) => kind === 'image')!
+    const created = active.nodes.find(({ title }) => title === 'reference.png')!
     const version = created.versions[0]
     const asset = active.assets.find(({ id }) => id === version.assetId)
     expect(created.position).toEqual({ x: 240, y: 360 })
@@ -3272,35 +3274,41 @@ describe('creative canvas', () => {
       url: expect.stringMatching(/^data:image\/png;base64,/),
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    expect(save.mock.calls[0][0]).toMatchObject({
+      name: 'reference.png',
+      kind: 'image',
+    })
   })
 
-  test('cancels context placement without history and returns focus to the canvas', async () => {
+  test('closes an expanded context submenu without history and returns focus to the canvas', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow()
     const canvas = screen.getByRole('region', { name: '项目画布' })
-    chooseContextNode('文本')
-    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+    contextMenuPane()
+    await user.click(screen.getByRole('menuitem', { name: '添加节点' }))
+    expect(screen.getByRole('menu', { name: '添加节点子菜单' })).toBeVisible()
     await user.keyboard('{Escape}')
 
-    expect(screen.queryByRole('dialog', { name: '创建文本节点' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
     expect(useProjectStore.getState().past).toEqual([])
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
     expect(canvas).toHaveFocus()
   })
 
-  test('ignores node clicks and a second pane double click while editing one draft', () => {
+  test('keeps only one node picker while a second pane double click occurs', () => {
     renderCanvas()
     initializeFlow()
 
-    chooseContextNode('视频')
-    const firstDialog = screen.getByRole('dialog', { name: '创建视频节点' })
+    doubleClickPane()
+    const firstDialog = screen.getByRole('dialog', { name: '选择节点类型' })
     act(() => {
       latestFlowProps?.onNodeClick?.({}, latestFlowProps.nodes[0])
     })
     doubleClickPane(900, 640)
-    expect(screen.getAllByRole('dialog', { name: '创建视频节点' })).toHaveLength(1)
-    expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBe(firstDialog)
+    expect(screen.getAllByRole('dialog', { name: '选择节点类型' })).toHaveLength(1)
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBe(firstDialog)
   })
 
   test('discards a pending draft when the project route changes', async () => {
@@ -3321,13 +3329,13 @@ describe('creative canvas', () => {
       </MemoryRouter>,
     )
     initializeFlow()
-    chooseContextNode('文本')
-    expect(screen.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+    doubleClickPane()
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
 
     expect(await screen.findByRole('heading', { name: '第二项目' })).toBeVisible()
-    expect(screen.queryByRole('dialog', { name: '创建文本节点' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '选择节点类型' })).not.toBeInTheDocument()
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
     expect(useProjectStore.getState().past).toEqual([])
   })

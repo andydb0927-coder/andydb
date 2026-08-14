@@ -172,7 +172,9 @@ interface WorkspaceSidePanelProps {
   panel: WorkspacePanel
   project: Project
   generationPreferenceStore?: GenerationProviderPreferenceStore
+  historyInsertionMode?: boolean
   onClose(): void
+  onInsertHistoryResult?(jobId: string): void
   onSelectNode(nodeId: string): void
 }
 
@@ -180,7 +182,9 @@ export function WorkspaceSidePanel({
   panel,
   project,
   generationPreferenceStore,
+  historyInsertionMode = false,
   onClose,
+  onInsertHistoryResult,
   onSelectNode,
 }: WorkspaceSidePanelProps) {
   useEffect(() => {
@@ -272,11 +276,38 @@ export function WorkspaceSidePanel({
 
       {panel === 'history' ? (
         <ol className="workspace-side-panel__history">
+          {historyInsertionMode ? (
+            <li className="workspace-side-panel__help">
+              <p>选择一个已完成结果，将副本插入右键位置。</p>
+            </li>
+          ) : null}
           {project.jobs.map((job) => {
             const node = project.nodes.find((candidate) => candidate.id === job.nodeId)
+            const canInsert = Boolean(
+              job.status === 'succeeded' &&
+              job.assetId &&
+              project.assets.some(({ id }) => id === job.assetId),
+            )
             return (
               <li key={job.id}>
-                <button type="button" disabled={!node} onClick={() => node && onSelectNode(node.id)}>
+                <button
+                  type="button"
+                  aria-label={
+                    historyInsertionMode && node
+                      ? `插入历史结果 ${node.title}`
+                      : undefined
+                  }
+                  disabled={historyInsertionMode ? !canInsert : !node}
+                  title={
+                    historyInsertionMode && !canInsert
+                      ? '只有带素材的已完成任务可以插入'
+                      : undefined
+                  }
+                  onClick={() => {
+                    if (historyInsertionMode) onInsertHistoryResult?.(job.id)
+                    else if (node) onSelectNode(node.id)
+                  }}
+                >
                   <span>{jobCopy[job.status]}</span>
                   <strong>{node?.title ?? '已移除节点'}</strong>
                   <small>{job.prompt}</small>

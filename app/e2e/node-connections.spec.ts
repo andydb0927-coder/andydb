@@ -59,7 +59,16 @@ async function clickBlankCanvas(
 
 async function openAddNodeAtBlank(
   page: import('@playwright/test').Page,
-  label: '文本' | '图片' | '分镜' | '视频',
+  label:
+    | '文本'
+    | '图片'
+    | '视频'
+    | '智能剪辑 Beta'
+    | '导演台 NEW'
+    | '逐帧拉片 SD2.5'
+    | '音频'
+    | '脚本'
+    | '素材库',
   fromBottomRight = false,
 ) {
   const point = await findBlankCanvasPoint(page, fromBottomRight)
@@ -663,9 +672,6 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   await expect(characterVideoEdge).toBeVisible()
 
   await openAddNodeAtBlank(page, '文本')
-  const textDialog = page.getByRole('dialog', { name: '创建文本节点' })
-  await textDialog.getByLabel('文字内容').fill('雨夜车站的旁白')
-  await textDialog.getByRole('button', { name: '确认创建' }).click()
   const text = page.getByRole('button', { name: '文本 01', exact: true })
   await expect(text).toBeVisible()
 

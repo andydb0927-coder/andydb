@@ -53,7 +53,16 @@ async function findBlankCanvasPoint(
 
 async function openAddNodeAtBlank(
   page: import('@playwright/test').Page,
-  label: '文本' | '图片' | '分镜' | '视频',
+  label:
+    | '文本'
+    | '图片'
+    | '视频'
+    | '智能剪辑 Beta'
+    | '导演台 NEW'
+    | '逐帧拉片 SD2.5'
+    | '音频'
+    | '脚本'
+    | '素材库',
   fromBottomRight = false,
 ) {
   const point = await findBlankCanvasPoint(page, fromBottomRight)
@@ -65,7 +74,10 @@ async function openAddNodeAtBlank(
 async function openUploadAtBlank(page: import('@playwright/test').Page) {
   const point = await findBlankCanvasPoint(page, true)
   await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加资源' }).click()
+  const fileChooser = page.waitForEvent('filechooser')
   await page.getByRole('menuitem', { name: '上传' }).click()
+  return fileChooser
 }
 
 test('creator completes the minimum short-film loop', async ({ page }) => {
@@ -82,9 +94,27 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
+  const historyPoint = await findBlankCanvasPoint(page, true)
+  await page.mouse.click(historyPoint.x, historyPoint.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加资源' }).click()
+  const historyAction = page.getByRole('menuitem', {
+    name: '从生成历史选择',
+  })
+  await expect(historyAction).toBeEnabled()
+  await historyAction.click()
+  const historyPanel = page.getByRole('complementary', { name: '历史' })
+  await historyPanel
+    .getByRole('button', { name: '插入历史结果 视频 01' })
+    .click()
+  await expect(
+    page.getByRole('button', { name: '视频 01 历史结果', exact: true }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '视频 01', exact: true }).focus()
+  await page.keyboard.press('Enter')
   await page.getByRole('button', { name: '加入时间线' }).click()
 
-  await page.getByRole('button', { name: '分镜 02', exact: true }).click()
+  await page.getByRole('button', { name: '分镜 02', exact: true }).focus()
+  await page.keyboard.press('Enter')
   await page.getByRole('button', { name: '生成视频' }).click()
   await expect(
     page.getByRole('button', { name: '视频 02', exact: true }),
@@ -188,25 +218,24 @@ test('persists image parameters and creates a canvas-selected media reference', 
   await expect(reloadedPanel.getByLabel('风格化程度')).toHaveValue('250')
   await expect(reloadedPanel.getByLabel('智能引用 AutoLink')).not.toBeChecked()
 
-  await openUploadAtBlank(page)
-  const imageDialog = page.getByRole('dialog', { name: '上传图片到画布' })
-  await imageDialog
-    .getByLabel('本地图片')
-    .setInputFiles('public/demo/character-lin-yuan.png')
-  await imageDialog.getByRole('button', { name: '确认创建' }).click()
-  const image = page.getByRole('button', { name: '图片 01', exact: true })
+  const imageChooser = await openUploadAtBlank(page)
+  await imageChooser.setFiles('public/demo/character-lin-yuan.png')
+  const image = page.getByRole('button', {
+    name: 'character-lin-yuan.png',
+    exact: true,
+  })
   await expect(image).toBeVisible()
   await page
-    .getByRole('region', { name: '图片 01 生成参数' })
+    .getByRole('region', { name: 'character-lin-yuan.png 生成参数' })
     .getByRole('button', { name: '参考' })
     .click()
   await expect(page.getByRole('region', { name: '从画布选择参考' })).toBeVisible()
   await scene.click()
   await expect(page.getByRole('status')).toContainText(
-    '已将“场景设定”设为“图片 01”的参考',
+    '已将“场景设定”设为“character-lin-yuan.png”的参考',
   )
   await expect(
-    page.getByLabel('场景设定 → 图片 01', { exact: true }),
+    page.getByLabel('场景设定 → character-lin-yuan.png', { exact: true }),
   ).toBeVisible()
 })
 
@@ -641,6 +670,32 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
 
   await expect(page.getByRole('toolbar', { name: '创作工具' })).toHaveCount(0)
   await expect(page.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
+  const menuPoint = await findBlankCanvasPoint(page, true)
+  await page.mouse.click(menuPoint.x, menuPoint.y, { button: 'right' })
+  const contextMenu = page.getByRole('menu', { name: '画布快捷菜单' })
+  await expect(contextMenu.getByRole('menuitem')).toHaveCount(2)
+  await expect(contextMenu.getByRole('menuitem', { name: '添加节点' })).toHaveAttribute(
+    'aria-haspopup',
+    'menu',
+  )
+  await contextMenu.getByRole('menuitem', { name: '添加节点' }).hover()
+  const nodeSubmenu = page.getByRole('menu', { name: '添加节点子菜单' })
+  await expect(nodeSubmenu.getByRole('menuitem')).toHaveCount(9)
+  await expect(
+    nodeSubmenu.getByRole('menuitem', { name: '导演台 NEW' }),
+  ).toBeVisible()
+  await expect(
+    nodeSubmenu.getByRole('menuitem', { name: '逐帧拉片 SD2.5' }),
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(contextMenu).toBeHidden()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeFocused()
+  await page.mouse.click(menuPoint.x, menuPoint.y, { button: 'right' })
+  await expect(contextMenu).toBeVisible()
+  await page.getByRole('heading', { level: 1 }).click()
+  await expect(contextMenu).toBeHidden()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeFocused()
+
   const freePoint = await findBlankCanvasPoint(page)
   await page.mouse.dblclick(freePoint.x, freePoint.y)
   const typePicker = page.getByRole('dialog', { name: '选择节点类型' })
@@ -660,29 +715,21 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await expect(textNode).toBeFocused()
   await expect(page.getByLabel('文本 01操作')).toBeVisible()
 
-  await openUploadAtBlank(page)
-  const imageDialog = page.getByRole('dialog', { name: '上传图片到画布' })
-  await imageDialog
-    .getByLabel('本地图片')
-    .setInputFiles('public/demo/character-lin-yuan.png')
-  await imageDialog.getByLabel('图片描述（选填）').fill('雨夜人物参考')
-  await imageDialog.getByRole('button', { name: '确认创建' }).click()
-  const imageNode = page.getByRole('button', { name: '图片 01', exact: true })
+  const imageChooser = await openUploadAtBlank(page)
+  await imageChooser.setFiles('public/demo/character-lin-yuan.png')
+  const imageNode = page.getByRole('button', {
+    name: 'character-lin-yuan.png',
+    exact: true,
+  })
   await expect(imageNode).toBeVisible()
   await expect(imageNode.locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/)
 
-  await openAddNodeAtBlank(page, '分镜')
-  const storyboardDialog = page.getByRole('dialog', { name: '创建分镜节点' })
-  await storyboardDialog.getByLabel('画面提示词').fill('近景，雨滴落在袖口')
-  await storyboardDialog.getByRole('button', { name: '确认创建' }).click()
+  await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
   await expect(
-    page.getByRole('button', { name: '分镜 02', exact: true }),
+    page.getByRole('button', { name: '逐帧拉片 01', exact: true }),
   ).toBeVisible()
 
   await openAddNodeAtBlank(page, '视频')
-  const videoDialog = page.getByRole('dialog', { name: '创建视频节点' })
-  await videoDialog.getByLabel('视频提示词').fill('镜头缓慢推向人物')
-  await videoDialog.getByRole('button', { name: '确认创建' }).click()
   const videoNode = page.getByRole('button', { name: '视频 01', exact: true })
   await expect(videoNode).toBeVisible()
   await expect(videoNode).toBeFocused()
@@ -692,10 +739,12 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await page.getByRole('button', { name: '重做' }).click()
   await expect(videoNode).toBeVisible()
 
-  await openAddNodeAtBlank(page, '文本')
-  await expect(page.getByRole('dialog', { name: '创建文本节点' })).toBeVisible()
+  const cancelPoint = await findBlankCanvasPoint(page)
+  await page.mouse.click(cancelPoint.x, cancelPoint.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加节点' }).click()
+  await expect(page.getByRole('menu', { name: '添加节点子菜单' })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: '创建文本节点' })).toBeHidden()
+  await expect(page.getByRole('menu', { name: '画布快捷菜单' })).toBeHidden()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeFocused()
   await expect(
     page.getByRole('button', { name: '文本 02', exact: true }),
@@ -725,13 +774,18 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
 
   await page.reload()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
-  for (const title of ['文本 01', '图片 01', '分镜 02', '视频 01']) {
+  for (const title of [
+    '文本 01',
+    'character-lin-yuan.png',
+    '逐帧拉片 01',
+    '视频 01',
+  ]) {
     await expect(
       page.getByRole('button', { name: title, exact: true }),
     ).toBeVisible()
   }
   const reloadedImage = page.getByRole('button', {
-    name: '图片 01',
+    name: 'character-lin-yuan.png',
     exact: true,
   })
   await expect(reloadedImage.locator('img')).toHaveAttribute(
@@ -748,27 +802,23 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   ).toBe(persistedTransform)
 
   await page.setViewportSize({ width: 721, height: 778 })
-  await openAddNodeAtBlank(page, '文本', true)
-  const zoomDialog = page.getByRole('dialog', { name: '创建文本节点' })
-  await zoomDialog.getByLabel('标题').fill('')
-  await zoomDialog.getByRole('button', { name: '确认创建' }).click()
-  await expect(zoomDialog.getByText('请输入标题')).toBeVisible()
-  await expect(zoomDialog.getByText('请输入文字内容')).toBeVisible()
-  const dialogBox = await zoomDialog.boundingBox()
-  const cancelBox = await zoomDialog.getByRole('button', { name: '取消' }).boundingBox()
-  const confirmBox = await zoomDialog
-    .getByRole('button', { name: '确认创建' })
-    .boundingBox()
-  expect(dialogBox).not.toBeNull()
-  expect(cancelBox).not.toBeNull()
-  expect(confirmBox).not.toBeNull()
-  for (const box of [dialogBox!, cancelBox!, confirmBox!]) {
+  const narrowPoint = await findBlankCanvasPoint(page, true)
+  await page.mouse.click(narrowPoint.x, narrowPoint.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加节点' }).click()
+  const narrowMenu = page.getByRole('menu', { name: '画布快捷菜单' })
+  const narrowSubmenu = page.getByRole('menu', { name: '添加节点子菜单' })
+  const menuBox = await narrowMenu.boundingBox()
+  const submenuBox = await narrowSubmenu.boundingBox()
+  expect(menuBox).not.toBeNull()
+  expect(submenuBox).not.toBeNull()
+  for (const box of [menuBox!, submenuBox!]) {
     expect(box.x).toBeGreaterThanOrEqual(0)
     expect(box.y).toBeGreaterThanOrEqual(0)
     expect(box.x + box.width).toBeLessThanOrEqual(721)
     expect(box.y + box.height).toBeLessThanOrEqual(778)
   }
-  await zoomDialog.getByRole('button', { name: '取消' }).click()
+  await narrowSubmenu.getByRole('menuitem', { name: '文本' }).click()
+  await expect(page.getByRole('button', { name: '文本 02', exact: true })).toBeVisible()
 
   expect(browserErrors).toEqual([])
 })

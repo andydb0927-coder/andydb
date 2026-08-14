@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
@@ -84,7 +85,7 @@ import {
 } from './CanvasToolbar'
 import {
   CanvasContextMenu,
-  type ContextCreatableKind,
+  type ContextQuickNodeType,
 } from './CanvasContextMenu'
 import { CanvasTopBar } from './CanvasTopBar'
 import {
@@ -115,6 +116,11 @@ import {
   type CreativeNodeAction,
 } from './node-types'
 import { NodeListView } from './NodeListView'
+import {
+  ACCEPTED_IMAGE_TYPES,
+  ImagePreparationError,
+  prepareImageFile,
+} from './image-file'
 import {
   NodeDraftPanel,
   type NodeDraftFormValue,
@@ -186,7 +192,12 @@ interface CanvasContextMenuState {
   bounds: { width: number; height: number }
   flowPosition: CanvasNodePosition
   targetNodeId?: string
-  clipboardText: string
+  returnFocusTo?: HTMLElement
+}
+
+interface ContextResourcePlacement {
+  projectId: string
+  position: CanvasNodePosition
   returnFocusTo?: HTMLElement
 }
 
@@ -459,6 +470,10 @@ export function CanvasPage({
     useState<NodeTypePickerState>()
   const [contextMenu, setContextMenu] =
     useState<CanvasContextMenuState>()
+  const [contextUploadPlacement, setContextUploadPlacement] =
+    useState<ContextResourcePlacement>()
+  const [historyPlacement, setHistoryPlacement] =
+    useState<ContextResourcePlacement>()
   const [editingCard, setEditingCard] = useState<EditingCard>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
@@ -471,6 +486,7 @@ export function CanvasPage({
   >()
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const contextUploadInputRef = useRef<HTMLInputElement>(null)
   const nativeConnectionActiveRef = useRef(false)
   const placementTriggerRef = useRef<HTMLElement>(null)
   const connectionTriggerRef = useRef<HTMLElement>(null)
@@ -547,6 +563,8 @@ export function CanvasPage({
     setPendingPlacement(undefined)
     setNodeTypePicker(undefined)
     setContextMenu(undefined)
+    setContextUploadPlacement(undefined)
+    setHistoryPlacement(undefined)
     setEditingCard(undefined)
     createdNodeFocusRef.current = undefined
     setFocusRequestVersion((version) => version + 1)
@@ -554,6 +572,7 @@ export function CanvasPage({
     connectionTriggerRef.current = null
     imageReferenceTriggerRef.current = null
     optionDragCloneRef.current = undefined
+    if (contextUploadInputRef.current) contextUploadInputRef.current.value = ''
 
     return () => {
       nativeConnectionActiveRef.current = false
@@ -1856,30 +1875,6 @@ export function CanvasPage({
     [canvasPoint, openNodeTypePicker],
   )
 
-  const beginPlacement = useCallback(
-    (
-      kind: ContextCreatableKind,
-      entry: PendingPlacement['entry'],
-      source: CanvasContextMenuState,
-    ) => {
-      placementTriggerRef.current =
-        source.returnFocusTo?.isConnected
-          ? source.returnFocusTo
-          : viewportRef.current
-      setContextMenu(undefined)
-      setPendingPlacement({
-        projectId: source.projectId,
-        kind,
-        entry,
-        position: source.flowPosition,
-        anchor: source.anchor,
-        bounds: source.bounds,
-      })
-      setActiveTool('select')
-    },
-    [],
-  )
-
   const openContextMenu = useCallback(
     (
       clientX: number,
@@ -1905,27 +1900,9 @@ export function CanvasPage({
         projectId: project.id,
         ...point,
         targetNodeId,
-        clipboardText: '',
         returnFocusTo: returnFocusTo ?? viewportRef.current ?? undefined,
       }
       setContextMenu(nextMenu)
-
-      const clipboard = navigator.clipboard
-      if (!clipboard?.readText) return
-      try {
-        void clipboard.readText().then(
-          (text) => {
-            setContextMenu((current) =>
-              current === nextMenu
-                ? { ...current, clipboardText: text }
-                : current,
-            )
-          },
-          () => undefined,
-        )
-      } catch {
-        // Clipboard permission and support vary by browser; disabled is safe.
-      }
     },
     [
       cancelConnection,
@@ -1948,17 +1925,14 @@ export function CanvasPage({
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }, [])
 
-  const createQuickNode = useCallback(
-    (type: QuickNodeType) => {
+  const createQuickNodeAt = useCallback(
+    (
+      type: QuickNodeType,
+      position: CanvasNodePosition,
+      entry: 'picker' | 'context',
+    ) => {
       const currentProject = useProjectStore.getState().activeProject
-      if (
-        !nodeTypePicker ||
-        !currentProject ||
-        currentProject.id !== projectId ||
-        nodeTypePicker.projectId !== currentProject.id
-      ) {
-        return
-      }
+      if (!currentProject || currentProject.id !== projectId) return undefined
 
       const numberedTitle = (label: string) => {
         const count = currentProject.nodes.filter((node) =>
@@ -1978,7 +1952,7 @@ export function CanvasPage({
             dialogue: '',
             shotNotes: '双击画布创建的本地故事脚本节点',
           },
-          nodeTypePicker.position,
+          position,
         )
       } else if (type === 'character-turnaround') {
         creation = buildCreativeCardCreation(
@@ -1991,7 +1965,7 @@ export function CanvasPage({
             wardrobe: '',
             relationships: '',
           },
-          nodeTypePicker.position,
+          position,
         )
       } else if (type === 'worldview') {
         creation = buildCreativeCardCreation(
@@ -2003,20 +1977,44 @@ export function CanvasPage({
             artStyle: '等待补充整体美术风格',
             rules: '',
           },
-          nodeTypePicker.position,
+          position,
         )
-      } else if (type === 'image') {
+      } else if (type === 'director' || type === 'script') {
+        const label = type === 'director' ? '导演台' : '脚本'
+        creation = buildCreativeCardCreation(
+          currentProject,
+          {
+            kind: 'script',
+            title: numberedTitle(label),
+            scenes:
+              type === 'director'
+                ? '导演台本地演示：等待拆解镜头与调度创作任务'
+                : '场一：等待补充脚本结构',
+            dialogue: '',
+            shotNotes: type === 'director' ? 'NEW · 本地导演台节点' : '',
+          },
+          position,
+        )
+      } else if (type === 'image' || type === 'asset-library') {
         const createdAt = new Date().toISOString()
+        const title =
+          type === 'asset-library'
+            ? numberedTitle('素材库')
+            : nextNodeTitle(currentProject, 'image')
+        const prompt =
+          type === 'asset-library'
+            ? '从素材库选择素材后替换此占位内容'
+            : ''
         creation = {
           node: {
             id: crypto.randomUUID(),
             kind: 'image',
-            title: nextNodeTitle(currentProject, 'image'),
-            position: nodeTypePicker.position,
+            title,
+            position,
             versions: [{
               id: crypto.randomUUID(),
               createdAt,
-              prompt: '',
+              prompt,
             }],
             activeVersionId: '',
             sourceChanged: false,
@@ -2025,7 +2023,16 @@ export function CanvasPage({
         creation.node.activeVersionId = creation.node.versions[0].id
       } else {
         const quickConfig: Record<
-          Exclude<QuickNodeType, 'script-generator' | 'character-turnaround' | 'worldview' | 'image'>,
+          Exclude<
+            QuickNodeType,
+            | 'script-generator'
+            | 'character-turnaround'
+            | 'worldview'
+            | 'director'
+            | 'script'
+            | 'image'
+            | 'asset-library'
+          >,
           { kind: 'text' | 'storyboard' | 'video'; title: string; content: string }
         > = {
           'reference-video': {
@@ -2038,10 +2045,28 @@ export function CanvasPage({
             title: numberedTitle('音频生视频'),
             content: 'SD2.5 音频生视频：等待补充音频与节奏说明',
           },
+          'smart-edit': {
+            kind: 'video',
+            title: numberedTitle('智能剪辑'),
+            content: 'Beta 智能剪辑：等待导入素材并设置剪辑目标',
+          },
+          'frame-analysis': {
+            kind: 'storyboard',
+            title: numberedTitle('逐帧拉片'),
+            content: 'SD2.5 · 分镜 / 动态 / 音乐',
+          },
+          audio: {
+            kind: 'text',
+            title: numberedTitle('音频'),
+            content: '等待导入或生成音频素材',
+          },
           text: {
             kind: 'text',
             title: nextNodeTitle(currentProject, 'text'),
-            content: '双击画布创建的自由文本节点',
+            content:
+              entry === 'picker'
+                ? '双击画布创建的自由文本节点'
+                : '右键画布创建的文本节点',
           },
           storyboard: {
             kind: 'storyboard',
@@ -2057,19 +2082,62 @@ export function CanvasPage({
         const config = quickConfig[type]
         creation = buildCanvasCreation(currentProject, {
           ...config,
-          position: nodeTypePicker.position,
+          position,
         })
+        if (type === 'frame-analysis') {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              videoTool: {
+                kind: 'frame-analysis',
+                model: 'SD2.5',
+                dimensions: ['分镜', '动态', '音乐'],
+              },
+            },
+          }
+        }
       }
 
       createdNodeFocusRef.current = creation.node.id
       setFocusRequestVersion((version) => version + 1)
       createCanvasContent(creation)
       selectOnlyNode(creation.node.id)
-      setNodeTypePicker(undefined)
       setActiveTool('select')
       setGenerationFeedback(`已创建“${creation.node.title}”，可继续编辑或建立连线。`)
+      return creation.node.id
     },
-    [createCanvasContent, nodeTypePicker, projectId, selectOnlyNode],
+    [createCanvasContent, projectId, selectOnlyNode],
+  )
+
+  const createQuickNode = useCallback(
+    (type: QuickNodeType) => {
+      const picker = nodeTypePicker
+      const currentProject = useProjectStore.getState().activeProject
+      if (
+        !picker ||
+        !currentProject ||
+        picker.projectId !== currentProject.id
+      ) return
+      if (!createQuickNodeAt(type, picker.position, 'picker')) return
+      setNodeTypePicker(undefined)
+    },
+    [createQuickNodeAt, nodeTypePicker],
+  )
+
+  const createContextNode = useCallback(
+    (type: ContextQuickNodeType) => {
+      const source = contextMenu
+      const currentProject = useProjectStore.getState().activeProject
+      if (
+        !source ||
+        !currentProject ||
+        source.projectId !== currentProject.id
+      ) return
+      if (!createQuickNodeAt(type, source.flowPosition, 'context')) return
+      setContextMenu(undefined)
+    },
+    [contextMenu, createQuickNodeAt],
   )
 
   const finishCardEditing = useCallback(
@@ -2543,69 +2611,181 @@ export function CanvasPage({
 
   const contextNodeId = contextMenu?.targetNodeId ?? primaryNodeId
   const contextNode = project?.nodes.find(({ id }) => id === contextNodeId)
-  const contextVersion = contextNode?.versions.find(
-    ({ id }) => id === contextNode.activeVersionId,
+  const canUseGenerationHistory = Boolean(
+    project?.jobs.some(
+      (job) =>
+        job.status === 'succeeded' &&
+        job.assetId &&
+        project.assets.some(({ id }) => id === job.assetId),
+    ),
   )
-  const contextAsset = project?.assets.find(
-    ({ id }) => id === contextVersion?.assetId,
-  )
-  const canSaveContextAsset = Boolean(contextAsset && libraryRepository.save)
 
-  const saveContextAsset = useCallback(() => {
-    const currentProject = useProjectStore.getState().activeProject
-    const nodeId = contextMenu?.targetNodeId ?? primaryNodeId
-    const node = currentProject?.nodes.find(({ id }) => id === nodeId)
-    const version = node?.versions.find(({ id }) => id === node.activeVersionId)
-    const asset = currentProject?.assets.find(({ id }) => id === version?.assetId)
-    const save = libraryRepository.save
-    closeContextMenu()
-    if (!currentProject || !node || !asset || !save) {
-      setGenerationFeedback('当前节点没有可保存的素材。')
-      return
-    }
-    void save.call(
-      libraryRepository,
-      deriveLibraryRecord(currentProject, asset),
-    ).then(
-      () => setGenerationFeedback(`已将“${node.title}”保存到我的资产。`),
-      () => setGenerationFeedback('保存到我的资产失败，请稍后重试。'),
-    )
-  }, [
-    closeContextMenu,
-    contextMenu?.targetNodeId,
-    libraryRepository,
-    primaryNodeId,
-  ])
+  const beginContextUpload = useCallback(() => {
+    const source = contextMenu
+    if (!source) return
+    setContextUploadPlacement({
+      projectId: source.projectId,
+      position: source.flowPosition,
+      returnFocusTo: source.returnFocusTo,
+    })
+    setContextMenu(undefined)
+    queueMicrotask(() => contextUploadInputRef.current?.click())
+  }, [contextMenu])
 
-  const pasteContextText = useCallback(
-    (text: string) => {
-      const source = contextMenu
+  const cancelContextUpload = useCallback(() => {
+    const returnFocusTo = contextUploadPlacement?.returnFocusTo
+    setContextUploadPlacement(undefined)
+    if (contextUploadInputRef.current) contextUploadInputRef.current.value = ''
+    queueMicrotask(() => {
+      if (returnFocusTo?.isConnected) returnFocusTo.focus()
+      else viewportRef.current?.focus()
+    })
+  }, [contextUploadPlacement?.returnFocusTo])
+
+  useEffect(() => {
+    const input = contextUploadInputRef.current
+    if (!input) return
+    input.addEventListener('cancel', cancelContextUpload)
+    return () => input.removeEventListener('cancel', cancelContextUpload)
+  }, [cancelContextUpload])
+
+  const handleContextUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const input = event.currentTarget
+      const file = input.files?.[0]
+      const placement = contextUploadPlacement
       const currentProject = useProjectStore.getState().activeProject
-      const content = text.trim()
       if (
-        !source ||
-        !content ||
+        !file ||
+        !placement ||
         !currentProject ||
         currentProject.id !== projectId ||
-        source.projectId !== currentProject.id
+        placement.projectId !== currentProject.id
       ) {
-        closeContextMenu()
+        cancelContextUpload()
         return
       }
-      const creation = buildCanvasCreation(currentProject, {
-        kind: 'text',
-        title: nextNodeTitle(currentProject, 'text'),
-        content,
-        position: source.flowPosition,
-      })
+
+      try {
+        const image = await prepareImageFile(file)
+        const title = file.name.trim().slice(0, 40) || nextNodeTitle(currentProject, 'image')
+        const creation = buildCanvasCreation(currentProject, {
+          kind: 'image',
+          title,
+          content: title,
+          image,
+          position: placement.position,
+        })
+        createdNodeFocusRef.current = creation.node.id
+        setFocusRequestVersion((version) => version + 1)
+        createCanvasContent(creation)
+        selectOnlyNode(creation.node.id)
+        setContextUploadPlacement(undefined)
+        input.value = ''
+        setGenerationFeedback(`已导入“${title}”并创建图片节点。`)
+
+        const save = libraryRepository.save
+        if (creation.asset && save) {
+          const expandedProject = useProjectStore.getState().activeProject
+          if (expandedProject) {
+            void save.call(
+              libraryRepository,
+              deriveLibraryRecord(expandedProject, creation.asset),
+            ).catch(() => {
+              setGenerationFeedback(`“${title}”已加入画布，但保存到本地素材库失败。`)
+            })
+          }
+        }
+      } catch (error) {
+        input.value = ''
+        setContextUploadPlacement(undefined)
+        setGenerationFeedback(
+          error instanceof ImagePreparationError
+            ? error.message
+            : '无法读取图片，请重新选择。',
+        )
+        queueMicrotask(() => placement.returnFocusTo?.focus())
+      }
+    },
+    [
+      cancelContextUpload,
+      contextUploadPlacement,
+      createCanvasContent,
+      libraryRepository,
+      projectId,
+      selectOnlyNode,
+    ],
+  )
+
+  const openContextGenerationHistory = useCallback(() => {
+    const source = contextMenu
+    if (!source || !canUseGenerationHistory) return
+    setHistoryPlacement({
+      projectId: source.projectId,
+      position: source.flowPosition,
+      returnFocusTo: source.returnFocusTo,
+    })
+    setContextMenu(undefined)
+    setWorkspacePanel('history')
+  }, [canUseGenerationHistory, contextMenu])
+
+  const closeWorkspacePanel = useCallback(() => {
+    const returnFocusTo = historyPlacement?.returnFocusTo
+    setWorkspacePanel(undefined)
+    setHistoryPlacement(undefined)
+    if (!historyPlacement) return
+    queueMicrotask(() => {
+      if (returnFocusTo?.isConnected) returnFocusTo.focus()
+      else viewportRef.current?.focus()
+    })
+  }, [historyPlacement])
+
+  const insertHistoryResult = useCallback(
+    (jobId: string) => {
+      const placement = historyPlacement
+      const currentProject = useProjectStore.getState().activeProject
+      const job = currentProject?.jobs.find(({ id }) => id === jobId)
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === job?.nodeId)
+      const asset = currentProject?.assets.find(({ id }) => id === job?.assetId)
+      if (
+        !placement ||
+        !currentProject ||
+        currentProject.id !== projectId ||
+        placement.projectId !== currentProject.id ||
+        job?.status !== 'succeeded' ||
+        !sourceNode ||
+        !asset
+      ) return
+
+      const label = `${sourceNode.title} 历史结果`
+      const count = currentProject.nodes.filter(({ title }) => title.startsWith(label)).length
+      const title = count ? `${label} ${String(count + 1).padStart(2, '0')}` : label
+      const versionId = crypto.randomUUID()
+      const creation: CanvasCreation = {
+        node: {
+          id: crypto.randomUUID(),
+          kind: asset.kind === 'video' ? 'video' : asset.kind === 'image' ? 'image' : 'text',
+          title,
+          position: placement.position,
+          versions: [{
+            id: versionId,
+            createdAt: new Date().toISOString(),
+            prompt: job.prompt,
+            assetId: asset.id,
+          }],
+          activeVersionId: versionId,
+          sourceChanged: false,
+        },
+      }
       createdNodeFocusRef.current = creation.node.id
       setFocusRequestVersion((version) => version + 1)
       createCanvasContent(creation)
       selectOnlyNode(creation.node.id)
-      setContextMenu(undefined)
-      setGenerationFeedback('已从剪贴板创建文本节点。')
+      setWorkspacePanel(undefined)
+      setHistoryPlacement(undefined)
+      setGenerationFeedback(`已从生成历史插入“${title}”。`)
     },
-    [closeContextMenu, contextMenu, createCanvasContent, projectId, selectOnlyNode],
+    [createCanvasContent, historyPlacement, projectId, selectOnlyNode],
   )
 
   const handlePaneContextMenu = useCallback(
@@ -2883,7 +3063,10 @@ export function CanvasPage({
           }
           onGroupAction={handleGroupAction}
           onAddNode={openNodeTypePickerFromDock}
-          onOpenPanel={setWorkspacePanel}
+          onOpenPanel={(panel) => {
+            setHistoryPlacement(undefined)
+            setWorkspacePanel(panel)
+          }}
           onToggleConnections={toggleConnectionsVisibility}
           onToolChange={handleToolChange}
         />
@@ -2894,25 +3077,21 @@ export function CanvasPage({
             targetNodeTitle={
               contextMenu.targetNodeId ? contextNode?.title : undefined
             }
-            canSaveAsset={canSaveContextAsset}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            clipboardText={contextMenu.clipboardText}
-            onUpload={() => beginPlacement('image', 'upload', contextMenu)}
-            onSaveAsset={saveContextAsset}
-            onAddNode={(kind) => beginPlacement(kind, 'add-node', contextMenu)}
-            onUndo={() => {
-              closeContextMenu()
-              undo()
-            }}
-            onRedo={() => {
-              closeContextMenu()
-              redo()
-            }}
-            onPaste={pasteContextText}
+            canUseGenerationHistory={canUseGenerationHistory}
+            onUpload={beginContextUpload}
+            onOpenGenerationHistory={openContextGenerationHistory}
+            onAddNode={createContextNode}
             onClose={closeContextMenu}
           />
         ) : null}
+        <input
+          ref={contextUploadInputRef}
+          className="canvas-context-upload-input"
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES.join(',')}
+          aria-label="上传画布图片"
+          onChange={(event) => void handleContextUpload(event)}
+        />
         {nodeTypePicker && project ? (
           <CanvasNodeTypePicker
             anchor={nodeTypePicker.anchor}
@@ -3020,7 +3199,9 @@ export function CanvasPage({
             generationPreferenceStore={generationPreferenceStore}
             panel={workspacePanel}
             project={project}
-            onClose={() => setWorkspacePanel(undefined)}
+            historyInsertionMode={Boolean(historyPlacement)}
+            onClose={closeWorkspacePanel}
+            onInsertHistoryResult={insertHistoryResult}
             onSelectNode={openWorkspaceNode}
           />
         ) : null}

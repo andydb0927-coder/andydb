@@ -76,72 +76,75 @@ async function findBlankCanvasPoint(page: Page, reverse = false) {
 async function uploadReferenceToCanvas(page: Page) {
   const point = await findBlankCanvasPoint(page, true)
   await page.mouse.click(point.x, point.y, { button: 'right' })
+  await page.getByRole('menuitem', { name: '添加资源' }).click()
+  const fileChooser = page.waitForEvent('filechooser')
   await page.getByRole('menuitem', { name: '上传' }).click()
-
-  const dialog = page.getByRole('dialog', { name: '上传图片到画布' })
-  await dialog.getByLabel('标题').fill('潮汐城参考.png')
-  await dialog.getByLabel('本地图片').setInputFiles({
+  await (await fileChooser).setFiles({
     name: '潮汐城参考.png',
     mimeType: 'image/png',
     buffer: onePixelPng,
   })
-  await dialog.getByRole('button', { name: '确认创建' }).click()
 
   const reference = page.getByRole('button', {
     name: '潮汐城参考.png',
     exact: true,
   })
   await expect(reference).toBeVisible()
-  await reference.click({ button: 'right' })
-  await page.getByRole('menuitem', { name: '保存到我的资产' }).click()
-  await expect(page.getByText('已将“潮汐城参考.png”保存到我的资产。')).toBeVisible()
 }
 
-async function openAddNodeAtBlank(
+async function createQuickCardAtBlank(
   page: Page,
-  label: '剧本卡' | '角色卡' | '世界观卡',
+  label: '故事脚本生成' | '角色三视图' | '世界观卡',
   reverse = false,
 ) {
   const point = await findBlankCanvasPoint(page, reverse)
-  await page.mouse.click(point.x, point.y, { button: 'right' })
-  await page.getByRole('menuitem', { name: '添加节点' }).click()
-  await page.getByRole('menuitem', { name: label }).click()
+  await page.mouse.dblclick(point.x, point.y)
+  await page
+    .getByRole('dialog', { name: '选择节点类型' })
+    .getByRole('button', { name: label, exact: true })
+    .click()
 }
 
 async function createScriptCard(page: Page) {
-  await openAddNodeAtBlank(page, '剧本卡')
-  const dialog = page.getByRole('dialog', { name: '创建剧本卡' })
+  await createQuickCardAtBlank(page, '故事脚本生成')
+  await page.getByRole('button', { name: '故事脚本 01', exact: true }).click()
+  await page.getByRole('button', { name: '编辑卡片' }).click()
+  const dialog = page.getByRole('dialog', { name: '编辑剧本卡' })
   await dialog.getByLabel('标题').fill('雨夜重逢')
   await dialog.getByLabel('分场').fill('场一：河岸夜外')
   await dialog.getByLabel('对白').fill('林渊：你终于来了。')
   await dialog.getByLabel('镜头备注').fill('从远景缓慢推近。')
   await dialog.getByLabel('引用图片素材').selectOption({ label: '潮汐城参考.png' })
-  await dialog.getByRole('button', { name: '确认创建' }).click()
+  await dialog.getByRole('button', { name: '确认保存' }).click()
   await expect(page.getByRole('button', { name: '雨夜重逢', exact: true })).toBeVisible()
 }
 
 async function createCharacterCard(page: Page) {
-  await openAddNodeAtBlank(page, '角色卡', true)
-  const dialog = page.getByRole('dialog', { name: '创建角色卡' })
+  await createQuickCardAtBlank(page, '角色三视图', true)
+  await page.getByRole('button', { name: '角色三视图 01', exact: true }).click()
+  await page.getByRole('button', { name: '编辑卡片' }).click()
+  const dialog = page.getByRole('dialog', { name: '编辑角色卡' })
   await dialog.getByLabel('标题').fill('林渊角色卡')
   await dialog.getByLabel('姓名').fill('林渊')
   await dialog.getByLabel('外貌锚点').fill('短发，右眼下有小痣')
   await dialog.getByLabel('服化道').fill('深灰长风衣，银色旧腕表')
   await dialog.getByLabel('关系').fill('林舟的姐姐')
   await dialog.getByLabel('引用图片素材').selectOption({ label: '潮汐城参考.png' })
-  await dialog.getByRole('button', { name: '确认创建' }).click()
+  await dialog.getByRole('button', { name: '确认保存' }).click()
   await expect(page.getByRole('button', { name: '林渊角色卡', exact: true })).toBeVisible()
 }
 
 async function createWorldviewCard(page: Page) {
-  await openAddNodeAtBlank(page, '世界观卡')
-  const dialog = page.getByRole('dialog', { name: '创建世界观卡' })
+  await createQuickCardAtBlank(page, '世界观卡')
+  await page.getByRole('button', { name: '世界观卡 01', exact: true }).click()
+  await page.getByRole('button', { name: '编辑卡片' }).click()
+  const dialog = page.getByRole('dialog', { name: '编辑世界观卡' })
   await dialog.getByLabel('标题').fill('潮汐城世界观')
   await dialog.getByLabel('背景').fill('每年雨季老城会被河水淹没三天')
   await dialog.getByLabel('美术风格').fill('低饱和蓝绿色，湿润胶片颗粒')
   await dialog.getByLabel('规则').fill('铜铃响起后不得直呼失踪者姓名')
   await dialog.getByLabel('引用图片素材').selectOption({ label: '潮汐城参考.png' })
-  await dialog.getByRole('button', { name: '确认创建' }).click()
+  await dialog.getByRole('button', { name: '确认保存' }).click()
   await expect(
     page.getByRole('button', { name: '潮汐城世界观', exact: true }),
   ).toBeVisible()
