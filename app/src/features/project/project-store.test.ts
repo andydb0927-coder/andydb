@@ -9,6 +9,7 @@ import {
   type CanvasCreation,
   type CanvasNode,
   type DependencyEdge,
+  type GenerationJob,
 } from './model'
 import {
   WirelessCanvasDatabase,
@@ -161,6 +162,58 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('deletes terminal generation history atomically without deleting assets', () => {
+    const project = makeProjectFixture()
+    const running: GenerationJob = {
+      id: 'running-history',
+      projectId: project.id,
+      nodeId: 'shot-1',
+      status: 'running',
+      prompt: '仍在生成',
+      createdAt: '2026-08-15T08:00:00.000Z',
+      updatedAt: '2026-08-15T08:01:00.000Z',
+    }
+    const linkedProject = {
+      ...project,
+      jobs: [...project.jobs, running],
+      nodes: project.nodes.map((node) =>
+        node.id === 'shot-1'
+          ? {
+              ...node,
+              versions: node.versions.map((version) => ({
+                ...version,
+                generationJobId: 'generation-job-shot-1',
+              })),
+            }
+          : node,
+      ),
+    }
+    useProjectStore.setState({
+      projectsById: { [linkedProject.id]: linkedProject },
+      activeProjectId: linkedProject.id,
+      activeProject: linkedProject,
+      past: [],
+      future: [],
+    })
+
+    expect(
+      useProjectStore.getState().deleteGenerationJobs([
+        'generation-job-shot-1',
+        'running-history',
+      ]),
+    ).toEqual(['generation-job-shot-1'])
+    expect(useProjectStore.getState().activeProject?.jobs).toEqual([running])
+    expect(useProjectStore.getState().activeProject?.assets).toEqual(project.assets)
+    expect(
+      useProjectStore.getState().activeProject?.nodes[0].versions[0]
+        .generationJobId,
+    ).toBeUndefined()
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(linkedProject)
+  })
+
   test('inserts canvas content into one dependency edge as one undoable graph transaction', () => {
     const before = structuredClone(useProjectStore.getState().activeProject!)
     const creation: CanvasCreation = {

@@ -103,8 +103,9 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(historyAction).toBeEnabled()
   await historyAction.click()
   const historyPanel = page.getByRole('complementary', { name: '历史' })
+  await historyPanel.getByRole('tab', { name: '视频 1' }).click()
   await historyPanel
-    .getByRole('button', { name: '插入历史结果 视频 01' })
+    .getByRole('button', { name: '使用 视频 01' })
     .click()
   await expect(
     page.getByRole('button', { name: '视频 01 历史结果', exact: true }),
@@ -129,6 +130,77 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   ).toContainText('视频 02')
   await page.getByRole('button', { name: '下载时间线 JSON' }).click()
   await expect(page.getByText('JSON 已开始下载')).toBeVisible()
+})
+
+test('filters, previews, reuses, resends, and batches generation history', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await page.getByRole('button', { name: '生成视频' }).click()
+  await expect(
+    page.getByRole('button', { name: '视频 01', exact: true }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '历史记录' }).click()
+  const history = page.getByRole('complementary', { name: '历史' })
+  await expect(history.getByRole('tab', { name: '视频 1' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await history.getByRole('tab', { name: '图片 0' }).click()
+  await expect(history.getByText('暂无图片生成历史')).toBeVisible()
+  await history.getByRole('tab', { name: '视频 1' }).click()
+  await expect(history.getByRole('heading', { name: '今天' })).toBeVisible()
+
+  await history.getByRole('button', { name: '小缩略图' }).click()
+  await expect(history.getByLabel('生成历史内容')).toHaveAttribute(
+    'data-thumbnail-size',
+    'small',
+  )
+  await history.getByRole('button', { name: '大缩略图' }).click()
+
+  const view = history.getByRole('button', { name: '查看 视频 01' })
+  await view.click()
+  const preview = page.getByRole('dialog', { name: '预览 视频 01' })
+  await expect(preview.locator('video')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(view).toBeFocused()
+
+  await history.getByRole('button', { name: '使用 视频 01' }).click()
+  await expect(
+    page.getByRole('button', { name: '视频 01 历史结果', exact: true }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '历史记录' }).click()
+  const resend = history.getByRole('button', { name: '重发画布 视频 01' })
+  await resend.click()
+  const confirmation = page.getByRole('dialog', { name: '重发画布配置' })
+  await expect(confirmation).toContainText('确认完整配置')
+  await expect(confirmation).toContainText('模型')
+  await expect(confirmation).toContainText('引用 1 项')
+  await expect(
+    page.getByRole('button', { name: '视频 01 重发', exact: true }),
+  ).toHaveCount(0)
+  await confirmation.getByRole('button', { name: '确认重新生成' }).click()
+  await expect(
+    page.getByRole('button', { name: '视频 01 重发', exact: true }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '历史记录' }).click()
+  await expect(history.getByRole('tab', { name: '视频 2' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await expect(history.getByText('已完成')).toHaveCount(2)
+  await history.getByRole('button', { name: '全选当前页' }).click()
+  await expect(history.getByRole('button', { name: '批量删除' })).toBeEnabled()
+  await history.getByRole('button', { name: '反选当前页' }).click()
+  await expect(history.getByRole('button', { name: '批量删除' })).toBeDisabled()
+  await history.getByRole('button', { name: '全选当前页' }).click()
+  await history.getByRole('button', { name: '批量删除' }).click()
+  await expect(history.getByText('暂无视频生成历史')).toBeVisible()
 })
 
 test('keeps one image node expanded and persists a confirmed main result', async ({

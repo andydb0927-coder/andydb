@@ -941,6 +941,10 @@ describe('creative canvas', () => {
     const project = useProjectStore.getState().activeProject!
     const video = project.nodes.find((node) => node.title === '视频 02')!
     expect(video.kind).toBe('video')
+    expect(video.generationConfig).toMatchObject({
+      targetKind: 'video',
+      referenceAssets: [{ url: '/demo/shot-rooftop.png' }],
+    })
     expect(project.edges).toContainEqual(
       expect.objectContaining({
         sourceNodeId: 'storyboard',
@@ -3043,7 +3047,7 @@ describe('creative canvas', () => {
 
     const history = screen.getByRole('complementary', { name: '历史' })
     await user.click(
-      within(history).getByRole('button', { name: '插入历史结果 分镜 02' }),
+      within(history).getByRole('button', { name: '使用 分镜 02' }),
     )
 
     expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
@@ -3053,6 +3057,78 @@ describe('creative canvas', () => {
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
     expect(screen.queryByRole('complementary', { name: '历史' })).not.toBeInTheDocument()
+  })
+
+  test('prefills a new canvas node from the complete history config and resends only after confirmation', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.jobs = project.jobs.map((job) => ({
+      ...job,
+      generationConfig: {
+        targetKind: 'image' as const,
+        providerId: 'mock-mj-image',
+        parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
+        referenceAssets: [{
+          url: '/demo/character-lin-yuan.png',
+          kind: 'image' as const,
+          mimeType: 'image/png',
+        }],
+      },
+      providerId: 'mock-mj-image',
+      providerName: 'Mock Studio',
+      modelName: 'MJ 风格图片',
+    }))
+    activate(project)
+    const start = vi.fn(
+      (_request: Parameters<GenerationAdapter['start']>[0], signal: AbortSignal) =>
+        new Promise<GenerationResult>((_resolve, reject) => {
+          signal.addEventListener(
+            'abort',
+            () => reject(new DOMException('cancelled', 'AbortError')),
+            { once: true },
+          )
+        }),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+    })
+
+    await user.click(screen.getByRole('button', { name: '历史记录' }))
+    const history = screen.getByRole('complementary', { name: '历史' })
+    await user.click(
+      within(history).getByRole('button', { name: '重发画布 分镜 02' }),
+    )
+    expect(start).not.toHaveBeenCalled()
+    const confirmation = screen.getByRole('dialog', { name: '重发画布配置' })
+    expect(confirmation).toHaveTextContent('aspectRatio：16:9')
+    expect(confirmation).toHaveTextContent('引用 1 项')
+    await user.click(
+      within(confirmation).getByRole('button', { name: '确认重新生成' }),
+    )
+
+    await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(start.mock.calls[0][0]).toMatchObject({
+      projectId: project.id,
+      operation: 'regenerate',
+      targetKind: 'image',
+      providerId: 'mock-mj-image',
+      prompt: '分镜 02 创作描述',
+      parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
+      referenceAssets: [{ url: '/demo/character-lin-yuan.png' }],
+    })
+    const resentNode = useProjectStore.getState().activeProject?.nodes.at(-1)
+    expect(resentNode).toMatchObject({
+      kind: 'image',
+      title: '分镜 02 重发',
+      modelProviderId: 'mock-mj-image',
+      generationConfig: {
+        targetKind: 'image',
+        parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
+        referenceAssets: [{ url: '/demo/character-lin-yuan.png' }],
+      },
+      versions: [{ prompt: '分镜 02 创作描述' }],
+    })
   })
 
   test('chooses a free-generation type and creates it at the double-click point', async () => {

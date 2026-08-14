@@ -84,6 +84,19 @@ export interface ImageGenerationSettings {
   autoLink: boolean
 }
 
+export interface GenerationReferenceConfig {
+  url: string
+  kind: 'image' | 'video' | 'audio'
+  mimeType: string
+}
+
+export interface GenerationConfiguration {
+  targetKind: 'image' | 'video' | 'audio'
+  providerId?: string
+  parameters?: Record<string, string | number | boolean>
+  referenceAssets: GenerationReferenceConfig[]
+}
+
 export const defaultImageGenerationSettings: ImageGenerationSettings = {
   prompt: '',
   pValue: '',
@@ -134,6 +147,7 @@ export interface CanvasNode {
   imageGeneration?: ImageGenerationSettings
   rotationQuarterTurns?: number
   videoTool?: VideoToolConfig
+  generationConfig?: GenerationConfiguration
 }
 
 export interface CanvasGroup {
@@ -184,6 +198,7 @@ export interface GenerationJob {
   progress?: number
   estimatedCost?: number
   creditsSpent?: number
+  generationConfig?: GenerationConfiguration
 }
 
 export interface ExportJob {

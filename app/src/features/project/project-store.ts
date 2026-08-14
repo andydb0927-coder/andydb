@@ -93,6 +93,7 @@ interface ProjectStore {
     version: Omit<NodeVersion, 'id' | 'createdAt'>,
   ) => void
   updateGenerationJob: (projectId: string, job: GenerationJob) => void
+  deleteGenerationJobs: (jobIds: Iterable<string>) => string[]
   applyGenerationSuccess: (
     projectId: string,
     job: GenerationJob,
@@ -119,6 +120,19 @@ const defaultRepository = new ProjectRepository()
 
 function withUpdatedTimestamp(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() }
+}
+
+function cloneGenerationConfig(job: GenerationJob) {
+  if (!job.generationConfig) return undefined
+  return {
+    ...job.generationConfig,
+    ...(job.generationConfig.parameters
+      ? { parameters: { ...job.generationConfig.parameters } }
+      : {}),
+    referenceAssets: job.generationConfig.referenceAssets.map((reference) => ({
+      ...reference,
+    })),
+  }
 }
 
 function findDownstream(project: Project, nodeId: string) {
@@ -1041,6 +1055,36 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       if (terminal) generationBaselines.delete(baselineKey)
     },
 
+    deleteGenerationJobs: (jobIds) => {
+      const requested = new Set(jobIds)
+      let deletedIds: string[] = []
+      commit((project) => {
+        deletedIds = project.jobs
+          .filter(
+            (job) =>
+              requested.has(job.id) &&
+              job.status !== 'queued' &&
+              job.status !== 'running',
+          )
+          .map(({ id }) => id)
+        if (deletedIds.length === 0) return project
+        const deleted = new Set(deletedIds)
+        return withUpdatedTimestamp({
+          ...project,
+          jobs: project.jobs.filter(({ id }) => !deleted.has(id)),
+          nodes: project.nodes.map((node) => ({
+            ...node,
+            versions: node.versions.map((version) =>
+              version.generationJobId && deleted.has(version.generationJobId)
+                ? { ...version, generationJobId: undefined }
+                : version,
+            ),
+          })),
+        })
+      })
+      return deletedIds
+    },
+
     applyGenerationSuccess: (projectId, job, result) => {
       const project = get().projectsById[projectId]
       if (!project || job.projectId !== projectId) {
@@ -1099,6 +1143,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   versions: [...node.versions, version],
                   activeVersionId: version.id,
                   sourceChanged: false,
+                  ...(job.generationConfig
+                    ? { generationConfig: cloneGenerationConfig(job) }
+                    : {}),
                 }
               : node,
           ),
@@ -1134,6 +1181,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           versions: [version],
           activeVersionId: version.id,
           sourceChanged: false,
+          ...(job.generationConfig
+            ? { generationConfig: cloneGenerationConfig(job) }
+            : {}),
           ...(job.providerId && job.providerId !== 'libtv-bridge'
             ? { modelProviderId: job.providerId }
             : {}),
@@ -1224,6 +1274,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             (latest, candidate) => Math.max(latest, candidate.sequence ?? 0),
             0,
           ) + 1,
+        generationConfig: {
+          targetKind: nodeRun.request.targetKind,
+          ...(nodeRun.request.providerId
+            ? { providerId: nodeRun.request.providerId }
+            : {}),
+          ...(nodeRun.request.parameters
+            ? { parameters: { ...nodeRun.request.parameters } }
+            : {}),
+          referenceAssets: nodeRun.request.referenceAssets.map((reference) => ({
+            ...reference,
+          })),
+        },
         ...(result.usage
           ? {
               providerId: result.usage.providerId,

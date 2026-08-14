@@ -74,6 +74,18 @@ export class GenerationQueue {
         status: 'queued',
         progress: 0,
         ...(dispatch ?? {}),
+        generationConfig: {
+          targetKind: request.targetKind,
+          ...(request.providerId || dispatch?.providerId
+            ? { providerId: request.providerId ?? dispatch?.providerId }
+            : {}),
+          ...(request.parameters
+            ? { parameters: { ...request.parameters } }
+            : {}),
+          referenceAssets: request.referenceAssets.map((reference) => ({
+            ...reference,
+          })),
+        },
         prompt: request.prompt,
         createdAt: timestamp,
         updatedAt: timestamp,

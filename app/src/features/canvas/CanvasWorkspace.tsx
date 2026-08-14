@@ -26,11 +26,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import type {
   CanvasNode,
-  JobStatus,
   Project,
   VideoDerivedTool,
 } from '../project/model'
 import { CanvasGenerationSettings } from './CanvasGenerationSettings'
+import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { VideoMediaContextBar } from './VideoContextTools'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
@@ -55,14 +55,6 @@ const kindCopy: Record<CanvasNode['kind'], string> = {
   video: '视频',
   preview: '预览',
   worldview: '世界观',
-}
-
-const jobCopy: Record<JobStatus, string> = {
-  queued: '排队中',
-  running: '生成中',
-  succeeded: '已完成',
-  failed: '失败',
-  cancelled: '已取消',
 }
 
 const panelCopy: Record<WorkspacePanel, string> = {
@@ -174,7 +166,9 @@ interface WorkspaceSidePanelProps {
   generationPreferenceStore?: GenerationProviderPreferenceStore
   historyInsertionMode?: boolean
   onClose(): void
+  onDeleteHistoryJobs?(jobIds: string[]): void
   onInsertHistoryResult?(jobId: string): void
+  onResendHistoryJob?(jobId: string): void
   onSelectNode(nodeId: string): void
 }
 
@@ -184,12 +178,16 @@ export function WorkspaceSidePanel({
   generationPreferenceStore,
   historyInsertionMode = false,
   onClose,
+  onDeleteHistoryJobs,
   onInsertHistoryResult,
+  onResendHistoryJob,
   onSelectNode,
 }: WorkspaceSidePanelProps) {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      if (document.querySelector('.generation-history-dialog')) return
+      onClose()
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
@@ -275,59 +273,13 @@ export function WorkspaceSidePanel({
       ) : null}
 
       {panel === 'history' ? (
-        <ol className="workspace-side-panel__history">
-          {historyInsertionMode ? (
-            <li className="workspace-side-panel__help">
-              <p>选择一个已完成结果，将副本插入右键位置。</p>
-            </li>
-          ) : null}
-          {project.jobs.map((job) => {
-            const node = project.nodes.find((candidate) => candidate.id === job.nodeId)
-            const canInsert = Boolean(
-              job.status === 'succeeded' &&
-              job.assetId &&
-              project.assets.some(({ id }) => id === job.assetId),
-            )
-            return (
-              <li key={job.id}>
-                <button
-                  type="button"
-                  aria-label={
-                    historyInsertionMode && node
-                      ? `插入历史结果 ${node.title}`
-                      : undefined
-                  }
-                  disabled={historyInsertionMode ? !canInsert : !node}
-                  title={
-                    historyInsertionMode && !canInsert
-                      ? '只有带素材的已完成任务可以插入'
-                      : undefined
-                  }
-                  onClick={() => {
-                    if (historyInsertionMode) onInsertHistoryResult?.(job.id)
-                    else if (node) onSelectNode(node.id)
-                  }}
-                >
-                  <span>{jobCopy[job.status]}</span>
-                  <strong>{node?.title ?? '已移除节点'}</strong>
-                  <small>{job.prompt}</small>
-                  {job.providerName && job.modelName ? (
-                    <small>{job.providerName} · {job.modelName}</small>
-                  ) : null}
-                  {job.status === 'running' && job.progress !== undefined ? (
-                    <small>进度 {job.progress}%</small>
-                  ) : null}
-                  {job.creditsSpent !== undefined ? (
-                    <small>消耗 {job.creditsSpent} 积分</small>
-                  ) : job.estimatedCost !== undefined ? (
-                    <small>预计 {job.estimatedCost} 积分</small>
-                  ) : null}
-                </button>
-              </li>
-            )
-          })}
-          {!project.jobs.length ? <p>生成历史将在完成任务后显示。</p> : null}
-        </ol>
+        <GenerationHistoryPanel
+          project={project}
+          insertionMode={historyInsertionMode}
+          onDeleteJobs={(jobIds) => onDeleteHistoryJobs?.(jobIds)}
+          onResend={(jobId) => onResendHistoryJob?.(jobId)}
+          onUse={(jobId) => onInsertHistoryResult?.(jobId)}
+        />
       ) : null}
 
       {panel === 'shortcuts' ? (

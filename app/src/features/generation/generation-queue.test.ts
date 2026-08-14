@@ -133,6 +133,12 @@ describe('generation queue lifecycle', () => {
     expect((job as GenerationJob & { projectId?: string }).projectId).toBe(
       'project-frost-river',
     )
+    expect(job).toMatchObject({
+      generationConfig: {
+        targetKind: 'image',
+        referenceAssets: regenerateRequest.referenceAssets,
+      },
+    })
     queue.cancel(job.id)
   })
 

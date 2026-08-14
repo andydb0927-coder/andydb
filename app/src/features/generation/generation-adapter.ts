@@ -1,24 +1,18 @@
 import type {
   Asset,
+  GenerationConfiguration,
   GenerationOperation,
+  GenerationReferenceConfig,
   NodeVersion,
 } from '../project/model'
 
-export interface GenerationReference {
-  url: string
-  kind: 'image' | 'video' | 'audio'
-  mimeType: string
-}
+export type GenerationReference = GenerationReferenceConfig
 
-export interface GenerationRequest {
+export interface GenerationRequest extends GenerationConfiguration {
   projectId: string
   nodeId: string
   operation: GenerationOperation
-  targetKind: 'image' | 'video' | 'audio'
-  providerId?: string
   prompt: string
-  referenceAssets: GenerationReference[]
-  parameters?: Record<string, string | number | boolean>
 }
 
 export interface GenerationUsage {

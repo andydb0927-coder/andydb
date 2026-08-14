@@ -300,18 +300,22 @@ function buildGenerationRequest(
   const asset = project.assets.find(
     (candidate) => candidate.id === activeVersion?.assetId,
   )
+  const savedConfig = node.generationConfig
   const targetKind =
-    operation === 'generate-video' || node.kind === 'video'
+    operation === 'generate-video'
       ? 'video'
-      : 'image'
-  const registeredProvider = node.modelProviderId
-    ? defaultProviderRegistry.list().find(({ id }) => id === node.modelProviderId)
+      : savedConfig?.targetKind ?? (node.kind === 'video' ? 'video' : 'image')
+  const requestedProviderId = savedConfig?.providerId ?? node.modelProviderId
+  const registeredProvider = requestedProviderId
+    ? defaultProviderRegistry.list().find(({ id }) => id === requestedProviderId)
     : undefined
   const registeredProviderId = registeredProvider &&
     registeredProvider.capabilities.some((capability) =>
       targetKind === 'video'
         ? capability === 'text-to-video' || capability === 'image-to-video'
-        : capability === 'text-to-image' || capability === 'image-to-image',
+        : targetKind === 'audio'
+          ? capability === 'audio'
+          : capability === 'text-to-image' || capability === 'image-to-image',
     )
     ? registeredProvider.id
     : undefined
@@ -323,7 +327,12 @@ function buildGenerationRequest(
     targetKind,
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
-    referenceAssets: asset
+    ...(savedConfig?.parameters
+      ? { parameters: { ...savedConfig.parameters } }
+      : {}),
+    referenceAssets: savedConfig?.referenceAssets.length
+      ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
+      : asset
       ? [
           {
             url: asset.url,
@@ -440,6 +449,9 @@ export function CanvasPage({
   )
   const insertCanvasContentIntoEdges = useProjectStore(
     (state) => state.insertCanvasContentIntoEdges,
+  )
+  const deleteGenerationJobs = useProjectStore(
+    (state) => state.deleteGenerationJobs,
   )
   const updateCreativeCard = useProjectStore(
     (state) => state.updateCreativeCard,
@@ -2962,7 +2974,7 @@ export function CanvasPage({
     })
   }, [historyPlacement])
 
-  const insertHistoryResult = useCallback(
+  const useHistoryResult = useCallback(
     (jobId: string) => {
       const placement = historyPlacement
       const currentProject = useProjectStore.getState().activeProject
@@ -2970,10 +2982,9 @@ export function CanvasPage({
       const sourceNode = currentProject?.nodes.find(({ id }) => id === job?.nodeId)
       const asset = currentProject?.assets.find(({ id }) => id === job?.assetId)
       if (
-        !placement ||
         !currentProject ||
         currentProject.id !== projectId ||
-        placement.projectId !== currentProject.id ||
+        (placement && placement.projectId !== currentProject.id) ||
         job?.status !== 'succeeded' ||
         !sourceNode ||
         !asset
@@ -2988,7 +2999,10 @@ export function CanvasPage({
           id: crypto.randomUUID(),
           kind: asset.kind === 'video' ? 'video' : asset.kind === 'image' ? 'image' : 'text',
           title,
-          position: placement.position,
+          position: placement?.position ?? {
+            x: sourceNode.position.x + 360,
+            y: sourceNode.position.y + 140,
+          },
           versions: [{
             id: versionId,
             createdAt: new Date().toISOString(),
@@ -2997,6 +3011,19 @@ export function CanvasPage({
           }],
           activeVersionId: versionId,
           sourceChanged: false,
+          ...(job.generationConfig
+            ? {
+                generationConfig: {
+                  ...job.generationConfig,
+                  ...(job.generationConfig.parameters
+                    ? { parameters: { ...job.generationConfig.parameters } }
+                    : {}),
+                  referenceAssets: job.generationConfig.referenceAssets.map(
+                    (reference) => ({ ...reference }),
+                  ),
+                },
+              }
+            : {}),
         },
       }
       createdNodeFocusRef.current = creation.node.id
@@ -3005,9 +3032,110 @@ export function CanvasPage({
       selectOnlyNode(creation.node.id)
       setWorkspacePanel(undefined)
       setHistoryPlacement(undefined)
-      setGenerationFeedback(`已从生成历史插入“${title}”。`)
+      setGenerationFeedback(`已从生成历史使用“${title}”。`)
     },
     [createCanvasContent, historyPlacement, projectId, selectOnlyNode],
+  )
+
+  const deleteHistoryJobs = useCallback(
+    (jobIds: string[]) => {
+      const deletedIds = deleteGenerationJobs(jobIds)
+      setGenerationFeedback(
+        deletedIds.length
+          ? `已删除 ${deletedIds.length} 条生成历史；结果素材仍保留在画布。`
+          : '进行中的任务不能从历史中删除。',
+      )
+    },
+    [deleteGenerationJobs],
+  )
+
+  const resendHistoryJob = useCallback(
+    (jobId: string) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const job = currentProject?.jobs.find(({ id }) => id === jobId)
+      if (!currentProject || currentProject.id !== projectId || !job) return
+      const sourceNode = currentProject.nodes.find(({ id }) => id === job.nodeId)
+      const sourceAsset = currentProject.assets.find(({ id }) => id === job.assetId)
+      const targetKind =
+        job.generationConfig?.targetKind ??
+        (sourceAsset?.kind === 'audio'
+          ? 'audio'
+          : sourceAsset?.kind === 'video' || sourceNode?.kind === 'video'
+            ? 'video'
+            : 'image')
+      const config = job.generationConfig ?? {
+        targetKind,
+        ...(job.providerId ? { providerId: job.providerId } : {}),
+        referenceAssets: sourceAsset
+          ? [{
+              url: sourceAsset.url,
+              kind: sourceAsset.kind,
+              mimeType: sourceAsset.mimeType,
+            }]
+          : [],
+      }
+      const fallbackLabel =
+        targetKind === 'video' ? '视频' : targetKind === 'audio' ? '音频' : '图片'
+      const label = `${sourceNode?.title ?? fallbackLabel} 重发`
+      const count = currentProject.nodes.filter(({ title }) =>
+        title.startsWith(label),
+      ).length
+      const title = count
+        ? `${label} ${String(count + 1).padStart(2, '0')}`
+        : label
+      const versionId = crypto.randomUUID()
+      const nodeId = crypto.randomUUID()
+      const generationConfig = {
+        ...config,
+        ...(config.parameters
+          ? { parameters: { ...config.parameters } }
+          : {}),
+        referenceAssets: config.referenceAssets.map((reference) => ({
+          ...reference,
+        })),
+      }
+      const creation: CanvasCreation = {
+        node: {
+          id: nodeId,
+          kind:
+            targetKind === 'video'
+              ? 'video'
+              : targetKind === 'image'
+                ? 'image'
+                : 'text',
+          title,
+          position: sourceNode
+            ? { x: sourceNode.position.x + 380, y: sourceNode.position.y + 180 }
+            : { x: 420, y: 320 },
+          versions: [{
+            id: versionId,
+            createdAt: new Date().toISOString(),
+            prompt: job.prompt,
+          }],
+          activeVersionId: versionId,
+          sourceChanged: false,
+          ...(generationConfig.providerId
+            ? { modelProviderId: generationConfig.providerId }
+            : {}),
+          generationConfig,
+        },
+      }
+      createCanvasContent(creation)
+      createdNodeFocusRef.current = nodeId
+      setFocusRequestVersion((version) => version + 1)
+      selectOnlyNode(nodeId)
+      setWorkspacePanel(undefined)
+      setHistoryPlacement(undefined)
+      generationQueue.enqueue({
+        projectId: currentProject.id,
+        nodeId,
+        operation: 'regenerate',
+        prompt: job.prompt,
+        ...generationConfig,
+      })
+      setGenerationFeedback(`已回填“${title}”完整配置并重新加入本地队列。`)
+    },
+    [createCanvasContent, generationQueue, projectId, selectOnlyNode],
   )
 
   const handlePaneContextMenu = useCallback(
@@ -3441,7 +3569,9 @@ export function CanvasPage({
             project={project}
             historyInsertionMode={Boolean(historyPlacement)}
             onClose={closeWorkspacePanel}
-            onInsertHistoryResult={insertHistoryResult}
+            onDeleteHistoryJobs={deleteHistoryJobs}
+            onInsertHistoryResult={useHistoryResult}
+            onResendHistoryJob={resendHistoryJob}
             onSelectNode={openWorkspaceNode}
           />
         ) : null}
