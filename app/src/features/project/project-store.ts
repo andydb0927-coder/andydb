@@ -36,7 +36,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged' | 'modelProviderId'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged' | 'modelProviderId' | 'effectTool'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -500,6 +500,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.modelProviderId === undefined
                     ? {}
                     : { modelProviderId: changes.modelProviderId }),
+                  ...(changes.effectTool === undefined
+                    ? {}
+                    : { effectTool: { ...changes.effectTool } }),
                 }
               : node,
           ),

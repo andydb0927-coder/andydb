@@ -132,6 +132,15 @@ export type VideoToolConfig =
       frame: '首帧' | '尾帧' | '当前帧'
     }
 
+export interface EffectToolConfig {
+  templateId: string
+  effect: string
+  intensity: number
+  color: string
+  direction: '无' | '左到右' | '右到左' | '上升' | '下降' | '径向'
+  blendMode: '正常' | '滤色' | '叠加' | '柔光'
+}
+
 export interface CanvasNode {
   id: string
   kind: NodeKind
@@ -147,6 +156,7 @@ export interface CanvasNode {
   imageGeneration?: ImageGenerationSettings
   rotationQuarterTurns?: number
   videoTool?: VideoToolConfig
+  effectTool?: EffectToolConfig
   generationConfig?: GenerationConfiguration
 }
 

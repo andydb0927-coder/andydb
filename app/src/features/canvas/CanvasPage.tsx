@@ -103,6 +103,11 @@ import {
   type WorkspacePanel,
 } from './CanvasWorkspace'
 import { CanvasGroupOverlay } from './CanvasGroupOverlay'
+import type {
+  CharacterProfile,
+  EffectTemplate,
+  WorkspaceAsset,
+} from './CanvasResourcePanels'
 import {
   findSelectedCanvasGroup,
   measureCanvasGroup,
@@ -1482,6 +1487,12 @@ export function CanvasPage({
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
           onLocalVideoGenerate: () => handleAction(node.id, 'regenerate'),
+          onUpdateEffectTool: (changes) => {
+            if (!node.effectTool) return
+            updateNode(node.id, {
+              effectTool: { ...node.effectTool, ...changes },
+            })
+          },
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
@@ -3249,6 +3260,138 @@ export function CanvasPage({
     })
   }
 
+  const canvasCenterPosition = () => {
+    const rect = viewportRef.current?.getBoundingClientRect()
+    if (!flowInstance || !rect) return { x: 640, y: 360 }
+    return flowInstance.screenToFlowPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    })
+  }
+
+  const insertEffectTemplate = (template: EffectTemplate) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const baseTitle = `${template.name}特效`
+    const count = currentProject.nodes.filter(({ title }) => title.startsWith(baseTitle)).length
+    const title = count ? `${baseTitle} ${String(count + 1).padStart(2, '0')}` : baseTitle
+    const versionId = crypto.randomUUID()
+    const creation: CanvasCreation = {
+      node: {
+        id: crypto.randomUUID(),
+        kind: 'storyboard',
+        title,
+        position: canvasCenterPosition(),
+        versions: [{
+          id: versionId,
+          createdAt: new Date().toISOString(),
+          prompt: `特效模板：${template.name}`,
+        }],
+        activeVersionId: versionId,
+        sourceChanged: false,
+        effectTool: {
+          templateId: template.id,
+          effect: template.name,
+          intensity: 70,
+          color: template.colors[0],
+          direction: '径向',
+          blendMode: '滤色',
+        },
+      },
+    }
+    createCanvasContent(creation)
+    selectOnlyNode(creation.node.id)
+    createdNodeFocusRef.current = creation.node.id
+    setFocusRequestVersion((version) => version + 1)
+    setWorkspacePanel(undefined)
+    setGenerationFeedback(`已在画布中心添加“${title}”，可继续调整参数。`)
+  }
+
+  const insertWorkspaceAsset = (record: WorkspaceAsset) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const assetId = record.existingProjectAsset ? record.id : crypto.randomUUID()
+    const versionId = crypto.randomUUID()
+    const nodeId = crypto.randomUUID()
+    const creation: CanvasCreation = {
+      node: {
+        id: nodeId,
+        kind: record.kind === 'video' ? 'video' : record.kind === 'image' ? 'image' : 'text',
+        title: record.name,
+        position: canvasCenterPosition(),
+        versions: [{
+          id: versionId,
+          createdAt: new Date().toISOString(),
+          prompt: `来自素材库：${record.name}`,
+          assetId,
+        }],
+        activeVersionId: versionId,
+        sourceChanged: false,
+      },
+      ...(record.existingProjectAsset ? {} : {
+        asset: {
+          id: assetId,
+          kind: record.kind,
+          url: record.url,
+          mimeType: record.mimeType,
+          width: record.width,
+          height: record.height,
+          durationSeconds: record.durationSeconds,
+        },
+      }),
+    }
+    createCanvasContent(creation)
+    selectOnlyNode(nodeId)
+    createdNodeFocusRef.current = nodeId
+    setFocusRequestVersion((version) => version + 1)
+    setWorkspacePanel(undefined)
+    setGenerationFeedback(`已将素材“${record.name}”发送到画布。`)
+  }
+
+  const applyCharactersToCanvas = (characters: CharacterProfile[]) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId || !characters.length) return
+    const center = canvasCenterPosition()
+    let lastNodeId: string | undefined
+    characters.forEach((character, index) => {
+      const nodeId = crypto.randomUUID()
+      const assetId = crypto.randomUUID()
+      const versionId = crypto.randomUUID()
+      createCanvasContent({
+        node: {
+          id: nodeId,
+          kind: 'character',
+          title: character.name,
+          position: { x: center.x + index * 320, y: center.y + index * 36 },
+          versions: [{
+            id: versionId,
+            createdAt: new Date().toISOString(),
+            prompt: `${character.position}；${character.tags.join('、')}`,
+            assetId,
+          }],
+          activeVersionId: versionId,
+          sourceChanged: false,
+        },
+        asset: {
+          id: assetId,
+          kind: 'image',
+          url: character.images[0],
+          mimeType: 'image/png',
+          width: 960,
+          height: 1200,
+        },
+      })
+      lastNodeId = nodeId
+    })
+    if (lastNodeId) {
+      selectOnlyNode(lastNodeId)
+      createdNodeFocusRef.current = lastNodeId
+      setFocusRequestVersion((version) => version + 1)
+    }
+    setWorkspacePanel(undefined)
+    setGenerationFeedback(`已应用 ${characters.length} 个角色到画布。`)
+  }
+
   const createImageToolNode = (tool: string) => {
     const currentProject = useProjectStore.getState().activeProject
     const sourceNode = currentProject?.nodes.find(({ id }) => id === primaryNodeId)
@@ -3569,7 +3712,10 @@ export function CanvasPage({
             project={project}
             historyInsertionMode={Boolean(historyPlacement)}
             onClose={closeWorkspacePanel}
+            onApplyCharacters={applyCharactersToCanvas}
             onDeleteHistoryJobs={deleteHistoryJobs}
+            onInsertAsset={insertWorkspaceAsset}
+            onInsertEffect={insertEffectTemplate}
             onInsertHistoryResult={useHistoryResult}
             onResendHistoryJob={resendHistoryJob}
             onSelectNode={openWorkspaceNode}

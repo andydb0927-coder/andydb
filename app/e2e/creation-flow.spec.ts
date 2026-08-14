@@ -923,3 +923,62 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
 
   expect(browserErrors).toEqual([])
 })
+
+test('inserts local effects, managed assets, and filtered characters from the dock libraries', async ({
+  page,
+}) => {
+  const browserErrors: string[] = []
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  await createCinematicProject(page)
+
+  await page.getByRole('button', { name: '打开工具箱' }).click()
+  const toolbox = page.getByRole('complementary', { name: '工具箱' })
+  await expect(toolbox.getByRole('list', { name: '动效模板' }).getByRole('button')).toHaveCount(17)
+  await toolbox.getByRole('button', { name: '使用极光模板' }).click()
+  await expect(page.getByRole('button', { name: '极光特效', exact: true })).toBeVisible()
+  const effectSettings = page.getByRole('region', { name: '极光特效 特效参数' })
+  await expect(effectSettings.getByLabel('强度')).toHaveValue('70')
+  await expect(effectSettings.getByLabel('混合模式')).toHaveValue('滤色')
+  await effectSettings.getByLabel('强度').fill('42')
+  await expect(effectSettings.getByLabel('强度')).toHaveValue('42')
+
+  await page.getByRole('button', { name: '素材库' }).click()
+  const assets = page.getByRole('dialog', { name: '素材库' })
+  await expect(assets.getByRole('tree', { name: '文件夹' })).toBeVisible()
+  await assets.getByRole('searchbox', { name: '搜索素材' }).fill('角色参考')
+  const originalAsset = assets.getByRole('article', { name: '素材 角色参考' })
+  await expect(originalAsset).toBeVisible()
+  await originalAsset.getByText('角色参考', { exact: true }).dblclick()
+  const rename = originalAsset.getByRole('textbox', { name: '重命名角色参考' })
+  await rename.fill('角色参考库')
+  await rename.press('Enter')
+  const renamedAsset = assets.getByRole('article', { name: '素材 角色参考库' })
+  await renamedAsset.click({ button: 'right' })
+  const assetMenu = page.getByRole('menu', { name: '素材操作' })
+  await assetMenu.getByRole('menuitem', { name: '移动到' }).click()
+  await assetMenu.getByRole('menuitem', { name: '灵感收集' }).click()
+  await expect(renamedAsset).toContainText('灵感收集')
+  await renamedAsset.getByRole('button', { name: '发送角色参考库到画布' }).click()
+  await expect(page.getByRole('button', { name: '角色参考库', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: '角色库' }).click()
+  const characters = page.getByRole('dialog', { name: '角色库' })
+  await characters.getByLabel('性别').selectOption('女')
+  await characters.getByLabel('时代').selectOption('古代')
+  const character = characters.getByRole('article', { name: '角色 程野' })
+  await expect(character.getByRole('img')).toHaveCount(4)
+  await character.getByRole('button', { name: '查看程野' }).click()
+  const detail = page.getByRole('dialog', { name: '角色详情 程野' })
+  await expect(detail).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(detail).toBeHidden()
+  await character.getByRole('button', { name: '使用程野' }).click()
+  await characters.getByRole('button', { name: '应用 1 个角色到画布' }).click()
+  await expect(page.getByRole('button', { name: '程野', exact: true })).toBeVisible()
+  await expect(page.getByText('已保存')).toBeVisible()
+
+  expect(browserErrors).toEqual([])
+})

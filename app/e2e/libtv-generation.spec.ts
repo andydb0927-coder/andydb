@@ -94,6 +94,7 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
   expect(projectId).toBeTruthy()
 
   await page.getByRole('button', { name: '打开工具箱' }).click()
+  await page.getByRole('tab', { name: '生成连接' }).click()
   await expect(page.getByText('LibTV CLI e2e-controlled')).toBeVisible()
   await page.getByRole('radio', { name: 'LibTV 实际生成' }).check()
   await page.getByRole('combobox', { name: '远程画布' }).selectOption(remoteProject.uuid)
@@ -171,8 +172,9 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
   await expect(page.getByRole('button', { name: '视频 01', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '素材库' }).click()
   const generatedAsset = page.getByRole('complementary', { name: '资产' })
-  await expect(generatedAsset.getByText('视频 01', { exact: true })).toBeVisible()
-  await expect(generatedAsset.getByText('VIDEO', { exact: true })).toBeVisible()
+  const generatedVideoCard = generatedAsset.getByRole('article', { name: '素材 视频 01' })
+  await expect(generatedVideoCard).toBeVisible()
+  await expect(generatedVideoCard).toContainText('生成结果 · VIDEO')
 
   expect(generationBodies).toHaveLength(1)
   expect(externalRequests).toEqual([])

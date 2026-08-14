@@ -30,6 +30,14 @@ import type {
   VideoDerivedTool,
 } from '../project/model'
 import { CanvasGenerationSettings } from './CanvasGenerationSettings'
+import {
+  AssetLibraryPanel,
+  CharacterLibraryPanel,
+  EffectToolboxPanel,
+  type CharacterProfile,
+  type EffectTemplate,
+  type WorkspaceAsset,
+} from './CanvasResourcePanels'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { VideoMediaContextBar } from './VideoContextTools'
 
@@ -166,7 +174,10 @@ interface WorkspaceSidePanelProps {
   generationPreferenceStore?: GenerationProviderPreferenceStore
   historyInsertionMode?: boolean
   onClose(): void
+  onApplyCharacters?(characters: CharacterProfile[]): void
   onDeleteHistoryJobs?(jobIds: string[]): void
+  onInsertAsset?(asset: WorkspaceAsset): void
+  onInsertEffect?(template: EffectTemplate): void
   onInsertHistoryResult?(jobId: string): void
   onResendHistoryJob?(jobId: string): void
   onSelectNode(nodeId: string): void
@@ -178,27 +189,29 @@ export function WorkspaceSidePanel({
   generationPreferenceStore,
   historyInsertionMode = false,
   onClose,
+  onApplyCharacters,
   onDeleteHistoryJobs,
+  onInsertAsset,
+  onInsertEffect,
   onInsertHistoryResult,
   onResendHistoryJob,
   onSelectNode,
 }: WorkspaceSidePanelProps) {
+  const [toolboxTab, setToolboxTab] = useState<'effects' | 'models'>('effects')
+
+  useEffect(() => {
+    if (panel !== 'toolbox') setToolboxTab('effects')
+  }, [panel])
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (document.querySelector('.generation-history-dialog')) return
+      if (document.querySelector('.generation-history-dialog, .canvas-resource-dialog__overlay, .asset-library__context')) return
       onClose()
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [onClose])
-
-  const assetRows = project.assets.map((asset) => {
-    const node = project.nodes.find((candidate) =>
-      candidate.versions.some((version) => version.assetId === asset.id),
-    )
-    return { asset, node }
-  })
 
   return (
     <aside className="workspace-side-panel" aria-label={panelCopy[panel]}>
@@ -225,51 +238,32 @@ export function WorkspaceSidePanel({
         </ul>
       ) : null}
 
-      {panel === 'models' || panel === 'toolbox' ? (
+      {panel === 'models' ? (
         <CanvasGenerationSettings preferenceStore={generationPreferenceStore} />
       ) : null}
 
       {panel === 'toolbox' ? (
-        <div className="workspace-side-panel__help">
-          <p>工具箱集中管理生成模型；节点分组、连线显隐和画布吸附仍保留为画布级操作。</p>
-          <p>Mock 会记录本地演示积分；不会调用第三方 API 或消耗 Liblib 积分。</p>
-        </div>
+        <>
+          <div className="effect-toolbox__tabs" role="tablist" aria-label="工具箱分类">
+            <button type="button" role="tab" aria-selected={toolboxTab === 'effects'} onClick={() => setToolboxTab('effects')}>动效模板</button>
+            <button type="button" role="tab" aria-selected={toolboxTab === 'models'} onClick={() => setToolboxTab('models')}>生成连接</button>
+          </div>
+          {toolboxTab === 'effects' ? (
+            <EffectToolboxPanel onInsert={(template) => onInsertEffect?.(template)} />
+          ) : (
+            <div className="effect-toolbox__provider" aria-label="工具箱生成连接">
+              <CanvasGenerationSettings preferenceStore={generationPreferenceStore} />
+            </div>
+          )}
+        </>
       ) : null}
 
       {panel === 'assets' ? (
-        <div className="workspace-side-panel__asset-grid">
-          {assetRows.map(({ asset, node }) => (
-            <button
-              key={asset.id}
-              type="button"
-              disabled={!node}
-              onClick={() => node && onSelectNode(node.id)}
-            >
-              {asset.kind === 'image' ? <img src={asset.url} alt="" /> : <FilmPlaceholder />}
-              <strong>{node?.title ?? '未绑定素材'}</strong>
-              <span>{asset.kind.toUpperCase()}</span>
-            </button>
-          ))}
-          {!assetRows.length ? <p>当前项目还没有素材。</p> : null}
-        </div>
+        <AssetLibraryPanel project={project} onInsert={(asset) => onInsertAsset?.(asset)} />
       ) : null}
 
       {panel === 'characters' ? (
-        <ul className="workspace-side-panel__list">
-          {project.nodes
-            .filter((node) => node.kind === 'character' || node.kind === 'character-card')
-            .map((node) => (
-              <li key={node.id}>
-                <button type="button" onClick={() => onSelectNode(node.id)}>
-                  <strong>{node.title}</strong>
-                  <span>{kindCopy[node.kind]}</span>
-                </button>
-              </li>
-            ))}
-          {!project.nodes.some(
-            (node) => node.kind === 'character' || node.kind === 'character-card',
-          ) ? <p>当前项目还没有角色节点。</p> : null}
-        </ul>
+        <CharacterLibraryPanel onApply={(characters) => onApplyCharacters?.(characters)} />
       ) : null}
 
       {panel === 'history' ? (
@@ -365,10 +359,6 @@ function ShortcutGroup({
       {children ? <div className="workspace-shortcuts__notes">{children}</div> : null}
     </section>
   )
-}
-
-function FilmPlaceholder() {
-  return <span className="workspace-side-panel__media-placeholder"><Sparkles aria-hidden="true" /></span>
 }
 
 interface CanvasViewControlsProps {

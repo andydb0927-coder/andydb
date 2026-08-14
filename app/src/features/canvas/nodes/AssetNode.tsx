@@ -79,7 +79,9 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
       aria-label={`${data.node.title}操作`}
       data-placement={data.actionsPlacement}
     >
-      {primaryActionsForNode(data.node.kind, data.asset !== undefined).map(
+      {(data.node.effectTool
+        ? []
+        : primaryActionsForNode(data.node.kind, data.asset !== undefined)).map(
         ({ action, label }) => {
           const ActionIcon = actionIcons[action]
 
@@ -134,6 +136,44 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
   )
 }
 
+function EffectToolDetails({ data }: { data: CreativeNodeData }) {
+  const config = data.node.effectTool
+  if (!config) return null
+  return (
+    <section className="effect-node-parameters nodrag" aria-label={`${data.node.title} 特效参数`}>
+      <div className="effect-node-parameters__heading">
+        <span>EFFECT</span>
+        <strong>{config.effect}</strong>
+      </div>
+      <label>强度
+        <input
+          type="number"
+          min="0"
+          max="100"
+          aria-label="强度"
+          value={config.intensity}
+          onChange={(event) => data.onUpdateEffectTool?.({
+            intensity: Math.min(100, Math.max(0, Number(event.target.value) || 0)),
+          })}
+        />
+      </label>
+      <label>颜色
+        <input type="color" aria-label="颜色" value={config.color} onChange={(event) => data.onUpdateEffectTool?.({ color: event.target.value })} />
+      </label>
+      <label>方向
+        <select aria-label="方向" value={config.direction} onChange={(event) => data.onUpdateEffectTool?.({ direction: event.target.value as typeof config.direction })}>
+          {['无', '左到右', '右到左', '上升', '下降', '径向'].map((value) => <option key={value}>{value}</option>)}
+        </select>
+      </label>
+      <label>混合模式
+        <select aria-label="混合模式" value={config.blendMode} onChange={(event) => data.onUpdateEffectTool?.({ blendMode: event.target.value as typeof config.blendMode })}>
+          {['正常', '滤色', '叠加', '柔光'].map((value) => <option key={value}>{value}</option>)}
+        </select>
+      </label>
+    </section>
+  )
+}
+
 export function CreativeNodeShell({
   data,
   preview,
@@ -164,7 +204,7 @@ export function CreativeNodeShell({
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
     node.videoTool === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
-  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined
+  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined || node.effectTool !== undefined
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -274,6 +314,7 @@ export function CreativeNodeShell({
         {imageGenerationNode && contextual ? <ImageGenerationPanel data={data} /> : null}
         {videoMedia && contextual ? <VideoGenerationPanel data={data} /> : null}
         {node.videoTool && contextual ? <VideoToolDetails data={data} /> : null}
+        {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
         <Handle
           id="dependency-target"
           type="target"

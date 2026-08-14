@@ -3763,6 +3763,58 @@ describe('canvas top bar', () => {
     expect(localStorage.getItem('wireless-canvas:workspace-preferences')).toContain('"snapToGrid":true')
   })
 
+  test('inserts configurable effects, managed assets and selected characters from the dock libraries', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 640, y: 360 })
+    const initialCount = useProjectStore.getState().activeProject!.nodes.length
+
+    await user.click(screen.getByRole('button', { name: '打开工具箱' }))
+    const toolbox = screen.getByRole('complementary', { name: '工具箱' })
+    await user.click(within(toolbox).getByRole('button', { name: '使用极光模板' }))
+    const effect = useProjectStore.getState().activeProject!.nodes.at(-1)!
+    expect(effect).toMatchObject({
+      kind: 'storyboard',
+      title: '极光特效',
+      position: { x: 640, y: 360 },
+      effectTool: {
+        templateId: 'aurora',
+        intensity: 70,
+        color: '#8fffd1',
+        direction: '径向',
+        blendMode: '滤色',
+      },
+    })
+    const effectSettings = screen.getByRole('region', { name: '极光特效 特效参数' })
+    await user.clear(within(effectSettings).getByLabelText('强度'))
+    await user.type(within(effectSettings).getByLabelText('强度'), '42')
+    expect(
+      useProjectStore.getState().activeProject!.nodes.at(-1)?.effectTool?.intensity,
+    ).toBe(42)
+
+    await user.click(screen.getByRole('button', { name: '素材库' }))
+    const assets = screen.getByRole('dialog', { name: '素材库' })
+    await user.click(within(assets).getByRole('button', { name: '发送分镜 02到画布' }))
+    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      title: '分镜 02',
+      position: { x: 640, y: 360 },
+    })
+
+    await user.click(screen.getByRole('button', { name: '角色库' }))
+    const characters = screen.getByRole('dialog', { name: '角色库' })
+    await user.selectOptions(within(characters).getByLabelText('性别'), '女')
+    await user.selectOptions(within(characters).getByLabelText('时代'), '古代')
+    await user.click(within(characters).getByRole('button', { name: '使用程野' }))
+    await user.click(within(characters).getByRole('button', { name: '应用 1 个角色到画布' }))
+    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
+      kind: 'character',
+      title: '程野',
+    })
+    expect(useProjectStore.getState().activeProject!.nodes).toHaveLength(initialCount + 3)
+    expect(useProjectStore.getState().past.length).toBeGreaterThanOrEqual(3)
+  })
+
   test('keeps a multi-angle draft side-effect free before atomically creating its tool node and edge', async () => {
     const user = userEvent.setup()
     renderCanvas()
