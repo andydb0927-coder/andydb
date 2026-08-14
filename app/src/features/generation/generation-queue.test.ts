@@ -217,7 +217,16 @@ describe('generation queue lifecycle', () => {
     await vi.advanceTimersByTimeAsync(1200)
 
     expect(queue.get(job.id)?.status).toBe('succeeded')
-    expect(statuses).toEqual(['queued', 'running', 'succeeded'])
+    expect(statuses[0]).toBe('queued')
+    expect(statuses.at(-1)).toBe('succeeded')
+    expect(statuses.filter((status) => status === 'running')).toHaveLength(5)
+    expect(queue.get(job.id)).toMatchObject({
+      providerId: 'mock-mj-image',
+      providerName: 'Mock Studio',
+      modelName: 'MJ 风格图片',
+      progress: 100,
+      creditsSpent: 15,
+    })
     expect(
       useProjectStore
         .getState()

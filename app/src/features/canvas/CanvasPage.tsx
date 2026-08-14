@@ -31,7 +31,8 @@ import { CollaborationRepository } from '../collaboration/collaboration-reposito
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
-import { DemoGenerationAdapter } from '../generation/demo-generation-adapter'
+import { defaultProviderRegistry } from '../generation/model-provider-registry'
+import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import type {
   GenerationAdapter,
   GenerationRequest,
@@ -230,12 +231,12 @@ const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const defaultWorkflowRepository = new WorkflowRepository(defaultDatabase)
 const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
 const defaultMembershipRepository = new MembershipRepository(defaultDatabase)
-const defaultWorkflowGenerationAdapter = new DemoGenerationAdapter()
+const defaultWorkflowGenerationAdapter = new RegistryGenerationAdapter()
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
   browserGenerationPreferenceStore,
-  new DemoGenerationAdapter(),
+  new RegistryGenerationAdapter(),
   new LibTvGenerationAdapter({
     preferenceStore: browserGenerationPreferenceStore,
   }),
@@ -295,15 +296,28 @@ function buildGenerationRequest(
   const asset = project.assets.find(
     (candidate) => candidate.id === activeVersion?.assetId,
   )
+  const targetKind =
+    operation === 'generate-video' || node.kind === 'video'
+      ? 'video'
+      : 'image'
+  const registeredProvider = node.modelProviderId
+    ? defaultProviderRegistry.list().find(({ id }) => id === node.modelProviderId)
+    : undefined
+  const registeredProviderId = registeredProvider &&
+    registeredProvider.capabilities.some((capability) =>
+      targetKind === 'video'
+        ? capability === 'text-to-video' || capability === 'image-to-video'
+        : capability === 'text-to-image' || capability === 'image-to-image',
+    )
+    ? registeredProvider.id
+    : undefined
 
   return {
     projectId: project.id,
     nodeId: node.id,
     operation,
-    targetKind:
-      operation === 'generate-video' || node.kind === 'video'
-        ? 'video'
-        : 'image',
+    targetKind,
+    ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
     referenceAssets: asset
       ? [
@@ -412,6 +426,7 @@ export function CanvasPage({
   const updateImageGenerationSettings = useProjectStore(
     (state) => state.updateImageGenerationSettings,
   )
+  const updateNode = useProjectStore((state) => state.updateNode)
   const rotateImageNode = useProjectStore((state) => state.rotateImageNode)
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
@@ -1433,19 +1448,18 @@ export function CanvasPage({
             setActiveImageResult(node.id, resultId),
           onUpdateImageGenerationSettings: (settings) =>
             updateImageGenerationSettings(node.id, settings),
+          onSelectModelProvider: (providerId) => {
+            const provider = defaultProviderRegistry.require(providerId)
+            if (provider.kind !== 'demo') return
+            updateNode(node.id, { modelProviderId: providerId })
+          },
           onStartImageReferenceSelection: (trigger) =>
             startImageReferenceSelection(node.id, trigger),
           onEndImageReferenceSelection: endImageReferenceSelection,
-          onLocalImageGenerate: () =>
-            setGenerationFeedback(
-              `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
-            ),
+          onLocalImageGenerate: () => handleAction(node.id, 'regenerate'),
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
-          onLocalVideoGenerate: () =>
-            setGenerationFeedback(
-              `“${node.title}”预计成本 24；本地演示未连接真实视频生成。`,
-            ),
+          onLocalVideoGenerate: () => handleAction(node.id, 'regenerate'),
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
@@ -1465,6 +1479,7 @@ export function CanvasPage({
     setActiveImageResult,
     startImageReferenceSelection,
     updateImageGenerationSettings,
+    updateNode,
     createVideoToolNode,
   ])
 
@@ -2281,15 +2296,11 @@ export function CanvasPage({
       (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
       !node.videoTool
     ) {
-      setGenerationFeedback(
-        `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
-      )
+      handleAction(node.id, 'regenerate')
       return true
     }
     if (node.kind === 'video' && !node.videoTool) {
-      setGenerationFeedback(
-        `“${node.title}”预计成本 24；本地演示未连接真实视频生成。`,
-      )
+      handleAction(node.id, 'regenerate')
       return true
     }
     if (node.kind === 'storyboard') {
@@ -2955,6 +2966,14 @@ export function CanvasPage({
         canRedo={Boolean(project) && canRedo}
         mode={workspaceMode}
         agentOpen={agentOpen}
+        creditBalance={Math.max(
+          0,
+          120 -
+            (project?.jobs.reduce(
+              (total, job) => total + (job.creditsSpent ?? 0),
+              0,
+            ) ?? 0),
+        )}
         onUndo={undo}
         onRedo={redo}
         onRenameProject={renameProject}

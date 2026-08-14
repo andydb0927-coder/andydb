@@ -11,6 +11,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { defaultImageGenerationSettings } from '../../project/model'
+import {
+  defaultProviderRegistry,
+  providerOptionLabel,
+} from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
 function downloadUrl(url: string, filename: string) {
@@ -282,8 +286,15 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
     ...imageGeneration,
   })
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
-  const cost = 15
   const hasMedia = Boolean(data.asset || data.imageReferences?.length)
+  const providers = defaultProviderRegistry.matching([
+    'text-to-image',
+    'image-to-image',
+  ])
+  const selectedProvider =
+    providers.find(({ id }) => id === data.node.modelProviderId) ??
+    providers.find(({ kind }) => kind === 'demo')!
+  const cost = selectedProvider.pricing.amount
   const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0
 
   useEffect(() => {
@@ -333,9 +344,25 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
         />
       </label>
       <div className="image-generation-panel__controls">
-        <button type="button" aria-label="模型 Style Image V8.2">
-          Style Image V8.2
-        </button>
+        <label className="image-generation-panel__model">
+          <span className="visually-hidden">图片模型</span>
+          <select
+            aria-label="图片模型"
+            value={selectedProvider.id}
+            onChange={(event) => data.onSelectModelProvider?.(event.target.value)}
+          >
+            {providers.map((provider) => (
+              <option
+                key={provider.id}
+                value={provider.id}
+                disabled={provider.kind === 'placeholder'}
+              >
+                {providerOptionLabel(provider)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="model-provider-badge">演示</span>
         <button type="button">4 张</button>
         <button type="button">16:9</button>
         <button type="button">自适应</button>
@@ -474,10 +501,10 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
         </div>
       ) : null}
       <div className="image-generation-panel__submit">
-        <span aria-label="预计成本 15"><Zap aria-hidden="true" />预计成本 {cost}</span>
+        <span aria-label={`预计成本 ${cost}`}><Zap aria-hidden="true" />预计成本 {cost}</span>
         <button
           type="button"
-          aria-label="生成图片，预计成本 15"
+          aria-label={`生成图片，预计成本 ${cost}`}
           aria-describedby={!eligible ? 'image-generation-reason' : undefined}
           title="本地演示，不连接真实生成"
           disabled={!eligible}

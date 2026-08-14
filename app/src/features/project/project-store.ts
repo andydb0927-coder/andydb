@@ -36,7 +36,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged' | 'modelProviderId'>
 >
 
 interface ProjectStore {
@@ -389,6 +389,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.sourceChanged === undefined
                     ? {}
                     : { sourceChanged: changes.sourceChanged }),
+                  ...(changes.modelProviderId === undefined
+                    ? {}
+                    : { modelProviderId: changes.modelProviderId }),
                 }
               : node,
           ),
@@ -1037,6 +1040,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           versions: [version],
           activeVersionId: version.id,
           sourceChanged: false,
+          ...(job.providerId && job.providerId !== 'libtv-bridge'
+            ? { modelProviderId: job.providerId }
+            : {}),
         }
         const completedJob: GenerationJob = { ...job, nodeId }
         next = withUpdatedTimestamp({
@@ -1124,6 +1130,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             (latest, candidate) => Math.max(latest, candidate.sequence ?? 0),
             0,
           ) + 1,
+        ...(result.usage
+          ? {
+              providerId: result.usage.providerId,
+              providerName: result.usage.providerName,
+              modelName: result.usage.modelName,
+              progress: 100,
+              estimatedCost: result.usage.cost,
+              creditsSpent: result.usage.cost,
+            }
+          : {}),
       }
       const versioned = withUpdatedTimestamp({
         ...project,

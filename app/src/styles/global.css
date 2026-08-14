@@ -2372,6 +2372,25 @@ select {
 
 .image-generation-panel__controls { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 
+.image-generation-panel__model {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.model-provider-badge {
+  display: inline-flex;
+  width: max-content;
+  min-height: 20px;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid rgb(118 99 255 / 35%);
+  border-radius: 999px;
+  color: rgb(194 187 255);
+  background: rgb(118 99 255 / 12%);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
 .image-generation-panel button,
 .image-results-grid button,
 .image-result-confirm button {

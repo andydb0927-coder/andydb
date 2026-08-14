@@ -61,6 +61,7 @@ function makeData(contextual: boolean): CreativeNodeData {
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
     onCreateVideoToolNode: vi.fn(),
+    onSelectModelProvider: vi.fn(),
     onLocalVideoGenerate: vi.fn(),
   }
 }
@@ -110,11 +111,18 @@ test('keeps a video as a folded media card until it becomes the current node', (
 
 test('renders the verified video generation controls, disabled modes, and cost', async () => {
   const user = userEvent.setup()
-  render(renderVideo(makeData(true)))
+  const data = makeData(true)
+  render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
 
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
-  expect(within(panel).getByLabelText('模型')).toHaveValue('Kling O3')
+  const model = within(panel).getByLabelText('模型')
+  expect(model).toHaveValue('mock-kling-video')
+  expect(within(model).getByRole('option', { name: /Mock Studio.*可灵风格视频.*24 积分\/次.*演示/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /Kling.*待接入/ })).toBeDisabled()
+  expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
+  await user.selectOptions(model, 'mock-seedance-video')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-video')
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeDisabled()

@@ -74,6 +74,11 @@ const project: Project = {
       prompt: '镜头',
       createdAt: '2026-08-13T00:02:00.000Z',
       updatedAt: '2026-08-13T00:03:00.000Z',
+      providerId: 'mock-kling-video',
+      providerName: 'Mock Studio',
+      modelName: '可灵风格视频',
+      progress: 100,
+      creditsSpent: 24,
     },
   ],
   exportJobs: [],
@@ -101,6 +106,8 @@ test('shows local assets, generation history and the complete four-group shortcu
     <WorkspaceSidePanel panel="history" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
   expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('已完成')
+  expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('Mock Studio · 可灵风格视频')
+  expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('消耗 24 积分')
 
   rerender(
     <WorkspaceSidePanel panel="shortcuts" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,

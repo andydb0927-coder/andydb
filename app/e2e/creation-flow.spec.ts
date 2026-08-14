@@ -253,7 +253,10 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   const generation = page.getByRole('region', { name: '视频 01 生成参数' })
   await expect(generation).toBeVisible()
   await expect(generation.getByLabel('提示词')).toHaveAttribute('maxlength', '2000')
-  await expect(generation.getByLabel('模型')).toHaveValue('Kling O3')
+  await expect(generation.getByLabel('模型')).toHaveValue('mock-kling-video')
+  await expect(
+    generation.getByRole('option', { name: /Mock Studio.*可灵风格视频.*24 积分\/次.*演示/ }),
+  ).toBeEnabled()
   await expect(generation.getByText('预计成本 24')).toBeVisible()
 
   const mediaTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
@@ -444,7 +447,12 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   await page.keyboard.press('Enter')
   await canvas.focus()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('status')).toContainText('预计成本 15')
+  await page.getByRole('button', { name: '历史记录' }).click()
+  const history = page.getByRole('complementary', { name: '历史' })
+  await expect(history).toContainText('Mock Studio · MJ 风格图片')
+  await expect(history).toContainText('消耗 15 积分')
+  await expect(page.getByText('105 积分', { exact: true })).toHaveText('105 积分')
+  await page.getByRole('button', { name: '关闭历史面板' }).click()
 
   await page.getByRole('button', { name: 'Agent', exact: true }).click()
   const agentInput = page.getByLabel('告诉我下一步要做什么')

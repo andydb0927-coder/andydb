@@ -143,4 +143,16 @@ describe('export panel', () => {
     })
     expect(progress).toEqual([17, 33, 50, 67, 83, 100])
   })
+
+  test('routes the default export through the registered mock provider', async () => {
+    vi.useFakeTimers()
+    render(<ExportPanel projectId="registry-project" />)
+
+    act(() => screen.getByRole('button', { name: '导出影片' }).click())
+    await act(() => vi.advanceTimersByTimeAsync(1800))
+
+    const job = screen.getByRole('listitem', { name: '导出任务 1' })
+    expect(job).toHaveTextContent('Mock Studio · 可灵风格视频')
+    expect(job).toHaveTextContent('消耗 24 积分')
+  })
 })

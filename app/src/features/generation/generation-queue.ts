@@ -60,6 +60,7 @@ export class GenerationQueue {
       this.options.getLatestSequence?.(request.projectId) ?? 0,
     )
     const timestamp = new Date().toISOString()
+    const dispatch = this.options.adapter.describe?.(request)
     const entry: QueueEntry = {
       request,
       controller: new AbortController(),
@@ -71,6 +72,8 @@ export class GenerationQueue {
         attempt: 1,
         sequence: ++this.nextSequence,
         status: 'queued',
+        progress: 0,
+        ...(dispatch ?? {}),
         prompt: request.prompt,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -130,6 +133,8 @@ export class GenerationQueue {
       attempt: entry.job.attempt + 1,
       error: undefined,
       assetId: undefined,
+      progress: 0,
+      creditsSpent: undefined,
     })
     queueMicrotask(() => void this.start(entry, job.attempt))
     return job
@@ -167,6 +172,14 @@ export class GenerationQueue {
       result = await this.options.adapter.start(
         entry.request,
         entry.controller.signal,
+        (progress) => {
+          if (!this.isCurrentAttempt(entry, attempt)) return
+          const normalized = Math.max(
+            entry.job.progress ?? 0,
+            Math.min(100, Math.round(progress)),
+          )
+          this.update(entry, { progress: normalized })
+        },
       )
     } catch (error) {
       if (!this.isCurrentAttempt(entry, attempt)) return
@@ -186,6 +199,15 @@ export class GenerationQueue {
       status: 'succeeded',
       assetId: result.asset.id,
       error: undefined,
+      progress: 100,
+      ...(result.usage
+        ? {
+            providerId: result.usage.providerId,
+            providerName: result.usage.providerName,
+            modelName: result.usage.modelName,
+            creditsSpent: result.usage.cost,
+          }
+        : {}),
       updatedAt: new Date().toISOString(),
     }
     if (

@@ -2,12 +2,12 @@ import { Download, RotateCcw, Square } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import type { JobStatus } from '../project/model'
-import { DemoExportAdapter } from './demo-export-adapter'
 import type {
   ExportAdapter,
   ExportResult,
   ExportSettings,
 } from './export-adapter'
+import { RegistryExportAdapter } from './registry-export-adapter'
 
 const defaults: ExportSettings = {
   width: 1920,
@@ -41,7 +41,7 @@ const statusCopy: Record<JobStatus, string> = {
 
 export function ExportPanel({ projectId, adapter }: ExportPanelProps) {
   const defaultAdapter = useMemo(
-    () => new DemoExportAdapter(projectId),
+    () => new RegistryExportAdapter(projectId),
     [projectId],
   )
   const exportAdapter = adapter ?? defaultAdapter
@@ -78,7 +78,11 @@ export function ExportPanel({ projectId, adapter }: ExportPanelProps) {
       }, 300)
       progressTimers.current.set(job.id, timer)
 
-      void exportAdapter.start(job.settings, controller.signal).then(
+      void exportAdapter.start(
+        job.settings,
+        controller.signal,
+        (progress) => patchJob(job.id, { progress }),
+      ).then(
         (result) => {
           clearProgress(job.id)
           controllers.current.delete(job.id)
@@ -206,6 +210,12 @@ export function ExportPanel({ projectId, adapter }: ExportPanelProps) {
               {job.status === 'succeeded' && job.result ? (
                 <div className="export-panel__result">
                   <span>演示导出</span>
+                  {job.result.providerName && job.result.modelName ? (
+                    <span>{job.result.providerName} · {job.result.modelName}</span>
+                  ) : null}
+                  {job.result.cost !== undefined ? (
+                    <span>消耗 {job.result.cost} 积分</span>
+                  ) : null}
                   <a href={job.result.downloadUrl} download>
                     <Download aria-hidden="true" />
                     下载演示文件

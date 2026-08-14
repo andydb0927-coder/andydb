@@ -46,6 +46,7 @@ function makeData(
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
     onUpdateImageGenerationSettings: vi.fn(),
+    onSelectModelProvider: vi.fn(),
     onStartImageReferenceSelection: vi.fn(),
     onEndImageReferenceSelection: vi.fn(),
     onLocalImageGenerate: vi.fn(),
@@ -58,6 +59,14 @@ test('exposes the verified MJ image settings with persistent accessible controls
   const data = makeData()
   render(<ImageGenerationPanel data={data} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+
+  const model = within(panel).getByRole('combobox', { name: '图片模型' })
+  expect(model).toHaveValue('mock-mj-image')
+  expect(within(model).getByRole('option', { name: /Mock Studio.*MJ 风格图片.*15 积分\/次.*演示/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /通义万相.*待接入/ })).toBeDisabled()
+  expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
+  await user.selectOptions(model, 'mock-mj-image')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-mj-image')
 
   await user.click(
     within(panel).getByRole('button', { name: '展开高级设置' }),

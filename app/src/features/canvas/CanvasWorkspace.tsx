@@ -234,7 +234,7 @@ export function WorkspaceSidePanel({
       {panel === 'toolbox' ? (
         <div className="workspace-side-panel__help">
           <p>工具箱集中管理生成模型；节点分组、连线显隐和画布吸附仍保留为画布级操作。</p>
-          <p>所有生成设置只保存在本机，不会消耗 Liblib 积分。</p>
+          <p>Mock 会记录本地演示积分；不会调用第三方 API 或消耗 Liblib 积分。</p>
         </div>
       ) : null}
 
@@ -311,6 +311,17 @@ export function WorkspaceSidePanel({
                   <span>{jobCopy[job.status]}</span>
                   <strong>{node?.title ?? '已移除节点'}</strong>
                   <small>{job.prompt}</small>
+                  {job.providerName && job.modelName ? (
+                    <small>{job.providerName} · {job.modelName}</small>
+                  ) : null}
+                  {job.status === 'running' && job.progress !== undefined ? (
+                    <small>进度 {job.progress}%</small>
+                  ) : null}
+                  {job.creditsSpent !== undefined ? (
+                    <small>消耗 {job.creditsSpent} 积分</small>
+                  ) : job.estimatedCost !== undefined ? (
+                    <small>预计 {job.estimatedCost} 积分</small>
+                  ) : null}
                 </button>
               </li>
             )

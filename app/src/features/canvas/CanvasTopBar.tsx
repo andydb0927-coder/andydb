@@ -34,6 +34,7 @@ interface CanvasTopBarProps {
   canRedo: boolean
   mode: WorkspaceMode
   agentOpen: boolean
+  creditBalance?: number
   onUndo(): void
   onRedo(): void
   onRenameProject(title: string): void
@@ -50,6 +51,7 @@ export function CanvasTopBar({
   canRedo,
   mode,
   agentOpen,
+  creditBalance = 120,
   onUndo,
   onRedo,
   onRenameProject,
@@ -178,7 +180,7 @@ export function CanvasTopBar({
           <Crown aria-hidden="true" />
           会员中心 <em>限时4.0折</em>
         </button>
-        <span className="canvas-top-bar__balance"><Coins aria-hidden="true" />120 积分</span>
+        <span className="canvas-top-bar__balance"><Coins aria-hidden="true" />{creditBalance} 积分</span>
         <button type="button" className="canvas-top-bar__avatar" aria-label="用户头像">安</button>
         <div className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button

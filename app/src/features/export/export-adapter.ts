@@ -10,8 +10,16 @@ export interface ExportResult {
   exportJobId: string
   downloadUrl: string
   completedAt: string
+  providerId?: string
+  providerName?: string
+  modelName?: string
+  cost?: number
 }
 
 export interface ExportAdapter {
-  start(settings: ExportSettings, signal: AbortSignal): Promise<ExportResult>
+  start(
+    settings: ExportSettings,
+    signal: AbortSignal,
+    onProgress?: (percentage: number) => void,
+  ): Promise<ExportResult>
 }

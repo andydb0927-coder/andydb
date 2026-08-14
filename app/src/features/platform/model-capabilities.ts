@@ -16,13 +16,13 @@ export const modelCapabilities: ModelCapability[] = [
     kind: 'image',
     label: '演示图像草稿',
     status: '本地草稿结果',
-    description: '使用当前 DemoGenerationAdapter 生成本地示例图像，用于验证画布与版本流程。',
+    description: '通过模型供应商注册表分发本地 Mock 图像，用于验证队列、计费、画布与版本回填。',
   },
   {
     id: 'demo-video-draft',
     kind: 'video',
     label: '演示视频草稿',
-    status: '静态示意帧',
-    description: '当前仅以本地静态示意帧验证视频节点流程，不输出真实视频文件。',
+    status: '本地演示视频',
+    description: '通过注册表分发可灵与 Seedance 风格 Mock，用本地视频验证进度、历史和导出流程。',
   },
 ]

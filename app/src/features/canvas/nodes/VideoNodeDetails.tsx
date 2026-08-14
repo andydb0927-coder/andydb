@@ -12,6 +12,10 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import type { VideoDerivedTool } from '../../project/model'
+import {
+  defaultProviderRegistry,
+  providerOptionLabel,
+} from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
 type VideoSurface =
@@ -204,6 +208,15 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
   const activeVersion = data.node.versions.find(({ id }) => id === data.node.activeVersionId)
   const referenceCount = data.videoReferences?.length ?? 0
+  const providers = defaultProviderRegistry.matching([
+    'text-to-video',
+    'image-to-video',
+  ])
+  const selectedProvider =
+    providers.find(({ id }) => id === data.node.modelProviderId) ??
+    providers.find(({ id }) => id === 'mock-kling-video') ??
+    providers.find(({ kind }) => kind === 'demo')!
+  const cost = selectedProvider.pricing.amount
 
   useEffect(() => {
     setAdvanced(false)
@@ -265,9 +278,21 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <small>最多 2000 字</small>
       </label>
       <div className="video-generation-panel__selectors">
-        <label>模型<select aria-label="模型" defaultValue="Kling O3">
-          {['Kling O3', 'Seedance 2.5', 'Hailuo 2.3', 'Wan 2.7', 'Vidu Q3 Pro'].map((model) => <option key={model}>{model}</option>)}
-        </select></label>
+        <label>模型<select
+          aria-label="模型"
+          value={selectedProvider.id}
+          onChange={(event) => data.onSelectModelProvider?.(event.target.value)}
+        >
+          {providers.map((provider) => (
+            <option
+              key={provider.id}
+              value={provider.id}
+              disabled={provider.kind === 'placeholder'}
+            >
+              {providerOptionLabel(provider)}
+            </option>
+          ))}
+        </select><span className="model-provider-badge">演示</span></label>
         <label>生成模式<select aria-label="生成模式" aria-describedby="video-mode-reasons" defaultValue="全能参考">
           <option disabled>文生视频</option>
           <option>全能参考</option>
@@ -307,7 +332,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         </label>
       ) : null}
       <div className="video-generation-panel__submit">
-        <span><Zap aria-hidden="true" />预计成本 24</span>
+        <span><Zap aria-hidden="true" />预计成本 {cost}</span>
         <button type="button" title="本地演示，不连接真实生成" onClick={data.onLocalVideoGenerate}>
           <Film aria-hidden="true" />生成视频
         </button>

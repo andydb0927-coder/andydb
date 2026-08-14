@@ -2463,8 +2463,16 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '角色参考' }))
     canvas.focus()
     await user.keyboard('{Enter}')
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '“角色参考”预计成本 15；本地演示未连接真实图片生成。',
+    await waitFor(() =>
+      expect(
+        useProjectStore
+          .getState()
+          .activeProject?.jobs.find(({ nodeId }) => nodeId === 'character'),
+      ).toMatchObject({
+          status: 'running',
+          providerId: 'mock-mj-image',
+          estimatedCost: 15,
+        }),
     )
 
     act(() =>
@@ -2487,6 +2495,51 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).not.toContain(
       'preview',
     )
+  })
+
+  test('persists a registry model choice on the node and dispatches that provider id', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.assets = project.assets.map((asset) =>
+      asset.id === 'asset-video'
+        ? {
+            ...asset,
+            kind: 'video',
+            url: '/demo/video-preview.mp4',
+            mimeType: 'video/mp4',
+            durationSeconds: 3.041,
+          }
+        : asset,
+    )
+    act(() => activate(project))
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+    })
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: '模型' }),
+      'mock-seedance-video',
+    )
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'video')?.modelProviderId,
+    ).toBe('mock-seedance-video')
+
+    await user.click(within(panel).getByRole('button', { name: '生成视频' }))
+    await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(start.mock.calls[0]?.[0]).toMatchObject({
+      nodeId: 'video',
+      targetKind: 'video',
+      providerId: 'mock-seedance-video',
+    })
   })
 
   test('does not run Enter generation when the selected node has neither prompt nor media', async () => {

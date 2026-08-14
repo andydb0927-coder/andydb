@@ -145,7 +145,9 @@ test('keeps image nodes folded until they become the current selection', async (
   view.rerender(renderWith({ ...baseData, selected: true, contextual: true }))
   const generation = screen.getByRole('region', { name: 'L1 生成参数' })
   expect(within(generation).getByLabelText('提示词')).toHaveValue('雾中茶山')
-  expect(within(generation).getByRole('button', { name: '模型 Style Image V8.2' })).toBeVisible()
+  expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
+    'mock-mj-image',
+  )
   expect(within(generation).getByText('预计成本 15')).toBeVisible()
 
   await user.click(screen.getByRole('button', { name: '查看 4 张结果' }))

@@ -127,6 +127,7 @@ export interface CanvasNode {
   versions: NodeVersion[]
   activeVersionId: string
   sourceChanged: boolean
+  modelProviderId?: string
   card?: CreativeCard
   imageResults?: ImageResult[]
   activeResultId?: string
@@ -177,6 +178,12 @@ export interface GenerationJob {
   operation?: GenerationOperation
   attempt?: number
   sequence?: number
+  providerId?: string
+  providerName?: string
+  modelName?: string
+  progress?: number
+  estimatedCost?: number
+  creditsSpent?: number
 }
 
 export interface ExportJob {
@@ -186,6 +193,12 @@ export interface ExportJob {
   updatedAt: string
   assetId?: string
   error?: string
+  providerId?: string
+  providerName?: string
+  modelName?: string
+  progress?: number
+  estimatedCost?: number
+  creditsSpent?: number
 }
 
 export interface Project {
