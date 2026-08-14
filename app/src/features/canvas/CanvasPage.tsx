@@ -383,9 +383,15 @@ export function CanvasPage({
   const persistActive = useProjectStore((state) => state.persistActive)
   const renameProject = useProjectStore((state) => state.renameProject)
   const connectNodes = useProjectStore((state) => state.connectNodes)
+  const connectImageReference = useProjectStore(
+    (state) => state.connectImageReference,
+  )
   const disconnectNodes = useProjectStore((state) => state.disconnectNodes)
   const setActiveImageResult = useProjectStore(
     (state) => state.setActiveImageResult,
+  )
+  const updateImageGenerationSettings = useProjectStore(
+    (state) => state.updateImageGenerationSettings,
   )
   const rotateImageNode = useProjectStore((state) => state.rotateImageNode)
   const createCanvasContent = useProjectStore(
@@ -431,6 +437,7 @@ export function CanvasPage({
     phase: 'idle',
   })
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
+  const [imageReferenceTargetId, setImageReferenceTargetId] = useState<string>()
   const [connectionsVisible, setConnectionsVisible] = useState(true)
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
@@ -458,6 +465,7 @@ export function CanvasPage({
   const nativeConnectionActiveRef = useRef(false)
   const placementTriggerRef = useRef<HTMLElement>(null)
   const connectionTriggerRef = useRef<HTMLElement>(null)
+  const imageReferenceTriggerRef = useRef<HTMLButtonElement>(null)
   const createdNodeFocusRef = useRef<string | undefined>(undefined)
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
@@ -519,6 +527,7 @@ export function CanvasPage({
     setActiveTool('select')
     setConnectionTool(cancelConnectionTool())
     setConnectionFeedback(undefined)
+    setImageReferenceTargetId(undefined)
     setConnectionsVisible(true)
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
@@ -533,10 +542,12 @@ export function CanvasPage({
     setFocusRequestVersion((version) => version + 1)
     placementTriggerRef.current = null
     connectionTriggerRef.current = null
+    imageReferenceTriggerRef.current = null
 
     return () => {
       nativeConnectionActiveRef.current = false
       connectionTriggerRef.current = null
+      imageReferenceTriggerRef.current = null
     }
   }, [projectId])
 
@@ -1026,6 +1037,48 @@ export function CanvasPage({
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }, [])
 
+  const endImageReferenceSelection = useCallback(
+    (returnToNode: boolean) => {
+      const targetNodeId = imageReferenceTargetId
+      const trigger = imageReferenceTriggerRef.current
+      setImageReferenceTargetId(undefined)
+      setConnectionFeedback(undefined)
+      imageReferenceTriggerRef.current = null
+      if (returnToNode && targetNodeId) {
+        selectOnlyNode(targetNodeId)
+        void flowInstance?.fitView({
+          nodes: [{ id: targetNodeId }],
+          duration: 220,
+          padding: 0.4,
+        })
+      }
+      queueMicrotask(() => trigger?.focus())
+    },
+    [flowInstance, imageReferenceTargetId, selectOnlyNode],
+  )
+
+  const startImageReferenceSelection = useCallback(
+    (targetNodeId: string, trigger: HTMLButtonElement) => {
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
+      imageReferenceTriggerRef.current = trigger
+      setSelectedEdgeId(undefined)
+      setConnectionFeedback(undefined)
+      setGenerationFeedback(undefined)
+      setImageReferenceTargetId(targetNodeId)
+      selectOnlyNode(targetNodeId)
+    },
+    [cancelConnection, connectionTool.phase, selectOnlyNode],
+  )
+
+  useEffect(() => {
+    if (!imageReferenceTargetId) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') endImageReferenceSelection(false)
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [endImageReferenceSelection, imageReferenceTargetId])
+
   const attemptConnection = useCallback(
     (
       sourceNodeId: string,
@@ -1054,6 +1107,47 @@ export function CanvasPage({
 
   const handleNodeSelection = useCallback(
     (nodeId: string) => {
+      if (imageReferenceTargetId) {
+        const currentProject = useProjectStore.getState().activeProject
+        const source = currentProject?.nodes.find(({ id }) => id === nodeId)
+        const target = currentProject?.nodes.find(
+          ({ id }) => id === imageReferenceTargetId,
+        )
+        const sourceVersion = source?.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        const sourceAsset = currentProject?.assets.find(
+          ({ id }) => id === sourceVersion?.assetId,
+        )
+        if (
+          !currentProject ||
+          !source ||
+          !target ||
+          (sourceAsset?.kind !== 'image' && sourceAsset?.kind !== 'video')
+        ) {
+          setGenerationFeedback('请选择带有图片或视频结果的节点作为参考。')
+          return
+        }
+        const result = connectImageReference({
+          id: crypto.randomUUID(),
+          sourceNodeId: source.id,
+          targetNodeId: target.id,
+        })
+        if (!result.ok) {
+          setConnectionFeedback(connectionFailureMessage(result.reason))
+          return
+        }
+        setConnectionFeedback(undefined)
+        setImageReferenceTargetId(undefined)
+        selectOnlyNode(target.id)
+        setGenerationFeedback(
+          `已将“${source.title}”设为“${target.title}”的参考。`,
+        )
+        const trigger = imageReferenceTriggerRef.current
+        imageReferenceTriggerRef.current = null
+        queueMicrotask(() => trigger?.focus())
+        return
+      }
       if (connectionTool.phase === 'idle') {
         selectOnlyNode(nodeId)
         return
@@ -1076,7 +1170,13 @@ export function CanvasPage({
         setConnectionTool(selection.state)
       }
     },
-    [attemptConnection, connectionTool, selectOnlyNode],
+    [
+      attemptConnection,
+      connectImageReference,
+      connectionTool,
+      imageReferenceTargetId,
+      selectOnlyNode,
+    ],
   )
 
   const handleConnectionHandleActivate = useCallback(
@@ -1085,6 +1185,7 @@ export function CanvasPage({
       type: 'source' | 'target',
       trigger: HTMLElement,
     ) => {
+      if (imageReferenceTargetId) return
       if (type === 'source') {
         placementTriggerRef.current = null
         connectionTriggerRef.current = trigger
@@ -1119,7 +1220,7 @@ export function CanvasPage({
         setActiveTool('connect')
       }
     },
-    [attemptConnection, connectionTool],
+    [attemptConnection, connectionTool, imageReferenceTargetId],
   )
 
   useEffect(() => {
@@ -1240,7 +1341,7 @@ export function CanvasPage({
           ? [{ id: result.id, asset: resultAsset }]
           : []
       })
-      const videoReferences = project.edges
+      const incomingMediaReferences = project.edges
         .filter(({ targetNodeId }) => targetNodeId === node.id)
         .flatMap(({ sourceNodeId }) => {
           const source = project.nodes.find(({ id }) => id === sourceNodeId)
@@ -1250,10 +1351,14 @@ export function CanvasPage({
           const sourceAsset = project.assets.find(
             ({ id }) => id === sourceVersion?.assetId,
           )
-          return source && sourceAsset?.kind === 'image'
+          return source &&
+            (sourceAsset?.kind === 'image' || sourceAsset?.kind === 'video')
             ? [{ id: source.id, title: source.title, asset: sourceAsset }]
             : []
         })
+      const videoReferences = incomingMediaReferences.filter(
+        ({ asset: referenceAsset }) => referenceAsset.kind === 'image',
+      )
 
       return {
         id: node.id,
@@ -1264,7 +1369,9 @@ export function CanvasPage({
           node,
           asset,
           imageResults,
+          imageReferences: incomingMediaReferences,
           videoReferences,
+          imageReferenceSelecting: imageReferenceTargetId === node.id,
           job,
           selected,
           contextual: node.id === primaryNodeId,
@@ -1293,6 +1400,11 @@ export function CanvasPage({
           onDelete: (trigger) => requestDelete(node.id, trigger),
           onSetActiveResult: (resultId) =>
             setActiveImageResult(node.id, resultId),
+          onUpdateImageGenerationSettings: (settings) =>
+            updateImageGenerationSettings(node.id, settings),
+          onStartImageReferenceSelection: (trigger) =>
+            startImageReferenceSelection(node.id, trigger),
+          onEndImageReferenceSelection: endImageReferenceSelection,
           onLocalImageGenerate: () =>
             setGenerationFeedback(
               `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
@@ -1310,14 +1422,18 @@ export function CanvasPage({
   }, [
     handleAction,
     connectionTool,
+    endImageReferenceSelection,
     focusRequestVersion,
     handleConnectionHandleActivate,
     handleNodeSelection,
+    imageReferenceTargetId,
     primaryNodeId,
     project,
     requestDelete,
     selectedNodeIds,
     setActiveImageResult,
+    startImageReferenceSelection,
+    updateImageGenerationSettings,
     createVideoToolNode,
   ])
 
@@ -1633,7 +1749,13 @@ export function CanvasPage({
       point: CanvasPoint,
       returnFocusTo?: HTMLElement,
     ) => {
-      if (!project || !point || pendingPlacement || editingCard) return
+      if (
+        !project ||
+        !point ||
+        pendingPlacement ||
+        editingCard ||
+        imageReferenceTargetId
+      ) return
       if (connectionTool.phase !== 'idle') cancelConnection(false)
       setContextMenu(undefined)
       setNodeTypePicker({
@@ -1649,6 +1771,7 @@ export function CanvasPage({
       cancelConnection,
       connectionTool.phase,
       editingCard,
+      imageReferenceTargetId,
       pendingPlacement,
       project,
     ],
@@ -1699,7 +1822,13 @@ export function CanvasPage({
       targetNodeId?: string,
       returnFocusTo?: HTMLElement,
     ) => {
-      if (!project || pendingPlacement || nodeTypePicker || editingCard) return
+      if (
+        !project ||
+        pendingPlacement ||
+        nodeTypePicker ||
+        editingCard ||
+        imageReferenceTargetId
+      ) return
       const point = canvasPoint(clientX, clientY)
       if (!point) return
       if (connectionTool.phase !== 'idle') cancelConnection(false)
@@ -1738,6 +1867,7 @@ export function CanvasPage({
       canvasPoint,
       connectionTool.phase,
       editingCard,
+      imageReferenceTargetId,
       nodeTypePicker,
       pendingPlacement,
       project,
@@ -1821,7 +1951,7 @@ export function CanvasPage({
             versions: [{
               id: crypto.randomUUID(),
               createdAt,
-              prompt: '待补充图片素材或图片生成提示',
+              prompt: '',
             }],
             activeVersionId: '',
             sourceChanged: false,
@@ -1904,7 +2034,7 @@ export function CanvasPage({
     (tool: CanvasTool, trigger: HTMLButtonElement) => {
       if (!project) return
       if (tool === 'connect') {
-        if (pendingPlacement) return
+        if (pendingPlacement || imageReferenceTargetId) return
         if (connectionTool.phase !== 'idle') {
           cancelConnection(false)
           return
@@ -1932,6 +2062,7 @@ export function CanvasPage({
       closeNodeTypePicker,
       connectionTool.phase,
       editingCard,
+      imageReferenceTargetId,
       nodeTypePicker,
       pendingPlacement,
       project,
@@ -1952,6 +2083,7 @@ export function CanvasPage({
         pendingPlacement ||
         nodeTypePicker ||
         editingCard ||
+        imageReferenceTargetId ||
         nodeListOpen ||
         deleteCandidateId ||
         connectionTool.phase !== 'idle' ||
@@ -1988,6 +2120,7 @@ export function CanvasPage({
     deleteCandidateId,
     editingCard,
     handleToolChange,
+    imageReferenceTargetId,
     nodeListOpen,
     nodeTypePicker,
     pendingPlacement,
@@ -2056,6 +2189,7 @@ export function CanvasPage({
       if (
         !project ||
         !flowInstance ||
+        imageReferenceTargetId ||
         pendingPlacement ||
         nodeTypePicker ||
         editingCard
@@ -2074,6 +2208,7 @@ export function CanvasPage({
       connectionTool.phase,
       contextMenu,
       flowInstance,
+      imageReferenceTargetId,
       editingCard,
       nodeTypePicker,
       openNodeTypePicker,
@@ -2233,6 +2368,7 @@ export function CanvasPage({
   const handlePaneContextMenu = useCallback(
     (event: ReactMouseEvent<Element> | MouseEvent) => {
       event.preventDefault()
+      if (imageReferenceTargetId) return
       openContextMenu(
         event.clientX,
         event.clientY,
@@ -2240,7 +2376,7 @@ export function CanvasPage({
         viewportRef.current ?? undefined,
       )
     },
-    [openContextMenu],
+    [imageReferenceTargetId, openContextMenu],
   )
 
   const handleNodeContextMenu = useCallback(
@@ -2301,10 +2437,15 @@ export function CanvasPage({
       : connectionTool.phase === 'selecting-target'
         ? '请选择目标节点'
         : undefined
+  const imageReferenceHint = imageReferenceTargetId
+    ? '请选择画布中的图片或视频参考'
+    : undefined
   const canvasHint =
-    connectionFeedback ?? connectionHint ?? generationFeedback ??
+    connectionFeedback ?? connectionHint ?? imageReferenceHint ?? generationFeedback ??
     groupFeedback ?? visibilityFeedback
-  const canvasHintIsConnection = Boolean(connectionFeedback || connectionHint)
+  const canvasHintIsConnection = Boolean(
+    connectionFeedback || connectionHint || imageReferenceHint,
+  )
 
   const cancelDelete = () => {
     setDeleteCandidateId(undefined)
@@ -2447,6 +2588,7 @@ export function CanvasPage({
           }}
           onInit={setFlowInstance}
           onMove={(_event, viewport) => setZoomPercent(viewport.zoom * 100)}
+          nodesConnectable={!imageReferenceTargetId}
           fitView
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll

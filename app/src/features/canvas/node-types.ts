@@ -4,6 +4,7 @@ import type {
   Asset,
   CanvasNode,
   GenerationJob,
+  ImageGenerationSettings,
   NodeKind,
   VideoDerivedTool,
 } from '../project/model'
@@ -32,7 +33,9 @@ export interface CreativeNodeProps {
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
   asset?: Asset
   imageResults?: Array<{ id: string; asset: Asset }>
+  imageReferences?: Array<{ id: string; title: string; asset: Asset }>
   videoReferences?: Array<{ id: string; title: string; asset: Asset }>
+  imageReferenceSelecting?: boolean
   actionsPlacement: 'before' | 'after'
   contextual: boolean
   connectionMode: boolean
@@ -44,6 +47,11 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onFocusComplete(): void
   onDelete(trigger: HTMLButtonElement): void
   onSetActiveResult?(resultId: string): void
+  onUpdateImageGenerationSettings?(
+    settings: Partial<ImageGenerationSettings>,
+  ): void
+  onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
+  onEndImageReferenceSelection?(returnToNode: boolean): void
   onLocalImageGenerate?(): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onLocalVideoGenerate?(): void

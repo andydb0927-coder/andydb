@@ -119,6 +119,12 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeDisabled()
   expect(within(mode).getByRole('option', { name: '视频编辑' })).toBeDisabled()
+  expect(
+    within(panel).getByText(/文生视频：当前节点已绑定全能参考配置/),
+  ).toBeVisible()
+  expect(
+    within(panel).getByText(/视频编辑：请先添加输入视频参考/),
+  ).toBeVisible()
   expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
   expect(within(panel).getByLabelText('时长')).toHaveValue('3')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
@@ -180,6 +186,9 @@ test('opens the verified mark, effects, subject, character, and camera-motion su
     'true',
   )
   expect(within(effects).getByPlaceholderText('搜索特效名称、作者')).toBeVisible()
+  expect(
+    within(effects).getByText('本地演示仅展示已核对列表，不执行应用或收藏。'),
+  ).toBeVisible()
   await user.keyboard('{Escape}')
 
   await user.click(within(tools).getByRole('button', { name: '主体' }))

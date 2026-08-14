@@ -160,9 +160,11 @@ export function CreativeNodeShell({
   const imageMedia =
     asset?.kind === 'image' &&
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene')
-  const imageGenerationMedia = imageMedia && node.videoTool === undefined
+  const imageGenerationNode =
+    (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
+    node.videoTool === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
-  const expandableMedia = imageGenerationMedia || videoMedia || node.videoTool !== undefined
+  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -268,8 +270,8 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
-        {imageGenerationMedia ? <ImageResults data={data} /> : null}
-        {imageGenerationMedia && contextual ? <ImageGenerationPanel data={data} /> : null}
+        {imageGenerationNode ? <ImageResults data={data} /> : null}
+        {imageGenerationNode && contextual ? <ImageGenerationPanel data={data} /> : null}
         {videoMedia && contextual ? <VideoGenerationPanel data={data} /> : null}
         {node.videoTool && contextual ? <VideoToolDetails data={data} /> : null}
         <Handle

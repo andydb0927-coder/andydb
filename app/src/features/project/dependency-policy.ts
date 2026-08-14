@@ -94,6 +94,45 @@ export function validateDependencyConnection(
   return { ok: true }
 }
 
+export function validateImageReferenceConnection(
+  project: Project,
+  sourceNodeId: string,
+  targetNodeId: string,
+): ConnectionValidationResult {
+  const source = project.nodes.find(({ id }) => id === sourceNodeId)
+  const target = project.nodes.find(({ id }) => id === targetNodeId)
+  if (!source || !target) return { ok: false, reason: 'missing-node' }
+  if (sourceNodeId === targetNodeId) {
+    return { ok: false, reason: 'self-connection' }
+  }
+  if (
+    project.edges.some(
+      (edge) =>
+        edge.sourceNodeId === sourceNodeId &&
+        edge.targetNodeId === targetNodeId,
+    )
+  ) {
+    return { ok: false, reason: 'duplicate' }
+  }
+  if (hasPath(project.edges, targetNodeId, sourceNodeId)) {
+    return { ok: false, reason: 'cycle' }
+  }
+  const sourceVersion = source.versions.find(
+    ({ id }) => id === source.activeVersionId,
+  )
+  const sourceAsset = project.assets.find(
+    ({ id }) => id === sourceVersion?.assetId,
+  )
+  if (
+    (sourceAsset?.kind !== 'image' && sourceAsset?.kind !== 'video') ||
+    !['image', 'character', 'scene'].includes(target.kind) ||
+    target.videoTool
+  ) {
+    return { ok: false, reason: 'incompatible-types' }
+  }
+  return { ok: true }
+}
+
 const failureCopy: Record<ConnectionFailureReason, string> = {
   'missing-node': '节点已发生变化，请重新选择',
   'self-connection': '节点不能连接到自身',

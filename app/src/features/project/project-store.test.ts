@@ -160,6 +160,110 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('marks an image target changed when a canvas media reference is connected', () => {
+    const project = makeProjectFixture()
+    const target: CanvasNode = {
+      id: 'image-target',
+      kind: 'image',
+      title: '待生成画面',
+      position: { x: 900, y: 240 },
+      versions: [],
+      activeVersionId: '',
+      sourceChanged: false,
+    }
+    const imageProject = {
+      ...project,
+      nodes: [
+        { ...project.nodes[0], kind: 'image' as const },
+        ...project.nodes.slice(1),
+        target,
+      ],
+    }
+    useProjectStore.setState({
+      projectsById: { [imageProject.id]: imageProject },
+      activeProjectId: imageProject.id,
+      activeProject: imageProject,
+      past: [],
+      future: [],
+    })
+
+    expect(
+      useProjectStore.getState().connectImageReference({
+        id: 'reference-edge',
+        sourceNodeId: 'shot-1',
+        targetNodeId: target.id,
+      }),
+    ).toEqual({ ok: true })
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === target.id)
+        ?.sourceChanged,
+    ).toBe(true)
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore.getState().activeProject?.edges.some(({ id }) => id === 'reference-edge'),
+    ).toBe(false)
+  })
+
+  test('persists image generation parameters as one undoable node configuration', async () => {
+    const repository = createRepository()
+    const project = makeProjectFixture()
+    const imageProject = {
+      ...project,
+      nodes: project.nodes.map((node) =>
+        node.id === 'shot-1' ? { ...node, kind: 'image' as const } : node,
+      ),
+    }
+    useProjectStore.setState({
+      projectsById: { [imageProject.id]: imageProject },
+      activeProjectId: imageProject.id,
+      activeProject: imageProject,
+      past: [],
+      future: [],
+    })
+
+    useProjectStore.getState().updateImageGenerationSettings('shot-1', {
+      pValue: 'p-demo',
+      stylization: 250,
+      weirdness: 100,
+      diversity: 10,
+      autoLink: false,
+    })
+
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.imageGeneration,
+    ).toEqual({
+      prompt: '远景，雨夜河岸',
+      pValue: 'p-demo',
+      stylization: 250,
+      weirdness: 100,
+      diversity: 10,
+      autoLink: false,
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    await useProjectStore.getState().persistActive(repository)
+    expect(
+      (await repository.load('project-frost-river'))?.nodes.find(
+        ({ id }) => id === 'shot-1',
+      )?.imageGeneration,
+    ).toEqual({
+      prompt: '远景，雨夜河岸',
+      pValue: 'p-demo',
+      stylization: 250,
+      weirdness: 100,
+      diversity: 10,
+      autoLink: false,
+    })
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.imageGeneration,
+    ).toBeUndefined()
+  })
+
   test('creates confirmed video-derived nodes and their dependency in one undo entry', () => {
     const project = makeProjectFixture()
     const videoNode: CanvasNode = {

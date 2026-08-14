@@ -557,19 +557,22 @@ export function SelectionContextBar({
       {surface === 'portrait' ? (
         <div className="image-tool-menu" role="menu" aria-label="人像质感调节">
           <button type="button" role="menuitem" onClick={() => requestToolNode('人像调节')}>人像调节</button>
-          <button type="button" role="menuitem" disabled title="该副作用尚未完成实机核对">情绪调节</button>
+          <button type="button" role="menuitem" disabled aria-describedby="image-emotion-disabled-reason">情绪调节</button>
+          <p id="image-emotion-disabled-reason" className="image-tool-disabled-reason">情绪调节：尚未完成副作用实机核对，本地演示不可用。</p>
         </div>
       ) : null}
 
       {surface === 'nine-grid' ? (
         <div className="image-tool-menu image-tool-menu--long" role="menu" aria-label="九宫格模板">
-          {nineGridTemplates.map((template) => <button key={template} type="button" role="menuitem" disabled>{template}</button>)}
+          {nineGridTemplates.map((template) => <button key={template} type="button" role="menuitem" disabled aria-describedby="nine-grid-disabled-reason">{template}</button>)}
+          <p id="nine-grid-disabled-reason" className="image-tool-disabled-reason">规格仅核对至菜单层，本地演示不执行模板。</p>
         </div>
       ) : null}
 
       {surface === 'split' ? (
         <div className="image-tool-menu" role="menu" aria-label="宫格切分规格">
-          {splitOptions.map((option) => <button key={option} type="button" role="menuitem" disabled>{option}</button>)}
+          {splitOptions.map((option) => <button key={option} type="button" role="menuitem" disabled aria-describedby="image-split-disabled-reason">{option}</button>)}
+          <p id="image-split-disabled-reason" className="image-tool-disabled-reason">规格未验证切分输出，本地演示不执行。</p>
         </div>
       ) : null}
 
@@ -610,7 +613,8 @@ export function SelectionContextBar({
             <label>颜色<input aria-label="颜色" type="color" defaultValue="#ffffff" onChange={() => setLightingDirty(true)} /></label>
             <label>主光源<select aria-label="主光源" defaultValue="前方" onChange={() => setLightingDirty(true)}>{['左侧', '顶部', '右侧', '前方', '底部', '后方'].map((option) => <option key={option}>{option}</option>)}</select></label>
             <label>轮廓光<input aria-label="轮廓光" type="checkbox" onChange={() => setLightingDirty(true)} /></label>
-            <div className="canvas-tool-config__footer"><button type="reset">重置参数</button><button type="submit" disabled={!lightingDirty}>生成</button></div>
+            {!lightingDirty ? <p id="image-lighting-disabled-reason" className="image-tool-disabled-reason">调整任一参数后才可生成。</p> : null}
+            <div className="canvas-tool-config__footer"><button type="reset">重置参数</button><button type="submit" disabled={!lightingDirty} aria-describedby={!lightingDirty ? 'image-lighting-disabled-reason' : undefined}>生成</button></div>
           </form>
         </ImageToolDialog>
       ) : null}
@@ -623,11 +627,12 @@ export function SelectionContextBar({
             <button type="button" aria-label="文字"><Type aria-hidden="true" /></button>
             <label aria-label="颜色"><input type="color" defaultValue="#ff0000" /></label>
             <label aria-label="线宽"><input type="range" min="1" max="40" step="1" defaultValue="4" /></label>
-            <button type="button" aria-label="撤销" disabled><Undo2 aria-hidden="true" /></button>
-            <button type="button" aria-label="重做" disabled><Redo2 aria-hidden="true" /></button>
+            <button type="button" aria-label="撤销" disabled aria-describedby="image-annotation-disabled-reason"><Undo2 aria-hidden="true" /></button>
+            <button type="button" aria-label="重做" disabled aria-describedby="image-annotation-disabled-reason"><Redo2 aria-hidden="true" /></button>
           </div>
           <div className="annotation-preview"><img src={asset.url} alt="标注预览" /></div>
-          <button type="button" disabled>保存标注</button>
+          <p id="image-annotation-disabled-reason" className="image-tool-disabled-reason">尚未创建标注，撤销、重做与保存均不可用。</p>
+          <button type="button" disabled aria-describedby="image-annotation-disabled-reason">保存标注</button>
         </ImageToolDialog>
       ) : null}
 

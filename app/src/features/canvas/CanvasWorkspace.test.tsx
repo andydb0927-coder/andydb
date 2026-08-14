@@ -161,6 +161,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   await user.click(screen.getByRole('button', { name: '人像质感调节' }))
   expect(screen.getByRole('menuitem', { name: '人像调节' })).toBeVisible()
   expect(screen.getByRole('menuitem', { name: '情绪调节' })).toBeDisabled()
+  expect(screen.getByText('情绪调节：尚未完成副作用实机核对，本地演示不可用。')).toBeVisible()
   await user.click(screen.getByRole('menuitem', { name: '人像调节' }))
   const confirmation = screen.getByRole('alertdialog', { name: '添加人像调节工具节点' })
   expect(confirmation).toHaveTextContent('将添加工具节点')
@@ -194,6 +195,7 @@ test('keeps multi-angle, lighting, and annotation changes in drafts until submit
   for (const field of ['智能模式', '亮度级别', '亮度百分比', '颜色', '主光源', '轮廓光']) {
     expect(within(lighting).getByLabelText(field)).toBeVisible()
   }
+  expect(within(lighting).getByText('调整任一参数后才可生成。')).toBeVisible()
   await user.keyboard('{Escape}')
 
   await user.click(screen.getByRole('button', { name: '标注' }))
@@ -202,6 +204,9 @@ test('keeps multi-angle, lighting, and annotation changes in drafts until submit
     expect(within(annotation).getByLabelText(tool)).toBeVisible()
   }
   expect(within(annotation).getByRole('button', { name: '保存标注' })).toBeDisabled()
+  expect(
+    within(annotation).getByText('尚未创建标注，撤销、重做与保存均不可用。'),
+  ).toBeVisible()
   await user.keyboard('{Escape}')
   expect(onCreateToolNode).not.toHaveBeenCalled()
 })
@@ -215,6 +220,9 @@ test('opens the verified nine-grid, split, and canvas-image preview read-only su
   await user.click(screen.getByRole('button', { name: '九宫格' }))
   const templates = screen.getByRole('menu', { name: '九宫格模板' })
   expect(within(templates).getAllByRole('menuitem')).toHaveLength(11)
+  expect(
+    within(templates).getByText('规格仅核对至菜单层，本地演示不执行模板。'),
+  ).toBeVisible()
   await user.keyboard('{Escape}')
 
   await user.click(screen.getByRole('button', { name: '宫格切分' }))
@@ -222,6 +230,9 @@ test('opens the verified nine-grid, split, and canvas-image preview read-only su
   for (const option of ['4 宫格（2×2）', '9 宫格（3×3）', '16 宫格（4×4）', '25 宫格（5×5）', '自定义']) {
     expect(within(split).getByRole('menuitem', { name: option })).toBeVisible()
   }
+  expect(
+    within(split).getByText('规格未验证切分输出，本地演示不执行。'),
+  ).toBeVisible()
   await user.keyboard('{Escape}')
 
   await user.click(screen.getByRole('button', { name: '预览' }))
@@ -259,7 +270,7 @@ test('offers the exact eleven video media actions with visible disabled reasons'
   expect(within(toolbar).getByRole('button', { name: '片段重拍' })).toBeDisabled()
   expect(within(toolbar).getByRole('button', { name: '智能续写' })).toBeDisabled()
   expect(screen.getByText(/当前仅支持时长不少于 4 秒/)).toBeVisible()
-  expect(screen.getByText(/原平台未公开具体条件/)).toBeVisible()
+  expect(screen.getByText(/当前本地演示未配置续写模型能力/)).toBeVisible()
 })
 
 test('keeps clip and crop edits in node-local drafts until an explicit submit', async () => {
@@ -359,6 +370,7 @@ test('keeps subtitle, subject editing, and keying as escapable node-local drafts
   await user.click(screen.getByRole('menuitem', { name: '框选擦除' }))
   const erase = screen.getByRole('dialog', { name: '框选擦除编辑器' })
   expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeDisabled()
+  expect(within(erase).getByText('请先框选字幕区域。')).toBeVisible()
   await user.click(within(erase).getByRole('button', { name: '框选区域' }))
   expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeEnabled()
   await user.keyboard('{Escape}')
@@ -370,6 +382,7 @@ test('keeps subtitle, subject editing, and keying as escapable node-local drafts
   expect(within(subject).getByText('已选择主体 (0/4)')).toBeVisible()
   expect(within(subject).getByRole('toolbar', { name: '主体标注工具' })).toBeVisible()
   expect(within(subject).getByRole('button', { name: '确定' })).toBeDisabled()
+  expect(within(subject).getByText('请先选择并标注主体。')).toBeVisible()
   await user.keyboard('{Escape}')
 
   await user.click(screen.getByRole('button', { name: '画面编辑' }))

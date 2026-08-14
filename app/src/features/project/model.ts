@@ -75,6 +75,24 @@ export interface ImageResult {
   assetId: string
 }
 
+export interface ImageGenerationSettings {
+  prompt: string
+  pValue: string
+  stylization: number
+  weirdness: number
+  diversity: number
+  autoLink: boolean
+}
+
+export const defaultImageGenerationSettings: ImageGenerationSettings = {
+  prompt: '',
+  pValue: '',
+  stylization: 150,
+  weirdness: 50,
+  diversity: 5,
+  autoLink: true,
+}
+
 export type VideoDerivedTool =
   | '视频高清'
   | '逐帧拉片'
@@ -112,6 +130,7 @@ export interface CanvasNode {
   card?: CreativeCard
   imageResults?: ImageResult[]
   activeResultId?: string
+  imageGeneration?: ImageGenerationSettings
   rotationQuarterTurns?: number
   videoTool?: VideoToolConfig
 }

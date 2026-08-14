@@ -804,6 +804,70 @@ describe('creative canvas', () => {
     ).toBeVisible()
   })
 
+  test('adds a selected canvas media node as an incoming image reference', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const target: Project['nodes'][number] = {
+      id: 'image-target',
+      kind: 'image',
+      title: 'L1',
+      position: { x: 1580, y: 720 },
+      versions: [
+        {
+          id: 'version-image-target',
+          createdAt: '2026-08-14T08:00:00.000Z',
+          prompt: '雾中茶山',
+          assetId: 'asset-shot',
+        },
+      ],
+      activeVersionId: 'version-image-target',
+      sourceChanged: false,
+    }
+    const reference: Project['nodes'][number] = {
+      id: 'image-reference',
+      kind: 'image',
+      title: '备选参考',
+      position: { x: 1880, y: 720 },
+      versions: [
+        {
+          id: 'version-image-reference',
+          createdAt: '2026-08-14T08:01:00.000Z',
+          prompt: '青绿衣饰',
+          assetId: 'asset-character',
+        },
+      ],
+      activeVersionId: 'version-image-reference',
+      sourceChanged: false,
+    }
+    act(() => activate({ ...project, nodes: [...project.nodes, target, reference] }))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: 'L1' }))
+    await user.click(screen.getByRole('button', { name: '参考' }))
+    expect(screen.getByRole('region', { name: '从画布选择参考' })).toHaveTextContent(
+      '在当前画布中添加参考',
+    )
+    await user.keyboard('l')
+    expect(screen.getByRole('button', { name: /^连线$/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    await user.click(screen.getByRole('button', { name: '备选参考' }))
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
+      expect.objectContaining({
+        sourceNodeId: 'image-reference',
+        targetNodeId: 'image-target',
+      }),
+    )
+    expect(
+      screen.queryByRole('region', { name: '从画布选择参考' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '已将“备选参考”设为“L1”的参考',
+    )
+  })
+
   test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
     const user = userEvent.setup()
     renderCanvas()

@@ -6,6 +6,7 @@ import {
   type CanvasNode,
   type DependencyEdge,
   type GenerationJob,
+  type ImageGenerationSettings,
   type NodeVersion,
   type Project,
   type TimelineItem,
@@ -13,6 +14,7 @@ import {
 import {
   type ConnectionValidationResult,
   validateDependencyConnection,
+  validateImageReferenceConnection,
 } from './dependency-policy'
 import { ProjectRepository } from './project-repository'
 import type { GenerationResult } from '../generation/generation-adapter'
@@ -57,11 +59,16 @@ interface ProjectStore {
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
   setActiveImageResult: (nodeId: string, resultId: string) => void
+  updateImageGenerationSettings: (
+    nodeId: string,
+    changes: Partial<ImageGenerationSettings>,
+  ) => void
   rotateImageNode: (nodeId: string) => void
   groupNodes: (nodeIds: Iterable<string>) => string | undefined
   ungroupNodes: (groupId: string) => boolean
   deleteNode: (nodeId: string) => void
   connectNodes: (edge: DependencyEdge) => ConnectionValidationResult
+  connectImageReference: (edge: DependencyEdge) => ConnectionValidationResult
   disconnectNodes: (edgeId: string) => boolean
   appendVersion: (
     nodeId: string,
@@ -465,6 +472,69 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
+    updateImageGenerationSettings: (nodeId, changes) => {
+      commit((project) => {
+        const source = project.nodes.find(({ id }) => id === nodeId)
+        if (
+          !source ||
+          !['image', 'character', 'scene'].includes(source.kind) ||
+          source.videoTool
+        ) {
+          return project
+        }
+        const current: ImageGenerationSettings = {
+          prompt:
+            source.versions.find(({ id }) => id === source.activeVersionId)
+              ?.prompt ?? '',
+          pValue: '',
+          stylization: 150,
+          weirdness: 50,
+          diversity: 5,
+          autoLink: true,
+          ...source.imageGeneration,
+        }
+        const next: ImageGenerationSettings = {
+          prompt:
+            changes.prompt === undefined ? current.prompt : changes.prompt,
+          pValue:
+            changes.pValue === undefined ? current.pValue : changes.pValue,
+          stylization:
+            changes.stylization === undefined
+              ? current.stylization
+              : Math.min(1000, Math.max(0, changes.stylization)),
+          weirdness:
+            changes.weirdness === undefined
+              ? current.weirdness
+              : Math.min(3000, Math.max(0, changes.weirdness)),
+          diversity:
+            changes.diversity === undefined
+              ? current.diversity
+              : Math.min(100, Math.max(0, changes.diversity)),
+          autoLink:
+            changes.autoLink === undefined
+              ? current.autoLink
+              : changes.autoLink,
+        }
+        if (
+          current.prompt === next.prompt &&
+          current.pValue === next.pValue &&
+          current.stylization === next.stylization &&
+          current.weirdness === next.weirdness &&
+          current.diversity === next.diversity &&
+          current.autoLink === next.autoLink
+        ) {
+          return project
+        }
+
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes.map((node) =>
+            node.id === nodeId ? { ...node, imageGeneration: next } : node,
+          ),
+        })
+      })
+    },
+
     rotateImageNode: (nodeId) => {
       commit((project) => {
         const source = project.nodes.find(({ id }) => id === nodeId)
@@ -603,6 +673,31 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         result = project.edges.some(({ id }) => id === edge.id)
           ? { ok: false, reason: 'duplicate' }
           : validateDependencyConnection(
+              project,
+              edge.sourceNodeId,
+              edge.targetNodeId,
+            )
+        if (!result.ok) return project
+        const connected = {
+          ...project,
+          edges: [...project.edges, { ...edge, sourceChanged: false }],
+        }
+        return withUpdatedTimestamp(
+          markDependencyConsumersChanged(connected, edge.targetNodeId),
+        )
+      })
+      return result
+    },
+
+    connectImageReference: (edge) => {
+      let result: ConnectionValidationResult = {
+        ok: false,
+        reason: 'missing-node',
+      }
+      commit((project) => {
+        result = project.edges.some(({ id }) => id === edge.id)
+          ? { ok: false, reason: 'duplicate' }
+          : validateImageReferenceConnection(
               project,
               edge.sourceNodeId,
               edge.targetNodeId,

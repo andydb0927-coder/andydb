@@ -182,14 +182,15 @@ function ReferenceSurface({
         {config.tabs.map((tab, index) => <button key={tab} type="button" role="tab" aria-selected={index === 0}>{tab}</button>)}
       </div>
       <label>搜索<input type="search" placeholder={config.search} /></label>
-      {surface === 'subjects' ? <button type="button" disabled>创建主体</button> : null}
+      <p id="video-library-disabled-reason" className="video-inline-disabled-reason">本地演示仅展示已核对列表，不执行应用或收藏。</p>
+      {surface === 'subjects' ? <button type="button" disabled aria-describedby="video-library-disabled-reason">创建主体</button> : null}
       {surface === 'characters' ? <p>第 1 页 · 每页 10 项</p> : null}
       <div className="video-library-dialog__grid">
         {config.items.map((item) => (
           <article key={item}>
             <span aria-hidden="true"><Sparkles /></span>
             <strong>{item}</strong>
-            <button type="button" disabled>{surface === 'subjects' ? '查看 / 使用' : '预览'}</button>
+            <button type="button" disabled aria-describedby="video-library-disabled-reason">{surface === 'subjects' ? '查看 / 使用' : '预览'}</button>
           </article>
         ))}
       </div>
@@ -267,7 +268,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <label>模型<select aria-label="模型" defaultValue="Kling O3">
           {['Kling O3', 'Seedance 2.5', 'Hailuo 2.3', 'Wan 2.7', 'Vidu Q3 Pro'].map((model) => <option key={model}>{model}</option>)}
         </select></label>
-        <label>生成模式<select aria-label="生成模式" defaultValue="全能参考">
+        <label>生成模式<select aria-label="生成模式" aria-describedby="video-mode-reasons" defaultValue="全能参考">
           <option disabled>文生视频</option>
           <option>全能参考</option>
           <option>图生视频</option>
@@ -280,6 +281,15 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <label>画质<select aria-label="画质" defaultValue="标准"><option>标准</option><option>高清</option><option>4K</option></select></label>
         <label>声音<select aria-label="声音" defaultValue="关闭"><option>关闭</option><option>开启</option></select></label>
         <label className="video-generation-panel__toggle"><input type="checkbox" aria-label="智能分镜" />智能分镜</label>
+      </div>
+      <div
+        id="video-mode-reasons"
+        className="video-generation-panel__reasons"
+        role="note"
+        aria-label="生成模式禁用原因"
+      >
+        <span>文生视频：当前节点已绑定全能参考配置，请新建文生视频节点。</span>
+        <span>视频编辑：请先添加输入视频参考。</span>
       </div>
       <button
         type="button"

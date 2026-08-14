@@ -115,12 +115,14 @@ function EraseEditor({
   onSubmit(): void
 }) {
   const [selected, setSelected] = useState(false)
+  const disabledReasonId = mode === '框选擦除' ? 'video-box-erase-disabled-reason' : 'video-smart-erase-disabled-reason'
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label={`${mode}编辑器`}>
       <header><div><span>节点内草稿</span><h2>{mode}</h2></div><button type="button" aria-label={`关闭${mode}编辑器`} onClick={onClose}><X aria-hidden="true" /></button></header>
       {mode === '框选擦除' ? <button type="button" aria-pressed={selected} onClick={() => setSelected(true)}>框选区域</button> : <p>自动识别中英文字幕区域。</p>}
-      <div className="video-inline-editor__toggles"><button type="button" disabled={!selected}>撤销</button><button type="button" disabled={!selected}>重做</button><button type="button" disabled={!selected}>重置</button></div>
-      <footer><span>预计成本 {mode === '框选擦除' ? '-' : '--'}</span><button type="button" disabled={mode === '框选擦除' && !selected} onClick={onSubmit}>提交{mode}</button></footer>
+      <div className="video-inline-editor__toggles"><button type="button" disabled={!selected} aria-describedby={!selected ? disabledReasonId : undefined}>撤销</button><button type="button" disabled={!selected} aria-describedby={!selected ? disabledReasonId : undefined}>重做</button><button type="button" disabled={!selected} aria-describedby={!selected ? disabledReasonId : undefined}>重置</button></div>
+      {!selected ? <p id={disabledReasonId} className="video-inline-disabled-reason">{mode === '框选擦除' ? '请先框选字幕区域。' : '智能擦除当前没有可撤销的手动选区。'}</p> : null}
+      <footer><span>预计成本 {mode === '框选擦除' ? '-' : '--'}</span><button type="button" disabled={mode === '框选擦除' && !selected} aria-describedby={mode === '框选擦除' && !selected ? disabledReasonId : undefined} onClick={onSubmit}>提交{mode}</button></footer>
     </section>
   )
 }
@@ -139,7 +141,8 @@ function SubjectEditor({
       <strong>已选择主体 (0/{limit})</strong>
       <div role="toolbar" aria-label="主体标注工具">{['点选', '框选', '画笔', '橡皮擦'].map((tool) => <button key={tool} type="button">{tool}</button>)}</div>
       <label>帧位置<input type="range" min="0" max="3" step="0.1" defaultValue="0" /></label>
-      <footer><span>预计成本 --</span><button type="button" disabled>确定</button></footer>
+      <p id="video-subject-disabled-reason" className="video-inline-disabled-reason">请先选择并标注主体。</p>
+      <footer><span>预计成本 --</span><button type="button" disabled aria-describedby="video-subject-disabled-reason">确定</button></footer>
     </section>
   )
 }
@@ -196,7 +199,7 @@ export function VideoMediaContextBar({
       </div>
       <div className="video-disabled-reasons" role="note" aria-label="视频工具禁用原因">
         <span id="video-reshoot-reason">片段重拍：当前仅支持时长不少于 4 秒的视频。</span>
-        <span id="video-extend-reason">智能续写：当前节点不可用；原平台未公开具体条件。</span>
+        <span id="video-extend-reason">智能续写：当前本地演示未配置续写模型能力。</span>
       </div>
 
       {surface === 'clip' ? <ClipEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={() => submitDraft('剪辑')} /> : null}

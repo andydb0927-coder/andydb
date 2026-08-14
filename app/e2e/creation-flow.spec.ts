@@ -145,6 +145,71 @@ test('keeps one image node expanded and persists a confirmed main result', async
   ).toHaveAttribute('src', '/demo/shot-river.png')
 })
 
+test('persists image parameters and creates a canvas-selected media reference', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const scene = page.getByRole('button', { name: '场景设定', exact: true })
+  await scene.click()
+  const panel = page.getByRole('region', { name: '场景设定 生成参数' })
+  await panel.getByRole('button', { name: '展开高级设置' }).click()
+  await expect(panel.getByLabel('风格化程度')).toHaveAttribute('step', '50')
+  await expect(panel.getByLabel('怪异度')).toHaveAttribute('step', '50')
+  await expect(panel.getByLabel('多样性')).toHaveAttribute('step', '5')
+  await panel.getByLabel('个性化风格 P 值').fill('p-e2e-style')
+  await panel.getByLabel('个性化风格 P 值').blur()
+  await panel.getByLabel('风格化程度').fill('250')
+  await panel.getByLabel('智能引用 AutoLink').uncheck()
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+
+  const styleTrigger = panel.getByRole('button', { name: '风格' })
+  await styleTrigger.click()
+  const gallery = page.getByRole('dialog', { name: '风格广场' })
+  await expect(gallery.getByRole('tab')).toHaveCount(3)
+  await expect(
+    gallery.getByRole('navigation', { name: '风格分类' }).getByRole('button'),
+  ).toHaveCount(10)
+  await expect(gallery.getByLabel('仅看可商用')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(styleTrigger).toBeFocused()
+
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await scene.click()
+  const reloadedPanel = page.getByRole('region', {
+    name: '场景设定 生成参数',
+  })
+  await reloadedPanel.getByRole('button', { name: '展开高级设置' }).click()
+  await expect(reloadedPanel.getByLabel('个性化风格 P 值')).toHaveValue(
+    'p-e2e-style',
+  )
+  await expect(reloadedPanel.getByLabel('风格化程度')).toHaveValue('250')
+  await expect(reloadedPanel.getByLabel('智能引用 AutoLink')).not.toBeChecked()
+
+  await openUploadAtBlank(page)
+  const imageDialog = page.getByRole('dialog', { name: '上传图片到画布' })
+  await imageDialog
+    .getByLabel('本地图片')
+    .setInputFiles('public/demo/character-lin-yuan.png')
+  await imageDialog.getByRole('button', { name: '确认创建' }).click()
+  const image = page.getByRole('button', { name: '图片 01', exact: true })
+  await expect(image).toBeVisible()
+  await page
+    .getByRole('region', { name: '图片 01 生成参数' })
+    .getByRole('button', { name: '参考' })
+    .click()
+  await expect(page.getByRole('region', { name: '从画布选择参考' })).toBeVisible()
+  await scene.click()
+  await expect(page.getByRole('status')).toContainText(
+    '已将“场景设定”设为“图片 01”的参考',
+  )
+  await expect(
+    page.getByLabel('场景设定 → 图片 01', { exact: true }),
+  ).toBeVisible()
+})
+
 test('keeps video drafts local and inserts confirmed derived nodes atomically', async ({
   page,
 }) => {

@@ -4,6 +4,7 @@ import type { CanvasNode, NodeKind, Project } from './model'
 import {
   connectionFailureMessage,
   validateDependencyConnection,
+  validateImageReferenceConnection,
 } from './dependency-policy'
 
 const kinds: NodeKind[] = [
@@ -140,5 +141,43 @@ describe('dependency connection policy', () => {
       ok: false,
       reason: 'cycle',
     })
+  })
+
+  test('accepts media-backed canvas references without widening normal dependency types', () => {
+    const referenceProject = project('image', 'image')
+    referenceProject.assets.push({
+      id: 'source-asset',
+      kind: 'image',
+      url: '/reference.png',
+      mimeType: 'image/png',
+    })
+    referenceProject.nodes[0] = {
+      ...referenceProject.nodes[0],
+      versions: [
+        {
+          id: 'source-version',
+          createdAt: '2026-08-14T00:00:00.000Z',
+          prompt: '参考图',
+          assetId: 'source-asset',
+        },
+      ],
+      activeVersionId: 'source-version',
+    }
+
+    expect(
+      validateDependencyConnection(referenceProject, 'source', 'target'),
+    ).toEqual({ ok: false, reason: 'incompatible-types' })
+    expect(
+      validateImageReferenceConnection(referenceProject, 'source', 'target'),
+    ).toEqual({ ok: true })
+
+    referenceProject.nodes[0] = {
+      ...referenceProject.nodes[0],
+      versions: [],
+      activeVersionId: '',
+    }
+    expect(
+      validateImageReferenceConnection(referenceProject, 'source', 'target'),
+    ).toEqual({ ok: false, reason: 'incompatible-types' })
   })
 })
