@@ -3228,6 +3228,19 @@ export function CanvasPage({
           <CanvasAgentPanel onClose={closeAgent}>
             <DirectorComposer
               selectedNodeId={primaryNodeId}
+              projectTitle={project.title}
+              selectedNodeTitle={
+                project.nodes.find(({ id }) => id === primaryNodeId)?.title
+              }
+              assetNames={[
+                ...new Set(
+                  project.assets.map((asset, index) =>
+                    project.nodes.find((node) =>
+                      node.versions.some(({ assetId }) => assetId === asset.id),
+                    )?.title ?? `项目资源 ${index + 1}`,
+                  ),
+                ),
+              ]}
               onExecute={handleDirectorCommand}
             />
           </CanvasAgentPanel>

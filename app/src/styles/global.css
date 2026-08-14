@@ -1846,7 +1846,7 @@ select {
   text-align: right;
 }
 
-.director-composer label {
+.director-composer__input-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1900,6 +1900,338 @@ select {
   min-height: 32px;
   border-color: rgb(169 162 255 / 36%);
   background: rgb(114 104 240 / 18%);
+}
+
+.agent-conversation-toolbar,
+.agent-composer-actions,
+.agent-skill-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.agent-conversation-toolbar {
+  margin-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.agent-conversation-toolbar button {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  font-size: 0.6875rem;
+}
+
+.agent-conversation-toolbar button[aria-pressed='true'],
+.agent-skill-tabs [aria-selected='true'] {
+  border-color: rgb(169 162 255 / 38%);
+  color: white;
+  background: rgb(114 104 240 / 22%);
+}
+
+.agent-local-notice,
+.agent-utility-card,
+.agent-recommendations,
+.agent-model-grid,
+.agent-skill-selection,
+.agent-generation-mode,
+.agent-popover-list,
+.agent-attachments {
+  margin: var(--space-2) 0 0;
+}
+
+.agent-local-notice {
+  padding: var(--space-2);
+  border: 1px solid rgb(104 211 145 / 18%);
+  border-radius: 9px;
+  color: var(--status-success) !important;
+  background: rgb(104 211 145 / 6%);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.agent-utility-card,
+.agent-recommendations,
+.agent-model-grid,
+.agent-skill-selection,
+.agent-generation-mode,
+.agent-popover-list {
+  padding: var(--space-2);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.agent-utility-card,
+.agent-model-grid,
+.agent-recommendations,
+.agent-popover-list,
+.agent-skill-list,
+.agent-skill-create,
+.agent-skill-detail {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.agent-utility-card label,
+.agent-model-grid label,
+.agent-skill-search,
+.agent-skill-create label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.agent-utility-card input,
+.agent-model-grid select,
+.agent-skill-search input,
+.agent-skill-create input,
+.agent-skill-create textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: rgb(10 11 15 / 82%);
+}
+
+.agent-settings label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.agent-settings input,
+.agent-generation-mode input {
+  accent-color: var(--focus-ring);
+}
+
+.agent-utility-card code {
+  overflow-wrap: anywhere;
+  color: var(--focus-ring);
+  font-size: 0.6875rem;
+}
+
+.agent-utility-card small,
+.agent-model-grid p,
+.agent-recommendations span,
+.agent-recommendations small,
+.agent-skill-selection span,
+.agent-skill-list small,
+.agent-skill-list p,
+.agent-skill-detail p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+.agent-recommendations > div,
+.agent-skill-selection,
+.agent-skill-dialog__heading,
+.agent-skill-list article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.agent-recommendations > button {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  min-height: 0;
+  padding: var(--space-2);
+  border-color: rgb(255 255 255 / 7%);
+  background: rgb(255 255 255 / 3%);
+  text-align: left;
+}
+
+.agent-recommendations > div button {
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  font-size: 0.6875rem;
+}
+
+.agent-model-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.agent-model-grid select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-skill-selection button {
+  min-height: 32px;
+}
+
+.agent-generation-mode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.agent-generation-mode legend {
+  padding: 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.agent-generation-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.agent-generation-mode__note {
+  margin: var(--space-1) 0 0 !important;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+.director-composer > form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.agent-composer-actions button,
+.agent-upload-control {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: rgb(255 255 255 / 5%);
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.agent-composer-actions button[type='submit'] {
+  flex: 1 1 100%;
+  border-color: rgb(169 162 255 / 34%);
+  color: var(--text-primary);
+  background: rgb(114 104 240 / 20%);
+}
+
+.agent-upload-control input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.agent-popover-list button {
+  width: 100%;
+  min-height: 32px;
+  justify-content: flex-start;
+  padding: 0 var(--space-2);
+  text-align: left;
+}
+
+.agent-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-attachments li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px var(--space-2);
+  border: 1px solid rgb(169 162 255 / 22%);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: rgb(114 104 240 / 10%);
+  font-size: 0.6875rem;
+}
+
+.agent-attachments button {
+  width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.agent-skill-dialog {
+  position: fixed;
+  z-index: 90;
+  top: 72px;
+  right: 24px;
+  width: min(420px, calc(100vw - 48px));
+  max-height: calc(100vh - 104px);
+  padding: var(--space-3);
+  overflow: auto;
+  border: 1px solid rgb(169 162 255 / 24%);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: rgb(16 18 23 / 98%);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 56%);
+}
+
+.agent-skill-dialog__heading {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.agent-skill-dialog__heading button {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+
+.agent-skill-tabs {
+  margin: var(--space-3) 0;
+}
+
+.agent-skill-tabs button {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  font-size: 0.6875rem;
+}
+
+.agent-skill-list {
+  margin-top: var(--space-2);
+}
+
+.agent-skill-list article,
+.agent-skill-detail {
+  padding: var(--space-2);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.agent-skill-list article > button,
+.agent-skill-detail button,
+.agent-skill-create button {
+  min-height: 32px;
+}
+
+.agent-skill-create textarea {
+  min-height: 72px;
+  padding: var(--space-2);
+}
+
+.agent-skill-detail {
+  margin-top: var(--space-3);
+  border-color: rgb(169 162 255 / 22%);
+  background: rgb(114 104 240 / 8%);
 }
 
 .workflow-run-panel {
@@ -8856,6 +9188,14 @@ select {
     left: var(--space-3);
     width: auto;
     max-height: 46vh;
+  }
+
+  .agent-skill-dialog {
+    top: var(--space-3);
+    right: var(--space-3);
+    left: var(--space-3);
+    width: auto;
+    max-height: calc(100vh - 24px);
   }
 
   .canvas-page--agent-open .canvas-workflow-layer {

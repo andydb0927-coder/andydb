@@ -3547,6 +3547,24 @@ describe('creative canvas', () => {
 })
 
 describe('canvas top bar', () => {
+  test('hydrates the complete Agent workspace from the current project and provider registry', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    const agent = screen.getByRole('complementary', { name: 'Agent 工作区' })
+    expect(within(agent).getByRole('toolbar', { name: 'Agent 对话工具' })).toBeVisible()
+    expect(within(agent).getByRole('combobox', { name: '图片模型' })).toHaveValue('mock-mj-image')
+    expect(within(agent).getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-kling-video')
+
+    await user.click(within(agent).getByRole('button', { name: '添加 @ 引用' }))
+    const references = within(agent).getByRole('menu', { name: '可引用的画布上下文' })
+    expect(within(references).getByRole('menuitem', { name: '引用工作流 雨夜追寻' })).toBeVisible()
+    expect(within(references).getByRole('menuitem', { name: '引用节点 角色参考' })).toBeVisible()
+    expect(within(references).getByRole('menuitem', { name: '引用资源 角色参考' })).toBeVisible()
+  })
+
   test('opens the Agent on demand and restores focus after closing it', async () => {
     const user = userEvent.setup()
     renderCanvas()
