@@ -145,6 +145,58 @@ test('keeps one image node expanded and persists a confirmed main result', async
   ).toHaveAttribute('src', '/demo/shot-river.png')
 })
 
+test('keeps video drafts local and inserts confirmed derived nodes atomically', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 721, height: 778 })
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await page.getByRole('button', { name: '生成视频' }).click()
+
+  const video = page.getByRole('button', { name: '视频 01', exact: true })
+  await expect(video).toBeVisible()
+  const generation = page.getByRole('region', { name: '视频 01 生成参数' })
+  await expect(generation).toBeVisible()
+  await expect(generation.getByLabel('提示词')).toHaveAttribute('maxlength', '2000')
+  await expect(generation.getByLabel('模型')).toHaveValue('Kling O3')
+  await expect(generation.getByText('预计成本 24')).toBeVisible()
+
+  const mediaTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
+  await expect(mediaTools.getByRole('button')).toHaveCount(11)
+  await expect(page.getByText(/当前仅支持时长不少于 4 秒/)).toBeVisible()
+  await mediaTools.getByRole('button', { name: '剪辑' }).click()
+  const clip = page.getByRole('dialog', { name: '剪辑内联编辑器' })
+  await expect(clip.getByRole('img', { name: '剪辑帧 12' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(clip).toHaveCount(0)
+
+  const initialNodeCount = await page.locator('.react-flow__node').count()
+  await mediaTools.getByRole('button', { name: '高清' }).click()
+  const upscaleConfirmation = page.getByRole('alertdialog', {
+    name: '添加视频高清工具节点',
+  })
+  await expect(upscaleConfirmation).toContainText('将添加工具节点')
+  await expect(page.locator('.react-flow__node')).toHaveCount(initialNodeCount)
+  await upscaleConfirmation.getByRole('button', { name: '确认添加' }).click()
+  await expect(page.getByRole('button', { name: '高清（1080P）', exact: true })).toBeVisible()
+  const upscale = page.getByRole('region', { name: '视频高清参数' })
+  await expect(upscale.getByLabel('模型')).toHaveValue('Topazlabs')
+  await expect(upscale.getByLabel('分辨率')).toHaveValue('1080P')
+  await expect(upscale.getByText('预计成本 16')).toBeVisible()
+
+  await video.click()
+  const frameTools = page.getByRole('toolbar', { name: '帧操作' })
+  await frameTools.getByRole('button', { name: '截取当前帧', exact: true }).click()
+  const frameConfirmation = page.getByRole('alertdialog', {
+    name: '添加截取当前帧工具节点',
+  })
+  await expect(frameConfirmation).toContainText('将添加工具节点')
+  await frameConfirmation.getByRole('button', { name: '确认添加' }).click()
+  await expect(page.getByRole('button', { name: '截图', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: '截图参数' })).toContainText('当前帧截图')
+})
+
 test('keyboard and list view preserve core actions in a strict small layout', async ({
   page,
 }) => {

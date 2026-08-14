@@ -160,6 +160,63 @@ describe('project repository', () => {
 })
 
 describe('project store history and persistence', () => {
+  test('creates confirmed video-derived nodes and their dependency in one undo entry', () => {
+    const project = makeProjectFixture()
+    const videoNode: CanvasNode = {
+      id: 'video-source',
+      kind: 'video',
+      title: '视频节点 16',
+      position: { x: 900, y: 240 },
+      versions: [],
+      activeVersionId: '',
+      sourceChanged: false,
+    }
+    const withVideo = { ...project, nodes: [...project.nodes, videoNode] }
+    useProjectStore.setState({
+      projectsById: { [withVideo.id]: withVideo },
+      activeProjectId: withVideo.id,
+      activeProject: withVideo,
+      past: [],
+      future: [],
+    })
+    const toolNode: CanvasNode = {
+      id: 'video-upscale',
+      kind: 'storyboard',
+      title: '高清（1080P）',
+      position: { x: 1260, y: 240 },
+      versions: [],
+      activeVersionId: '',
+      sourceChanged: false,
+      videoTool: {
+        kind: 'upscale',
+        model: 'Topazlabs',
+        resolution: '1080P',
+        interpolation: '不补帧',
+        slowMotion: '1x',
+        cost: 16,
+      },
+    }
+
+    expect(
+      useProjectStore
+        .getState()
+        .createConnectedCanvasContent('video-source', { node: toolNode }, 'video-tool-edge'),
+    ).toBe(true)
+    expect(useProjectStore.getState().activeProject?.nodes).toContainEqual(toolNode)
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual({
+      id: 'video-tool-edge',
+      sourceNodeId: 'video-source',
+      targetNodeId: 'video-upscale',
+      sourceChanged: false,
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore.getState().activeProject?.nodes.some(({ id }) => id === toolNode.id),
+    ).toBe(false)
+  })
+
   test('persists the active image result, updates the active version, and invalidates downstream consumers', async () => {
     const repository = createRepository()
     const project = makeProjectFixture()

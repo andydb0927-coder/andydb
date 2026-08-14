@@ -174,6 +174,26 @@ describe('generation queue lifecycle', () => {
     })
   })
 
+  test('returns a local video-shaped result for video generation requests', async () => {
+    vi.useFakeTimers()
+    const generation = new DemoGenerationAdapter().start(
+      { ...regenerateRequest, operation: 'generate-video', targetKind: 'video' },
+      new AbortController().signal,
+    )
+
+    await vi.advanceTimersByTimeAsync(1200)
+    await expect(generation).resolves.toMatchObject({
+      asset: {
+        kind: 'video',
+        url: '/demo/video-preview.mp4',
+        mimeType: 'video/mp4',
+        width: 1280,
+        height: 720,
+        durationSeconds: 3.041,
+      },
+    })
+  })
+
   test('moves queued to running to succeeded after the deterministic 1200ms generation', async () => {
     vi.useFakeTimers()
     const statuses: GenerationJob['status'][] = []

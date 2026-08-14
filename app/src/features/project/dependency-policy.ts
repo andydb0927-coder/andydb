@@ -34,7 +34,7 @@ const allowedTargets: Record<NodeKind, ReadonlySet<NodeKind>> = {
   image: targets('storyboard', 'video'),
   preview: targets('storyboard', 'video'),
   storyboard: targets('video'),
-  video: targets(),
+  video: targets('image', 'storyboard'),
   worldview: targets(
     'script',
     'character-card',

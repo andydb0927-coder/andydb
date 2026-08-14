@@ -227,3 +227,155 @@ test('opens the verified nine-grid, split, and canvas-image preview read-only su
   await user.click(screen.getByRole('button', { name: '预览' }))
   expect(screen.getByRole('dialog', { name: '画布图片预览' })).toBeVisible()
 })
+
+test('offers the exact eleven video media actions with visible disabled reasons', () => {
+  render(
+    <SelectionContextBar
+      project={project}
+      node={project.nodes[2]}
+      onCreateToolNode={vi.fn()}
+      onCreateVideoToolNode={vi.fn()}
+      onSubmitVideoDraft={vi.fn()}
+      onRotateImage={vi.fn()}
+    />,
+  )
+
+  const toolbar = screen.getByRole('toolbar', { name: '视频媒体处理工具' })
+  for (const label of [
+    '剪辑',
+    '片段重拍',
+    '裁剪',
+    '高清',
+    '逐帧拉片',
+    '智能续写',
+    '智能去字幕',
+    '音频分离',
+    '画面编辑',
+    '下载',
+    '预览',
+  ]) {
+    expect(within(toolbar).getByRole('button', { name: label })).toBeVisible()
+  }
+  expect(within(toolbar).getByRole('button', { name: '片段重拍' })).toBeDisabled()
+  expect(within(toolbar).getByRole('button', { name: '智能续写' })).toBeDisabled()
+  expect(screen.getByText(/当前仅支持时长不少于 4 秒/)).toBeVisible()
+  expect(screen.getByText(/原平台未公开具体条件/)).toBeVisible()
+})
+
+test('keeps clip and crop edits in node-local drafts until an explicit submit', async () => {
+  const user = userEvent.setup()
+  const onSubmitVideoDraft = vi.fn()
+  render(
+    <SelectionContextBar
+      project={project}
+      node={project.nodes[2]}
+      onCreateToolNode={vi.fn()}
+      onCreateVideoToolNode={vi.fn()}
+      onSubmitVideoDraft={onSubmitVideoDraft}
+      onRotateImage={vi.fn()}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '剪辑' }))
+  const clip = screen.getByRole('dialog', { name: '剪辑内联编辑器' })
+  expect(within(clip).getAllByRole('img', { name: /剪辑帧/ })).toHaveLength(12)
+  expect(within(clip).getByRole('button', { name: '整数秒吸附' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  expect(within(clip).getByRole('button', { name: '选区循环播放' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await user.keyboard('{Escape}')
+  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
+
+  await user.click(screen.getByRole('button', { name: '裁剪' }))
+  const crop = screen.getByRole('dialog', { name: '裁剪内联编辑器' })
+  expect(within(crop).getAllByRole('button', { name: /裁剪控制点/ })).toHaveLength(8)
+  expect(within(crop).getByText('1024 × 576')).toBeVisible()
+  await user.keyboard('{Escape}')
+  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
+})
+
+test('confirms derived video nodes and exposes subtitle, audio, and picture-edit menus', async () => {
+  const user = userEvent.setup()
+  const onCreateVideoToolNode = vi.fn()
+  render(
+    <SelectionContextBar
+      project={project}
+      node={project.nodes[2]}
+      onCreateToolNode={vi.fn()}
+      onCreateVideoToolNode={onCreateVideoToolNode}
+      onSubmitVideoDraft={vi.fn()}
+      onRotateImage={vi.fn()}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '高清' }))
+  const confirmation = screen.getByRole('alertdialog', {
+    name: '添加视频高清工具节点',
+  })
+  expect(confirmation).toHaveTextContent('将添加工具节点')
+  expect(onCreateVideoToolNode).not.toHaveBeenCalled()
+  await user.click(within(confirmation).getByRole('button', { name: '确认添加' }))
+  expect(onCreateVideoToolNode).toHaveBeenCalledWith('视频高清')
+
+  await user.click(screen.getByRole('button', { name: '智能去字幕' }))
+  const subtitle = screen.getByRole('menu', { name: '智能去字幕' })
+  expect(within(subtitle).getByRole('menuitem', { name: '智能擦除' })).toBeVisible()
+  expect(within(subtitle).getByRole('menuitem', { name: '框选擦除' })).toBeVisible()
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '音频分离' }))
+  const audio = screen.getByRole('menu', { name: '音频分离' })
+  expect(within(audio).getByRole('menuitem', { name: '人声分离' })).toBeDisabled()
+  expect(within(audio).getByText('当前视频无音轨，无法使用人声分离')).toBeVisible()
+  expect(within(audio).getByText('当前视频无音轨，无法分离音视频')).toBeVisible()
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '画面编辑' }))
+  const picture = screen.getByRole('menu', { name: '画面编辑' })
+  for (const label of ['主体消除', '主体修改', '主体替换', '智能抠像']) {
+    expect(within(picture).getByRole('menuitem', { name: label })).toBeVisible()
+  }
+})
+
+test('keeps subtitle, subject editing, and keying as escapable node-local drafts', async () => {
+  const user = userEvent.setup()
+  const onSubmitVideoDraft = vi.fn()
+  render(
+    <SelectionContextBar
+      project={project}
+      node={project.nodes[2]}
+      onCreateToolNode={vi.fn()}
+      onCreateVideoToolNode={vi.fn()}
+      onSubmitVideoDraft={onSubmitVideoDraft}
+      onRotateImage={vi.fn()}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '智能去字幕' }))
+  await user.click(screen.getByRole('menuitem', { name: '框选擦除' }))
+  const erase = screen.getByRole('dialog', { name: '框选擦除编辑器' })
+  expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeDisabled()
+  await user.click(within(erase).getByRole('button', { name: '框选区域' }))
+  expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeEnabled()
+  await user.keyboard('{Escape}')
+  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
+
+  await user.click(screen.getByRole('button', { name: '画面编辑' }))
+  await user.click(screen.getByRole('menuitem', { name: '主体消除' }))
+  const subject = screen.getByRole('dialog', { name: '主体消除编辑器' })
+  expect(within(subject).getByText('已选择主体 (0/4)')).toBeVisible()
+  expect(within(subject).getByRole('toolbar', { name: '主体标注工具' })).toBeVisible()
+  expect(within(subject).getByRole('button', { name: '确定' })).toBeDisabled()
+  await user.keyboard('{Escape}')
+
+  await user.click(screen.getByRole('button', { name: '画面编辑' }))
+  await user.click(screen.getByRole('menuitem', { name: '智能抠像' }))
+  const keying = screen.getByRole('dialog', { name: '智能抠像编辑器' })
+  expect(within(keying).getByText('预计成本 1')).toBeVisible()
+  await user.keyboard('{Escape}')
+  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
+})

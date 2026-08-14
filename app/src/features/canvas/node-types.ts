@@ -5,6 +5,7 @@ import type {
   CanvasNode,
   GenerationJob,
   NodeKind,
+  VideoDerivedTool,
 } from '../project/model'
 import { AssetNode } from './nodes/AssetNode'
 import { CreativeCardNode } from './nodes/CreativeCardNode'
@@ -31,6 +32,7 @@ export interface CreativeNodeProps {
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
   asset?: Asset
   imageResults?: Array<{ id: string; asset: Asset }>
+  videoReferences?: Array<{ id: string; title: string; asset: Asset }>
   actionsPlacement: 'before' | 'after'
   contextual: boolean
   connectionMode: boolean
@@ -43,6 +45,8 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onDelete(trigger: HTMLButtonElement): void
   onSetActiveResult?(resultId: string): void
   onLocalImageGenerate?(): void
+  onCreateVideoToolNode?(tool: VideoDerivedTool): void
+  onLocalVideoGenerate?(): void
 }
 
 export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>

@@ -217,18 +217,47 @@ async function dragHandle(
   target: import('@playwright/test').Locator,
 ) {
   const sourceBox = await source.boundingBox()
-  const targetBox = await target.boundingBox()
   expect(sourceBox).not.toBeNull()
-  expect(targetBox).not.toBeNull()
   await page.mouse.move(
     sourceBox!.x + sourceBox!.width / 2,
     sourceBox!.y + sourceBox!.height / 2,
   )
   await page.mouse.down()
-  await page.mouse.move(
-    targetBox!.x + targetBox!.width / 2,
-    targetBox!.y + targetBox!.height / 2,
-    { steps: 12 },
+  let targetBox = await target.boundingBox()
+  expect(targetBox).not.toBeNull()
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.mouse.move(
+      targetBox!.x + targetBox!.width / 2,
+      targetBox!.y + targetBox!.height / 2,
+      { steps: attempt === 0 ? 12 : 2 },
+    )
+    await page.waitForTimeout(40)
+    const nextTargetBox = await target.boundingBox()
+    expect(nextTargetBox).not.toBeNull()
+    const moved =
+      Math.abs(nextTargetBox!.x - targetBox!.x) +
+      Math.abs(nextTargetBox!.y - targetBox!.y)
+    targetBox = nextTargetBox
+    if (moved < 0.5) break
+  }
+  const targetLabel = await target.getAttribute('aria-label')
+  const hitTarget = await page.evaluate(
+    ({ x, y }) => {
+      const hit = document.elementFromPoint(x, y)
+      return {
+        label: hit?.closest<HTMLElement>('[aria-label]')?.getAttribute('aria-label'),
+        tag: hit?.tagName,
+        className: hit instanceof HTMLElement ? hit.className : hit?.getAttribute('class'),
+        text: hit?.textContent?.trim().slice(0, 80),
+      }
+    },
+    {
+      x: targetBox!.x + targetBox!.width / 2,
+      y: targetBox!.y + targetBox!.height / 2,
+    },
+  )
+  expect(hitTarget.label, `target handle center should remain reachable for ${targetLabel}: ${JSON.stringify(hitTarget)}`).toBe(
+    targetLabel,
   )
   await page.mouse.up()
 }

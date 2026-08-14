@@ -75,6 +75,32 @@ export interface ImageResult {
   assetId: string
 }
 
+export type VideoDerivedTool =
+  | '视频高清'
+  | '逐帧拉片'
+  | '截取首帧'
+  | '截取尾帧'
+  | '截取当前帧'
+
+export type VideoToolConfig =
+  | {
+      kind: 'upscale'
+      model: 'Topazlabs' | 'HuoShan-画质增强'
+      resolution: '1080P' | '2K' | '4K'
+      interpolation: '不补帧' | '高质量补帧'
+      slowMotion: '1x' | '2x' | '3x' | '5x'
+      cost: 16
+    }
+  | {
+      kind: 'frame-analysis'
+      model: 'SD2.5'
+      dimensions: ['分镜', '动态', '音乐']
+    }
+  | {
+      kind: 'frame-capture'
+      frame: '首帧' | '尾帧' | '当前帧'
+    }
+
 export interface CanvasNode {
   id: string
   kind: NodeKind
@@ -87,6 +113,7 @@ export interface CanvasNode {
   imageResults?: ImageResult[]
   activeResultId?: string
   rotationQuarterTurns?: number
+  videoTool?: VideoToolConfig
 }
 
 export interface CanvasGroup {

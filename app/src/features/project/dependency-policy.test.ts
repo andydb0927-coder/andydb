@@ -30,6 +30,8 @@ const allowed = new Set([
   'preview:storyboard',
   'preview:video',
   'storyboard:video',
+  'video:image',
+  'video:storyboard',
   'script:script',
   'script:character-card',
   'script:worldview',

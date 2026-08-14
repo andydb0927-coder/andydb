@@ -24,8 +24,14 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
-import type { CanvasNode, JobStatus, Project } from '../project/model'
+import type {
+  CanvasNode,
+  JobStatus,
+  Project,
+  VideoDerivedTool,
+} from '../project/model'
 import { CanvasGenerationSettings } from './CanvasGenerationSettings'
+import { VideoMediaContextBar } from './VideoContextTools'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -458,6 +464,8 @@ interface SelectionContextBarProps {
   project: Project
   node?: CanvasNode
   onCreateToolNode(tool: string): void
+  onCreateVideoToolNode?(tool: VideoDerivedTool): void
+  onSubmitVideoDraft?(tool: string): void
   onRotateImage(nodeId: string): void
 }
 
@@ -465,6 +473,8 @@ export function SelectionContextBar({
   project,
   node,
   onCreateToolNode,
+  onCreateVideoToolNode,
+  onSubmitVideoDraft,
   onRotateImage,
 }: SelectionContextBarProps) {
   const [surface, setSurface] = useState<ImageToolSurface>()
@@ -488,6 +498,16 @@ export function SelectionContextBar({
   }, [pendingTool, surface])
 
   const asset = node ? activeImageAsset(project, node) : undefined
+  if (node?.kind === 'video' && asset?.kind === 'video') {
+    return (
+      <VideoMediaContextBar
+        node={node}
+        asset={asset}
+        onCreateToolNode={onCreateVideoToolNode}
+        onSubmitDraft={onSubmitVideoDraft}
+      />
+    )
+  }
   if (
     !node ||
     !['image', 'character', 'scene'].includes(node.kind) ||

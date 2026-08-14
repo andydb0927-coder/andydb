@@ -51,6 +51,7 @@ import type {
   CreativeCardKind,
   GenerationJob,
   Project,
+  VideoDerivedTool,
 } from '../project/model'
 import {
   buildCreativeCardCreation,
@@ -1130,6 +1131,97 @@ export function CanvasPage({
     return () => window.removeEventListener('keydown', handleEscape)
   }, [cancelConnection, connectionTool.phase])
 
+  const createVideoToolNode = useCallback(
+    (sourceNodeId: string, tool: VideoDerivedTool) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === sourceNodeId)
+      if (!currentProject || currentProject.id !== projectId || !sourceNode) return
+
+      const frame =
+        tool === '截取首帧'
+          ? '首帧'
+          : tool === '截取尾帧'
+            ? '尾帧'
+            : tool === '截取当前帧'
+              ? '当前帧'
+              : undefined
+      let creation: CanvasCreation
+
+      if (frame) {
+        creation = buildCanvasCreation(currentProject, {
+          kind: 'image',
+          title: '截图',
+          content: `${sourceNode.title} · ${frame}`,
+          image: {
+            dataUrl: '/demo/shot-river.png',
+            mimeType: 'image/png',
+          },
+          position: {
+            x: sourceNode.position.x + 420,
+            y: sourceNode.position.y + 80,
+          },
+        })
+        creation = {
+          ...creation,
+          node: {
+            ...creation.node,
+            videoTool: { kind: 'frame-capture', frame },
+          },
+        }
+      } else {
+        creation = buildCanvasCreation(currentProject, {
+          kind: 'storyboard',
+          title: tool === '视频高清' ? '高清（1080P）' : '逐帧拉片',
+          content:
+            tool === '视频高清'
+              ? 'Topazlabs · 1080P · 不补帧 · 1x · 预计成本 16'
+              : 'SD2.5 · 分镜 / 动态 / 音乐',
+          position: {
+            x: sourceNode.position.x + 420,
+            y: sourceNode.position.y + 80,
+          },
+        })
+        creation = {
+          ...creation,
+          node: {
+            ...creation.node,
+            videoTool:
+              tool === '视频高清'
+                ? {
+                    kind: 'upscale',
+                    model: 'Topazlabs',
+                    resolution: '1080P',
+                    interpolation: '不补帧',
+                    slowMotion: '1x',
+                    cost: 16,
+                  }
+                : {
+                    kind: 'frame-analysis',
+                    model: 'SD2.5',
+                    dimensions: ['分镜', '动态', '音乐'],
+                  },
+          },
+        }
+      }
+
+      if (
+        !createConnectedCanvasContent(
+          sourceNode.id,
+          creation,
+          crypto.randomUUID(),
+        )
+      ) {
+        setGenerationFeedback('无法创建视频工具节点，请重新选择来源节点。')
+        return
+      }
+      selectOnlyNode(creation.node.id)
+      setGenerationFeedback(
+        `已创建“${creation.node.title}”并建立连接；尚未触发外部生成。`,
+      )
+    },
+    [createConnectedCanvasContent, projectId, selectOnlyNode],
+  )
+
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
     const rightmostX = Math.max(...project.nodes.map((node) => node.position.x))
@@ -1148,6 +1240,20 @@ export function CanvasPage({
           ? [{ id: result.id, asset: resultAsset }]
           : []
       })
+      const videoReferences = project.edges
+        .filter(({ targetNodeId }) => targetNodeId === node.id)
+        .flatMap(({ sourceNodeId }) => {
+          const source = project.nodes.find(({ id }) => id === sourceNodeId)
+          const sourceVersion = source?.versions.find(
+            ({ id }) => id === source.activeVersionId,
+          )
+          const sourceAsset = project.assets.find(
+            ({ id }) => id === sourceVersion?.assetId,
+          )
+          return source && sourceAsset?.kind === 'image'
+            ? [{ id: source.id, title: source.title, asset: sourceAsset }]
+            : []
+        })
 
       return {
         id: node.id,
@@ -1158,6 +1264,7 @@ export function CanvasPage({
           node,
           asset,
           imageResults,
+          videoReferences,
           job,
           selected,
           contextual: node.id === primaryNodeId,
@@ -1190,6 +1297,12 @@ export function CanvasPage({
             setGenerationFeedback(
               `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
             ),
+          onCreateVideoToolNode: (tool) =>
+            createVideoToolNode(node.id, tool),
+          onLocalVideoGenerate: () =>
+            setGenerationFeedback(
+              `“${node.title}”预计成本 24；本地演示未连接真实视频生成。`,
+            ),
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
@@ -1205,6 +1318,7 @@ export function CanvasPage({
     requestDelete,
     selectedNodeIds,
     setActiveImageResult,
+    createVideoToolNode,
   ])
 
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -2427,6 +2541,14 @@ export function CanvasPage({
             project={project}
             node={selectedWorkspaceNode}
             onCreateToolNode={createImageToolNode}
+            onCreateVideoToolNode={(tool) => {
+              if (primaryNodeId) createVideoToolNode(primaryNodeId, tool)
+            }}
+            onSubmitVideoDraft={(tool) =>
+              setGenerationFeedback(
+                `“${tool}”参数已在本地确认；未连接真实媒体处理。`,
+              )
+            }
             onRotateImage={rotateImageNode}
           />
         ) : null}

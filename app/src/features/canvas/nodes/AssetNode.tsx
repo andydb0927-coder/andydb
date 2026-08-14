@@ -26,6 +26,7 @@ import { StatusText } from '../../../ui/StatusText'
 import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { ImageGenerationPanel, ImageResults } from './ImageNodeDetails'
+import { VideoGenerationPanel, VideoToolDetails } from './VideoNodeDetails'
 
 const kindCopy = {
   character: '角色',
@@ -159,6 +160,9 @@ export function CreativeNodeShell({
   const imageMedia =
     asset?.kind === 'image' &&
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene')
+  const imageGenerationMedia = imageMedia && node.videoTool === undefined
+  const videoMedia = asset?.kind === 'video' && node.kind === 'video'
+  const expandableMedia = imageGenerationMedia || videoMedia || node.videoTool !== undefined
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -200,22 +204,10 @@ export function CreativeNodeShell({
           data.connectionMode ? ' creative-node--connection-mode' : ''
         }${data.connectionSource ? ' creative-node--connection-source' : ''}${
           imageMedia ? ' creative-node--image-media' : ''
-        }${imageMedia && contextual ? ' creative-node--expanded' : ''}`}
+        }${videoMedia ? ' creative-node--video-media' : ''}${
+          expandableMedia && contextual ? ' creative-node--expanded' : ''
+        }`}
       >
-        <Handle
-          id="dependency-target"
-          type="target"
-          position={Position.Left}
-          role="button"
-          tabIndex={0}
-          aria-label={`连接到${node.title}`}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            event.stopPropagation()
-            data.onHandleActivate('target', event.currentTarget)
-          }}
-        />
         <button
           ref={selectRef}
           type="button"
@@ -232,7 +224,17 @@ export function CreativeNodeShell({
             <strong>{node.title}</strong>
           </span>
           {preview ??
-            (asset ? (
+            (asset?.kind === 'video' ? (
+              <video
+                src={asset.url}
+                className="creative-node__media"
+                poster="/demo/shot-river.png"
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+            ) : asset ? (
               <img
                 src={asset.url}
                 alt=""
@@ -243,7 +245,15 @@ export function CreativeNodeShell({
           {imageMedia && asset.width && asset.height ? (
             <span className="creative-node__dimensions">{asset.width} × {asset.height}</span>
           ) : null}
-          {!hidePrompt && !imageMedia ? (
+          {videoMedia ? (
+            <>
+              <span className="creative-node__dimensions">
+                {asset.width ?? 1280} × {asset.height ?? 720}
+              </span>
+              <span className="creative-node__result-count-label">1 个结果</span>
+            </>
+          ) : null}
+          {!hidePrompt && !imageMedia && !videoMedia ? (
             <span className="creative-node__prompt">
               {activeVersion?.prompt ?? '尚未生成内容'}
             </span>
@@ -258,12 +268,30 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
-        {imageMedia ? <ImageResults data={data} /> : null}
-        {imageMedia && contextual ? <ImageGenerationPanel data={data} /> : null}
+        {imageGenerationMedia ? <ImageResults data={data} /> : null}
+        {imageGenerationMedia && contextual ? <ImageGenerationPanel data={data} /> : null}
+        {videoMedia && contextual ? <VideoGenerationPanel data={data} /> : null}
+        {node.videoTool && contextual ? <VideoToolDetails data={data} /> : null}
+        <Handle
+          id="dependency-target"
+          type="target"
+          position={Position.Left}
+          style={expandableMedia && contextual ? { top: 112 } : undefined}
+          role="button"
+          tabIndex={0}
+          aria-label={`连接到${node.title}`}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            event.stopPropagation()
+            data.onHandleActivate('target', event.currentTarget)
+          }}
+        />
         <Handle
           id="dependency-source"
           type="source"
           position={Position.Right}
+          style={expandableMedia && contextual ? { top: 112 } : undefined}
           role="button"
           tabIndex={0}
           aria-label={`从${node.title}建立连接`}
