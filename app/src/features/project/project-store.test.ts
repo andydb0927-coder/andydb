@@ -435,6 +435,79 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().activeProject?.groups?.[0].id).toBe(groupId)
   })
 
+  test('creates a semantic storyboard group without changing dependency edges', () => {
+    const original = useProjectStore.getState().activeProject!
+
+    const groupId = useProjectStore
+      .getState()
+      .groupNodes(['shot-1', 'rain-audio'], 'storyboard')
+
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([
+      expect.objectContaining({
+        id: groupId,
+        kind: 'storyboard',
+        title: '分镜组 01',
+        nodeIds: ['shot-1', 'rain-audio'],
+      }),
+    ])
+    expect(useProjectStore.getState().activeProject?.edges).toEqual(original.edges)
+    expect(useProjectStore.getState().past).toEqual([original])
+  })
+
+  test('duplicates selected nodes and their incident connections in one undoable transaction', () => {
+    const fixture = makeProjectFixture()
+    const sourceWithResults = {
+      ...fixture,
+      nodes: fixture.nodes.map((node) =>
+        node.id === 'shot-1'
+          ? {
+              ...node,
+              imageResults: [
+                { id: 'result-a', assetId: 'asset-shot-river-v1' },
+                { id: 'result-b', assetId: 'asset-shot-river-v1' },
+              ],
+              activeResultId: 'result-b',
+            }
+          : node,
+      ),
+    }
+    useProjectStore.setState({
+      projectsById: { [sourceWithResults.id]: sourceWithResults },
+      activeProject: sourceWithResults,
+      past: [],
+      future: [],
+    })
+    const original = useProjectStore.getState().activeProject!
+
+    const duplicatedIds = useProjectStore
+      .getState()
+      .duplicateNodes(['shot-1'], { x: 96, y: 72 })
+
+    expect(duplicatedIds).toHaveLength(1)
+    const duplicate = useProjectStore
+      .getState()
+      .activeProject?.nodes.find(({ id }) => id === duplicatedIds[0])
+    expect(duplicate).toMatchObject({
+      title: '河岸寻人 副本',
+      position: { x: 216, y: 312 },
+      sourceChanged: false,
+    })
+    expect(duplicate?.versions[0].id).not.toBe('version-shot-river-v1')
+    expect(duplicate?.versions[0].assetId).toBe('asset-shot-river-v1')
+    expect(duplicate?.imageResults?.map(({ id }) => id)).not.toContain('result-b')
+    expect(duplicate?.activeResultId).toBe(duplicate?.imageResults?.[1].id)
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
+      expect.objectContaining({
+        sourceNodeId: duplicatedIds[0],
+        targetNodeId: 'rain-audio',
+      }),
+    )
+    expect(useProjectStore.getState().past).toEqual([original])
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(original)
+  })
+
   test('keeps invalid grouping as a no-op and removes a group atomically', () => {
     expect(useProjectStore.getState().groupNodes(['shot-1', 'missing'])).toBeUndefined()
     expect(useProjectStore.getState().past).toEqual([])

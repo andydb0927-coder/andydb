@@ -485,7 +485,7 @@ test('hides and restores dependency visuals without changing connection data', a
   expect(errors).toEqual([])
 })
 
-test('preserves hidden connection data for H and the real L handle flow', async ({
+test('preserves hidden connection data for the H hand tool and real L handle flow', async ({
   page,
 }) => {
   const errors: string[] = []
@@ -515,6 +515,12 @@ test('preserves hidden connection data for H and the real L handle flow', async 
 
   await canvas.focus()
   await page.keyboard.press('h')
+  await expect(page.locator('.canvas-page')).toHaveClass(/canvas-page--hand-tool/)
+  await expect(page.getByRole('button', { name: '隐藏连线' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.getByRole('button', { name: '隐藏连线' }).click()
   await expect(page.getByRole('button', { name: '显示连线' })).toHaveAttribute(
     'aria-pressed',
     'false',

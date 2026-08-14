@@ -15,6 +15,7 @@ import type { WorkspacePanel } from './CanvasWorkspace'
 
 export type CanvasTool =
   | 'select'
+  | 'hand'
   | 'connect'
   | 'script'
   | 'character-card'
@@ -68,9 +69,14 @@ export function CanvasToolbar({
         </button>
         <button
           type="button"
-          className={activeTool === 'select' ? 'canvas-mode-bar__active' : undefined}
+          className={
+            activeTool === 'select' || activeTool === 'hand'
+              ? 'canvas-mode-bar__active'
+              : undefined
+          }
           aria-label="移动"
-          aria-pressed={activeTool === 'select'}
+          aria-pressed={activeTool === 'select' || activeTool === 'hand'}
+          title={activeTool === 'hand' ? '抓手工具（H）' : '移动工具（V）'}
           disabled={disabled}
           onClick={(event) => onToolChange('select', event.currentTarget)}
         >

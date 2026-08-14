@@ -289,16 +289,52 @@ export function WorkspaceSidePanel({
       ) : null}
 
       {panel === 'shortcuts' ? (
-        <dl className="workspace-shortcuts">
-          <div><dt>连接节点</dt><dd>L</dd></div>
-          <div><dt>隐藏/显示连线</dt><dd>H</dd></div>
-          <div><dt>画布快捷菜单</dt><dd>右键</dd></div>
-          <div><dt>自由生成节点</dt><dd>双击空白处</dd></div>
-          <div><dt>撤销</dt><dd>⌘ Z</dd></div>
-          <div><dt>重做</dt><dd>⌘ ⇧ Z</dd></div>
-          <div><dt>平移画布</dt><dd>Space</dd></div>
-          <div><dt>删除选择</dt><dd>Delete</dd></div>
-        </dl>
+        <div className="workspace-shortcuts">
+          <ShortcutGroup
+            title="创作"
+            items={[
+              ['成组', 'G'],
+              ['合并分镜组', '⌥ G'],
+              ['解组', '⇧ G'],
+              ['连线', 'L'],
+              ['复制节点和连线', 'D'],
+              ['生成', 'Enter'],
+              ['新建节点', 'Tab'],
+              ['节点复制', '⌥ 拖动节点'],
+              ['创建副本', '⌥ 拖动'],
+            ]}
+          />
+          <ShortcutGroup
+            title="缩放"
+            items={[
+              ['放大', '+'],
+              ['缩小', '−'],
+              ['适应画布', '0'],
+            ]}
+          >
+            <p>触控板：双指移动与缩放</p>
+            <p>鼠标：滚轮缩放，抓手模式拖动平移</p>
+          </ShortcutGroup>
+          <ShortcutGroup
+            title="移动画布"
+            items={[
+              ['键盘', 'Space'],
+              ['移动工具', 'V'],
+              ['抓手工具', 'H'],
+              ['整理画布', '⌥ ⇧ F'],
+            ]}
+          >
+            <p>键盘：按住 Space 临时平移</p>
+          </ShortcutGroup>
+          <ShortcutGroup
+            title="其他"
+            items={[
+              ['撤销', '⌘ Z'],
+              ['重做', '⌘ ⇧ Z'],
+              ['删除', 'Delete'],
+            ]}
+          />
+        </div>
       ) : null}
 
       {panel === 'help' ? (
@@ -309,6 +345,31 @@ export function WorkspaceSidePanel({
         </div>
       ) : null}
     </aside>
+  )
+}
+
+function ShortcutGroup({
+  title,
+  items,
+  children,
+}: {
+  title: string
+  items: Array<[string, string]>
+  children?: ReactNode
+}) {
+  return (
+    <section className="workspace-shortcuts__group">
+      <h3>{title}</h3>
+      <dl>
+        {items.map(([action, shortcut]) => (
+          <div key={action}>
+            <dt>{action}</dt>
+            <dd>{shortcut}</dd>
+          </div>
+        ))}
+      </dl>
+      {children ? <div className="workspace-shortcuts__notes">{children}</div> : null}
+    </section>
   )
 }
 

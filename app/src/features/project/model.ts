@@ -138,6 +138,7 @@ export interface CanvasNode {
 export interface CanvasGroup {
   id: string
   title: string
+  kind?: 'standard' | 'storyboard'
   nodeIds: string[]
   createdAt: string
   updatedAt: string

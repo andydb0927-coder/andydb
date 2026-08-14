@@ -91,7 +91,7 @@ test('groups current project media in the storyboard and returns to its source n
   expect(onOpenNode).toHaveBeenCalledWith('image-node')
 })
 
-test('shows local assets, generation history and keyboard help in one side panel', () => {
+test('shows local assets, generation history and the complete four-group shortcut reference', () => {
   const { rerender } = render(
     <WorkspaceSidePanel panel="assets" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
@@ -105,8 +105,36 @@ test('shows local assets, generation history and keyboard help in one side panel
   rerender(
     <WorkspaceSidePanel panel="shortcuts" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
-  expect(screen.getByText('连接节点')).toBeVisible()
-  expect(screen.getByText('L')).toBeVisible()
+  const panel = screen.getByRole('complementary', { name: '快捷键' })
+  for (const group of ['创作', '缩放', '移动画布', '其他']) {
+    expect(within(panel).getByRole('heading', { name: group })).toBeVisible()
+  }
+  for (const [action, shortcut] of [
+    ['成组', 'G'],
+    ['合并分镜组', '⌥ G'],
+    ['解组', '⇧ G'],
+    ['连线', 'L'],
+    ['复制节点和连线', 'D'],
+    ['生成', 'Enter'],
+    ['新建节点', 'Tab'],
+    ['节点复制', '⌥ 拖动节点'],
+    ['创建副本', '⌥ 拖动'],
+    ['放大', '+'],
+    ['缩小', '−'],
+    ['适应画布', '0'],
+    ['移动工具', 'V'],
+    ['抓手工具', 'H'],
+    ['整理画布', '⌥ ⇧ F'],
+    ['撤销', '⌘ Z'],
+    ['重做', '⌘ ⇧ Z'],
+    ['删除', 'Delete'],
+  ]) {
+    const row = within(panel).getByText(action).closest('div')
+    expect(row).toHaveTextContent(shortcut)
+  }
+  expect(panel).toHaveTextContent('键盘：按住 Space 临时平移')
+  expect(panel).toHaveTextContent('触控板：双指移动与缩放')
+  expect(panel).toHaveTextContent('鼠标：滚轮缩放，抓手模式拖动平移')
 })
 
 test('exposes independent workspace view controls', async () => {

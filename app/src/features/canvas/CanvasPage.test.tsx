@@ -82,6 +82,8 @@ interface FlowPropsFixture {
   zoomOnScroll: boolean
   panOnScroll: boolean
   panActivationKeyCode: string
+  panOnDrag?: boolean | number[]
+  nodesDraggable?: boolean
   selectionOnDrag: boolean
   zoomOnDoubleClick: boolean
   onMove?(
@@ -109,14 +111,18 @@ interface FlowPropsFixture {
     },
     node: FlowNodeFixture,
   ): void
+  onNodeDragStart?(event: MouseEvent, node: FlowNodeFixture): void
+  onNodeDragStop?(event: MouseEvent, node: FlowNodeFixture): void
   onEdgeClick?(
     event: { target?: EventTarget | null },
     edge: FlowPropsFixture['edges'][number],
   ): void
   edgesFocusable?: boolean
-  deleteKeyCode?: string[]
+  deleteKeyCode?: string[] | null
   onInit?(instance: {
     fitView(options: unknown): Promise<boolean>
+    zoomIn?(options?: unknown): Promise<boolean>
+    zoomOut?(options?: unknown): Promise<boolean>
     screenToFlowPosition(position: { x: number; y: number }): {
       x: number
       y: number
@@ -322,9 +328,18 @@ function initializeFlow(
   flowPosition = { x: 777, y: 333 },
 ) {
   const fitView = vi.fn().mockResolvedValue(true)
+  const zoomIn = vi.fn().mockResolvedValue(true)
+  const zoomOut = vi.fn().mockResolvedValue(true)
   const screenToFlowPosition = vi.fn(() => flowPosition)
-  act(() => latestFlowProps?.onInit?.({ fitView, screenToFlowPosition }))
-  return { fitView, screenToFlowPosition }
+  act(() =>
+    latestFlowProps?.onInit?.({
+      fitView,
+      zoomIn,
+      zoomOut,
+      screenToFlowPosition,
+    }),
+  )
+  return { fitView, zoomIn, zoomOut, screenToFlowPosition }
 }
 
 function clickPane(clientX = 420, clientY = 300) {
@@ -2198,7 +2213,7 @@ describe('creative canvas', () => {
     )
     expect(latestFlowProps).toMatchObject({
       edgesFocusable: true,
-      deleteKeyCode: ['Backspace', 'Delete'],
+      deleteKeyCode: null,
     })
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '场景设定' })).toHaveFocus(),
@@ -2330,82 +2345,233 @@ describe('creative canvas', () => {
     expect(screen.getByRole('button', { name: '显示连线' })).toBeEnabled()
   })
 
-  test('toggles connections with the H shortcut while preserving Connect port state', async () => {
+  test('switches between the real hand and move tools with H and V without hiding connections', async () => {
     const user = userEvent.setup()
     renderCanvas()
-    const connect = screen.getByRole('button', { name: '连线' })
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+    canvas.focus()
 
-    await user.click(connect)
-    await user.click(screen.getByRole('button', { name: '角色参考' }))
-    expect(
-      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
-    ).toMatchObject({ connectionMode: true, connectionSource: true })
-
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
-
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === false)).toBe(
-      true,
-    )
-    expect(screen.getByRole('status')).toHaveTextContent('请选择目标节点')
-    expect(connect).toHaveAttribute('aria-pressed', 'true')
-    expect(
-      latestFlowProps?.nodes.find(({ id }) => id === 'character')?.data,
-    ).toMatchObject({ connectionMode: true, connectionSource: true })
-  })
-
-  test('ignores the H shortcut in editable contexts and for modified or repeated key events', async () => {
-    const user = userEvent.setup()
-    renderCanvas()
-    await user.click(screen.getByRole('button', { name: 'Agent' }))
-    const directorInput = screen.getByLabelText('告诉我下一步要做什么')
-
-    act(() => {
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'h', ctrlKey: true }),
-      )
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', repeat: true }))
-    })
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
-      true,
-    )
-
-    await user.click(directorInput)
     await user.keyboard('h')
-    expect(directorInput).toHaveValue('h')
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
-      true,
-    )
+
+    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: false })
+    expect(screen.getByRole('status')).toHaveTextContent('已切换抓手工具')
+    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(true)
+
+    await user.keyboard('v')
+    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(screen.getByRole('status')).toHaveTextContent('已切换移动工具')
   })
 
-  test('ignores the H shortcut while canvas dialogs are open', async () => {
+  test('blocks every canvas shortcut from Agent inputs, editables, and dialogs', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow()
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    const directorInput = screen.getByLabelText('告诉我下一步要做什么')
+    const before = useProjectStore.getState().activeProject
 
+    await user.click(directorInput)
+    await user.keyboard('hd')
+    expect(directorInput).toHaveValue('hd')
+    await user.keyboard('{Enter}')
+    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(useProjectStore.getState().activeProject).toBe(before)
+    expect(screen.queryByRole('dialog', { name: '自由生成节点' })).not.toBeInTheDocument()
+
+    const editable = document.createElement('div')
+    editable.contentEditable = 'true'
+    document.body.append(editable)
+    editable.focus()
+    await user.keyboard('d')
+    expect(useProjectStore.getState().activeProject).toBe(before)
+    editable.remove()
+
+    await user.click(screen.getByRole('button', { name: '关闭 Agent' }))
     chooseContextNode('视频')
     expect(screen.getByRole('dialog', { name: '创建视频节点' })).toBeVisible()
+    await user.keyboard('h')
+    await user.keyboard('d')
+    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(useProjectStore.getState().activeProject).toBe(before)
+  })
 
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
-      true,
+  test('groups, creates storyboard groups, ungroups, and duplicates nodes with keyboard transactions', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+    act(() =>
+      latestFlowProps?.onNodesChange([
+        { type: 'select', id: 'character', selected: true },
+        { type: 'select', id: 'scene', selected: true },
+      ]),
     )
+    canvas.focus()
 
-    await user.click(screen.getByRole('button', { name: '取消' }))
-    await user.click(screen.getByRole('button', { name: '节点列表' }))
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
-      true,
-    )
+    await user.keyboard('g')
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([
+      expect.objectContaining({ kind: 'standard', nodeIds: ['character', 'scene'] }),
+    ])
 
-    await user.keyboard('{Escape}')
+    await user.keyboard('{Shift>}g{/Shift}')
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([])
+
+    await user.keyboard('{Alt>}g{/Alt}')
+    expect(useProjectStore.getState().activeProject?.groups).toEqual([
+      expect.objectContaining({ kind: 'storyboard', title: '分镜组 01' }),
+    ])
+
+    const beforeNodes = useProjectStore.getState().activeProject!.nodes.length
+    const beforeEdges = useProjectStore.getState().activeProject!.edges.length
+    await user.keyboard('d')
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(beforeNodes + 2)
+    expect(useProjectStore.getState().activeProject?.edges.length).toBeGreaterThan(beforeEdges)
+    expect(screen.getByRole('status')).toHaveTextContent('已复制 2 个节点及关联连线')
+  })
+
+  test('zooms, fits, opens the node picker, and arranges the canvas from shortcuts', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const { fitView, zoomIn, zoomOut } = initializeFlow()
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+    canvas.focus()
+
+    await user.keyboard('+')
+    await user.keyboard('-')
+    await user.keyboard('0')
+    expect(zoomIn).toHaveBeenCalledWith({ duration: 160 })
+    expect(zoomOut).toHaveBeenCalledWith({ duration: 160 })
+    expect(fitView).toHaveBeenCalledWith({ duration: 260, padding: 0.16 })
+
+    await user.keyboard('{Alt>}{Shift>}f{/Shift}{/Alt}')
+    expect(useProjectStore.getState().past).toHaveLength(1)
+    expect(useProjectStore.getState().activeProject?.nodes[0].position).toEqual({
+      x: 80,
+      y: 80,
+    })
+    expect(fitView).toHaveBeenLastCalledWith({ duration: 320, padding: 0.18 })
+
+    await user.keyboard('{Tab}')
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
+  })
+
+  test('runs generation, undo, redo, and safe deletion only from an eligible canvas selection', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const canvas = screen.getByRole('region', { name: '项目画布' })
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    await user.click(screen.getByRole('button', { name: '删除节点' }))
-    expect(screen.getByRole('dialog', { name: '删除“角色参考”？' })).toBeVisible()
-
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })))
-    expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(
-      true,
+    canvas.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '“角色参考”预计成本 15；本地演示未连接真实图片生成。',
     )
+
+    act(() =>
+      latestFlowProps?.onNodesChange([
+        { type: 'select', id: 'character', selected: false },
+        { type: 'select', id: 'preview', selected: true },
+      ]),
+    )
+    canvas.focus()
+    await user.keyboard('{Delete}')
+    expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).not.toContain(
+      'preview',
+    )
+
+    await user.keyboard('{Meta>}z{/Meta}')
+    expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).toContain(
+      'preview',
+    )
+    await user.keyboard('{Meta>}{Shift>}z{/Shift}{/Meta}')
+    expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).not.toContain(
+      'preview',
+    )
+  })
+
+  test('does not run Enter generation when the selected node has neither prompt nor media', async () => {
+    const project = makeCanvasProject()
+    const blankImage: Project['nodes'][number] = {
+      ...project.nodes[0],
+      id: 'blank-image',
+      kind: 'image',
+      title: '空白图片',
+      position: { x: 1600, y: 200 },
+      versions: [
+        {
+          id: 'blank-image-version',
+          createdAt: project.createdAt,
+          prompt: '',
+        },
+      ],
+      activeVersionId: 'blank-image-version',
+      imageGeneration: {
+        prompt: '',
+        pValue: '',
+        stylization: 150,
+        weirdness: 50,
+        diversity: 5,
+        autoLink: true,
+      },
+    }
+    activate({ ...project, nodes: [...project.nodes, blankImage] })
+    const user = userEvent.setup()
+    renderCanvas()
+    await user.click(screen.getByRole('button', { name: '空白图片' }))
+    const canvas = screen.getByRole('region', { name: '项目画布' })
+    canvas.focus()
+    const jobsBefore = useProjectStore.getState().activeProject?.jobs
+
+    await user.keyboard('{Enter}')
+
+    expect(useProjectStore.getState().activeProject?.jobs).toBe(jobsBefore)
+    expect(screen.queryByText(/空白图片.*预计成本/)).not.toBeInTheDocument()
+    expect(
+      screen.getByText('请输入提示词或添加参考媒体后再生成。'),
+    ).toBeVisible()
+  })
+
+  test('duplicates selected nodes at the Option-drag drop position without moving originals', () => {
+    renderCanvas()
+    const character = latestFlowProps!.nodes.find(({ id }) => id === 'character')!
+    act(() => {
+      latestFlowProps?.onNodesChange([
+        { type: 'select', id: 'character', selected: true },
+      ])
+      latestFlowProps?.onNodeDragStart?.(
+        new MouseEvent('mousedown', { altKey: true }),
+        character,
+      )
+      latestFlowProps?.onNodesChange([
+        {
+          type: 'position',
+          id: 'character',
+          position: { x: 280, y: 200 },
+          dragging: true,
+        },
+        {
+          type: 'position',
+          id: 'character',
+          position: { x: 280, y: 200 },
+          dragging: false,
+        },
+      ])
+      latestFlowProps?.onNodeDragStop?.(
+        new MouseEvent('mouseup', { altKey: true }),
+        { ...character, position: { x: 280, y: 200 } },
+      )
+    })
+
+    const project = useProjectStore.getState().activeProject!
+    expect(project.nodes.find(({ id }) => id === 'character')?.position).toEqual({
+      x: 80,
+      y: 80,
+    })
+    expect(project.nodes).toContainEqual(
+      expect.objectContaining({
+        title: '角色参考 副本',
+        position: { x: 280, y: 200 },
+      }),
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
   test('resets connection visibility when the active project changes', async () => {

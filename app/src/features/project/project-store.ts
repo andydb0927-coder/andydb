@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import {
   appendNodeVersion,
   type CanvasCreation,
+  type CanvasGroup,
   type CanvasNode,
   type DependencyEdge,
   type GenerationJob,
@@ -64,8 +65,15 @@ interface ProjectStore {
     changes: Partial<ImageGenerationSettings>,
   ) => void
   rotateImageNode: (nodeId: string) => void
-  groupNodes: (nodeIds: Iterable<string>) => string | undefined
+  groupNodes: (
+    nodeIds: Iterable<string>,
+    kind?: NonNullable<CanvasGroup['kind']>,
+  ) => string | undefined
   ungroupNodes: (groupId: string) => boolean
+  duplicateNodes: (
+    nodeIds: Iterable<string>,
+    offset?: CanvasNode['position'],
+  ) => string[]
   deleteNode: (nodeId: string) => void
   connectNodes: (edge: DependencyEdge) => ConnectionValidationResult
   connectImageReference: (edge: DependencyEdge) => ConnectionValidationResult
@@ -233,13 +241,26 @@ function nextVideoNumber(nodes: CanvasNode[], source: CanvasNode) {
   return candidate
 }
 
-function nextGroupNumber(titles: Iterable<string>) {
+function nextGroupNumber(
+  titles: Iterable<string>,
+  kind: NonNullable<CanvasGroup['kind']>,
+) {
   let highest = 0
+  const prefix = kind === 'storyboard' ? '分镜组' : '分组'
   for (const title of titles) {
-    const match = title.match(/^分组\s*(\d+)$/)
+    const match = title.match(new RegExp(`^${prefix}\\s*(\\d+)$`))
     if (match) highest = Math.max(highest, Number(match[1]))
   }
   return highest + 1
+}
+
+function nextCopyTitle(nodes: CanvasNode[], title: string) {
+  const base = `${title} 副本`
+  const used = new Set(nodes.map((node) => node.title))
+  if (!used.has(base)) return base
+  let number = 2
+  while (used.has(`${base} ${number}`)) number += 1
+  return `${base} ${number}`
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -568,7 +589,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
-    groupNodes: (nodeIds) => {
+    groupNodes: (nodeIds, kind = 'standard') => {
       let createdGroupId: string | undefined
       commit((project) => {
         const requested = new Set(nodeIds)
@@ -591,7 +612,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           })
           .filter((group) => group.nodeIds.length >= 2)
         createdGroupId = crypto.randomUUID()
-        const number = nextGroupNumber(existingGroups.map(({ title }) => title))
+        const number = nextGroupNumber(
+          existingGroups.map(({ title }) => title),
+          kind,
+        )
+        const prefix = kind === 'storyboard' ? '分镜组' : '分组'
 
         return withUpdatedTimestamp({
           ...project,
@@ -599,7 +624,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             ...remainingGroups,
             {
               id: createdGroupId,
-              title: `分组 ${String(number).padStart(2, '0')}`,
+              title: `${prefix} ${String(number).padStart(2, '0')}`,
+              kind,
               nodeIds: orderedNodeIds,
               createdAt: timestamp,
               updatedAt: timestamp,
@@ -623,6 +649,95 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         })
       })
       return removed
+    },
+
+    duplicateNodes: (nodeIds, offset = { x: 48, y: 48 }) => {
+      let duplicatedIds: string[] = []
+      commit((project) => {
+        const requested = new Set(nodeIds)
+        const sources = project.nodes.filter(({ id }) => requested.has(id))
+        if (sources.length === 0) return project
+
+        const timestamp = new Date().toISOString()
+        const nodeIdMap = new Map<string, string>()
+        const versionIdMap = new Map<string, string>()
+        const reservedTitles = [...project.nodes]
+        const duplicates = sources.map((source) => {
+          const id = crypto.randomUUID()
+          nodeIdMap.set(source.id, id)
+          const versions = source.versions.map((version) => {
+            const versionId = crypto.randomUUID()
+            versionIdMap.set(version.id, versionId)
+            return {
+              ...version,
+              id: versionId,
+              createdAt: timestamp,
+              generationJobId: undefined,
+            }
+          })
+          const imageResultIdMap = new Map<string, string>()
+          const imageResults = source.imageResults?.map((result) => {
+            const resultId = crypto.randomUUID()
+            imageResultIdMap.set(result.id, resultId)
+            return { ...result, id: resultId }
+          })
+          const duplicate: CanvasNode = {
+            ...source,
+            id,
+            title: nextCopyTitle(reservedTitles, source.title),
+            position: {
+              x: source.position.x + offset.x,
+              y: source.position.y + offset.y,
+            },
+            versions,
+            activeVersionId:
+              versionIdMap.get(source.activeVersionId) ?? versions[0]?.id ?? '',
+            sourceChanged: false,
+            ...(imageResults
+              ? {
+                  imageResults,
+                  activeResultId: source.activeResultId
+                    ? imageResultIdMap.get(source.activeResultId)
+                    : undefined,
+                }
+              : {}),
+          }
+          reservedTitles.push(duplicate)
+          return duplicate
+        })
+
+        duplicatedIds = duplicates.map(({ id }) => id)
+        const expanded: Project = {
+          ...project,
+          nodes: [...project.nodes, ...duplicates],
+        }
+        const edges = [...project.edges]
+        for (const edge of project.edges) {
+          if (!requested.has(edge.sourceNodeId) && !requested.has(edge.targetNodeId)) {
+            continue
+          }
+          const sourceNodeId = nodeIdMap.get(edge.sourceNodeId) ?? edge.sourceNodeId
+          const targetNodeId = nodeIdMap.get(edge.targetNodeId) ?? edge.targetNodeId
+          if (
+            edges.some(
+              (candidate) =>
+                candidate.sourceNodeId === sourceNodeId &&
+                candidate.targetNodeId === targetNodeId,
+            )
+          ) {
+            continue
+          }
+          edges.push({
+            id: crypto.randomUUID(),
+            sourceNodeId,
+            targetNodeId,
+            sourceChanged: false,
+          })
+        }
+
+        return withUpdatedTimestamp({ ...expanded, edges })
+      })
+      return duplicatedIds
     },
 
     deleteNode: (nodeId) => {

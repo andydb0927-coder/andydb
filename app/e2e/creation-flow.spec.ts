@@ -325,6 +325,144 @@ test('keyboard and list view preserve core actions in a strict small layout', as
   })
 })
 
+test('exposes the full shortcut panel and executes guarded canvas keyboard actions', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  await createCinematicProject(page)
+  const canvas = page.getByRole('region', { name: '项目画布' })
+  await page.getByRole('button', { name: '快捷键' }).click()
+  const shortcuts = page.getByRole('complementary', { name: '快捷键' })
+  for (const group of ['创作', '缩放', '移动画布', '其他']) {
+    await expect(shortcuts.getByRole('heading', { name: group })).toBeVisible()
+  }
+  for (const copy of [
+    '成组',
+    '合并分镜组',
+    '解组',
+    '复制节点和连线',
+    '节点复制',
+    '创建副本',
+    '整理画布',
+  ]) {
+    await expect(shortcuts.getByText(copy, { exact: true })).toBeVisible()
+  }
+  await expect(shortcuts).toContainText('键盘：按住 Space 临时平移')
+  await expect(shortcuts).toContainText('触控板：双指移动与缩放')
+  await page.keyboard.press('Escape')
+  await expect(shortcuts).toHaveCount(0)
+
+  await canvas.focus()
+  const initialZoom = await page.locator('.react-flow__viewport').evaluate(
+    (viewport) => {
+      const match = viewport.getAttribute('style')?.match(/scale\(([-\d.]+)\)/)
+      return match ? Number(match[1]) : 0
+    },
+  )
+  await page.keyboard.press('+')
+  await expect
+    .poll(() =>
+      page.locator('.react-flow__viewport').evaluate((viewport) => {
+        const match = viewport.getAttribute('style')?.match(/scale\(([-\d.]+)\)/)
+        return match ? Number(match[1]) : 0
+      }),
+    )
+    .toBeGreaterThan(initialZoom)
+  await page.keyboard.press('-')
+  await page.keyboard.press('0')
+
+  await page.keyboard.press('h')
+  await expect(page.locator('.canvas-page')).toHaveClass(/canvas-page--hand-tool/)
+  await expect(page.getByRole('button', { name: '移动' })).toHaveAttribute(
+    'title',
+    '抓手工具（H）',
+  )
+  await page.keyboard.press('v')
+  await expect(page.locator('.canvas-page')).not.toHaveClass(/canvas-page--hand-tool/)
+
+  await canvas.focus()
+  await page.keyboard.press('Tab')
+  const picker = page.getByRole('dialog', { name: '选择节点类型' })
+  await expect(picker).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(picker).toHaveCount(0)
+
+  const character = page.getByRole('button', { name: '角色参考', exact: true })
+  await character.focus()
+  await page.keyboard.press('Enter')
+  await canvas.focus()
+  const nodeCount = await page.locator('.react-flow__node').count()
+  await page.keyboard.press('d')
+  await expect(page.locator('.react-flow__node')).toHaveCount(nodeCount + 1)
+  await expect(
+    page.getByRole('button', { name: '角色参考 副本', exact: true }),
+  ).toBeVisible()
+  await page.keyboard.press('Meta+z')
+  await expect(
+    page.getByRole('button', { name: '角色参考 副本', exact: true }),
+  ).toHaveCount(0)
+  await page.keyboard.press('Meta+Shift+z')
+  await expect(
+    page.getByRole('button', { name: '角色参考 副本', exact: true }),
+  ).toBeVisible()
+
+  await character.focus()
+  await page.keyboard.press('Enter')
+  await canvas.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('status')).toContainText('预计成本 15')
+
+  await page.getByRole('button', { name: 'Agent', exact: true }).click()
+  const agentInput = page.getByLabel('告诉我下一步要做什么')
+  await agentInput.fill('')
+  await agentInput.pressSequentially('hv')
+  await expect(agentInput).toHaveValue('hv')
+  await expect(page.locator('.canvas-page')).not.toHaveClass(/canvas-page--hand-tool/)
+  expect(errors).toEqual([])
+})
+
+test('creates an undoable node copy at the real Option-drag drop point', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+  const source = page.getByRole('button', { name: '分镜 01', exact: true })
+  const sourceNode = page.locator('.react-flow__node').filter({ has: source })
+  const before = await sourceNode.boundingBox()
+  expect(before).not.toBeNull()
+
+  await page.keyboard.down('Alt')
+  await page.mouse.move(before!.x + before!.width / 2, before!.y + 24)
+  await page.mouse.down()
+  await page.mouse.move(
+    before!.x + before!.width / 2 + 120,
+    before!.y + 104,
+    { steps: 8 },
+  )
+  await page.mouse.up()
+  await page.keyboard.up('Alt')
+
+  const copy = page.getByRole('button', { name: '分镜 01 副本', exact: true })
+  await expect(copy).toBeVisible()
+  const after = await sourceNode.boundingBox()
+  const copyBox = await page.locator('.react-flow__node').filter({ has: copy }).boundingBox()
+  expect(after).not.toBeNull()
+  expect(copyBox).not.toBeNull()
+  expect(Math.abs(after!.x - before!.x)).toBeLessThan(4)
+  expect(Math.abs(after!.y - before!.y)).toBeLessThan(4)
+  expect(Math.abs(copyBox!.x - before!.x)).toBeGreaterThan(60)
+
+  const canvas = page.getByRole('region', { name: '项目画布' })
+  await canvas.focus()
+  await page.keyboard.press('Meta+z')
+  await expect(copy).toHaveCount(0)
+})
+
 test('keeps the selected node primary action inside a 200% zoom layout viewport', async ({
   page,
 }) => {

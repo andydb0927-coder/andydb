@@ -8,6 +8,7 @@ import {
   type Connection,
   type EdgeChange,
   type NodeChange,
+  type OnNodeDrag,
   type OnConnectEnd,
   type ReactFlowInstance,
 } from '@xyflow/react'
@@ -148,6 +149,13 @@ interface CanvasPoint {
 interface DragPreviewState {
   projectId?: string
   positions: Record<string, CanvasNodePosition>
+}
+
+interface OptionDragCloneState {
+  projectId: string
+  nodeIds: string[]
+  originNodeId: string
+  originalPositions: Record<string, CanvasNodePosition>
 }
 
 interface NodeMeasurementState {
@@ -408,6 +416,7 @@ export function CanvasPage({
   )
   const groupNodes = useProjectStore((state) => state.groupNodes)
   const ungroupNodes = useProjectStore((state) => state.ungroupNodes)
+  const duplicateNodes = useProjectStore((state) => state.duplicateNodes)
   const deleteNode = useProjectStore((state) => state.deleteNode)
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
     () => new Set(),
@@ -470,6 +479,7 @@ export function CanvasPage({
   const deleteTriggerRef = useRef<HTMLElement>(null)
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
   const nodeListSelectionMadeRef = useRef(false)
+  const optionDragCloneRef = useRef<OptionDragCloneState | undefined>(undefined)
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
@@ -543,11 +553,13 @@ export function CanvasPage({
     placementTriggerRef.current = null
     connectionTriggerRef.current = null
     imageReferenceTriggerRef.current = null
+    optionDragCloneRef.current = undefined
 
     return () => {
       nativeConnectionActiveRef.current = false
       connectionTriggerRef.current = null
       imageReferenceTriggerRef.current = null
+      optionDragCloneRef.current = undefined
     }
   }, [projectId])
 
@@ -1607,7 +1619,8 @@ export function CanvasPage({
       const committedPositions = changes.flatMap((change) =>
         change.type === 'position' &&
         change.position !== undefined &&
-        change.dragging !== true
+        change.dragging !== true &&
+        !optionDragCloneRef.current?.nodeIds.includes(change.id)
           ? [{ nodeId: change.id, position: change.position }]
           : [],
       )
@@ -1651,6 +1664,58 @@ export function CanvasPage({
       }
     },
     [project, selectedNodeIds, updateNodePositions],
+  )
+
+  const handleNodeDragStart: OnNodeDrag<CreativeFlowNode> = useCallback(
+    (event, node) => {
+      if (!(event instanceof MouseEvent) || !event.altKey || !project) {
+        optionDragCloneRef.current = undefined
+        return
+      }
+      const nodeIds = selectedNodeIds.has(node.id)
+        ? [...selectedNodeIds]
+        : [node.id]
+      const originalPositions = Object.fromEntries(
+        project.nodes
+          .filter(({ id }) => nodeIds.includes(id))
+          .map(({ id, position }) => [id, position]),
+      )
+      optionDragCloneRef.current = {
+        projectId: project.id,
+        nodeIds,
+        originNodeId: node.id,
+        originalPositions,
+      }
+    },
+    [project, selectedNodeIds],
+  )
+
+  const handleNodeDragStop: OnNodeDrag<CreativeFlowNode> = useCallback(
+    (_event, node) => {
+      const clone = optionDragCloneRef.current
+      optionDragCloneRef.current = undefined
+      if (!clone || clone.projectId !== projectId) return
+      const origin = clone.originalPositions[clone.originNodeId]
+      if (!origin) return
+      const duplicatedIds = duplicateNodes(clone.nodeIds, {
+        x: node.position.x - origin.x,
+        y: node.position.y - origin.y,
+      })
+      setDragPreview((current) => {
+        if (current.projectId !== clone.projectId) return current
+        const positions = { ...current.positions }
+        clone.nodeIds.forEach((nodeId) => delete positions[nodeId])
+        return { ...current, positions }
+      })
+      if (duplicatedIds.length === 0) return
+      setSelectedNodeIds(new Set(duplicatedIds))
+      setPrimaryNodeId(duplicatedIds.at(-1))
+      setSelectedEdgeId(undefined)
+      setGroupFeedback(
+        `已创建 ${duplicatedIds.length} 个节点副本`,
+      )
+    },
+    [duplicateNodes, projectId],
   )
 
   const handleConnect = useCallback(
@@ -2048,6 +2113,13 @@ export function CanvasPage({
       }
 
       if (connectionTool.phase !== 'idle') cancelConnection(false)
+      if (tool === 'hand') {
+        if (editingCard) cancelCardEditing()
+        else if (pendingPlacement) cancelPlacement()
+        else if (nodeTypePicker) closeNodeTypePicker()
+        else setActiveTool('hand')
+        return
+      }
       if (tool === 'select') {
         if (editingCard) cancelCardEditing()
         else if (pendingPlacement) cancelPlacement()
@@ -2069,16 +2141,101 @@ export function CanvasPage({
     ],
   )
 
+  const arrangeCanvas = useCallback(() => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const outgoing = new Map<string, string[]>()
+    const indegree = new Map(
+      currentProject.nodes.map(({ id }) => [id, 0]),
+    )
+    for (const edge of currentProject.edges) {
+      outgoing.set(edge.sourceNodeId, [
+        ...(outgoing.get(edge.sourceNodeId) ?? []),
+        edge.targetNodeId,
+      ])
+      indegree.set(edge.targetNodeId, (indegree.get(edge.targetNodeId) ?? 0) + 1)
+    }
+    const depths = new Map<string, number>()
+    const queue = currentProject.nodes
+      .filter(({ id }) => (indegree.get(id) ?? 0) === 0)
+      .map(({ id }) => id)
+    queue.forEach((id) => depths.set(id, 0))
+    for (let index = 0; index < queue.length; index += 1) {
+      const sourceId = queue[index]
+      const sourceDepth = depths.get(sourceId) ?? 0
+      for (const targetId of outgoing.get(sourceId) ?? []) {
+        depths.set(targetId, Math.max(depths.get(targetId) ?? 0, sourceDepth + 1))
+        const nextIndegree = (indegree.get(targetId) ?? 1) - 1
+        indegree.set(targetId, nextIndegree)
+        if (nextIndegree === 0) queue.push(targetId)
+      }
+    }
+    const rowByDepth = new Map<number, number>()
+    const positions = currentProject.nodes.map(({ id }, index) => {
+      const depth = depths.get(id) ?? index
+      const row = rowByDepth.get(depth) ?? 0
+      rowByDepth.set(depth, row + 1)
+      return {
+        nodeId: id,
+        position: { x: 80 + depth * 360, y: 80 + row * 300 },
+      }
+    })
+    updateNodePositions(positions)
+    setGroupFeedback('已整理画布')
+    queueMicrotask(() => {
+      void flowInstance?.fitView({ duration: 320, padding: 0.18 })
+    })
+  }, [flowInstance, projectId, updateNodePositions])
+
+  const runSelectedGeneration = useCallback(() => {
+    const currentProject = useProjectStore.getState().activeProject
+    const node = currentProject?.nodes.find(({ id }) => id === primaryNodeId)
+    if (!currentProject || currentProject.id !== projectId || !node) return false
+    const version = node.versions.find(({ id }) => id === node.activeVersionId)
+    const asset = currentProject.assets.find(({ id }) => id === version?.assetId)
+    const hasIncomingMedia = currentProject.edges
+      .filter(({ targetNodeId }) => targetNodeId === node.id)
+      .some(({ sourceNodeId }) => {
+        const source = currentProject.nodes.find(({ id }) => id === sourceNodeId)
+        const sourceVersion = source?.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        return currentProject.assets.some(
+          ({ id, kind }) =>
+            id === sourceVersion?.assetId && (kind === 'image' || kind === 'video'),
+        )
+      })
+    const prompt = node.imageGeneration?.prompt ?? version?.prompt ?? ''
+    const eligible = Boolean(prompt.trim() || asset || hasIncomingMedia)
+    if (!eligible) return false
+
+    if (
+      (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
+      !node.videoTool
+    ) {
+      setGenerationFeedback(
+        `“${node.title}”预计成本 15；本地演示未连接真实图片生成。`,
+      )
+      return true
+    }
+    if (node.kind === 'video' && !node.videoTool) {
+      setGenerationFeedback(
+        `“${node.title}”预计成本 24；本地演示未连接真实视频生成。`,
+      )
+      return true
+    }
+    if (node.kind === 'storyboard') {
+      handleAction(node.id, 'generate-video')
+      return true
+    }
+    return false
+  }, [handleAction, primaryNodeId, projectId])
+
   useEffect(() => {
-    const handleConnectShortcut = (event: KeyboardEvent) => {
+    const handleCanvasShortcut = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
         event.repeat ||
-        event.key.toLowerCase() !== 'l' ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
         !project ||
         pendingPlacement ||
         nodeTypePicker ||
@@ -2086,8 +2243,12 @@ export function CanvasPage({
         imageReferenceTargetId ||
         nodeListOpen ||
         deleteCandidateId ||
-        connectionTool.phase !== 'idle' ||
-        nativeConnectionActiveRef.current
+        contextMenu ||
+        workspacePanel ||
+        nativeConnectionActiveRef.current ||
+        document.querySelector(
+          '[role="dialog"], [role="alertdialog"], [role="menu"]',
+        )
       ) {
         return
       }
@@ -2095,7 +2256,8 @@ export function CanvasPage({
       const target = event.target
       if (
         target instanceof HTMLElement &&
-        (target.isContentEditable ||
+        (target.closest('.canvas-agent-panel') ||
+          target.isContentEditable ||
           Boolean(
             target.closest(
               'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
@@ -2105,75 +2267,156 @@ export function CanvasPage({
         return
       }
 
-      const trigger = viewportRef.current?.querySelector<HTMLButtonElement>(
-        '.canvas-mode-bar button[aria-label="连线"]',
-      )
-      if (!trigger || trigger.disabled) return
-      event.preventDefault()
-      handleToolChange('connect', trigger)
+      const key = event.key.toLowerCase()
+      const commandKey = event.metaKey || event.ctrlKey
+      if (key === 'z' && commandKey && !event.altKey) {
+        event.preventDefault()
+        if (event.shiftKey) redo()
+        else undo()
+        return
+      }
+      if (key === 'f' && event.altKey && event.shiftKey && !commandKey) {
+        event.preventDefault()
+        arrangeCanvas()
+        return
+      }
+      if (event.ctrlKey || event.metaKey || (event.altKey && key !== 'g')) return
+
+      if (key === 'h' && !event.shiftKey) {
+        event.preventDefault()
+        if (connectionTool.phase !== 'idle') cancelConnection(false)
+        setActiveTool('hand')
+        setGroupFeedback('已切换抓手工具')
+        return
+      }
+      if (key === 'v' && !event.shiftKey) {
+        event.preventDefault()
+        if (connectionTool.phase !== 'idle') cancelConnection(false)
+        setActiveTool('select')
+        setGroupFeedback('已切换移动工具')
+        return
+      }
+      if (connectionTool.phase !== 'idle') return
+      if (key === 'l' && !event.shiftKey) {
+        const trigger = viewportRef.current?.querySelector<HTMLButtonElement>(
+          '.canvas-mode-bar button[aria-label="连线"]',
+        )
+        if (!trigger || trigger.disabled) return
+        event.preventDefault()
+        handleToolChange('connect', trigger)
+        return
+      }
+      if (key === 'g') {
+        event.preventDefault()
+        const currentProject = useProjectStore.getState().activeProject
+        const selectedGroup = findSelectedCanvasGroup(
+          currentProject?.groups ?? [],
+          selectedNodeIds,
+        )
+        if (event.shiftKey) {
+          if (selectedGroup) removeCanvasGroup(selectedGroup.id)
+          return
+        }
+        if (selectedNodeIds.size < 2) return
+        const groupId = groupNodes(
+          selectedNodeIds,
+          event.altKey ? 'storyboard' : 'standard',
+        )
+        if (groupId) {
+          setGroupFeedback(
+            event.altKey ? '已创建分镜组' : '已创建分组',
+          )
+        }
+        return
+      }
+      if (event.shiftKey) {
+        if (event.key !== '+' && event.key !== '=') return
+      }
+      if (key === 'd') {
+        event.preventDefault()
+        const duplicatedIds = duplicateNodes(selectedNodeIds)
+        if (duplicatedIds.length === 0) return
+        setSelectedNodeIds(new Set(duplicatedIds))
+        setPrimaryNodeId(duplicatedIds.at(-1))
+        setSelectedEdgeId(undefined)
+        setGroupFeedback(
+          `已复制 ${duplicatedIds.length} 个节点及关联连线`,
+        )
+        return
+      }
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault()
+        void flowInstance?.zoomIn({ duration: 160 })
+        return
+      }
+      if (event.key === '-') {
+        event.preventDefault()
+        void flowInstance?.zoomOut({ duration: 160 })
+        return
+      }
+      if (event.key === '0') {
+        event.preventDefault()
+        void flowInstance?.fitView({ duration: 260, padding: 0.16 })
+        return
+      }
+      if (event.key === 'Tab') {
+        const trigger = viewportRef.current?.querySelector<HTMLButtonElement>(
+          '.canvas-mode-bar button[aria-label="添加节点"]',
+        )
+        if (!trigger || trigger.disabled) return
+        event.preventDefault()
+        openNodeTypePickerFromDock(trigger)
+        return
+      }
+      if (event.key === 'Enter') {
+        if (
+          target instanceof HTMLElement &&
+          target.closest('button, a, [role="button"]')
+        ) {
+          return
+        }
+        if (runSelectedGeneration()) event.preventDefault()
+        return
+      }
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault()
+        if (selectedEdgeId) {
+          disconnectEdge(selectedEdgeId)
+        } else if (primaryNodeId && viewportRef.current) {
+          requestDelete(primaryNodeId, viewportRef.current)
+        }
+      }
     }
 
-    window.addEventListener('keydown', handleConnectShortcut)
-    return () => window.removeEventListener('keydown', handleConnectShortcut)
+    window.addEventListener('keydown', handleCanvasShortcut)
+    return () => window.removeEventListener('keydown', handleCanvasShortcut)
   }, [
+    arrangeCanvas,
+    cancelConnection,
     connectionTool.phase,
+    contextMenu,
     deleteCandidateId,
+    disconnectEdge,
+    duplicateNodes,
     editingCard,
+    flowInstance,
+    groupNodes,
     handleToolChange,
     imageReferenceTargetId,
     nodeListOpen,
     nodeTypePicker,
+    openNodeTypePickerFromDock,
     pendingPlacement,
+    primaryNodeId,
     project,
-  ])
-
-  useEffect(() => {
-    const handleVisibilityShortcut = (event: KeyboardEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.repeat ||
-        event.key.toLowerCase() !== 'h' ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        !project ||
-        pendingPlacement ||
-        nodeTypePicker ||
-        nodeListOpen ||
-        deleteCandidateId ||
-        nativeConnectionActiveRef.current ||
-        document.querySelector('[role="dialog"]')
-      ) {
-        return
-      }
-
-      const target = event.target
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          Boolean(
-            target.closest(
-              'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
-            ),
-          ))
-      ) {
-        return
-      }
-
-      event.preventDefault()
-      toggleConnectionsVisibility()
-    }
-
-    window.addEventListener('keydown', handleVisibilityShortcut)
-    return () => window.removeEventListener('keydown', handleVisibilityShortcut)
-  }, [
-    deleteCandidateId,
-    nodeListOpen,
-    nodeTypePicker,
-    pendingPlacement,
-    project,
-    toggleConnectionsVisibility,
+    redo,
+    removeCanvasGroup,
+    requestDelete,
+    runSelectedGeneration,
+    selectedEdgeId,
+    selectedNodeIds,
+    undo,
+    workspacePanel,
   ])
 
   const handlePaneClick = useCallback(
@@ -2519,7 +2762,11 @@ export function CanvasPage({
   }
 
   return (
-    <main className={`canvas-page${agentOpen ? ' canvas-page--agent-open' : ''}`}>
+    <main
+      className={`canvas-page${agentOpen ? ' canvas-page--agent-open' : ''}${
+        activeTool === 'hand' ? ' canvas-page--hand-tool' : ''
+      }`}
+    >
       <CanvasTopBar
         projectId={project?.id}
         projectTitle={project?.title ?? '项目画布'}
@@ -2564,6 +2811,8 @@ export function CanvasPage({
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
+          onNodeDragStart={handleNodeDragStart}
+          onNodeDragStop={handleNodeDragStop}
           onEdgesChange={handleEdgesChange}
           isValidConnection={isValidConnection}
           onConnect={handleConnect}
@@ -2593,11 +2842,13 @@ export function CanvasPage({
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll
           panOnScroll={false}
+          panOnDrag
           panActivationKeyCode="Space"
+          nodesDraggable={activeTool !== 'hand'}
           selectionOnDrag
           zoomOnDoubleClick={false}
           edgesFocusable
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={null}
           minZoom={0.35}
           maxZoom={1.8}
           snapToGrid={snapToGrid}

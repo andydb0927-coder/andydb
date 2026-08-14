@@ -7661,6 +7661,14 @@ select {
   font-size: 0.625rem;
 }
 
+.canvas-page--hand-tool .react-flow__pane {
+  cursor: grab;
+}
+
+.canvas-page--hand-tool .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
 .canvas-node-type-picker {
   position: absolute;
   z-index: 45;
@@ -8067,19 +8075,36 @@ select {
 
 .workspace-shortcuts {
   display: grid;
-  gap: 0;
+  gap: var(--space-4);
   margin: var(--space-3) 0 0;
 }
 
-.workspace-shortcuts > div {
+.workspace-shortcuts__group h3 {
+  margin: 0 0 var(--space-1);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.workspace-shortcuts__group dl {
+  margin: 0;
+}
+
+.workspace-shortcuts__group dl > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid rgb(255 255 255 / 7%);
 }
 
-.workspace-shortcuts dd {
+.workspace-shortcuts__group dt {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.workspace-shortcuts__group dd {
   margin: 0;
   padding: 3px var(--space-2);
   border: 1px solid rgb(255 255 255 / 12%);
@@ -8087,6 +8112,20 @@ select {
   color: var(--text-muted);
   background: rgb(255 255 255 / 5%);
   font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+.workspace-shortcuts__notes {
+  display: grid;
+  gap: 2px;
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.workspace-shortcuts__notes p {
+  margin: 0;
 }
 
 .workspace-side-panel__help {
