@@ -146,6 +146,7 @@ export interface CanvasNode {
   kind: NodeKind
   title: string
   position: { x: number; y: number }
+  storyboardDialogue?: string
   versions: NodeVersion[]
   activeVersionId: string
   sourceChanged: boolean

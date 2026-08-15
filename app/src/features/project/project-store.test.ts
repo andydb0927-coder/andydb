@@ -1088,6 +1088,34 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().future).toEqual([])
   })
 
+  test('stores storyboard dialogue and reorders the shared canvas node source atomically', () => {
+    const original = useProjectStore.getState().activeProject!.nodes.map(({ id }) => id)
+    const reordered = [original[1], original[0], ...original.slice(2)]
+
+    useProjectStore.getState().updateNode('shot-1', {
+      storyboardDialogue: '林渊：河灯快灭了。',
+    })
+    useProjectStore.getState().reorderNodes(reordered)
+
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.storyboardDialogue,
+    ).toBe('林渊：河灯快灭了。')
+    expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).toEqual(reordered)
+    expect(useProjectStore.getState().past).toHaveLength(2)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject?.nodes.map(({ id }) => id)).toEqual(original)
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.storyboardDialogue,
+    ).toBe('林渊：河灯快灭了。')
+
+    const beforeInvalid = useProjectStore.getState().activeProject
+    useProjectStore.getState().reorderNodes([original[0], original[0]])
+    expect(useProjectStore.getState().activeProject).toBe(beforeInvalid)
+  })
+
   test('marks canvas mutations and history traversal dirty until persisted', () => {
     expect(useProjectStore.getState().saveStatus).toBe('saved')
 

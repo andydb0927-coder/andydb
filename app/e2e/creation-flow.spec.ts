@@ -982,3 +982,62 @@ test('inserts local effects, managed assets, and filtered characters from the do
 
   expect(browserErrors).toEqual([])
 })
+
+test('keeps storyboard dialogue, section state, node order, and canvas linkage in sync', async ({
+  page,
+}) => {
+  const browserErrors: string[] = []
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  await createCinematicProject(page)
+
+  await page.getByRole('button', { name: '故事板' }).click()
+  const storyboard = page.getByRole('region', { name: '项目故事板' })
+  for (const name of ['文本区', '图片区', '视频区']) {
+    await expect(storyboard.getByRole('region', { name })).toBeVisible()
+  }
+  const stats = storyboard.getByRole('status', { name: '故事板统计' })
+  await expect(stats).toContainText('总镜头数 3')
+  await expect(stats).toContainText('总时长 00:00')
+
+  const characterCard = storyboard.getByRole('article', { name: '图片故事板卡 角色参考' })
+  await expect(characterCard).toContainText('960 × 1200')
+  await characterCard.getByRole('textbox', { name: '角色参考对白' }).fill('林渊：灯火就在河对岸。')
+  await characterCard.getByRole('button', { name: '保存角色参考对白' }).click()
+
+  const sceneCard = storyboard.getByRole('article', { name: '图片故事板卡 场景设定' })
+  const shotCard = storyboard.getByRole('article', { name: '图片故事板卡 分镜 01' })
+  await shotCard.dragTo(sceneCard)
+  const imageCards = storyboard.getByRole('region', { name: '图片区' }).getByRole('article')
+  await expect(imageCards.nth(0)).toHaveAccessibleName('图片故事板卡 角色参考')
+  await expect(imageCards.nth(1)).toHaveAccessibleName('图片故事板卡 分镜 01')
+  await expect(imageCards.nth(2)).toHaveAccessibleName('图片故事板卡 场景设定')
+
+  await storyboard.getByRole('button', { name: '收起文本区' }).click()
+  await expect(storyboard.getByRole('button', { name: '展开文本区' })).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByText('已保存')).toBeVisible()
+  await page.reload()
+  await page.getByRole('button', { name: '故事板' }).click()
+  await expect(page.getByRole('button', { name: '展开文本区' })).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByRole('textbox', { name: '角色参考对白' })).toHaveValue('林渊：灯火就在河对岸。')
+
+  const reloadedCards = page.getByRole('region', { name: '图片区' }).getByRole('article')
+  await expect(reloadedCards.nth(1)).toHaveAccessibleName('图片故事板卡 分镜 01')
+  await reloadedCards.nth(2).getByRole('button', { name: '定位 场景设定' }).click()
+  await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toBeVisible()
+
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await page.getByRole('button', { name: '扩展镜头' }).click()
+  await page.getByRole('button', { name: '故事板' }).click()
+  await expect(page.getByRole('article', { name: '图片故事板卡 分镜 02' })).toBeVisible()
+  await expect(page.getByRole('status', { name: '故事板统计' })).toContainText('总镜头数 4')
+  await page.getByRole('article', { name: '图片故事板卡 分镜 02' }).getByRole('button', { name: '定位 分镜 02' }).click()
+  await page.getByRole('button', { name: '删除节点' }).click()
+  await page.getByRole('button', { name: '故事板' }).click()
+  await expect(page.getByRole('article', { name: '图片故事板卡 分镜 02' })).toHaveCount(0)
+  await expect(page.getByRole('status', { name: '故事板统计' })).toContainText('总镜头数 3')
+
+  expect(browserErrors).toEqual([])
+})

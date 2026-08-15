@@ -464,6 +464,7 @@ export function CanvasPage({
   const updateNodePositions = useProjectStore(
     (state) => state.updateNodePositions,
   )
+  const reorderNodes = useProjectStore((state) => state.reorderNodes)
   const groupNodes = useProjectStore((state) => state.groupNodes)
   const ungroupNodes = useProjectStore((state) => state.ungroupNodes)
   const duplicateNodes = useProjectStore((state) => state.duplicateNodes)
@@ -3260,6 +3261,18 @@ export function CanvasPage({
     })
   }
 
+  const reorderStoryboardNodes = (sourceNodeId: string, targetNodeId: string) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const sourceIndex = currentProject.nodes.findIndex(({ id }) => id === sourceNodeId)
+    const targetIndex = currentProject.nodes.findIndex(({ id }) => id === targetNodeId)
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return
+    const orderedNodeIds = currentProject.nodes.map(({ id }) => id)
+    const [movedNodeId] = orderedNodeIds.splice(sourceIndex, 1)
+    orderedNodeIds.splice(targetIndex, 0, movedNodeId)
+    reorderNodes(orderedNodeIds)
+  }
+
   const canvasCenterPosition = () => {
     const rect = viewportRef.current?.getBoundingClientRect()
     if (!flowInstance || !rect) return { x: 640, y: 360 }
@@ -3703,7 +3716,15 @@ export function CanvasPage({
         })() : null}
         </div>
         {workspaceMode === 'storyboard' && project ? (
-          <CanvasStoryboardView project={project} onOpenNode={openWorkspaceNode} />
+          <CanvasStoryboardView
+            key={project.id}
+            project={project}
+            onOpenNode={openWorkspaceNode}
+            onReorderNodes={reorderStoryboardNodes}
+            onUpdateDialogue={(nodeId, dialogue) => {
+              updateNode(nodeId, { storyboardDialogue: dialogue })
+            }}
+          />
         ) : null}
         {workspacePanel && project ? (
           <WorkspaceSidePanel

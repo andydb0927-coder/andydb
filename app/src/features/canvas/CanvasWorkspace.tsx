@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Crosshair,
   Download,
+  GripVertical,
   Grid3X3,
   Lightbulb,
   Map,
@@ -21,7 +22,7 @@ import {
   Undo2,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import type {
@@ -79,30 +80,89 @@ const panelCopy: Record<WorkspacePanel, string> = {
 interface CanvasStoryboardViewProps {
   project: Project
   onOpenNode(nodeId: string): void
+  onReorderNodes(sourceNodeId: string, targetNodeId: string): void
+  onUpdateDialogue(nodeId: string, dialogue: string): void
+}
+
+type StoryboardSectionId = 'text' | 'image' | 'video'
+type StoryboardSectionState = Record<StoryboardSectionId, boolean>
+
+const defaultStoryboardSections: StoryboardSectionState = {
+  text: true,
+  image: true,
+  video: true,
+}
+
+function readStoryboardSections(projectId: string): StoryboardSectionState {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem(`wireless-canvas:storyboard-sections:${projectId}`) ?? '{}',
+    ) as Partial<StoryboardSectionState>
+    return {
+      text: value.text !== false,
+      image: value.image !== false,
+      video: value.video !== false,
+    }
+  } catch {
+    return defaultStoryboardSections
+  }
+}
+
+function formatStoryboardDuration(totalSeconds: number) {
+  const rounded = Math.max(0, Math.round(totalSeconds))
+  const minutes = Math.floor(rounded / 60)
+  const seconds = rounded % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 export function CanvasStoryboardView({
   project,
   onOpenNode,
+  onReorderNodes,
+  onUpdateDialogue,
 }: CanvasStoryboardViewProps) {
+  const storageKey = `wireless-canvas:storyboard-sections:${project.id}`
+  const [expanded, setExpanded] = useState<StoryboardSectionState>(() =>
+    readStoryboardSections(project.id),
+  )
+  const [dialogueDrafts, setDialogueDrafts] = useState<Record<string, string>>(
+    () => Object.fromEntries(
+      project.nodes.map((node) => [node.id, node.storyboardDialogue ?? '']),
+    ),
+  )
+  const persistedDialoguesRef = useRef<Record<string, string>>(
+    Object.fromEntries(
+      project.nodes.map((node) => [node.id, node.storyboardDialogue ?? '']),
+    ),
+  )
+  const [draggedNodeId, setDraggedNodeId] = useState<string>()
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(expanded))
+    } catch {
+      // Device-local preferences may be unavailable in private storage modes.
+    }
+  }, [expanded, storageKey])
+
   const groups = useMemo(
     () => [
       {
-        id: 'text',
+        id: 'text' as const,
         title: '文本',
         nodes: project.nodes.filter((node) =>
           ['text', 'script', 'worldview', 'character-card'].includes(node.kind),
         ),
       },
       {
-        id: 'image',
+        id: 'image' as const,
         title: '图片',
         nodes: project.nodes.filter((node) =>
           ['character', 'scene', 'image', 'storyboard'].includes(node.kind),
         ),
       },
       {
-        id: 'video',
+        id: 'video' as const,
         title: '视频',
         nodes: project.nodes.filter((node) =>
           ['video', 'preview'].includes(node.kind),
@@ -111,6 +171,44 @@ export function CanvasStoryboardView({
     ],
     [project.nodes],
   )
+
+  useEffect(() => {
+    const nextPersisted = Object.fromEntries(
+      project.nodes.map((node) => [node.id, node.storyboardDialogue ?? '']),
+    )
+    setDialogueDrafts((current) => Object.fromEntries(
+      project.nodes.map((node) => {
+        const persisted = nextPersisted[node.id]
+        const previousPersisted = persistedDialoguesRef.current[node.id]
+        const draft = current[node.id]
+        return [
+          node.id,
+          draft === undefined || draft === previousPersisted ? persisted : draft,
+        ]
+      }),
+    ))
+    persistedDialoguesRef.current = nextPersisted
+  }, [project.nodes])
+  const shotCount = groups
+    .filter(({ id }) => id !== 'text')
+    .reduce((total, group) => total + group.nodes.length, 0)
+  const totalDuration = groups
+    .find(({ id }) => id === 'video')!
+    .nodes.reduce((total, node) => {
+      const version = node.versions.find(({ id }) => id === node.activeVersionId)
+      const asset = project.assets.find(({ id }) => id === version?.assetId)
+      const timelineDuration = project.timeline.find(({ nodeId }) => nodeId === node.id)
+        ?.durationSeconds
+      return total + (
+        asset?.kind === 'video'
+          ? asset.durationSeconds ?? timelineDuration ?? 0
+          : timelineDuration ?? 0
+      )
+    }, 0)
+
+  const toggleSection = (sectionId: StoryboardSectionId) => {
+    setExpanded((current) => ({ ...current, [sectionId]: !current[sectionId] }))
+  }
 
   return (
     <section className="canvas-storyboard" aria-label="项目故事板">
@@ -121,13 +219,23 @@ export function CanvasStoryboardView({
       </div>
       <div className="canvas-storyboard__sections">
         {groups.map((group) => (
-          <section key={group.id} className="canvas-storyboard__section">
+          <section key={group.id} className="canvas-storyboard__section" aria-label={`${group.title}区`}>
             <div className="canvas-storyboard__section-heading">
-              <h3>{group.title}</h3>
-              <span>{group.nodes.length}</span>
+              <h3>
+                <button
+                  type="button"
+                  aria-expanded={expanded[group.id]}
+                  aria-label={`${expanded[group.id] ? '收起' : '展开'}${group.title}区`}
+                  onClick={() => toggleSection(group.id)}
+                >
+                  <ChevronRight aria-hidden="true" />
+                  <span>{group.title}</span>
+                  <small>{group.nodes.length}</small>
+                </button>
+              </h3>
             </div>
-            {group.nodes.length ? (
-              <div className="canvas-storyboard__grid">
+            {expanded[group.id] && group.nodes.length ? (
+              <div className="canvas-storyboard__grid" id={`storyboard-${project.id}-${group.id}`}>
                 {group.nodes.map((node) => {
                   const version = node.versions.find(
                     (candidate) => candidate.id === node.activeVersionId,
@@ -136,34 +244,102 @@ export function CanvasStoryboardView({
                     (candidate) => candidate.id === version?.assetId,
                   )
                   return (
-                    <button
+                    <article
                       key={node.id}
-                      type="button"
                       className="canvas-storyboard__card"
-                      aria-label={`在工作流中打开 ${node.title}`}
-                      onClick={() => onOpenNode(node.id)}
+                      aria-label={`${group.title}故事板卡 ${node.title}`}
+                      draggable
+                      data-dragging={draggedNodeId === node.id || undefined}
+                      onDragStart={(event) => {
+                        setDraggedNodeId(node.id)
+                        event.dataTransfer.effectAllowed = 'move'
+                        event.dataTransfer.setData('text/storyboard-node', node.id)
+                      }}
+                      onDragEnd={() => setDraggedNodeId(undefined)}
+                      onDragOver={(event) => {
+                        const sourceIsInSection = group.nodes.some(
+                          ({ id }) => id === draggedNodeId,
+                        )
+                        if (!draggedNodeId || draggedNodeId === node.id || !sourceIsInSection) return
+                        event.preventDefault()
+                        event.dataTransfer.dropEffect = 'move'
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        const sourceNodeId =
+                          event.dataTransfer.getData('text/storyboard-node') ||
+                          draggedNodeId
+                        setDraggedNodeId(undefined)
+                        const sourceIsInSection = group.nodes.some(
+                          ({ id }) => id === sourceNodeId,
+                        )
+                        if (sourceNodeId && sourceNodeId !== node.id && sourceIsInSection) {
+                          onReorderNodes(sourceNodeId, node.id)
+                        }
+                      }}
                     >
-                      <span className="canvas-storyboard__preview">
-                        {asset?.kind === 'image' ? (
-                          <img src={asset.url} alt="" />
-                        ) : asset?.kind === 'video' ? (
-                          <video src={asset.url} muted preload="metadata" />
-                        ) : (
-                          <Sparkles aria-hidden="true" />
-                        )}
-                      </span>
-                      <strong>{node.title}</strong>
-                      <small>{version?.prompt || kindCopy[node.kind]}</small>
-                    </button>
+                      <button
+                        type="button"
+                        className="canvas-storyboard__locate"
+                        aria-label={`定位 ${node.title}`}
+                        onClick={() => onOpenNode(node.id)}
+                      >
+                        <span className="canvas-storyboard__preview">
+                          {asset?.kind === 'image' ? (
+                            <img src={asset.url} alt="" />
+                          ) : asset?.kind === 'video' ? (
+                            <video src={asset.url} muted preload="metadata" />
+                          ) : (
+                            <Sparkles aria-hidden="true" />
+                          )}
+                        </span>
+                        <span className="canvas-storyboard__card-copy">
+                          <GripVertical aria-hidden="true" />
+                          <strong>{node.title}</strong>
+                          {group.id === 'image' ? (
+                            <small>{asset?.width && asset.height ? `${asset.width} × ${asset.height}` : '尺寸待识别'}</small>
+                          ) : (
+                            <small>{version?.prompt || kindCopy[node.kind]}</small>
+                          )}
+                        </span>
+                      </button>
+                      {group.id === 'image' ? (
+                        <div className="canvas-storyboard__dialogue">
+                          <label>
+                            <span>对白</span>
+                            <textarea
+                              aria-label={`${node.title}对白`}
+                              maxLength={2000}
+                              placeholder="输入这一镜的对白…"
+                              value={dialogueDrafts[node.id] ?? node.storyboardDialogue ?? ''}
+                              onChange={(event) => setDialogueDrafts((current) => ({
+                                ...current,
+                                [node.id]: event.target.value,
+                              }))}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            disabled={(dialogueDrafts[node.id] ?? '') === (node.storyboardDialogue ?? '')}
+                            aria-label={`保存${node.title}对白`}
+                            onClick={() => onUpdateDialogue(node.id, dialogueDrafts[node.id] ?? '')}
+                          >保存对白</button>
+                        </div>
+                      ) : null}
+                    </article>
                   )
                 })}
               </div>
-            ) : (
+            ) : expanded[group.id] ? (
               <p className="canvas-storyboard__empty">暂无{group.title}内容</p>
-            )}
+            ) : null}
           </section>
         ))}
       </div>
+      <footer className="canvas-storyboard__stats" role="status" aria-live="polite" aria-label="故事板统计">
+        <span>总镜头数 <strong>{shotCount}</strong></span>
+        <span>总时长 <strong>{formatStoryboardDuration(totalDuration)}</strong></span>
+      </footer>
     </section>
   )
 }

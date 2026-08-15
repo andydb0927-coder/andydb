@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -52,6 +52,7 @@ const project: Project = {
       versions: [{ id: 'image-v1', createdAt: '2026-08-13T00:01:00.000Z', prompt: '角色', assetId: 'image-asset' }],
       activeVersionId: 'image-v1',
       sourceChanged: false,
+      storyboardDialogue: '别回头。',
     },
     {
       id: 'video-node',
@@ -60,6 +61,15 @@ const project: Project = {
       position: { x: 600, y: 0 },
       versions: [{ id: 'video-v1', createdAt: '2026-08-13T00:02:00.000Z', prompt: '镜头', assetId: 'video-asset' }],
       activeVersionId: 'video-v1',
+      sourceChanged: false,
+    },
+    {
+      id: 'image-node-2',
+      kind: 'storyboard',
+      title: '河岸镜头',
+      position: { x: 460, y: 120 },
+      versions: [{ id: 'image-v2', createdAt: '2026-08-13T00:01:30.000Z', prompt: '河岸', assetId: 'image-asset' }],
+      activeVersionId: 'image-v2',
       sourceChanged: false,
     },
   ],
@@ -84,16 +94,117 @@ const project: Project = {
   exportJobs: [],
 }
 
-test('groups current project media in the storyboard and returns to its source node', async () => {
+test('groups project nodes into storyboard sections, saves dialogue, and reports totals', async () => {
   const user = userEvent.setup()
   const onOpenNode = vi.fn()
-  render(<CanvasStoryboardView project={project} onOpenNode={onOpenNode} />)
+  const onUpdateDialogue = vi.fn()
+  render(
+    <CanvasStoryboardView
+      project={project}
+      onOpenNode={onOpenNode}
+      onReorderNodes={vi.fn()}
+      onUpdateDialogue={onUpdateDialogue}
+    />,
+  )
 
-  expect(screen.getByRole('heading', { name: '文本' })).toBeVisible()
-  expect(screen.getByRole('heading', { name: '图片' })).toBeVisible()
-  expect(screen.getByRole('heading', { name: '视频' })).toBeVisible()
-  await user.click(screen.getByRole('button', { name: '在工作流中打开 角色图' }))
+  for (const section of ['文本区', '图片区', '视频区']) {
+    expect(screen.getByRole('region', { name: section })).toBeVisible()
+  }
+  const imageCard = screen.getByRole('article', { name: '图片故事板卡 角色图' })
+  expect(within(imageCard).getByText('1024 × 1024')).toBeVisible()
+  const dialogue = within(imageCard).getByRole('textbox', { name: '角色图对白' })
+  expect(dialogue).toHaveValue('别回头。')
+  await user.clear(dialogue)
+  await user.type(dialogue, '林渊：等等我。')
+  await user.click(within(imageCard).getByRole('button', { name: '保存角色图对白' }))
+  expect(onUpdateDialogue).toHaveBeenCalledWith('image-node', '林渊：等等我。')
+  const stats = screen.getByRole('status', { name: '故事板统计' })
+  expect(stats).toHaveTextContent('总镜头数 3')
+  expect(stats).toHaveTextContent('总时长 00:05')
+
+  await user.click(within(imageCard).getByRole('button', { name: '定位 角色图' }))
   expect(onOpenNode).toHaveBeenCalledWith('image-node')
+})
+
+test('persists section collapse outside project data', async () => {
+  localStorage.clear()
+  const user = userEvent.setup()
+  const props = {
+    project,
+    onOpenNode: vi.fn(),
+    onReorderNodes: vi.fn(),
+    onUpdateDialogue: vi.fn(),
+  }
+  const first = render(<CanvasStoryboardView {...props} />)
+
+  const toggle = screen.getByRole('button', { name: '收起图片区' })
+  expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await user.click(toggle)
+  expect(screen.queryByRole('article', { name: '图片故事板卡 角色图' })).not.toBeInTheDocument()
+  expect(localStorage.getItem(`wireless-canvas:storyboard-sections:${project.id}`)).toContain('"image":false')
+
+  first.unmount()
+  render(<CanvasStoryboardView {...props} />)
+  expect(screen.getByRole('button', { name: '展开图片区' })).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('drags cards to reorder the shared canvas node source', () => {
+  localStorage.clear()
+  const onReorderNodes = vi.fn()
+  render(
+    <CanvasStoryboardView
+      project={project}
+      onOpenNode={vi.fn()}
+      onReorderNodes={onReorderNodes}
+      onUpdateDialogue={vi.fn()}
+    />,
+  )
+  const source = screen.getByRole('article', { name: '图片故事板卡 河岸镜头' })
+  const target = screen.getByRole('article', { name: '图片故事板卡 角色图' })
+
+  const dataTransfer = {
+    effectAllowed: 'none',
+    dropEffect: 'none',
+    setData: vi.fn(),
+    getData: vi.fn(() => 'image-node-2'),
+  }
+  fireEvent.dragStart(source, { dataTransfer })
+  fireEvent.dragOver(target, { dataTransfer })
+  fireEvent.drop(target, { dataTransfer })
+  expect(onReorderNodes).toHaveBeenCalledWith('image-node-2', 'image-node')
+
+  onReorderNodes.mockClear()
+  const videoTarget = screen.getByRole('article', { name: '视频故事板卡 视频 01' })
+  fireEvent.dragStart(source, { dataTransfer })
+  fireEvent.dragOver(videoTarget, { dataTransfer })
+  fireEvent.drop(videoTarget, { dataTransfer })
+  expect(onReorderNodes).not.toHaveBeenCalled()
+})
+
+test('refreshes a saved storyboard dialogue after project history changes', async () => {
+  localStorage.clear()
+  const user = userEvent.setup()
+  const props = {
+    onOpenNode: vi.fn(),
+    onReorderNodes: vi.fn(),
+    onUpdateDialogue: vi.fn(),
+  }
+  const view = render(<CanvasStoryboardView project={project} {...props} />)
+  const dialogue = screen.getByRole('textbox', { name: '角色图对白' })
+  await user.clear(dialogue)
+  await user.type(dialogue, '林渊：跟紧我。')
+
+  const savedProject = {
+    ...project,
+    nodes: project.nodes.map((node) => node.id === 'image-node'
+      ? { ...node, storyboardDialogue: '林渊：跟紧我。' }
+      : node),
+  }
+  view.rerender(<CanvasStoryboardView project={savedProject} {...props} />)
+  expect(screen.getByRole('textbox', { name: '角色图对白' })).toHaveValue('林渊：跟紧我。')
+
+  view.rerender(<CanvasStoryboardView project={project} {...props} />)
+  expect(screen.getByRole('textbox', { name: '角色图对白' })).toHaveValue('别回头。')
 })
 
 test('shows local assets, generation history and the complete four-group shortcut reference', () => {

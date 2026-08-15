@@ -36,7 +36,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'sourceChanged' | 'modelProviderId' | 'effectTool'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'effectTool'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -69,6 +69,7 @@ interface ProjectStore {
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
   ) => void
+  reorderNodes: (orderedNodeIds: string[]) => void
   setActiveImageResult: (nodeId: string, resultId: string) => void
   updateImageGenerationSettings: (
     nodeId: string,
@@ -494,6 +495,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.position === undefined
                     ? {}
                     : { position: changes.position }),
+                  ...(changes.storyboardDialogue === undefined
+                    ? {}
+                    : { storyboardDialogue: changes.storyboardDialogue }),
                   ...(changes.sourceChanged === undefined
                     ? {}
                     : { sourceChanged: changes.sourceChanged }),
@@ -557,6 +561,28 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             const position = positionsById.get(node.id)
             return position ? { ...node, position } : node
           }),
+        })
+      })
+    },
+
+    reorderNodes: (orderedNodeIds) => {
+      commit((project) => {
+        if (
+          orderedNodeIds.length !== project.nodes.length ||
+          new Set(orderedNodeIds).size !== project.nodes.length
+        ) return project
+        const nodesById = new Map(project.nodes.map((node) => [node.id, node]))
+        const reordered = orderedNodeIds.flatMap((id) => {
+          const node = nodesById.get(id)
+          return node ? [node] : []
+        })
+        if (reordered.length !== project.nodes.length) return project
+        if (project.nodes.every((node, index) => node.id === orderedNodeIds[index])) {
+          return project
+        }
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: reordered,
         })
       })
     },

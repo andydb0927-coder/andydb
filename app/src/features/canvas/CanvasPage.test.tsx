@@ -1,5 +1,5 @@
 import Dexie from 'dexie'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type {
   ComponentProps,
@@ -3728,7 +3728,7 @@ describe('canvas top bar', () => {
     )
   })
 
-  test('switches to a derived storyboard and returns to the selected source node', async () => {
+  test('edits and reorders the shared storyboard before locating its canvas node', async () => {
     const user = userEvent.setup()
     renderCanvas()
     const { fitView } = initializeFlow()
@@ -3737,7 +3737,30 @@ describe('canvas top bar', () => {
     expect(screen.getByRole('region', { name: '项目故事板' })).toBeVisible()
     expect(screen.queryByRole('toolbar', { name: '创作工具' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '在工作流中打开 场景设定' }))
+    const source = screen.getByRole('article', { name: '图片故事板卡 分镜 02' })
+    const target = screen.getByRole('article', { name: '图片故事板卡 场景设定' })
+    const dataTransfer = {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      setData: vi.fn(),
+      getData: vi.fn(() => 'storyboard'),
+    }
+    fireEvent.dragStart(source, { dataTransfer })
+    fireEvent.dragOver(target, { dataTransfer })
+    fireEvent.drop(target, { dataTransfer })
+    expect(
+      useProjectStore.getState().activeProject?.nodes.map(({ id }) => id),
+    ).toEqual(['character', 'storyboard', 'scene', 'video', 'preview'])
+
+    const sceneCard = screen.getByRole('article', { name: '图片故事板卡 场景设定' })
+    await user.type(within(sceneCard).getByRole('textbox', { name: '场景设定对白' }), '林渊：跟紧我。')
+    await user.click(within(sceneCard).getByRole('button', { name: '保存场景设定对白' }))
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'scene')
+        ?.storyboardDialogue,
+    ).toBe('林渊：跟紧我。')
+
+    await user.click(within(sceneCard).getByRole('button', { name: '定位 场景设定' }))
     expect(screen.getByRole('button', { name: '工作流' })).toHaveAttribute('aria-pressed', 'true')
     expect(latestFlowProps?.nodes.find(({ id }) => id === 'scene')?.selected).toBe(true)
     expect(fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: 'scene' }] }))
