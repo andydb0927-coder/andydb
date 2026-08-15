@@ -141,6 +141,81 @@ export interface EffectToolConfig {
   blendMode: '正常' | '滤色' | '叠加' | '柔光'
 }
 
+export type TextFontStyle = '正文' | '标题' | '引用' | '等宽'
+
+export interface TextNodeDetails {
+  type: 'text'
+  content: string
+  fontStyle: TextFontStyle
+}
+
+export interface ScriptChapter {
+  id: string
+  title: string
+  summary: string
+}
+
+export interface ScriptNodeDetails {
+  type: 'script'
+  chapters: ScriptChapter[]
+}
+
+export interface AudioNodeDetails {
+  type: 'audio'
+  durationSeconds: number
+  voice: '温暖女声' | '沉稳男声' | '清亮少年' | '纪录片旁白'
+  speed: number
+  volume: number
+}
+
+export interface DirectorShot {
+  id: string
+  title: string
+  cameraHint: string
+}
+
+export interface DirectorNodeDetails {
+  type: 'director'
+  shots: DirectorShot[]
+}
+
+export interface FrameAnalysisNodeDetails {
+  type: 'frame-analysis'
+  sourceName: string
+  sourceSummary: string
+  dimensions: {
+    storyboard: boolean
+    motion: boolean
+    music: boolean
+  }
+}
+
+export interface SmartEditTrack {
+  id: string
+  name: string
+}
+
+export interface SmartEditClip {
+  id: string
+  name: string
+  durationSeconds: number
+}
+
+export interface SmartEditNodeDetails {
+  type: 'smart-edit'
+  tracks: SmartEditTrack[]
+  clips: SmartEditClip[]
+  exportDurationSeconds: number
+}
+
+export type CanvasNodeDetails =
+  | TextNodeDetails
+  | ScriptNodeDetails
+  | AudioNodeDetails
+  | DirectorNodeDetails
+  | FrameAnalysisNodeDetails
+  | SmartEditNodeDetails
+
 export interface CanvasNode {
   id: string
   kind: NodeKind
@@ -158,6 +233,7 @@ export interface CanvasNode {
   rotationQuarterTurns?: number
   videoTool?: VideoToolConfig
   effectTool?: EffectToolConfig
+  details?: CanvasNodeDetails
   generationConfig?: GenerationConfiguration
 }
 

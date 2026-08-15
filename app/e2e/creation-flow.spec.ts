@@ -1041,3 +1041,67 @@ test('keeps storyboard dialogue, section state, node order, and canvas linkage i
 
   expect(browserErrors).toEqual([])
 })
+
+test('edits and persists all specialized Liblib node detail panels', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await createCinematicProject(page)
+
+  await openAddNodeAtBlank(page, '文本')
+  const textNode = page.getByRole('button', { name: '文本 01', exact: true })
+  const textPanel = page.getByRole('region', { name: '文本 01 文本参数' })
+  await expect(textPanel).toBeVisible()
+  await textPanel.getByRole('textbox', { name: '文本内容' }).fill('雨巷中的河灯旁白')
+  await textPanel.getByRole('combobox', { name: '字体样式' }).selectOption('引用')
+  await expect(textPanel).toContainText('8 / 5000')
+
+  await openAddNodeAtBlank(page, '脚本')
+  await expect(textPanel).toBeHidden()
+  await expect(textNode).toContainText('文本节点')
+  const scriptPanel = page.getByRole('region', { name: '脚本 01 脚本参数' })
+  await expect(scriptPanel.getByRole('list', { name: '章节列表' })).toBeVisible()
+  await scriptPanel.getByRole('textbox', { name: '第一章情节摘要' }).fill('雨夜重逢后追查失踪真相')
+  await expect(scriptPanel.getByText(/共 \d+ 字/)).toBeVisible()
+
+  await openAddNodeAtBlank(page, '音频')
+  const audioPanel = page.getByRole('region', { name: '音频 01 音频参数' })
+  await expect(audioPanel.getByText('00:12')).toBeVisible()
+  await audioPanel.getByRole('combobox', { name: '音色' }).selectOption('沉稳男声')
+  await audioPanel.getByRole('spinbutton', { name: '语速' }).fill('1.2')
+  await audioPanel.getByRole('spinbutton', { name: '音量' }).fill('72')
+
+  await openAddNodeAtBlank(page, '导演台 NEW')
+  const directorPanel = page.getByRole('region', { name: '导演台 01 导演台参数' })
+  const shotList = directorPanel.getByRole('list', { name: '分镜编排列表' })
+  await expect(shotList.getByRole('listitem')).toHaveCount(2)
+  await directorPanel.getByRole('button', { name: '上移人物入画' }).click()
+  await directorPanel.getByRole('button', { name: '新增分镜' }).click()
+  await expect(shotList.getByRole('listitem')).toHaveCount(3)
+
+  await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
+  const analysisPanel = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
+  await expect(analysisPanel).toContainText('尚未绑定视频')
+  await analysisPanel.getByRole('checkbox', { name: '音乐维度' }).uncheck()
+  await analysisPanel.getByRole('button', { name: '开始拉片（演示）' }).click()
+  await expect(analysisPanel.getByRole('status')).toContainText('未调用真实模型')
+
+  await openAddNodeAtBlank(page, '智能剪辑 Beta')
+  const smartEditPanel = page.getByRole('region', { name: '智能剪辑 01 智能剪辑参数' })
+  await expect(smartEditPanel.getByRole('list', { name: '剪辑轨道' }).getByRole('listitem')).toHaveCount(3)
+  await expect(smartEditPanel.getByRole('list', { name: '片段列表' }).getByRole('listitem')).toHaveCount(2)
+  await smartEditPanel.getByRole('spinbutton', { name: '片段 02时长' }).fill('5')
+  await expect(smartEditPanel.getByText('导出时长 00:09')).toBeVisible()
+
+  await expect(page.getByText('已保存')).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await page.getByRole('button', { name: '适配画布' }).click()
+  await page.getByRole('button', { name: '文本 01', exact: true }).click()
+  const persistedText = page.getByRole('region', { name: '文本 01 文本参数' })
+  await expect(persistedText.getByRole('textbox', { name: '文本内容' })).toHaveValue('雨巷中的河灯旁白')
+  await expect(persistedText.getByRole('combobox', { name: '字体样式' })).toHaveValue('引用')
+  expect(browserErrors).toEqual([])
+})

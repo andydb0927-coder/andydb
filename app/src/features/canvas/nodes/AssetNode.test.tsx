@@ -160,3 +160,210 @@ test('keeps image nodes folded until they become the current selection', async (
   await user.click(screen.getByRole('button', { name: '确认设为主图' }))
   expect(onSetActiveResult).toHaveBeenCalledWith('result-2')
 })
+
+type TestNodeDetails = Record<string, unknown> & { type: string }
+
+function renderSpecializedNode(
+  title: string,
+  kind: 'text' | 'script' | 'storyboard' | 'video',
+  details: TestNodeDetails,
+  contextual = true,
+) {
+  const onUpdateNodeDetails = vi.fn()
+  const node = {
+    id: `${details.type}-node`,
+    kind,
+    title,
+    position: { x: 0, y: 0 },
+    versions: [{
+      id: `${details.type}-version`,
+      createdAt: '2026-08-15T00:00:00.000Z',
+      prompt: '本地演示内容',
+    }],
+    activeVersionId: `${details.type}-version`,
+    sourceChanged: false,
+    details,
+  } as unknown as CreativeNodeData['node']
+  const data = {
+    node,
+    selected: contextual,
+    actionsPlacement: 'after',
+    contextual,
+    connectionMode: false,
+    connectionSource: false,
+    focusOnMount: false,
+    focusRequestVersion: 0,
+    onAction: vi.fn(),
+    onSelect: vi.fn(),
+    onHandleActivate: vi.fn(),
+    onFocusComplete: vi.fn(),
+    onDelete: vi.fn(),
+    onUpdateNodeDetails,
+  } as unknown as CreativeNodeData
+  const flowNode: CreativeFlowNode = {
+    id: node.id,
+    type: kind,
+    position: node.position,
+    initialWidth: 420,
+    initialHeight: 720,
+    data,
+  }
+
+  const view = render(
+    <div style={{ width: 1000, height: 900 }}>
+      <ReactFlowProvider>
+        <ReactFlow
+          nodes={[flowNode]}
+          edges={[]}
+          nodeTypes={{
+            text: AssetNode,
+            script: AssetNode,
+            storyboard: AssetNode,
+            video: AssetNode,
+          }}
+        />
+      </ReactFlowProvider>
+    </div>,
+  )
+
+  return { ...view, data, flowNode, onUpdateNodeDetails }
+}
+
+test('keeps specialized nodes folded until selected and edits text details', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'text',
+    content: '雨巷旁白',
+    fontStyle: '正文',
+  }
+  const folded = renderSpecializedNode('文本 01', 'text', details, false)
+
+  expect(screen.getByText('文本节点')).toBeVisible()
+  expect(screen.queryByRole('region', { name: '文本 01 文本参数' })).not.toBeInTheDocument()
+  expect(screen.queryByText('本地演示内容')).not.toBeInTheDocument()
+  expect(screen.queryByText('就绪')).not.toBeInTheDocument()
+  folded.unmount()
+
+  const { onUpdateNodeDetails } = renderSpecializedNode('文本 01', 'text', details)
+  const panel = screen.getByRole('region', { name: '文本 01 文本参数' })
+  const editor = within(panel).getByRole('textbox', { name: '文本内容' })
+  expect(editor).toHaveValue('雨巷旁白')
+  expect(within(panel).getByText('4 / 5000')).toBeVisible()
+  await user.selectOptions(within(panel).getByRole('combobox', { name: '字体样式' }), '引用')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({ ...details, fontStyle: '引用' })
+})
+
+test('shows editable script chapters, summaries, and word counts', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'script',
+    chapters: [{ id: 'chapter-1', title: '第一章', summary: '主角在雨夜重逢' }],
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('脚本 01', 'script', details)
+  const panel = screen.getByRole('region', { name: '脚本 01 脚本参数' })
+  expect(within(panel).getByRole('list', { name: '章节列表' })).toBeVisible()
+  expect(within(panel).getByText('共 10 字')).toBeVisible()
+  await user.clear(within(panel).getByRole('textbox', { name: '第一章情节摘要' }))
+  await user.type(within(panel).getByRole('textbox', { name: '第一章情节摘要' }), '河灯熄灭')
+  expect(onUpdateNodeDetails).toHaveBeenCalled()
+})
+
+test('shows persistent audio duration, voice, speed, and volume controls', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'audio',
+    durationSeconds: 12,
+    voice: '温暖女声',
+    speed: 1,
+    volume: 80,
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', details)
+  const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
+  expect(within(panel).getByText('00:12')).toBeVisible()
+  await user.selectOptions(within(panel).getByRole('combobox', { name: '音色' }), '沉稳男声')
+  await user.clear(within(panel).getByRole('spinbutton', { name: '语速' }))
+  await user.type(within(panel).getByRole('spinbutton', { name: '语速' }), '1.2')
+  expect(onUpdateNodeDetails).toHaveBeenCalled()
+})
+
+test('adds, sorts, and removes director shots with camera hints', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'director',
+    shots: [
+      { id: 'shot-a', title: '远景建立', cameraHint: '稳定机位' },
+      { id: 'shot-b', title: '人物入画', cameraHint: '滑轨前推' },
+    ],
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('导演台 01', 'script', details)
+  const panel = screen.getByRole('region', { name: '导演台 01 导演台参数' })
+  expect(within(panel).getByRole('list', { name: '分镜编排列表' })).toBeVisible()
+  expect(within(panel).getByRole('textbox', { name: '远景建立机位提示' })).toHaveValue('稳定机位')
+  await user.click(within(panel).getByRole('button', { name: '上移人物入画' }))
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({
+    ...details,
+    shots: [details.shots[1], details.shots[0]],
+  })
+  await user.click(within(panel).getByRole('button', { name: '删除远景建立' }))
+  expect(onUpdateNodeDetails).toHaveBeenCalledWith({
+    ...details,
+    shots: [details.shots[1]],
+  })
+  await user.click(within(panel).getByRole('button', { name: '新增分镜' }))
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({
+    ...details,
+    shots: [
+      ...details.shots,
+      expect.objectContaining({ title: '分镜 03' }),
+    ],
+  })
+})
+
+test('configures frame analysis dimensions and starts only a demo analysis', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'frame-analysis',
+    sourceName: '待选择素材',
+    sourceSummary: '尚未绑定视频',
+    dimensions: { storyboard: true, motion: true, music: true },
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('逐帧拉片 01', 'storyboard', details)
+  const panel = screen.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
+  expect(within(panel).getByText('尚未绑定视频')).toBeVisible()
+  await user.upload(
+    within(panel).getByLabelText('替换素材'),
+    new File(['demo'], '雨夜镜头.mp4', { type: 'video/mp4' }),
+  )
+  expect(onUpdateNodeDetails).toHaveBeenCalledWith({
+    ...details,
+    sourceName: '雨夜镜头.mp4',
+    sourceSummary: 'video/mp4 · 1 KB',
+  })
+  await user.click(within(panel).getByRole('checkbox', { name: '音乐维度' }))
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({
+    ...details,
+    dimensions: { ...details.dimensions, music: false },
+  })
+  await user.click(within(panel).getByRole('button', { name: '开始拉片（演示）' }))
+  expect(within(panel).getByRole('status')).toHaveTextContent('演示分析已完成')
+})
+
+test('shows smart-edit tracks, clips, and export duration', () => {
+  const details = {
+    type: 'smart-edit',
+    tracks: [
+      { id: 'video-track', name: '主视频轨' },
+      { id: 'audio-track', name: '音频轨' },
+    ],
+    clips: [
+      { id: 'clip-a', name: '片段 01', durationSeconds: 4 },
+      { id: 'clip-b', name: '片段 02', durationSeconds: 3 },
+    ],
+    exportDurationSeconds: 7,
+  }
+  renderSpecializedNode('智能剪辑 01', 'video', details)
+  const panel = screen.getByRole('region', { name: '智能剪辑 01 智能剪辑参数' })
+  expect(within(panel).getByRole('list', { name: '剪辑轨道' })).toHaveTextContent('主视频轨')
+  expect(within(panel).getByRole('textbox', { name: '片段 02名称' })).toHaveValue('片段 02')
+  expect(within(panel).getByText('导出时长 00:07')).toBeVisible()
+})

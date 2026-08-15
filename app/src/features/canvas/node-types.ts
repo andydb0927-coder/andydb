@@ -3,6 +3,7 @@ import type { Node } from '@xyflow/react'
 import type {
   Asset,
   CanvasNode,
+  CanvasNodeDetails,
   EffectToolConfig,
   GenerationJob,
   ImageGenerationSettings,
@@ -58,6 +59,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onLocalVideoGenerate?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
+  onUpdateNodeDetails?(details: CanvasNodeDetails): void
 }
 
 export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>

@@ -1116,6 +1116,26 @@ describe('project store history and persistence', () => {
     expect(useProjectStore.getState().activeProject).toBe(beforeInvalid)
   })
 
+  test('persists specialized node parameters as one undoable node edit', () => {
+    const details = {
+      type: 'audio' as const,
+      durationSeconds: 18,
+      voice: '沉稳男声' as const,
+      speed: 1.2,
+      volume: 72,
+    }
+
+    useProjectStore.getState().updateNode('shot-1', { details })
+
+    const updatedNode = useProjectStore.getState().activeProject!.nodes[0]
+    expect(updatedNode.details).toEqual(details)
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+
+    useProjectStore.getState().undo()
+    const restoredNode = useProjectStore.getState().activeProject!.nodes[0]
+    expect(restoredNode.details).toBeUndefined()
+  })
+
   test('marks canvas mutations and history traversal dirty until persisted', () => {
     expect(useProjectStore.getState().saveStatus).toBe('saved')
 

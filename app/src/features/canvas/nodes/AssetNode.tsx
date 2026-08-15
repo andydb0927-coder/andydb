@@ -27,6 +27,8 @@ import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { ImageGenerationPanel, ImageResults } from './ImageNodeDetails'
 import { VideoGenerationPanel, VideoToolDetails } from './VideoNodeDetails'
+import { SpecializedNodeDetailsPanel } from './SpecializedNodeDetails'
+import { specializedNodeTypeCopy } from './specialized-node-copy'
 
 const kindCopy = {
   character: '角色',
@@ -81,7 +83,8 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
     >
       {(data.node.effectTool
         ? []
-        : primaryActionsForNode(data.node.kind, data.asset !== undefined)).map(
+        : primaryActionsForNode(data.node.kind, data.asset !== undefined)
+            .filter(({ action }) => !(data.node.details && action === 'edit-card'))).map(
         ({ action, label }) => {
           const ActionIcon = actionIcons[action]
 
@@ -194,6 +197,7 @@ export function CreativeNodeShell({
   } = data
   const selectRef = useRef<HTMLButtonElement>(null)
   const KindIcon = kindIcons[node.kind]
+  const specializedDetails = node.details
   const activeVersion = node.versions.find(
     (version) => version.id === node.activeVersionId,
   )
@@ -204,7 +208,7 @@ export function CreativeNodeShell({
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
     node.videoTool === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
-  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined || node.effectTool !== undefined
+  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined || node.effectTool !== undefined || specializedDetails !== undefined
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -247,6 +251,8 @@ export function CreativeNodeShell({
         }${data.connectionSource ? ' creative-node--connection-source' : ''}${
           imageMedia ? ' creative-node--image-media' : ''
         }${videoMedia ? ' creative-node--video-media' : ''}${
+          specializedDetails ? ' creative-node--specialized' : ''
+        }${
           expandableMedia && contextual ? ' creative-node--expanded' : ''
         }`}
       >
@@ -261,11 +267,13 @@ export function CreativeNodeShell({
           <span className="creative-node__heading">
             <span className="creative-node__kind">
               <KindIcon aria-hidden="true" />
-              {kindCopy[node.kind]}
+              {specializedDetails
+                ? specializedNodeTypeCopy[specializedDetails.type]
+                : kindCopy[node.kind]}
             </span>
             <strong>{node.title}</strong>
           </span>
-          {preview ??
+          {specializedDetails ? null : preview ??
             (asset?.kind === 'video' ? (
               <video
                 src={asset.url}
@@ -295,12 +303,12 @@ export function CreativeNodeShell({
               <span className="creative-node__result-count-label">1 个结果</span>
             </>
           ) : null}
-          {!hidePrompt && !imageMedia && !videoMedia ? (
+          {!specializedDetails && !hidePrompt && !imageMedia && !videoMedia ? (
             <span className="creative-node__prompt">
               {activeVersion?.prompt ?? '尚未生成内容'}
             </span>
           ) : null}
-          {node.sourceChanged ? (
+          {specializedDetails ? null : node.sourceChanged ? (
             <StatusText status="offline">上游来源已变更</StatusText>
           ) : job ? (
             <StatusText status={job.status === 'cancelled' ? 'idle' : job.status}>
@@ -313,8 +321,9 @@ export function CreativeNodeShell({
         {imageGenerationNode ? <ImageResults data={data} /> : null}
         {imageGenerationNode && contextual ? <ImageGenerationPanel data={data} /> : null}
         {videoMedia && contextual ? <VideoGenerationPanel data={data} /> : null}
-        {node.videoTool && contextual ? <VideoToolDetails data={data} /> : null}
+        {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
+        {specializedDetails && contextual ? <SpecializedNodeDetailsPanel data={data} /> : null}
         <Handle
           id="dependency-target"
           type="target"

@@ -3145,6 +3145,11 @@ describe('creative canvas', () => {
       kind: 'text',
       position: { x: 640, y: 360 },
       versions: [{ prompt: '双击画布创建的自由文本节点' }],
+      details: {
+        type: 'text',
+        content: '双击画布创建的自由文本节点',
+        fontStyle: '正文',
+      },
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
@@ -3181,18 +3186,18 @@ describe('creative canvas', () => {
     initializeFlow({ x: 520, y: 340 })
 
     const cases = [
-      ['文本', 'text', '文本'],
-      ['图片', 'image', '图片'],
-      ['视频', 'video', '视频'],
-      ['智能剪辑 Beta', 'video', '智能剪辑'],
-      ['导演台 NEW', 'script', '导演台'],
-      ['逐帧拉片 SD2.5', 'storyboard', '逐帧拉片'],
-      ['音频', 'text', '音频'],
-      ['脚本', 'script', '脚本'],
-      ['素材库', 'image', '素材库'],
+      ['文本', 'text', '文本', 'text'],
+      ['图片', 'image', '图片', undefined],
+      ['视频', 'video', '视频', undefined],
+      ['智能剪辑 Beta', 'video', '智能剪辑', 'smart-edit'],
+      ['导演台 NEW', 'script', '导演台', 'director'],
+      ['逐帧拉片 SD2.5', 'storyboard', '逐帧拉片', 'frame-analysis'],
+      ['音频', 'text', '音频', 'audio'],
+      ['脚本', 'script', '脚本', 'script'],
+      ['素材库', 'image', '素材库', undefined],
     ] as const
 
-    for (const [label, kind, title] of cases) {
+    for (const [label, kind, title, detailType] of cases) {
       contextMenuPane(440, 300)
       await user.click(screen.getByRole('menuitem', { name: '添加节点' }))
       await user.click(screen.getByRole('menuitem', { name: label }))
@@ -3201,6 +3206,7 @@ describe('creative canvas', () => {
         title: expect.stringContaining(title),
         position: { x: 520, y: 340 },
       })
+      expect(useProjectStore.getState().activeProject?.nodes.at(-1)?.details?.type).toBe(detailType)
       expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
     }
 

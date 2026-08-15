@@ -1494,6 +1494,9 @@ export function CanvasPage({
               effectTool: { ...node.effectTool, ...changes },
             })
           },
+          onUpdateNodeDetails: (details) => {
+            updateNode(node.id, { details })
+          },
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
       }
@@ -2137,6 +2140,36 @@ export function CanvasPage({
           },
           position,
         )
+        creation = {
+          ...creation,
+          node: {
+            ...creation.node,
+            details: type === 'director'
+              ? {
+                  type: 'director',
+                  shots: [
+                    {
+                      id: crypto.randomUUID(),
+                      title: '远景建立',
+                      cameraHint: '广角稳定机位，交代环境与人物关系',
+                    },
+                    {
+                      id: crypto.randomUUID(),
+                      title: '人物入画',
+                      cameraHint: '中景滑轨前推，保持视线高度',
+                    },
+                  ],
+                }
+              : {
+                  type: 'script',
+                  chapters: [{
+                    id: crypto.randomUUID(),
+                    title: '第一章',
+                    summary: '主角进入场景，建立目标并引出第一个冲突。',
+                  }],
+                },
+          },
+        }
       } else if (type === 'image' || type === 'asset-library') {
         const createdAt = new Date().toISOString()
         const title =
@@ -2226,6 +2259,70 @@ export function CanvasPage({
           ...config,
           position,
         })
+        if (type === 'text') {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              details: {
+                type: 'text',
+                content: config.content,
+                fontStyle: '正文',
+              },
+            },
+          }
+        } else if (type === 'audio') {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              details: {
+                type: 'audio',
+                durationSeconds: 12,
+                voice: '温暖女声',
+                speed: 1,
+                volume: 80,
+              },
+            },
+          }
+        } else if (type === 'smart-edit') {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              details: {
+                type: 'smart-edit',
+                tracks: [
+                  { id: crypto.randomUUID(), name: '主视频轨' },
+                  { id: crypto.randomUUID(), name: '叠加轨' },
+                  { id: crypto.randomUUID(), name: '音频轨' },
+                ],
+                clips: [
+                  { id: crypto.randomUUID(), name: '片段 01', durationSeconds: 4 },
+                  { id: crypto.randomUUID(), name: '片段 02', durationSeconds: 3 },
+                ],
+                exportDurationSeconds: 7,
+              },
+            },
+          }
+        } else if (type === 'frame-analysis') {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              details: {
+                type: 'frame-analysis',
+                sourceName: '待选择素材',
+                sourceSummary: '尚未绑定视频，可替换为本地演示素材。',
+                dimensions: {
+                  storyboard: true,
+                  motion: true,
+                  music: true,
+                },
+              },
+            },
+          }
+        }
         if (type === 'frame-analysis') {
           creation = {
             ...creation,
