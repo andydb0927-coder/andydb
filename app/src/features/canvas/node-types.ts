@@ -49,6 +49,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onHandleActivate(type: 'source' | 'target', trigger: HTMLElement): void
   onFocusComplete(): void
   onDelete(trigger: HTMLButtonElement): void
+  onRenameNode?(title: string): void
   onSetActiveResult?(resultId: string): void
   onUpdateImageGenerationSettings?(
     settings: Partial<ImageGenerationSettings>,

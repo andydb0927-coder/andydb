@@ -2758,7 +2758,7 @@ select {
   justify-content: flex-start;
   gap: var(--space-2);
   color: var(--text-muted);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .creative-node__floating-title svg {
@@ -2766,10 +2766,29 @@ select {
   height: 18px;
 }
 
-.creative-node__floating-title strong {
+.creative-node__floating-title input {
+  min-width: 4ch;
+  max-width: calc(100% - 28px);
+  padding: 2px var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
   color: var(--text-muted);
+  background: transparent;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.creative-node__floating-title input:hover {
+  border-color: var(--neutral-white-a12);
+  background: var(--neutral-white-a05);
+}
+
+.creative-node__floating-title input:focus-visible {
+  border-color: var(--border-selected);
+  color: var(--text-primary);
+  background: var(--surface-panel-strong);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .creative-node--liblib-media .creative-node__media {
@@ -2837,7 +2856,15 @@ select {
   pointer-events: none;
 }
 
-.creative-node-composer :is(button, input, textarea, select, label, [role='button']) {
+.creative-node-composer :is(
+  button,
+  input,
+  textarea,
+  select,
+  label,
+  [role='button'],
+  [contenteditable='true']
+) {
   pointer-events: auto;
 }
 
@@ -3482,10 +3509,17 @@ select {
   display: block;
   min-height: 82px;
   color: var(--text-primary);
+  cursor: text;
   font-size: 0.875rem;
   line-height: 1.65;
   outline: none;
   white-space: pre-wrap;
+}
+
+.image-generation-panel__prompt:focus-visible {
+  border-radius: var(--radius-button);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
 }
 
 .image-generation-panel__prompt:empty::before {

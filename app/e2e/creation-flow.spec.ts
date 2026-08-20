@@ -261,6 +261,40 @@ test('keeps one image node expanded and persists a confirmed main result', async
   ).toHaveAttribute('src', '/demo/shot-river.png')
 })
 
+test('renames a media node and accepts prompt input from the composer', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const character = page.getByRole('button', { name: '角色参考', exact: true })
+  await character.click()
+  const title = page
+    .locator('.react-flow__node')
+    .filter({ has: character })
+    .getByRole('textbox', { name: '节点名称' })
+  await title.fill('雨夜角色')
+  await title.press('Enter')
+  await expect(page.getByRole('button', { name: '雨夜角色', exact: true })).toBeVisible()
+
+  const prompt = page
+    .getByRole('region', { name: '雨夜角色 生成参数' })
+    .getByRole('textbox', { name: '提示词' })
+  await prompt.click()
+  await prompt.fill('将背景改为雪夜')
+  await prompt.blur()
+  await expect(prompt).toHaveText('将背景改为雪夜')
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '雨夜角色', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '雨夜角色', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: '提示词' })).toHaveText(
+    '将背景改为雪夜',
+  )
+})
+
 test('persists image parameters and creates a canvas-selected media reference', async ({
   page,
 }) => {

@@ -6,7 +6,7 @@ import { expect, test, vi } from 'vitest'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { AssetNode } from './AssetNode'
 
-function renderNode(onHandleActivate = vi.fn()) {
+function renderNode(onHandleActivate = vi.fn(), onRenameNode = vi.fn()) {
   const data: CreativeNodeData = {
     node: {
       id: 'character',
@@ -27,6 +27,7 @@ function renderNode(onHandleActivate = vi.fn()) {
     onAction: vi.fn(),
     onSelect: vi.fn(),
     onHandleActivate,
+    onRenameNode,
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
   }
@@ -51,7 +52,7 @@ function renderNode(onHandleActivate = vi.fn()) {
     </div>,
   )
 
-  return { ...view, onHandleActivate }
+  return { ...view, onHandleActivate, onRenameNode }
 }
 
 test('uses real React Flow handles with button semantics and keyboard actions', async () => {
@@ -83,6 +84,20 @@ test('exposes connection mode and selected-source state on the real node shell',
     'creative-node--connection-mode',
     'creative-node--connection-source',
   )
+})
+
+test('edits a Liblib media node title from its floating heading', async () => {
+  const user = userEvent.setup()
+  const onRenameNode = vi.fn()
+  renderNode(vi.fn(), onRenameNode)
+
+  const title = screen.getByRole('textbox', { name: '节点名称' })
+  expect(title).toHaveValue('角色参考')
+  await user.clear(title)
+  await user.type(title, '雨夜角色{Enter}')
+
+  expect(onRenameNode).toHaveBeenCalledOnce()
+  expect(onRenameNode).toHaveBeenCalledWith('雨夜角色')
 })
 
 test('keeps image nodes folded until they become the current selection', async () => {
@@ -145,7 +160,9 @@ test('keeps image nodes folded until they become the current selection', async (
   view.rerender(renderWith({ ...baseData, selected: true, contextual: true }))
   const generation = screen.getByRole('region', { name: 'L1 生成参数' })
   const mediaCard = screen.getByRole('article')
-  const floatingTitle = screen.getByText('L1').closest('.creative-node__floating-title')
+  const floatingTitle = screen
+    .getByRole('textbox', { name: '节点名称' })
+    .closest('.creative-node__floating-title')
   expect(mediaCard).toHaveClass('creative-node--liblib-media')
   expect(floatingTitle).toBeVisible()
   expect(mediaCard).not.toContainElement(floatingTitle as HTMLElement)

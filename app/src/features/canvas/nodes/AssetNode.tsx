@@ -189,8 +189,10 @@ export function CreativeNodeShell({
   } = data
   const selectRef = useRef<HTMLButtonElement>(null)
   const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
+  const renameCancelledRef = useRef(false)
   const [imageToImage, setImageToImage] = useState(false)
   const [upscalePending, setUpscalePending] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(node.title)
   const KindIcon = kindIcons[node.kind]
   const specializedDetails = node.details
   const activeVersion = node.versions.find(
@@ -214,6 +216,25 @@ export function CreativeNodeShell({
     setImageToImage(false)
     setUpscalePending(false)
   }, [node.id])
+
+  useEffect(() => {
+    setTitleDraft(node.title)
+  }, [node.id, node.title])
+
+  const commitTitle = () => {
+    if (renameCancelledRef.current) {
+      renameCancelledRef.current = false
+      setTitleDraft(node.title)
+      return
+    }
+    const title = titleDraft.trim().slice(0, 80)
+    if (!title) {
+      setTitleDraft(node.title)
+      return
+    }
+    setTitleDraft(title)
+    if (title !== node.title) data.onRenameNode?.(title)
+  }
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -249,9 +270,30 @@ export function CreativeNodeShell({
   return (
     <div className="creative-node-layout">
       {liblibMediaNode ? (
-        <div className="creative-node__floating-title" aria-hidden="true">
-          <KindIcon />
-          <strong>{node.title}</strong>
+        <div className="creative-node__floating-title nodrag nowheel">
+          <KindIcon aria-hidden="true" />
+          <input
+            type="text"
+            aria-label="节点名称"
+            value={titleDraft}
+            maxLength={80}
+            size={Math.min(24, Math.max(4, titleDraft.length))}
+            onChange={(event) => setTitleDraft(event.target.value)}
+            onBlur={commitTitle}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                event.currentTarget.blur()
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                renameCancelledRef.current = true
+                setTitleDraft(node.title)
+                event.currentTarget.blur()
+              }
+            }}
+          />
         </div>
       ) : null}
       <article

@@ -1588,6 +1588,7 @@ export function CanvasPage({
             setFocusRequestVersion((version) => version + 1)
           },
           onDelete: (trigger) => requestDelete(node.id, trigger),
+          onRenameNode: (title) => updateNode(node.id, { title }),
           onSetActiveResult: (resultId) =>
             setActiveImageResult(node.id, resultId),
           onUpdateImageGenerationSettings: (settings) =>
