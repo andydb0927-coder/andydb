@@ -21,7 +21,7 @@ import type {
 } from '../generation/generation-adapter'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import type { LibraryAssetRecord } from '../assets/library-model'
-import type { Project } from '../project/model'
+import { defaultImageGenerationSettings, type Project } from '../project/model'
 import {
   ProjectRepository,
   WirelessCanvasDatabase,
@@ -2715,6 +2715,52 @@ describe('creative canvas', () => {
     )
   })
 
+  test('dispatches the persisted image picker parameters and output-adjusted cost', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'character'
+        ? {
+            ...node,
+            modelProviderId: 'mock-mj-image',
+            imageGeneration: {
+              ...defaultImageGenerationSettings,
+              prompt: '雨夜角色创作描述',
+              quality: '高画质',
+              resolution: '4K',
+              aspectRatio: '9:16',
+              count: 2,
+            },
+          }
+        : node,
+    )
+    act(() => activate(project))
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+    })
+
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(
+      screen.getByRole('button', { name: '生成图片，预计成本 36' }),
+    )
+
+    await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(start.mock.calls[0]?.[0]).toMatchObject({
+      targetKind: 'image',
+      providerId: 'mock-mj-image',
+      parameters: {
+        aspectRatio: '9:16',
+        quality: '高画质',
+        resolution: '4K',
+        count: 2,
+      },
+    })
+  })
+
   test('persists a registry model choice on the node and dispatches that provider id', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
@@ -2807,6 +2853,10 @@ describe('creative canvas', () => {
         weirdness: 50,
         diversity: 5,
         autoLink: true,
+        quality: '标准画质',
+        resolution: '2K',
+        aspectRatio: '16:9',
+        count: 1,
       },
     }
     activate({ ...project, nodes: [...project.nodes, blankImage] })

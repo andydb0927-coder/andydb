@@ -82,6 +82,23 @@ export interface ImageGenerationSettings {
   weirdness: number
   diversity: number
   autoLink: boolean
+  quality: '低画质' | '标准画质' | '高画质'
+  resolution: '1K' | '2K' | '4K'
+  aspectRatio:
+    | '1:1'
+    | '1:2'
+    | '2:1'
+    | '9:16'
+    | '16:9'
+    | '3:4'
+    | '4:3'
+    | '3:2'
+    | '2:3'
+    | '5:4'
+    | '4:5'
+    | '21:9'
+    | '9:21'
+  count: 1 | 2 | 4
 }
 
 export interface GenerationReferenceConfig {
@@ -104,6 +121,10 @@ export const defaultImageGenerationSettings: ImageGenerationSettings = {
   weirdness: 50,
   diversity: 5,
   autoLink: true,
+  quality: '标准画质',
+  resolution: '2K',
+  aspectRatio: '16:9',
+  count: 1,
 }
 
 export type VideoDerivedTool =

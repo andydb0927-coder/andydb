@@ -1,5 +1,6 @@
 import {
   ArrowUp,
+  ChevronDown,
   Download,
   Heart,
   Images,
@@ -15,7 +16,10 @@ import {
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
-import { defaultImageGenerationSettings } from '../../project/model'
+import {
+  defaultImageGenerationSettings,
+  type ImageGenerationSettings,
+} from '../../project/model'
 import {
   defaultProviderRegistry,
   providerOptionLabel,
@@ -112,6 +116,31 @@ const styleCards = [
 ] as const
 
 type StyleTab = 'plaza' | 'favorites' | 'recent'
+
+const imageQualityOptions = ['低画质', '标准画质', '高画质'] as const
+const imageResolutionOptions = ['1K', '2K', '4K'] as const
+const imageAspectRatioOptions = [
+  '1:1',
+  '1:2',
+  '2:1',
+  '9:16',
+  '16:9',
+  '3:4',
+  '4:3',
+  '3:2',
+  '2:3',
+  '5:4',
+  '4:5',
+  '21:9',
+  '9:21',
+] as const
+const imageCountOptions = [1, 2, 4] as const
+
+type ImageParameterKey =
+  | 'quality'
+  | 'resolution'
+  | 'aspectRatio'
+  | 'count'
 
 function ImageStyleGallery({ onClose }: { onClose(): void }) {
   const [tab, setTab] = useState<StyleTab>('plaza')
@@ -276,6 +305,122 @@ function ImageStyleGallery({ onClose }: { onClose(): void }) {
   )
 }
 
+function ImageParameterPicker({
+  settings,
+  triggerRef,
+  onChange,
+  onClose,
+}: {
+  settings: ImageGenerationSettings
+  triggerRef: RefObject<HTMLButtonElement | null>
+  onChange<Key extends ImageParameterKey>(
+    key: Key,
+    value: ImageGenerationSettings[Key],
+  ): void
+  onClose(restoreFocus: boolean): void
+}) {
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      onClose(true)
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return
+      if (
+        pickerRef.current?.contains(event.target) ||
+        triggerRef.current?.contains(event.target)
+      ) {
+        return
+      }
+      onClose(false)
+    }
+    window.addEventListener('keydown', handleKeyDown, true)
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+    }
+  }, [onClose, triggerRef])
+
+  const optionButton = <Key extends ImageParameterKey>(
+    key: Key,
+    value: ImageGenerationSettings[Key],
+    label: string,
+    content?: React.ReactNode,
+  ) => (
+    <button
+      key={String(value)}
+      type="button"
+      aria-label={label}
+      aria-pressed={settings[key] === value}
+      onClick={() => onChange(key, value)}
+    >
+      {content ?? label}
+    </button>
+  )
+
+  return (
+    <div
+      ref={pickerRef}
+      className="image-parameter-picker nodrag nowheel"
+      role="dialog"
+      aria-label="图片生成参数"
+    >
+      <fieldset>
+        <legend>画质</legend>
+        <div className="image-parameter-picker__three-column">
+          {imageQualityOptions.map((option) =>
+            optionButton('quality', option, option),
+          )}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>清晰度</legend>
+        <div className="image-parameter-picker__three-column">
+          {imageResolutionOptions.map((option) =>
+            optionButton('resolution', option, option),
+          )}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>比例</legend>
+        <div className="image-parameter-picker__ratio-grid">
+          {imageAspectRatioOptions.map((option) => {
+            const [width, height] = option.split(':').map(Number)
+            const orientation =
+              width === height ? 'square' : width > height ? 'landscape' : 'portrait'
+            return optionButton(
+              'aspectRatio',
+              option,
+              option,
+              <>
+                <span
+                  className="image-parameter-picker__ratio-icon"
+                  data-orientation={orientation}
+                  aria-hidden="true"
+                />
+                <span>{option}</span>
+              </>,
+            )
+          })}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>生成数量</legend>
+        <div className="image-parameter-picker__three-column">
+          {imageCountOptions.map((option) =>
+            optionButton('count', option, `${option}张`),
+          )}
+        </div>
+      </fieldset>
+    </div>
+  )
+}
+
 export function ImageGenerationPanel({
   data,
   imageToImage,
@@ -295,6 +440,7 @@ export function ImageGenerationPanel({
   const [styleOpen, setStyleOpen] = useState(false)
   const [marking, setMarking] = useState(false)
   const [composerExpanded, setComposerExpanded] = useState(false)
+  const [parametersOpen, setParametersOpen] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -309,6 +455,7 @@ export function ImageGenerationPanel({
   })
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
+  const parameterTriggerRef = useRef<HTMLButtonElement>(null)
   const incomingReferenceCount =
     data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
   const hasMedia = Boolean(data.asset || incomingReferenceCount)
@@ -319,7 +466,7 @@ export function ImageGenerationPanel({
   const selectedProvider =
     providers.find(({ id }) => id === data.node.modelProviderId) ??
     providers.find(({ kind }) => kind === 'demo')!
-  const cost = selectedProvider.pricing.amount
+  const cost = selectedProvider.pricing.amount * settings.count
   const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0
 
   useEffect(() => {
@@ -327,6 +474,7 @@ export function ImageGenerationPanel({
     setStyleOpen(false)
     setMarking(false)
     setComposerExpanded(false)
+    setParametersOpen(false)
   }, [data.node.id])
 
   useEffect(() => {
@@ -377,6 +525,13 @@ export function ImageGenerationPanel({
   const closeUpscale = () => {
     onUpscalePendingChange(false)
     queueMicrotask(() => upscaleTriggerRef.current?.focus())
+  }
+
+  const closeParameters = (restoreFocus: boolean) => {
+    setParametersOpen(false)
+    if (restoreFocus) {
+      queueMicrotask(() => parameterTriggerRef.current?.focus())
+    }
   }
 
   return (
@@ -520,9 +675,21 @@ export function ImageGenerationPanel({
           </select>
         </label>
         <span className="model-provider-badge">演示</span>
-        <span className="image-generation-panel__parameter-row">
-          16:9 · 标准画质 · 2K · 1张
-        </span>
+        <button
+          ref={parameterTriggerRef}
+          type="button"
+          className="image-generation-panel__parameter-row"
+          aria-label="图片生成参数"
+          aria-haspopup="dialog"
+          aria-expanded={parametersOpen}
+          onClick={() => setParametersOpen((open) => !open)}
+        >
+          <span>
+            {settings.aspectRatio} · {settings.quality} · {settings.resolution} ·{' '}
+            {settings.count}张
+          </span>
+          <ChevronDown aria-hidden="true" />
+        </button>
         <button
           type="button"
           aria-label="翻译提示词"
@@ -556,6 +723,14 @@ export function ImageGenerationPanel({
           </button>
         </div>
       </div>
+      {parametersOpen ? (
+        <ImageParameterPicker
+          settings={settings}
+          triggerRef={parameterTriggerRef}
+          onChange={updateSetting}
+          onClose={closeParameters}
+        />
+      ) : null}
       <p id="image-translation-reason" className="image-generation-panel__reason">
         翻译服务未接入，本地演示暂不可用。
       </p>

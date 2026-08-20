@@ -51,13 +51,14 @@ import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
 import type { MembershipPlanId } from '../membership/membership-model'
 import { MembershipRepository } from '../membership/membership-repository'
-import type {
-  CanvasCreation,
-  CanvasGroup,
-  CreativeCardKind,
-  GenerationJob,
-  Project,
-  VideoDerivedTool,
+import {
+  defaultImageGenerationSettings,
+  type CanvasCreation,
+  type CanvasGroup,
+  type CreativeCardKind,
+  type GenerationJob,
+  type Project,
+  type VideoDerivedTool,
 } from '../project/model'
 import {
   buildCreativeCardCreation,
@@ -374,6 +375,23 @@ function buildGenerationRequest(
       ? fallbackProvider
       : undefined
   const registeredProviderId = registeredProvider?.id
+  const normalizedImageSettings = node.imageGeneration
+    ? { ...defaultImageGenerationSettings, ...node.imageGeneration }
+    : undefined
+  const imageParameters =
+    targetKind === 'image' && normalizedImageSettings
+      ? {
+          aspectRatio: normalizedImageSettings.aspectRatio,
+          quality: normalizedImageSettings.quality,
+          resolution: normalizedImageSettings.resolution,
+          count: normalizedImageSettings.count,
+        }
+      : undefined
+  const parameters = {
+    ...(registeredProvider ? providerDefaultParameters(registeredProvider) : {}),
+    ...savedConfig?.parameters,
+    ...imageParameters,
+  }
 
   return {
     projectId: project.id,
@@ -382,16 +400,7 @@ function buildGenerationRequest(
     targetKind,
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
-    ...(registeredProviderId && registeredProvider
-      ? {
-          parameters: {
-            ...providerDefaultParameters(registeredProvider),
-            ...savedConfig?.parameters,
-          },
-        }
-      : savedConfig?.parameters
-        ? { parameters: { ...savedConfig.parameters } }
-        : {}),
+    ...(Object.keys(parameters).length ? { parameters } : {}),
     referenceAssets: savedConfig?.referenceAssets.length
       ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
       : asset

@@ -420,6 +420,10 @@ describe('project store history and persistence', () => {
       weirdness: 100,
       diversity: 10,
       autoLink: false,
+      quality: '高画质',
+      resolution: '4K',
+      aspectRatio: '9:16',
+      count: 2,
     })
 
     expect(
@@ -432,6 +436,10 @@ describe('project store history and persistence', () => {
       weirdness: 100,
       diversity: 10,
       autoLink: false,
+      quality: '高画质',
+      resolution: '4K',
+      aspectRatio: '9:16',
+      count: 2,
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
 
@@ -447,6 +455,10 @@ describe('project store history and persistence', () => {
       weirdness: 100,
       diversity: 10,
       autoLink: false,
+      quality: '高画质',
+      resolution: '4K',
+      aspectRatio: '9:16',
+      count: 2,
     })
 
     useProjectStore.getState().undo()

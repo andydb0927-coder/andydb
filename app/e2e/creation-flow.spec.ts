@@ -338,6 +338,18 @@ test('persists image parameters and creates a canvas-selected media reference', 
   const scene = page.getByRole('button', { name: '场景设定', exact: true })
   await scene.click()
   const panel = page.getByRole('region', { name: '场景设定 生成参数' })
+  const parameterTrigger = panel.getByRole('button', { name: '图片生成参数' })
+  await expect(parameterTrigger).toContainText('16:9 · 标准画质 · 2K · 1张')
+  await parameterTrigger.click()
+  const parameterDialog = panel.getByRole('dialog', { name: '图片生成参数' })
+  await parameterDialog.getByRole('button', { name: '高画质' }).click()
+  await parameterDialog.getByRole('button', { name: '4K' }).click()
+  await parameterDialog.getByRole('button', { name: '9:16' }).click()
+  await parameterDialog.getByRole('button', { name: '2张' }).click()
+  await expect(parameterTrigger).toContainText('9:16 · 高画质 · 4K · 2张')
+  await expect(panel.getByText('预计成本 36')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(parameterTrigger).toBeFocused()
   await panel.getByRole('button', { name: '展开高级设置' }).click()
   await expect(panel.getByLabel('风格化程度')).toHaveAttribute('step', '50')
   await expect(panel.getByLabel('怪异度')).toHaveAttribute('step', '50')
@@ -365,6 +377,10 @@ test('persists image parameters and creates a canvas-selected media reference', 
   const reloadedPanel = page.getByRole('region', {
     name: '场景设定 生成参数',
   })
+  await expect(
+    reloadedPanel.getByRole('button', { name: '图片生成参数' }),
+  ).toContainText('9:16 · 高画质 · 4K · 2张')
+  await expect(reloadedPanel.getByText('预计成本 36')).toBeVisible()
   await reloadedPanel.getByRole('button', { name: '展开高级设置' }).click()
   await expect(reloadedPanel.getByLabel('个性化风格 P 值')).toHaveValue(
     'p-e2e-style',

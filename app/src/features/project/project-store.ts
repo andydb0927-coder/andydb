@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import {
   appendNodeVersion,
+  defaultImageGenerationSettings,
   type CanvasCreation,
   type CanvasGroup,
   type CanvasNode,
@@ -713,14 +714,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           return project
         }
         const current: ImageGenerationSettings = {
+          ...defaultImageGenerationSettings,
           prompt:
             source.versions.find(({ id }) => id === source.activeVersionId)
               ?.prompt ?? '',
-          pValue: '',
-          stylization: 150,
-          weirdness: 50,
-          diversity: 5,
-          autoLink: true,
           ...source.imageGeneration,
         }
         const next: ImageGenerationSettings = {
@@ -744,6 +741,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             changes.autoLink === undefined
               ? current.autoLink
               : changes.autoLink,
+          quality:
+            changes.quality === undefined ? current.quality : changes.quality,
+          resolution:
+            changes.resolution === undefined
+              ? current.resolution
+              : changes.resolution,
+          aspectRatio:
+            changes.aspectRatio === undefined
+              ? current.aspectRatio
+              : changes.aspectRatio,
+          count: changes.count === undefined ? current.count : changes.count,
         }
         if (
           current.prompt === next.prompt &&
@@ -751,7 +759,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           current.stylization === next.stylization &&
           current.weirdness === next.weirdness &&
           current.diversity === next.diversity &&
-          current.autoLink === next.autoLink
+          current.autoLink === next.autoLink &&
+          current.quality === next.quality &&
+          current.resolution === next.resolution &&
+          current.aspectRatio === next.aspectRatio &&
+          current.count === next.count
         ) {
           return project
         }

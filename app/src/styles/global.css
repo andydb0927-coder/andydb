@@ -3722,6 +3722,11 @@ select {
 }
 
 .image-generation-panel__parameter-row {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 0;
   border-left: 1px solid var(--neutral-white-a13);
@@ -3731,6 +3736,139 @@ select {
   font-size: 0.75rem;
   text-align: left;
   white-space: nowrap;
+}
+
+.image-generation-panel button.image-generation-panel__parameter-row {
+  min-height: 36px;
+  border: 0;
+  border-left: 1px solid var(--neutral-white-a13);
+  border-radius: 0;
+  background: transparent;
+}
+
+.image-generation-panel__parameter-row:hover,
+.image-generation-panel__parameter-row[aria-expanded='true'] {
+  color: var(--text-primary);
+  background: var(--neutral-white-a05);
+}
+
+.image-generation-panel__parameter-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.image-generation-panel__parameter-row > svg {
+  flex: 0 0 auto;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.image-generation-panel__parameter-row[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+
+.image-parameter-picker {
+  position: absolute;
+  z-index: 28;
+  right: 88px;
+  bottom: 76px;
+  display: grid;
+  width: min(430px, calc(100vw - 32px));
+  max-height: min(650px, calc(100vh - 96px));
+  gap: var(--space-3);
+  overflow: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--neutral-white-a13);
+  border-radius: var(--radius-panel);
+  color: var(--text-primary);
+  background: rgb(30 31 34 / 98%);
+  box-shadow: var(--shadow-overlay);
+}
+
+.image-parameter-picker fieldset {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.image-parameter-picker legend {
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.image-parameter-picker__three-column,
+.image-parameter-picker__ratio-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.image-parameter-picker__three-column {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.image-parameter-picker__ratio-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.image-generation-panel .image-parameter-picker button {
+  display: grid;
+  min-width: 0;
+  min-height: 48px;
+  place-items: center;
+  gap: 5px;
+  padding: var(--space-2);
+  border: 1px solid var(--neutral-white-a13);
+  border-radius: var(--radius-button);
+  color: var(--text-muted);
+  background: var(--neutral-white-a03);
+  font-size: 0.75rem;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.image-generation-panel .image-parameter-picker button:hover {
+  border-color: var(--neutral-white-a24);
+  color: var(--text-primary);
+  background: var(--neutral-white-a06);
+}
+
+.image-generation-panel .image-parameter-picker button[aria-pressed='true'] {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background: var(--neutral-white-a12);
+  box-shadow: inset 0 0 0 1px var(--neutral-white-a06);
+}
+
+.image-generation-panel .image-parameter-picker__ratio-grid button {
+  min-height: 62px;
+}
+
+.image-parameter-picker__ratio-icon {
+  display: block;
+  border: 2px solid currentcolor;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.image-parameter-picker__ratio-icon[data-orientation='square'] {
+  width: 13px;
+  height: 13px;
+}
+
+.image-parameter-picker__ratio-icon[data-orientation='landscape'] {
+  width: 18px;
+  height: 10px;
+}
+
+.image-parameter-picker__ratio-icon[data-orientation='portrait'] {
+  width: 9px;
+  height: 16px;
 }
 
 .model-provider-badge {
@@ -3956,6 +4094,18 @@ select {
 }
 
 @media (max-width: 800px) {
+  .image-parameter-picker {
+    right: 0;
+    bottom: 68px;
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 112px);
+    padding: var(--space-3);
+  }
+
+  .image-parameter-picker__ratio-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .image-style-gallery-backdrop { padding: var(--space-2); }
   .image-style-gallery {
     width: calc(100vw - 16px);

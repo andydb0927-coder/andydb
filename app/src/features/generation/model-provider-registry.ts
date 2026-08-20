@@ -97,11 +97,20 @@ function providerCost(
   provider: ModelProvider,
   parameters?: GenerationRequest['parameters'],
 ) {
-  if (provider.pricing.unit === 'generation') return provider.pricing.amount
+  const requestedCount = Number(parameters?.count ?? 1)
+  const count =
+    Number.isFinite(requestedCount) && requestedCount > 0 ? requestedCount : 1
+  if (provider.pricing.unit === 'generation') {
+    return provider.pricing.amount * count
+  }
   const duration = Number(
     parameters?.duration ?? provider.parameterSchema.duration?.defaultValue ?? 1,
   )
-  return provider.pricing.amount * (Number.isFinite(duration) ? duration : 1)
+  return (
+    provider.pricing.amount *
+    (Number.isFinite(duration) ? duration : 1) *
+    count
+  )
 }
 
 export function providerCapabilityLabel(provider: ModelProvider) {

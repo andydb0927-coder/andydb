@@ -99,6 +99,66 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   expect(within(panel).getByRole('button', { name: '退出放大编辑区' })).toBeVisible()
 })
 
+test('opens the complete Liblib image parameter picker and persists its live summary', async () => {
+  const user = userEvent.setup()
+  const data = makeData()
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const trigger = within(panel).getByRole('button', { name: '图片生成参数' })
+
+  expect(trigger).toHaveTextContent('16:9 · 标准画质 · 2K · 1张')
+  await user.click(trigger)
+
+  const dialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
+  const quality = within(dialog).getByRole('group', { name: '画质' })
+  const resolution = within(dialog).getByRole('group', { name: '清晰度' })
+  const ratio = within(dialog).getByRole('group', { name: '比例' })
+  const count = within(dialog).getByRole('group', { name: '生成数量' })
+
+  expect(within(quality).getAllByRole('button')).toHaveLength(3)
+  expect(within(resolution).getAllByRole('button')).toHaveLength(3)
+  expect(within(ratio).getAllByRole('button')).toHaveLength(13)
+  expect(within(count).getAllByRole('button')).toHaveLength(3)
+  expect(within(quality).getByRole('button', { name: '标准画质' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  expect(within(resolution).getByRole('button', { name: '2K' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  expect(within(ratio).getByRole('button', { name: '16:9' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  expect(within(count).getByRole('button', { name: '1张' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  await user.click(within(quality).getByRole('button', { name: '高画质' }))
+  await user.click(within(resolution).getByRole('button', { name: '4K' }))
+  await user.click(within(ratio).getByRole('button', { name: '9:16' }))
+  await user.click(within(count).getByRole('button', { name: '2张' }))
+
+  expect(trigger).toHaveTextContent('9:16 · 高画质 · 4K · 2张')
+  expect(within(panel).getByText('预计成本 36')).toBeVisible()
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    quality: '高画质',
+  })
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    resolution: '4K',
+  })
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    aspectRatio: '9:16',
+  })
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({ count: 2 })
+
+  await user.keyboard('{Escape}')
+  expect(within(panel).queryByRole('dialog', { name: '图片生成参数' })).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+})
+
 test('confirms image upscaling before inserting a connected tool node', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()

@@ -130,6 +130,17 @@ describe('model provider registry', () => {
     expect(progress).toEqual([25, 55, 85, 100])
   })
 
+  test('prices each requested image output through the provider contract', () => {
+    const registry = createDefaultProviderRegistry()
+
+    expect(
+      registry.describe({
+        ...imageRequest,
+        parameters: { count: 2 },
+      }),
+    ).toMatchObject({ estimatedCost: 36 })
+  })
+
   test('propagates registry identity, progress and charged cost through persisted queue history', async () => {
     vi.useFakeTimers()
     const jobs: Array<{ status: string; progress?: number; creditsSpent?: number }> = []
