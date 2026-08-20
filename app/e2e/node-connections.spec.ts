@@ -10,7 +10,7 @@ async function openPreview(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: '发布与分享' }).click()
   await page
     .getByRole('menu', { name: '发布与分享菜单' })
-    .getByRole('menuitem', { name: '预览' })
+    .getByRole('menuitem', { name: '预览', exact: true })
     .click()
 }
 

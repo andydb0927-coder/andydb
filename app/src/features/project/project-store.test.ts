@@ -108,6 +108,30 @@ describe('project domain', () => {
     ).toBe('/demo/shot-river.png')
     expect(projectWithFixture.nodes[0].versions).toHaveLength(1)
   })
+
+  test('merges an imported workflow atomically and undo restores the prior graph', () => {
+    const before = useProjectStore.getState().activeProject!
+    const importedNode = {
+      ...before.nodes[0],
+      id: 'imported-node',
+      title: '导入镜头',
+      position: { x: 900, y: 400 },
+    }
+    const merged = useProjectStore.getState().mergeCanvasWorkflow({
+      assets: [],
+      nodes: [importedNode],
+      edges: [],
+    })
+
+    expect(merged).toBe(true)
+    expect(useProjectStore.getState().activeProject?.nodes).toContainEqual(
+      importedNode,
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+  })
 })
 
 describe('project repository', () => {

@@ -64,6 +64,11 @@ interface ProjectStore {
   insertCanvasContentIntoEdges: (
     insertions: readonly CanvasEdgeInsertion[],
   ) => string[]
+  mergeCanvasWorkflow: (merge: {
+    assets: Project['assets']
+    nodes: Project['nodes']
+    edges: Project['edges']
+  }) => boolean
   updateNode: (nodeId: string, changes: NodeUpdates) => void
   updateCreativeCard: (nodeId: string, draft: CreativeCardDraft) => void
   updateNodePositions: (
@@ -474,6 +479,50 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         })
       })
       return createdNodeIds
+    },
+
+    mergeCanvasWorkflow: ({ assets, nodes, edges }) => {
+      let merged = false
+      commit((project) => {
+        if (nodes.length === 0) return project
+        const existingNodeIds = new Set(project.nodes.map(({ id }) => id))
+        const existingAssetIds = new Set(project.assets.map(({ id }) => id))
+        const existingEdgeIds = new Set(project.edges.map(({ id }) => id))
+        const incomingNodeIds = new Set<string>()
+        const incomingAssetIds = new Set<string>()
+        const incomingEdgeIds = new Set<string>()
+        for (const node of nodes) {
+          if (existingNodeIds.has(node.id) || incomingNodeIds.has(node.id)) {
+            return project
+          }
+          incomingNodeIds.add(node.id)
+        }
+        for (const asset of assets) {
+          if (existingAssetIds.has(asset.id) || incomingAssetIds.has(asset.id)) {
+            return project
+          }
+          incomingAssetIds.add(asset.id)
+        }
+        for (const edge of edges) {
+          if (
+            existingEdgeIds.has(edge.id) ||
+            incomingEdgeIds.has(edge.id) ||
+            !incomingNodeIds.has(edge.sourceNodeId) ||
+            !incomingNodeIds.has(edge.targetNodeId)
+          ) {
+            return project
+          }
+          incomingEdgeIds.add(edge.id)
+        }
+        merged = true
+        return withUpdatedTimestamp({
+          ...project,
+          assets: [...project.assets, ...assets],
+          nodes: [...project.nodes, ...nodes],
+          edges: [...project.edges, ...edges],
+        })
+      })
+      return merged
     },
 
     updateNode: (nodeId, changes) => {

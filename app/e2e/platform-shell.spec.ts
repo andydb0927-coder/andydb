@@ -23,7 +23,7 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   await page.getByRole('button', { name: '发布与分享' }).click()
   await page
     .getByRole('menu', { name: '发布与分享菜单' })
-    .getByRole('menuitem', { name: '预览' })
+    .getByRole('menuitem', { name: '预览', exact: true })
     .click()
   await expect(page.getByRole('heading', { name: '成片预览' })).toBeVisible()
   await page.getByRole('link', { name: '项目', exact: true }).click()

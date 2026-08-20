@@ -41,6 +41,9 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
 
 test('keeps publish and share actions explicitly local-only', async () => {
   const user = userEvent.setup()
+  const onOpenCanvasExport = vi.fn()
+  const onExportWorkflow = vi.fn()
+  const onImportWorkflow = vi.fn()
   render(
     <MemoryRouter>
       <CanvasTopBar
@@ -56,6 +59,9 @@ test('keeps publish and share actions explicitly local-only', async () => {
         onOpenNodeList={vi.fn()}
         onModeChange={vi.fn()}
         onToggleAgent={vi.fn()}
+        onOpenCanvasExport={onOpenCanvasExport}
+        onExportWorkflow={onExportWorkflow}
+        onImportWorkflow={onImportWorkflow}
       />
     </MemoryRouter>,
   )
@@ -64,8 +70,20 @@ test('keeps publish and share actions explicitly local-only', async () => {
   expect(menu).toHaveTextContent('发布作品')
   expect(menu).toHaveTextContent('分享链接')
   expect(menu).toHaveTextContent('预览')
-  expect(menu).toHaveTextContent('导出')
+  expect(menu).toHaveTextContent('导出画布')
+  expect(menu).toHaveTextContent('导出工作流 JSON')
+  expect(menu).toHaveTextContent('导入工作流 JSON')
+  expect(menu).toHaveTextContent('预览导出')
   expect(menu).toHaveTextContent('本地演示不执行外部发布')
+
+  await user.click(screen.getByRole('menuitem', { name: '导出画布' }))
+  expect(onOpenCanvasExport).toHaveBeenCalledOnce()
+  await user.click(screen.getByRole('button', { name: '发布与分享' }))
+  await user.click(screen.getByRole('menuitem', { name: '导出工作流 JSON' }))
+  expect(onExportWorkflow).toHaveBeenCalledOnce()
+  await user.click(screen.getByRole('button', { name: '发布与分享' }))
+  await user.click(screen.getByRole('menuitem', { name: '导入工作流 JSON' }))
+  expect(onImportWorkflow).toHaveBeenCalledOnce()
 })
 
 test('edits the project title and exposes local membership controls', async () => {

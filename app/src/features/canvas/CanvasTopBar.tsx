@@ -4,6 +4,8 @@ import {
   Coins,
   Crown,
   Download,
+  FileDown,
+  FileUp,
   ListTree,
   PencilLine,
   Redo2,
@@ -41,6 +43,9 @@ interface CanvasTopBarProps {
   onOpenNodeList(trigger: HTMLButtonElement): void
   onModeChange(mode: WorkspaceMode): void
   onToggleAgent(): void
+  onOpenCanvasExport?(): void
+  onExportWorkflow?(): void
+  onImportWorkflow?(): void
 }
 
 export function CanvasTopBar({
@@ -58,6 +63,9 @@ export function CanvasTopBar({
   onOpenNodeList,
   onModeChange,
   onToggleAgent,
+  onOpenCanvasExport,
+  onExportWorkflow,
+  onImportWorkflow,
 }: CanvasTopBarProps) {
   const [canvasMenuOpen, setCanvasMenuOpen] = useState(false)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
@@ -202,7 +210,25 @@ export function CanvasTopBar({
                 <button type="button" role="menuitem" disabled>预览</button>
               )}
               <button type="button" role="menuitem" onClick={() => closeShareMenu('请先进入预览页配置本地导出')}>
-                <Download aria-hidden="true" />导出
+                <Download aria-hidden="true" />预览导出
+              </button>
+              <button type="button" role="menuitem" disabled={!onOpenCanvasExport} onClick={() => {
+                closeShareMenu()
+                onOpenCanvasExport?.()
+              }}>
+                <Download aria-hidden="true" />导出画布
+              </button>
+              <button type="button" role="menuitem" disabled={!onExportWorkflow} onClick={() => {
+                closeShareMenu()
+                onExportWorkflow?.()
+              }}>
+                <FileDown aria-hidden="true" />导出工作流 JSON
+              </button>
+              <button type="button" role="menuitem" disabled={!onImportWorkflow} onClick={() => {
+                closeShareMenu()
+                onImportWorkflow?.()
+              }}>
+                <FileUp aria-hidden="true" />导入工作流 JSON
               </button>
               <p>本地演示不执行外部发布</p>
             </div>

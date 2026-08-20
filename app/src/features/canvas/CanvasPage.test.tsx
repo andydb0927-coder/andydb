@@ -126,6 +126,7 @@ interface FlowPropsFixture {
   deleteKeyCode?: string[] | null
   onInit?(instance: {
     fitView(options: unknown): Promise<boolean>
+    getViewport?(): { x: number; y: number; zoom: number }
     zoomIn?(options?: unknown): Promise<boolean>
     zoomOut?(options?: unknown): Promise<boolean>
     screenToFlowPosition(position: { x: number; y: number }): {
@@ -723,6 +724,58 @@ describe('creative canvas', () => {
       'href',
       '/project/project-canvas/preview',
     )
+  })
+
+  test('opens canvas export and imports a validated workflow as one graph change', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow()
+
+    await user.click(screen.getByRole('button', { name: '发布与分享' }))
+    await user.click(screen.getByRole('menuitem', { name: '导出画布' }))
+    expect(screen.getByRole('dialog', { name: '导出画布' })).toHaveTextContent(
+      '当前视口',
+    )
+    await user.click(screen.getByRole('button', { name: '取消' }))
+
+    const importedProject = {
+      ...makeCanvasProject(),
+      id: 'imported-project',
+      nodes: [
+        {
+          ...makeCanvasProject().nodes[0],
+          id: 'imported-node',
+          title: '导入镜头',
+          position: { x: 980, y: 520 },
+        },
+      ],
+      edges: [],
+    }
+    await user.click(screen.getByRole('button', { name: '发布与分享' }))
+    const input = screen.getByLabelText('导入工作流 JSON 文件')
+    await user.upload(
+      input,
+      new File(
+        [JSON.stringify({
+          format: 'wireless-canvas-workflow',
+          version: 1,
+          exportedAt: '2026-08-15T03:04:05.000Z',
+          project: importedProject,
+        })],
+        'workflow.json',
+        { type: 'application/json' },
+      ),
+    )
+    expect(
+      await screen.findByRole('dialog', { name: '导入工作流 JSON' }),
+    ).toHaveTextContent('1 个节点')
+    await user.click(screen.getByRole('button', { name: '确认合并' }))
+    expect(useProjectStore.getState().activeProject?.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: '导入镜头', position: { x: 980, y: 520 } }),
+      ]),
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
   test('shows a not-found state without leaking the previous project', async () => {

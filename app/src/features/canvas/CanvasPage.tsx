@@ -80,6 +80,7 @@ import {
 } from '../workflow/workflow-model'
 import { WorkflowRepository } from '../workflow/workflow-repository'
 import { WorkflowRunner } from '../workflow/workflow-runner'
+import { downloadBlob } from '../timeline/timeline-export'
 import {
   CanvasToolbar,
   type CanvasTool,
@@ -89,6 +90,24 @@ import {
   type ContextQuickNodeType,
 } from './CanvasContextMenu'
 import { CanvasTopBar } from './CanvasTopBar'
+import {
+  CanvasExportDialog,
+  WorkflowImportDialog,
+} from './CanvasTransferDialogs'
+import {
+  buildCanvasExportFilename,
+  buildWorkflowFilename,
+  createWorkflowSnapshot,
+  estimateCanvasExport,
+  parseWorkflowImport,
+  prepareWorkflowMerge,
+  rasterizeCanvasSvg,
+  renderCanvasSvg,
+  type CanvasExportEstimate,
+  type CanvasExportFormat,
+  type CanvasExportScope,
+  type WorkflowImportResult,
+} from './canvas-workflow-export'
 import {
   CanvasNodeTypePicker,
   type QuickNodeType,
@@ -209,6 +228,16 @@ interface ContextResourcePlacement {
   projectId: string
   position: CanvasNodePosition
   returnFocusTo?: HTMLElement
+}
+
+interface CanvasExportSession {
+  viewport: CanvasExportEstimate
+  all: CanvasExportEstimate
+}
+
+interface WorkflowImportSession {
+  fileName: string
+  result: WorkflowImportResult
 }
 
 interface EditingCard {
@@ -455,6 +484,9 @@ export function CanvasPage({
   const insertCanvasContentIntoEdges = useProjectStore(
     (state) => state.insertCanvasContentIntoEdges,
   )
+  const mergeCanvasWorkflow = useProjectStore(
+    (state) => state.mergeCanvasWorkflow,
+  )
   const deleteGenerationJobs = useProjectStore(
     (state) => state.deleteGenerationJobs,
   )
@@ -505,6 +537,10 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const [canvasExportSession, setCanvasExportSession] =
+    useState<CanvasExportSession>()
+  const [workflowImportSession, setWorkflowImportSession] =
+    useState<WorkflowImportSession>()
   const [pendingRemoteGeneration, setPendingRemoteGeneration] =
     useState<PendingRemoteGeneration>()
   const [pendingPlacement, setPendingPlacement] =
@@ -530,6 +566,7 @@ export function CanvasPage({
   const appliedFocusRef = useRef<string | undefined>(undefined)
   const viewportRef = useRef<HTMLDivElement>(null)
   const contextUploadInputRef = useRef<HTMLInputElement>(null)
+  const workflowImportInputRef = useRef<HTMLInputElement>(null)
   const nativeConnectionActiveRef = useRef(false)
   const placementTriggerRef = useRef<HTMLElement>(null)
   const connectionTriggerRef = useRef<HTMLElement>(null)
@@ -601,6 +638,8 @@ export function CanvasPage({
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
+    setCanvasExportSession(undefined)
+    setWorkflowImportSession(undefined)
     setPendingRemoteGeneration(undefined)
     setSelectedEdgeIds(new Set())
     setPendingPlacement(undefined)
@@ -616,6 +655,7 @@ export function CanvasPage({
     imageReferenceTriggerRef.current = null
     optionDragCloneRef.current = undefined
     if (contextUploadInputRef.current) contextUploadInputRef.current.value = ''
+    if (workflowImportInputRef.current) workflowImportInputRef.current.value = ''
 
     return () => {
       nativeConnectionActiveRef.current = false
@@ -3544,6 +3584,165 @@ export function CanvasPage({
     setWorkspaceMode(mode)
   }
 
+  const restorePublishFocus = () => {
+    queueMicrotask(() => {
+      viewportRef.current
+        ?.closest('.canvas-page')
+        ?.querySelector<HTMLButtonElement>('button[aria-label="发布与分享"]')
+        ?.focus()
+    })
+  }
+
+  const closeCanvasExport = () => {
+    setCanvasExportSession(undefined)
+    restorePublishFocus()
+  }
+
+  const openCanvasExport = () => {
+    if (!project) return
+    const flowElement = viewportRef.current?.querySelector<HTMLElement>('.react-flow')
+    const rect = flowElement?.getBoundingClientRect()
+    const viewport = flowInstance?.getViewport?.() ?? { x: 0, y: 0, zoom: 1 }
+    const viewportSnapshot = {
+      ...viewport,
+      width: rect?.width || viewportRef.current?.clientWidth || 1280,
+      height: rect?.height || viewportRef.current?.clientHeight || 720,
+    }
+    const measurements =
+      nodeMeasurements.projectId === project.id
+        ? nodeMeasurements.measurements
+        : {}
+    setCanvasExportSession({
+      viewport: estimateCanvasExport(
+        project,
+        'viewport',
+        viewportSnapshot,
+        measurements,
+      ),
+      all: estimateCanvasExport(
+        project,
+        'all',
+        viewportSnapshot,
+        measurements,
+      ),
+    })
+  }
+
+  const exportCanvas = async (
+    format: CanvasExportFormat,
+    scope: CanvasExportScope,
+  ) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId || !canvasExportSession) {
+      return
+    }
+    const estimate =
+      scope === 'viewport' ? canvasExportSession.viewport : canvasExportSession.all
+    const measurements =
+      nodeMeasurements.projectId === currentProject.id
+        ? nodeMeasurements.measurements
+        : {}
+    const svg = renderCanvasSvg(currentProject, estimate, measurements)
+    try {
+      const blob =
+        format === 'svg'
+          ? new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+          : await rasterizeCanvasSvg(svg, estimate.width, estimate.height)
+      downloadBlob(
+        blob,
+        buildCanvasExportFilename(currentProject.title, scope, format),
+      )
+      setGenerationFeedback(
+        `已导出${scope === 'viewport' ? '当前视口' : '全画布'} ${format.toUpperCase()}（${estimate.width} × ${estimate.height}）。`,
+      )
+      closeCanvasExport()
+    } catch (error) {
+      setGenerationFeedback(
+        error instanceof Error ? error.message : '画布导出失败，请重试。',
+      )
+    }
+  }
+
+  const exportWorkflow = () => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const now = new Date()
+    const snapshot = createWorkflowSnapshot(currentProject, now)
+    downloadBlob(
+      new Blob([JSON.stringify(snapshot, null, 2)], {
+        type: 'application/json;charset=utf-8',
+      }),
+      buildWorkflowFilename(currentProject.title, now),
+    )
+    setGenerationFeedback(
+      `已导出完整工作流 JSON：${currentProject.nodes.length} 个节点、${currentProject.edges.length} 条连线。`,
+    )
+  }
+
+  const openWorkflowImport = () => {
+    if (workflowImportInputRef.current) {
+      workflowImportInputRef.current.value = ''
+      workflowImportInputRef.current.click()
+    }
+  }
+
+  const readWorkflowFile = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () =>
+        typeof reader.result === 'string'
+          ? resolve(reader.result)
+          : reject(new Error('工作流文件不是文本格式'))
+      reader.onerror = () => reject(new Error('工作流文件读取失败'))
+      reader.readAsText(file)
+    })
+
+  const handleWorkflowImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    const currentProject = useProjectStore.getState().activeProject
+    if (!file || !currentProject || currentProject.id !== projectId) return
+    try {
+      const json = await readWorkflowFile(file)
+      setWorkflowImportSession({
+        fileName: file.name,
+        result: parseWorkflowImport(json, currentProject),
+      })
+    } catch (error) {
+      setWorkflowImportSession({
+        fileName: file.name,
+        result: {
+          valid: false,
+          errors: [error instanceof Error ? error.message : '工作流文件读取失败'],
+          titleConflicts: [],
+          missingReferences: [],
+        },
+      })
+    }
+  }
+
+  const closeWorkflowImport = () => {
+    setWorkflowImportSession(undefined)
+    if (workflowImportInputRef.current) workflowImportInputRef.current.value = ''
+    restorePublishFocus()
+  }
+
+  const confirmWorkflowImport = () => {
+    if (!workflowImportSession?.result.valid || !workflowImportSession.result.snapshot) {
+      return
+    }
+    const payload = prepareWorkflowMerge(workflowImportSession.result.snapshot)
+    if (!mergeCanvasWorkflow(payload)) {
+      setGenerationFeedback('工作流与当前画布发生 ID 冲突，未执行导入。')
+      return
+    }
+    setSelectedNodeIds(new Set(payload.nodes.map((node) => node.id)))
+    setPrimaryNodeId(payload.nodes.at(-1)?.id)
+    setGenerationFeedback(
+      `已合并 ${payload.nodes.length} 个节点和 ${payload.edges.length} 条连线，可使用撤销恢复。`,
+    )
+    closeWorkflowImport()
+  }
+
   return (
     <main
       className={`canvas-page${agentOpen ? ' canvas-page--agent-open' : ''}${
@@ -3572,7 +3771,35 @@ export function CanvasPage({
         onOpenNodeList={openNodeList}
         onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
+        onOpenCanvasExport={openCanvasExport}
+        onExportWorkflow={exportWorkflow}
+        onImportWorkflow={openWorkflowImport}
       />
+      <input
+        ref={workflowImportInputRef}
+        className="canvas-workflow-import-input"
+        type="file"
+        accept="application/json,.json"
+        aria-label="导入工作流 JSON 文件"
+        onChange={(event) => void handleWorkflowImport(event)}
+      />
+      {canvasExportSession && project ? (
+        <CanvasExportDialog
+          projectTitle={project.title}
+          viewportEstimate={canvasExportSession.viewport}
+          allEstimate={canvasExportSession.all}
+          onClose={closeCanvasExport}
+          onExport={(format, scope) => void exportCanvas(format, scope)}
+        />
+      ) : null}
+      {workflowImportSession ? (
+        <WorkflowImportDialog
+          fileName={workflowImportSession.fileName}
+          result={workflowImportSession.result}
+          onClose={closeWorkflowImport}
+          onConfirm={confirmWorkflowImport}
+        />
+      ) : null}
       <div
         ref={viewportRef}
         className="canvas-page__viewport"
