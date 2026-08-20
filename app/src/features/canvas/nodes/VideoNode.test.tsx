@@ -109,6 +109,32 @@ test('keeps a video as a folded media card until it becomes the current node', (
   ).toHaveStyle({ top: '112px' })
 })
 
+test('renders an empty selected video as a Liblib media card with a separate compact composer', () => {
+  const data = makeData(true)
+  data.node = {
+    ...data.node,
+    title: '视频节点 7',
+    versions: [{
+      id: 'empty-video-version',
+      createdAt: '2026-08-20T00:00:00.000Z',
+      prompt: '',
+    }],
+    activeVersionId: 'empty-video-version',
+  }
+  data.asset = undefined
+
+  render(renderVideo(data))
+
+  const card = screen.getByRole('article')
+  const composer = screen.getByRole('region', { name: '视频节点 7 生成参数' })
+  expect(card).toHaveClass('creative-node--liblib-media')
+  expect(card).not.toContainElement(composer)
+  expect(composer.parentElement).toHaveClass('creative-node-composer')
+  expect(within(composer).getByRole('toolbar', { name: '视频主操作' })).toBeVisible()
+  expect(within(composer).getByLabelText('生成模式')).toHaveValue('全能参考')
+  expect(within(composer).getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+})
+
 test('renders the verified video generation controls, disabled modes, and cost', async () => {
   const user = userEvent.setup()
   const data = makeData(true)
@@ -126,20 +152,18 @@ test('renders the verified video generation controls, disabled modes, and cost',
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeDisabled()
-  expect(within(mode).getByRole('option', { name: '视频编辑' })).toBeDisabled()
+  expect(within(mode).getByRole('option', { name: '图片参考' })).toBeEnabled()
+  await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
   expect(
     within(panel).getByText(/文生视频：当前节点已绑定全能参考配置/),
   ).toBeVisible()
-  expect(
-    within(panel).getByText(/视频编辑：请先添加输入视频参考/),
-  ).toBeVisible()
   expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
-  expect(within(panel).getByLabelText('时长')).toHaveValue('3')
+  expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
-  expect(within(panel).getByLabelText('画质')).toHaveValue('标准')
+  expect(within(panel).getByLabelText('画质')).toHaveValue('720P')
   expect(within(panel).getByLabelText('声音')).toHaveValue('关闭')
   expect(within(panel).getByLabelText('智能分镜')).not.toBeChecked()
-  expect(within(panel).getByText('预计成本 24')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
 
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
@@ -149,6 +173,8 @@ test('exposes frame confirmations and all seven reference controls without mutat
   const user = userEvent.setup()
   const data = makeData(true)
   render(renderVideo(data))
+
+  await user.click(screen.getByRole('button', { name: '展开完整视频工具' }))
 
   const frameTools = screen.getByRole('toolbar', { name: '帧操作' })
   for (const label of ['截取首帧', '截取尾帧', '截取当前帧', '相机截取当前帧']) {
@@ -179,6 +205,7 @@ test('exposes frame confirmations and all seven reference controls without mutat
 test('opens the verified mark, effects, subject, character, and camera-motion surfaces', async () => {
   const user = userEvent.setup()
   render(renderVideo(makeData(true)))
+  await user.click(screen.getByRole('button', { name: '展开完整视频工具' }))
   const tools = screen.getByRole('toolbar', { name: '引用与控制' })
 
   await user.click(within(tools).getByRole('button', { name: '标记' }))

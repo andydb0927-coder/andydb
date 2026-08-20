@@ -1,5 +1,6 @@
 import {
   AudioLines,
+  ClipboardPaste,
   ChevronRight,
   Clapperboard,
   Film,
@@ -8,9 +9,12 @@ import {
   Image,
   Library,
   Plus,
+  Redo2,
+  Save,
   Sparkles,
   Trash2,
   Type,
+  Undo2,
   Upload,
 } from 'lucide-react'
 import {
@@ -54,16 +58,22 @@ const contextNodeTypes: Array<{
   { type: 'asset-library', label: '素材库', icon: Library },
 ]
 
-type ContextSubmenu = 'nodes' | 'resources'
+type ContextSubmenu = 'nodes'
 
 export interface CanvasContextMenuProps {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
   targetNodeTitle?: string
-  canUseGenerationHistory: boolean
+  canUndo: boolean
+  canRedo: boolean
+  canPaste: boolean
+  canSaveToAssets: boolean
   onUpload(): void
-  onOpenGenerationHistory(): void
   onAddNode(type: ContextQuickNodeType): void
+  onUndo(): void
+  onRedo(): void
+  onPaste(): void
+  onSaveToAssets(): void
   onDeleteNode?(): void
   onClose(): void
 }
@@ -92,10 +102,16 @@ export function CanvasContextMenu({
   anchor,
   bounds,
   targetNodeTitle,
-  canUseGenerationHistory,
+  canUndo,
+  canRedo,
+  canPaste,
+  canSaveToAssets,
   onUpload,
-  onOpenGenerationHistory,
   onAddNode,
+  onUndo,
+  onRedo,
+  onPaste,
+  onSaveToAssets,
   onDeleteNode,
   onClose,
 }: CanvasContextMenuProps) {
@@ -169,12 +185,25 @@ export function CanvasContextMenu({
         <strong>{targetNodeTitle ?? '画布快捷操作'}</strong>
       </div>
 
+      <button ref={firstItemRef} type="button" role="menuitem" onClick={onUpload}>
+        <Upload aria-hidden="true" />
+        上传
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={!canSaveToAssets}
+        onClick={onSaveToAssets}
+      >
+        <Save aria-hidden="true" />
+        保存到我的资产
+      </button>
+
       <div
         className="canvas-context-menu__branch"
         onPointerEnter={() => setSubmenu('nodes')}
       >
         <button
-          ref={firstItemRef}
           type="button"
           role="menuitem"
           aria-haspopup="menu"
@@ -209,54 +238,19 @@ export function CanvasContextMenu({
           </div>
         ) : null}
       </div>
-
-      <div
-        className="canvas-context-menu__branch"
-        onPointerEnter={() => setSubmenu('resources')}
-      >
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="menu"
-          aria-expanded={submenu === 'resources'}
-          aria-controls="canvas-add-resource-submenu"
-          onClick={() => setSubmenu('resources')}
-        >
-          <Library aria-hidden="true" />
-          添加资源
-          <ChevronRight aria-hidden="true" />
-        </button>
-        {submenu === 'resources' ? (
-          <div
-            id="canvas-add-resource-submenu"
-            className={submenuClassName}
-            role="menu"
-            aria-label="添加资源子菜单"
-          >
-            <button type="button" role="menuitem" onClick={onUpload}>
-              <Upload aria-hidden="true" />
-              <span>上传</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!canUseGenerationHistory}
-              aria-describedby={
-                canUseGenerationHistory ? undefined : 'generation-history-disabled-reason'
-              }
-              onClick={onOpenGenerationHistory}
-            >
-              <FileClock aria-hidden="true" />
-              <span>从生成历史选择</span>
-            </button>
-            {!canUseGenerationHistory ? (
-              <span id="generation-history-disabled-reason" className="canvas-context-menu__reason">
-                暂无可插入的已完成结果
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <div className="canvas-context-menu__separator" role="separator" />
+      <button type="button" role="menuitem" aria-label="撤销" disabled={!canUndo} onClick={onUndo}>
+        <Undo2 aria-hidden="true" />
+        撤销 <kbd>⌘Z</kbd>
+      </button>
+      <button type="button" role="menuitem" aria-label="重做" disabled={!canRedo} onClick={onRedo}>
+        <Redo2 aria-hidden="true" />
+        重做 <kbd>⇧⌘Z</kbd>
+      </button>
+      <button type="button" role="menuitem" aria-label="粘贴" disabled={!canPaste} onClick={onPaste}>
+        <ClipboardPaste aria-hidden="true" />
+        粘贴 <kbd>⌘V</kbd>
+      </button>
       {targetNodeTitle && onDeleteNode ? (
         <button
           type="button"

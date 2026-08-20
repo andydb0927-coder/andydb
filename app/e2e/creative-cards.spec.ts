@@ -76,7 +76,6 @@ async function findBlankCanvasPoint(page: Page, reverse = false) {
 async function uploadReferenceToCanvas(page: Page) {
   const point = await findBlankCanvasPoint(page, true)
   await page.mouse.click(point.x, point.y, { button: 'right' })
-  await page.getByRole('menuitem', { name: '添加资源' }).click()
   const fileChooser = page.waitForEvent('filechooser')
   await page.getByRole('menuitem', { name: '上传' }).click()
   await (await fileChooser).setFiles({

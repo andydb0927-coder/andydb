@@ -883,6 +883,48 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
   await expect(page.getByRole('status')).toHaveCount(0)
 })
 
+test('drops a source connection on blank canvas to create one referenced downstream node', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await createCinematicProject(page)
+
+  const sourceHandle = page.getByRole('button', {
+    name: '从角色参考建立连接',
+  })
+  const sourceBox = await sourceHandle.boundingBox()
+  const dropPoint = await findBlankCanvasPoint(page, true)
+  expect(sourceBox).not.toBeNull()
+
+  await page.mouse.move(
+    sourceBox!.x + sourceBox!.width / 2,
+    sourceBox!.y + sourceBox!.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 14 })
+  await page.mouse.up()
+
+  const picker = page.getByRole('menu', { name: '引用该节点生成' })
+  await expect(picker).toContainText('角色参考')
+  await picker.getByRole('menuitem', { name: '图片', exact: true }).click()
+
+  await expect(
+    page.getByRole('button', { name: '图片 01', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('角色参考 → 图片 01', { exact: true }),
+  ).toHaveCount(1)
+  await expect(page.getByLabel('1 个上游参考')).toBeVisible()
+
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(
+    page.getByRole('button', { name: '图片 01', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByLabel('角色参考 → 图片 01', { exact: true }),
+  ).toHaveCount(0)
+})
+
 test('inserts a contextual media node from the edge midpoint and undoes the graph replacement once', async ({
   page,
 }) => {

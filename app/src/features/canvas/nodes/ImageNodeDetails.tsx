@@ -1,9 +1,8 @@
 import {
+  ArrowUp,
   Download,
   Heart,
-  Images,
   Languages,
-  Maximize2,
   ScanSearch,
   Search,
   SlidersHorizontal,
@@ -11,7 +10,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import { defaultImageGenerationSettings } from '../../project/model'
@@ -275,12 +274,22 @@ function ImageStyleGallery({ onClose }: { onClose(): void }) {
   )
 }
 
-export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
+export function ImageGenerationPanel({
+  data,
+  imageToImage,
+  upscalePending,
+  onUpscalePendingChange,
+  upscaleTriggerRef,
+}: {
+  data: CreativeNodeData
+  imageToImage: boolean
+  upscalePending: boolean
+  onUpscalePendingChange(pending: boolean): void
+  upscaleTriggerRef: RefObject<HTMLButtonElement | null>
+}) {
   const [advanced, setAdvanced] = useState(false)
   const [styleOpen, setStyleOpen] = useState(false)
-  const [imageToImage, setImageToImage] = useState(false)
   const [marking, setMarking] = useState(false)
-  const [upscalePending, setUpscalePending] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -294,8 +303,9 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
   })
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
-  const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
-  const hasMedia = Boolean(data.asset || data.imageReferences?.length)
+  const incomingReferenceCount =
+    data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
+  const hasMedia = Boolean(data.asset || incomingReferenceCount)
   const providers = defaultProviderRegistry.matching([
     'text-to-image',
     'image-to-image',
@@ -309,9 +319,7 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
   useEffect(() => {
     setAdvanced(false)
     setStyleOpen(false)
-    setImageToImage(false)
     setMarking(false)
-    setUpscalePending(false)
   }, [data.node.id])
 
   useEffect(() => {
@@ -352,7 +360,7 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
   }
 
   const closeUpscale = () => {
-    setUpscalePending(false)
+    onUpscalePendingChange(false)
     queueMicrotask(() => upscaleTriggerRef.current?.focus())
   }
 
@@ -367,20 +375,6 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
         role="toolbar"
         aria-label="图片主操作"
       >
-        <button
-          type="button"
-          aria-pressed={imageToImage}
-          onClick={() => setImageToImage((enabled) => !enabled)}
-        >
-          <Images aria-hidden="true" />图生图
-        </button>
-        <button
-          ref={upscaleTriggerRef}
-          type="button"
-          onClick={() => setUpscalePending(true)}
-        >
-          <Maximize2 aria-hidden="true" />图片高清
-        </button>
         <button
           type="button"
           aria-pressed={data.imageReferenceSelecting}
@@ -416,6 +410,14 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
           <Sparkles aria-hidden="true" />风格
         </button>
       </div>
+      {incomingReferenceCount ? (
+        <span
+          className="image-generation-panel__reference-count"
+          aria-label={`${incomingReferenceCount} 个上游参考`}
+        >
+          <ScanSearch aria-hidden="true" />{incomingReferenceCount}
+        </span>
+      ) : null}
       {imageToImage ? (
         <p className="image-generation-panel__mode" role="status">
           已切换图生图模式
@@ -460,14 +462,16 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
                 value={provider.id}
                 disabled={provider.kind === 'placeholder'}
               >
-                {providerOptionLabel(provider)}
+                {provider.id === 'mock-mj-image'
+                  ? 'Lib Image'
+                  : providerOptionLabel(provider)}
               </option>
             ))}
           </select>
         </label>
         <span className="model-provider-badge">演示</span>
         <span className="image-generation-panel__parameter-row">
-          16:9 · 标准画质 · 2K · 1张样式
+          16:9 · 标准画质 · 2K · 1张
         </span>
         <button
           type="button"
@@ -587,7 +591,9 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
         </div>
       ) : null}
       <div className="image-generation-panel__submit">
-        <span aria-label={`预计成本 ${cost}`}><Zap aria-hidden="true" />预计成本 {cost}</span>
+        <span aria-label={`预计成本 ${cost}`}>
+          <Zap aria-hidden="true" />预计成本 {cost}
+        </span>
         <button
           type="button"
           aria-label={`生成图片，预计成本 ${cost}`}
@@ -596,7 +602,8 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
           disabled={!eligible}
           onClick={() => data.onLocalImageGenerate?.()}
         >
-          生成
+          <ArrowUp aria-hidden="true" />
+          <span className="visually-hidden">生成</span>
         </button>
       </div>
       {!eligible ? (

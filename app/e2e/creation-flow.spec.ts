@@ -20,6 +20,17 @@ async function findBlankCanvasPoint(
   page: import('@playwright/test').Page,
   fromBottomRight = false,
 ) {
+  const viewport = page.locator('.react-flow__viewport')
+  let previousTransform = ''
+  await expect
+    .poll(async () => {
+      const transform = (await viewport.getAttribute('style')) ?? ''
+      const stable = transform === previousTransform
+      previousTransform = transform
+      return stable
+    })
+    .toBe(true)
+
   return page.locator('.react-flow__pane').evaluate(
     (pane, reverse) => {
       const rect = pane.getBoundingClientRect()
@@ -38,7 +49,7 @@ async function findBlankCanvasPoint(
           if (!target) continue
           if (
             target.closest(
-              '.react-flow__node, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls',
+              '.react-flow__node, .react-flow__edge, .dependency-edge__insert, .react-flow__attribution, .canvas-mode-bar, .canvas-context-menu, .director-composer, .react-flow__controls, button, a, input, textarea, select, [role="button"]',
             )
           ) {
             continue
@@ -76,7 +87,6 @@ async function openAddNodeAtBlank(
 async function openUploadAtBlank(page: import('@playwright/test').Page) {
   const point = await findBlankCanvasPoint(page, true)
   await page.mouse.click(point.x, point.y, { button: 'right' })
-  await page.getByRole('menuitem', { name: '添加资源' }).click()
   const fileChooser = page.waitForEvent('filechooser')
   await page.getByRole('menuitem', { name: '上传' }).click()
   return fileChooser
@@ -96,10 +106,12 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
-  const historyPoint = await findBlankCanvasPoint(page, true)
-  await page.mouse.click(historyPoint.x, historyPoint.y, { button: 'right' })
-  await page.getByRole('menuitem', { name: '添加资源' }).click()
-  const historyAction = page.getByRole('menuitem', {
+  await page
+    .getByRole('toolbar', { name: '画布模式工具' })
+    .getByRole('button', { name: '添加节点' })
+    .click()
+  const addMenu = page.getByRole('menu', { name: '添加节点' })
+  const historyAction = addMenu.getByRole('menuitem', {
     name: '从生成历史选择',
   })
   await expect(historyAction).toBeEnabled()
@@ -357,6 +369,7 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   await expect(upscale.getByText('预计成本 16')).toBeVisible()
 
   await video.click()
+  await generation.getByRole('button', { name: '展开完整视频工具' }).click()
   const frameTools = page.getByRole('toolbar', { name: '帧操作' })
   await frameTools.getByRole('button', { name: '截取当前帧', exact: true }).click()
   const frameConfirmation = page.getByRole('alertdialog', {
@@ -494,7 +507,7 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
 
   await canvas.focus()
   await page.keyboard.press('Tab')
-  const picker = page.getByRole('dialog', { name: '选择节点类型' })
+  const picker = page.getByRole('menu', { name: '添加节点' })
   await expect(picker).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(picker).toHaveCount(0)
@@ -618,7 +631,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     page.getByRole('button', { name: '角色参考', exact: true }),
   ).toBeVisible()
   const primaryAction = page
-    .getByRole('toolbar', { name: '图片主操作' })
+    .getByRole('toolbar', { name: '图片快捷尝试' })
     .getByRole('button', { name: '图生图' })
   await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
@@ -736,19 +749,26 @@ for (const width of [721, 720]) {
     expect(actionBox!.y).toBeGreaterThanOrEqual(0)
     expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(width)
     expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(778)
-    expect(
-      await page.evaluate(
-        ({ x, y }) =>
-          document
-            .elementFromPoint(x, y)
-            ?.closest('button')
-            ?.textContent?.trim(),
+    const actionHitTarget = await page.evaluate(
+        ({ x, y }) => {
+          const hit = document.elementFromPoint(x, y)
+          return {
+            action: hit?.closest('button')?.textContent?.trim(),
+            tag: hit?.tagName,
+            className:
+              hit instanceof HTMLElement ? hit.className : hit?.getAttribute('class'),
+            label: hit?.closest<HTMLElement>('[aria-label]')?.getAttribute('aria-label'),
+          }
+        },
         {
           x: actionBox!.x + actionBox!.width / 2,
           y: actionBox!.y + actionBox!.height / 2,
         },
-      ),
-    ).toContain('加入时间线')
+      )
+    expect(
+      actionHitTarget,
+      `add-to-timeline hit target=${JSON.stringify(actionHitTarget)}, action=${JSON.stringify(actionBox)}`,
+    ).toEqual(expect.objectContaining({ action: expect.stringContaining('加入时间线') }))
     await primaryAction.click()
     await openPreview(page)
     await expect(
@@ -772,7 +792,12 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   const menuPoint = await findBlankCanvasPoint(page, true)
   await page.mouse.click(menuPoint.x, menuPoint.y, { button: 'right' })
   const contextMenu = page.getByRole('menu', { name: '画布快捷菜单' })
-  await expect(contextMenu.getByRole('menuitem')).toHaveCount(2)
+  await expect(contextMenu.getByRole('menuitem')).toHaveCount(6)
+  await expect(contextMenu.getByRole('menuitem').nth(0)).toContainText('上传')
+  await expect(
+    contextMenu.getByRole('menuitem', { name: '保存到我的资产' }),
+  ).toBeDisabled()
+  await expect(contextMenu.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
   await expect(contextMenu.getByRole('menuitem', { name: '添加节点' })).toHaveAttribute(
     'aria-haspopup',
     'menu',

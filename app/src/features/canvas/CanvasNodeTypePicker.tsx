@@ -1,12 +1,17 @@
 import {
   AudioLines,
   BookOpenText,
+  Clapperboard,
   ContactRound,
+  FileClock,
   Film,
   Image,
   Images,
+  Library,
   PanelsTopLeft,
+  Sparkles,
   Type,
+  Upload,
 } from 'lucide-react'
 import {
   useEffect,
@@ -99,10 +104,34 @@ const quickNodeTypes: Array<{
   },
 ]
 
+const compactNodeTypes: Array<{
+  type: QuickNodeType
+  label: string
+  badge?: string
+  icon: typeof BookOpenText
+}> = [
+  { type: 'text', label: '文本', icon: Type },
+  { type: 'image', label: '图片', icon: Image },
+  { type: 'video', label: '视频', icon: Film },
+  { type: 'smart-edit', label: '智能剪辑', badge: 'Beta', icon: Clapperboard },
+  { type: 'director', label: '导演台', badge: 'NEW', icon: Sparkles },
+  { type: 'frame-analysis', label: '逐帧拉片', badge: 'SD2.5', icon: FileClock },
+  { type: 'audio', label: '音频', icon: AudioLines },
+  { type: 'script', label: '脚本', icon: BookOpenText },
+  { type: 'asset-library', label: '素材库', icon: Library },
+]
+
+export type NodeTypePickerMode = 'free' | 'add' | 'reference'
+
 interface CanvasNodeTypePickerProps {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
+  mode?: NodeTypePickerMode
+  sourceTitle?: string
+  canUseGenerationHistory?: boolean
   onSelect(type: QuickNodeType): void
+  onUpload?(): void
+  onOpenGenerationHistory?(): void
   onClose(): void
 }
 
@@ -128,15 +157,43 @@ function clampPickerPosition(
   }
 }
 
+function clampCompactPosition(
+  anchor: CanvasNodeTypePickerProps['anchor'],
+  bounds: CanvasNodeTypePickerProps['bounds'],
+) {
+  const gutter = 8
+  const width = Math.min(224, Math.max(0, bounds.width - gutter * 2))
+  const estimatedHeight = Math.min(548, Math.max(0, bounds.height - gutter * 2))
+  return {
+    left: Math.min(
+      Math.max(gutter, anchor.x - 18),
+      Math.max(gutter, bounds.width - width - gutter),
+    ),
+    top: Math.min(
+      Math.max(gutter, anchor.y - estimatedHeight + 44),
+      Math.max(gutter, bounds.height - estimatedHeight - gutter),
+    ),
+    width,
+  }
+}
+
 export function CanvasNodeTypePicker({
   anchor,
   bounds,
+  mode = 'free',
+  sourceTitle,
+  canUseGenerationHistory = false,
   onSelect,
+  onUpload,
+  onOpenGenerationHistory,
   onClose,
 }: CanvasNodeTypePickerProps) {
   const firstButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const style: CSSProperties = clampPickerPosition(anchor, bounds)
+  const compact = mode !== 'free'
+  const style: CSSProperties = compact
+    ? clampCompactPosition(anchor, bounds)
+    : clampPickerPosition(anchor, bounds)
 
   useEffect(() => {
     firstButtonRef.current?.focus()
@@ -160,6 +217,70 @@ export function CanvasNodeTypePicker({
     event.preventDefault()
     event.stopPropagation()
     onClose()
+  }
+
+  if (compact) {
+    const nodeTypes = mode === 'reference'
+      ? compactNodeTypes.filter(({ type }) => type !== 'asset-library')
+      : compactNodeTypes
+    const label = mode === 'reference' ? '引用该节点生成' : '添加节点'
+
+    return (
+      <FloatingPanel
+        ref={panelRef}
+        className={`canvas-node-type-picker canvas-node-type-picker--${mode} nodrag nopan`}
+        role="menu"
+        aria-label={label}
+        style={style}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="canvas-node-type-picker__compact-heading">
+          <strong>{label}</strong>
+          {sourceTitle ? <small>来源：{sourceTitle}</small> : null}
+        </div>
+        <div className="canvas-node-type-picker__list">
+          {nodeTypes.map(({ type, label: itemLabel, badge, icon: Icon }, index) => (
+            <button
+              key={type}
+              ref={index === 0 ? firstButtonRef : undefined}
+              type="button"
+              role="menuitem"
+              aria-label={badge ? `${itemLabel} ${badge}` : itemLabel}
+              onClick={() => onSelect(type)}
+            >
+              <Icon aria-hidden="true" />
+              <span>{itemLabel}</span>
+              {badge ? <em>{badge}</em> : null}
+            </button>
+          ))}
+          {mode === 'reference' ? (
+            <button type="button" role="menuitem" disabled>
+              <PanelsTopLeft aria-hidden="true" />
+              <span>参考节点</span>
+            </button>
+          ) : (
+            <>
+              <div className="canvas-node-type-picker__section" role="separator">
+                添加资源
+              </div>
+              <button type="button" role="menuitem" onClick={onUpload}>
+                <Upload aria-hidden="true" />
+                <span>上传</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!canUseGenerationHistory}
+                onClick={onOpenGenerationHistory}
+              >
+                <FileClock aria-hidden="true" />
+                <span>从生成历史选择</span>
+              </button>
+            </>
+          )}
+        </div>
+      </FloatingPanel>
+    )
   }
 
   return (

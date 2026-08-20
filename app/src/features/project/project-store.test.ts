@@ -513,6 +513,45 @@ describe('project store history and persistence', () => {
     ).toBe(false)
   })
 
+  test('creates a media reference node and edge as one undoable canvas change', () => {
+    const referenceNode: CanvasNode = {
+      id: 'referenced-image',
+      kind: 'image',
+      title: '引用生成图片',
+      position: { x: 860, y: 420 },
+      versions: [{
+        id: 'referenced-image-version',
+        createdAt: '2026-08-20T08:00:00.000Z',
+        prompt: '',
+      }],
+      activeVersionId: 'referenced-image-version',
+      sourceChanged: false,
+    }
+
+    expect(
+      useProjectStore.getState().createConnectedCanvasContent(
+        'shot-1',
+        { node: referenceNode },
+        'shot-to-reference',
+        'image-reference',
+      ),
+    ).toBe(true)
+    expect(useProjectStore.getState().activeProject?.nodes).toContainEqual(referenceNode)
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual({
+      id: 'shot-to-reference',
+      sourceNodeId: 'shot-1',
+      targetNodeId: 'referenced-image',
+      sourceChanged: false,
+    })
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().activeProject?.nodes).not.toContainEqual(referenceNode)
+    expect(useProjectStore.getState().activeProject?.edges).not.toContainEqual(
+      expect.objectContaining({ id: 'shot-to-reference' }),
+    )
+  })
+
   test('persists the active image result, updates the active version, and invalidates downstream consumers', async () => {
     const repository = createRepository()
     const project = makeProjectFixture()

@@ -60,6 +60,7 @@ interface ProjectStore {
     sourceNodeId: string,
     creation: CanvasCreation,
     edgeId: string,
+    connectionKind?: 'dependency' | 'image-reference',
   ) => boolean
   insertCanvasContentIntoEdges: (
     insertions: readonly CanvasEdgeInsertion[],
@@ -357,7 +358,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       })
     },
 
-    createConnectedCanvasContent: (sourceNodeId, { node, asset }, edgeId) => {
+    createConnectedCanvasContent: (
+      sourceNodeId,
+      { node, asset },
+      edgeId,
+      connectionKind = 'dependency',
+    ) => {
       let created = false
       commit((project) => {
         const nodeConflict = project.nodes.some(
@@ -374,11 +380,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           assets: asset ? [...project.assets, asset] : project.assets,
           nodes: [...project.nodes, node],
         }
-        const validation = validateDependencyConnection(
-          withNode,
-          sourceNodeId,
-          node.id,
-        )
+        const validation = connectionKind === 'image-reference'
+          ? validateImageReferenceConnection(withNode, sourceNodeId, node.id)
+          : validateDependencyConnection(withNode, sourceNodeId, node.id)
         if (!validation.ok) return project
         created = true
         return withUpdatedTimestamp({

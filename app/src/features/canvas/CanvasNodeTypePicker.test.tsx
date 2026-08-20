@@ -52,3 +52,51 @@ test('closes on Escape', async () => {
   await user.keyboard('{Escape}')
   expect(onClose).toHaveBeenCalledOnce()
 })
+
+test('renders the compact dock list and recorded downstream-reference list', () => {
+  const { rerender } = render(
+    <CanvasNodeTypePicker
+      anchor={{ x: 420, y: 260 }}
+      bounds={{ width: 960, height: 720 }}
+      mode="add"
+      canUseGenerationHistory={false}
+      onClose={vi.fn()}
+      onSelect={vi.fn()}
+      onUpload={vi.fn()}
+      onOpenGenerationHistory={vi.fn()}
+    />,
+  )
+
+  const addMenu = screen.getByRole('menu', { name: '添加节点' })
+  expect(
+    screen.getAllByRole('menuitem', { hidden: true }).map((item) => item.textContent?.trim()),
+  ).toEqual([
+    '文本',
+    '图片',
+    '视频',
+    '智能剪辑Beta',
+    '导演台NEW',
+    '逐帧拉片SD2.5',
+    '音频',
+    '脚本',
+    '素材库',
+    '上传',
+    '从生成历史选择',
+  ])
+  expect(addMenu).toHaveTextContent('添加资源')
+
+  rerender(
+    <CanvasNodeTypePicker
+      anchor={{ x: 420, y: 260 }}
+      bounds={{ width: 960, height: 720 }}
+      mode="reference"
+      sourceTitle="图片节点 5"
+      onClose={vi.fn()}
+      onSelect={vi.fn()}
+    />,
+  )
+  const referenceMenu = screen.getByRole('menu', { name: '引用该节点生成' })
+  expect(referenceMenu).toHaveTextContent('图片节点 5')
+  expect(screen.getByRole('menuitem', { name: '参考节点' })).toBeDisabled()
+  expect(screen.queryByRole('menuitem', { name: '素材库' })).not.toBeInTheDocument()
+})

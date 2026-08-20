@@ -110,6 +110,7 @@ import {
 } from './canvas-workflow-export'
 import {
   CanvasNodeTypePicker,
+  type NodeTypePickerMode,
   type QuickNodeType,
 } from './CanvasNodeTypePicker'
 import {
@@ -209,6 +210,8 @@ interface NodeTypePickerState {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
   returnFocusTo?: HTMLElement
+  mode: NodeTypePickerMode
+  sourceNodeId?: string
   edgeInsertions?: Array<{
     edgeId: string
     position: CanvasNodePosition
@@ -1521,6 +1524,9 @@ export function CanvasPage({
           imageResults,
           imageReferences: incomingMediaReferences,
           videoReferences,
+          incomingReferenceCount: project.edges.filter(
+            ({ targetNodeId }) => targetNodeId === node.id,
+          ).length,
           imageReferenceSelecting: imageReferenceTargetId === node.id,
           job,
           selected,
@@ -1723,6 +1729,7 @@ export function CanvasPage({
         },
         bounds: { width: viewportBounds.width, height: viewportBounds.height },
         returnFocusTo: trigger,
+        mode: 'free',
         edgeInsertions,
       })
       setActiveTool('select')
@@ -1986,9 +1993,41 @@ export function CanvasPage({
   )
 
   const handleConnectEnd: OnConnectEnd = useCallback(
-    (_event, state) => {
+    (event, state) => {
       nativeConnectionActiveRef.current = false
-      if (state.isValid || !state.fromNode || !state.toNode) return
+      if (state.isValid || !state.fromNode) return
+      if (!state.toNode) {
+        if (state.fromHandle?.type === 'target' || !flowInstance || !project) return
+        const pointer = event as {
+          clientX?: number
+          clientY?: number
+          changedTouches?: ArrayLike<{ clientX: number; clientY: number }>
+        }
+        const touch = pointer.changedTouches?.[0]
+        const clientX = pointer.clientX ?? touch?.clientX
+        const clientY = pointer.clientY ?? touch?.clientY
+        if (clientX === undefined || clientY === undefined) return
+        const viewport = viewportRef.current
+        const rect = viewport?.getBoundingClientRect()
+        const hasBounds = Boolean(rect && rect.width > 0 && rect.height > 0)
+        setNodeTypePicker({
+          projectId: project.id,
+          position: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+          anchor: {
+            x: clientX - (hasBounds ? rect!.left : 0),
+            y: clientY - (hasBounds ? rect!.top : 0),
+          },
+          bounds: hasBounds
+            ? { width: rect!.width, height: rect!.height }
+            : { width: window.innerWidth, height: Math.max(0, window.innerHeight - 56) },
+          returnFocusTo:
+            findCanvasNodeControl(viewport, state.fromNode.id) ?? viewport ?? undefined,
+          mode: 'reference',
+          sourceNodeId: state.fromNode.id,
+        })
+        setActiveTool('select')
+        return
+      }
       const startsFromTarget = state.fromHandle?.type === 'target'
       attemptConnection(
         startsFromTarget ? state.toNode.id : state.fromNode.id,
@@ -1996,7 +2035,7 @@ export function CanvasPage({
         'drag',
       )
     },
-    [attemptConnection],
+    [attemptConnection, flowInstance, project],
   )
 
   const handleConnectStart = useCallback(() => {
@@ -2057,6 +2096,7 @@ export function CanvasPage({
     (
       point: CanvasPoint,
       returnFocusTo?: HTMLElement,
+      mode: NodeTypePickerMode = 'free',
     ) => {
       if (
         !project ||
@@ -2073,6 +2113,7 @@ export function CanvasPage({
         anchor: point.anchor,
         bounds: point.bounds,
         returnFocusTo,
+        mode,
       })
       setActiveTool('select')
     },
@@ -2095,7 +2136,7 @@ export function CanvasPage({
         rect.top + Math.min(rect.height * 0.56, rect.height - 220),
       )
       if (!point) return
-      openNodeTypePicker(point, trigger)
+      openNodeTypePicker(point, trigger, 'add')
     },
     [canvasPoint, openNodeTypePicker],
   )
@@ -2489,6 +2530,35 @@ export function CanvasPage({
         !currentProject ||
         picker.projectId !== currentProject.id
       ) return
+      if (picker.sourceNodeId) {
+        const sourceNode = currentProject.nodes.find(
+          ({ id }) => id === picker.sourceNodeId,
+        )
+        if (!sourceNode) return
+        const creation = buildQuickNodeCreation(
+          currentProject,
+          type,
+          picker.position,
+          'picker',
+        )
+        if (
+          !createConnectedCanvasContent(
+            sourceNode.id,
+            creation,
+            crypto.randomUUID(),
+            type === 'image' ? 'image-reference' : 'dependency',
+          )
+        ) return
+        createdNodeFocusRef.current = creation.node.id
+        setFocusRequestVersion((version) => version + 1)
+        selectOnlyNode(creation.node.id)
+        setActiveTool('select')
+        setGenerationFeedback(
+          `已引用“${sourceNode.title}”创建“${creation.node.title}”；撤销一次可同时移除节点与连线。`,
+        )
+        setNodeTypePicker(undefined)
+        return
+      }
       if (picker.edgeInsertions) {
         let stagedProject = currentProject
         const insertions = picker.edgeInsertions.flatMap((target) => {
@@ -2545,9 +2615,11 @@ export function CanvasPage({
     },
     [
       buildQuickNodeCreation,
+      createConnectedCanvasContent,
       createQuickNodeAt,
       insertCanvasContentIntoEdges,
       nodeTypePicker,
+      selectOnlyNode,
     ],
   )
 
@@ -2680,6 +2752,65 @@ export function CanvasPage({
       void flowInstance?.fitView({ duration: 320, padding: 0.18 })
     })
   }, [flowInstance, projectId, updateNodePositions])
+
+  const arrangeCanvasGroup = useCallback(
+    (group: CanvasGroup, mode: 'grid' | 'horizontal' | 'vertical') => {
+      const currentProject = useProjectStore.getState().activeProject
+      if (!currentProject || currentProject.id !== projectId) return
+      const members = group.nodeIds.flatMap((nodeId) => {
+        const node = currentProject.nodes.find(({ id }) => id === nodeId)
+        return node ? [node] : []
+      })
+      if (members.length < 2) return
+      const originX = Math.min(...members.map(({ position }) => position.x))
+      const originY = Math.min(...members.map(({ position }) => position.y))
+      const measured = nodeMeasurements.projectId === currentProject.id
+        ? nodeMeasurements.measurements
+        : {}
+      const gap = 48
+      const maxWidth = Math.max(
+        ...members.map(({ id }) => measured[id]?.width ?? 270),
+      )
+      const maxHeight = Math.max(
+        ...members.map(({ id }) => measured[id]?.height ?? 180),
+      )
+      const columns = Math.ceil(Math.sqrt(members.length))
+      updateNodePositions(
+        members.map(({ id }, index) => ({
+          nodeId: id,
+          position:
+            mode === 'horizontal'
+              ? { x: originX + index * (maxWidth + gap), y: originY }
+              : mode === 'vertical'
+                ? { x: originX, y: originY + index * (maxHeight + gap) }
+                : {
+                    x: originX + (index % columns) * (maxWidth + gap),
+                    y: originY + Math.floor(index / columns) * (maxHeight + gap),
+                  },
+        })),
+      )
+      setGroupFeedback(
+        mode === 'horizontal'
+          ? '已水平排列组合节点'
+          : mode === 'vertical'
+            ? '已垂直排列组合节点'
+            : '已宫格排列组合节点',
+      )
+    },
+    [nodeMeasurements, projectId, updateNodePositions],
+  )
+
+  const duplicateCanvasGroup = useCallback(
+    (group: CanvasGroup) => {
+      const duplicatedIds = duplicateNodes(group.nodeIds, { x: 64, y: 64 })
+      if (!duplicatedIds.length) return
+      setSelectedNodeIds(new Set(duplicatedIds))
+      setPrimaryNodeId(duplicatedIds.at(-1))
+      setSelectedEdgeIds(new Set())
+      setGroupFeedback(`已创建 ${duplicatedIds.length} 个节点副本`)
+    },
+    [duplicateNodes],
+  )
 
   const runSelectedGeneration = useCallback(() => {
     const currentProject = useProjectStore.getState().activeProject
@@ -3054,6 +3185,30 @@ export function CanvasPage({
     queueMicrotask(() => contextUploadInputRef.current?.click())
   }, [contextMenu])
 
+  const beginPickerUpload = useCallback(() => {
+    const source = nodeTypePicker
+    if (!source || source.mode !== 'add') return
+    setContextUploadPlacement({
+      projectId: source.projectId,
+      position: source.position,
+      returnFocusTo: source.returnFocusTo,
+    })
+    setNodeTypePicker(undefined)
+    queueMicrotask(() => contextUploadInputRef.current?.click())
+  }, [nodeTypePicker])
+
+  const openPickerGenerationHistory = useCallback(() => {
+    const source = nodeTypePicker
+    if (!source || source.mode !== 'add' || !canUseGenerationHistory) return
+    setHistoryPlacement({
+      projectId: source.projectId,
+      position: source.position,
+      returnFocusTo: source.returnFocusTo,
+    })
+    setNodeTypePicker(undefined)
+    setWorkspacePanel('history')
+  }, [canUseGenerationHistory, nodeTypePicker])
+
   const cancelContextUpload = useCallback(() => {
     const returnFocusTo = contextUploadPlacement?.returnFocusTo
     setContextUploadPlacement(undefined)
@@ -3138,18 +3293,6 @@ export function CanvasPage({
       selectOnlyNode,
     ],
   )
-
-  const openContextGenerationHistory = useCallback(() => {
-    const source = contextMenu
-    if (!source || !canUseGenerationHistory) return
-    setHistoryPlacement({
-      projectId: source.projectId,
-      position: source.flowPosition,
-      returnFocusTo: source.returnFocusTo,
-    })
-    setContextMenu(undefined)
-    setWorkspacePanel('history')
-  }, [canUseGenerationHistory, contextMenu])
 
   const closeWorkspacePanel = useCallback(() => {
     const returnFocusTo = historyPlacement?.returnFocusTo
@@ -3903,8 +4046,20 @@ export function CanvasPage({
                 key={group.id}
                 group={group}
                 bounds={bounds}
+                selected={selectedCanvasGroup?.id === group.id}
                 onSelect={() => selectCanvasGroup(group)}
                 onUngroup={() => removeCanvasGroup(group.id, true)}
+                onArrange={(mode) => arrangeCanvasGroup(group, mode)}
+                onDuplicate={() => duplicateCanvasGroup(group)}
+                onFeedback={setGroupFeedback}
+                onContinue={(trigger) => {
+                  const triggerBounds = trigger.getBoundingClientRect()
+                  const point = canvasPoint(
+                    triggerBounds.left + triggerBounds.width / 2,
+                    triggerBounds.top + triggerBounds.height / 2,
+                  )
+                  if (point) openNodeTypePicker(point, trigger, 'add')
+                }}
               />
             ))}
           </ViewportPortal>
@@ -3937,10 +4092,27 @@ export function CanvasPage({
             targetNodeTitle={
               contextMenu.targetNodeId ? contextNode?.title : undefined
             }
-            canUseGenerationHistory={canUseGenerationHistory}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            canPaste={false}
+            canSaveToAssets={Boolean(contextMenu.targetNodeId && contextNode)}
             onUpload={beginContextUpload}
-            onOpenGenerationHistory={openContextGenerationHistory}
             onAddNode={createContextNode}
+            onUndo={() => {
+              setContextMenu(undefined)
+              undo()
+            }}
+            onRedo={() => {
+              setContextMenu(undefined)
+              redo()
+            }}
+            onPaste={() => undefined}
+            onSaveToAssets={() => {
+              setContextMenu(undefined)
+              if (contextNode) {
+                setGenerationFeedback(`已将“${contextNode.title}”保存到本地资产。`)
+              }
+            }}
             onDeleteNode={contextMenu.targetNodeId ? () => {
               const targetNodeId = contextMenu.targetNodeId
               const focusReturnTarget =
@@ -3965,8 +4137,13 @@ export function CanvasPage({
           <CanvasNodeTypePicker
             anchor={nodeTypePicker.anchor}
             bounds={nodeTypePicker.bounds}
+            mode={nodeTypePicker.mode}
+            sourceTitle={project.nodes.find(({ id }) => id === nodeTypePicker.sourceNodeId)?.title}
+            canUseGenerationHistory={canUseGenerationHistory}
             onClose={closeNodeTypePicker}
             onSelect={createQuickNode}
+            onUpload={beginPickerUpload}
+            onOpenGenerationHistory={openPickerGenerationHistory}
           />
         ) : null}
         <CanvasViewControls

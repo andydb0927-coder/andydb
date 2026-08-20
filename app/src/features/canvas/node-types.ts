@@ -37,6 +37,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   imageResults?: Array<{ id: string; asset: Asset }>
   imageReferences?: Array<{ id: string; title: string; asset: Asset }>
   videoReferences?: Array<{ id: string; title: string; asset: Asset }>
+  incomingReferenceCount?: number
   imageReferenceSelecting?: boolean
   actionsPlacement: 'before' | 'after'
   contextual: boolean

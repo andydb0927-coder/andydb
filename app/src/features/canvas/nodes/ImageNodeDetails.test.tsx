@@ -1,9 +1,20 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createRef } from 'react'
 import { expect, test, vi } from 'vitest'
 
 import type { CreativeNodeData } from '../node-types'
 import { ImageGenerationPanel } from './ImageNodeDetails'
+
+function panelProps(data: CreativeNodeData) {
+  return {
+    data,
+    imageToImage: false,
+    upscalePending: false,
+    onUpscalePendingChange: vi.fn(),
+    upscaleTriggerRef: createRef<HTMLButtonElement>(),
+  }
+}
 
 function makeData(
   overrides: Partial<CreativeNodeData> = {},
@@ -56,15 +67,12 @@ function makeData(
 }
 
 test('matches the Liblib image action bar and generation copy without legacy node actions', async () => {
-  const user = userEvent.setup()
   const data = makeData()
-  render(<ImageGenerationPanel data={data} />)
+  render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
   const actions = within(panel).getByRole('toolbar', { name: '图片主操作' })
 
   expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
-    '图生图',
-    '图片高清',
     '参考',
     '标记',
     '风格',
@@ -75,39 +83,43 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   expect(within(panel).getByText(
     '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
   )).toBeVisible()
-  expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张样式')).toBeVisible()
+  expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张')).toBeVisible()
   expect(within(panel).getByRole('combobox', { name: '图片模型' })).toBeVisible()
   expect(within(panel).getByText('预计成本 15')).toBeVisible()
   expect(within(panel).getByRole('button', { name: '生成图片，预计成本 15' })).toBeEnabled()
-
-  const imageToImage = within(actions).getByRole('button', { name: '图生图' })
-  await user.click(imageToImage)
-  expect(imageToImage).toHaveAttribute('aria-pressed', 'true')
-  expect(within(panel).getByRole('status')).toHaveTextContent('已切换图生图模式')
 })
 
 test('confirms image upscaling before inserting a connected tool node', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()
+  const upscaleTriggerRef = createRef<HTMLButtonElement>()
+  const onUpscalePendingChange = vi.fn()
   render(
-    <ImageGenerationPanel
-      data={makeData({ onCreateImageToolNode })}
-    />,
+    <>
+      <button ref={upscaleTriggerRef} type="button">图片高清</button>
+      <ImageGenerationPanel
+        data={makeData({ onCreateImageToolNode })}
+        imageToImage={false}
+        upscalePending
+        onUpscalePendingChange={onUpscalePendingChange}
+        upscaleTriggerRef={upscaleTriggerRef}
+      />
+    </>,
   )
 
   const trigger = screen.getByRole('button', { name: '图片高清' })
-  await user.click(trigger)
   const dialog = screen.getByRole('alertdialog', { name: '将添加工具节点' })
   expect(dialog).toHaveTextContent('图片高清')
   expect(onCreateImageToolNode).not.toHaveBeenCalled()
   await user.click(within(dialog).getByRole('button', { name: '确认添加图片高清工具节点' }))
   expect(onCreateImageToolNode).toHaveBeenCalledWith('图片高清')
+  expect(onUpscalePendingChange).toHaveBeenCalledWith(false)
   expect(trigger).toHaveFocus()
 })
 
 test('opens and safely exits the local element marking mode', async () => {
   const user = userEvent.setup()
-  render(<ImageGenerationPanel data={makeData()} />)
+  render(<ImageGenerationPanel {...panelProps(makeData())} />)
 
   const trigger = screen.getByRole('button', { name: '标记' })
   await user.click(trigger)
@@ -124,12 +136,12 @@ test('opens and safely exits the local element marking mode', async () => {
 test('exposes the verified MJ image settings with persistent accessible controls', async () => {
   const user = userEvent.setup()
   const data = makeData()
-  render(<ImageGenerationPanel data={data} />)
+  render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
 
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
   expect(model).toHaveValue('mock-mj-image')
-  expect(within(model).getByRole('option', { name: /Mock Studio.*MJ 风格图片.*15 积分\/次.*演示/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: 'Lib Image' })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /通义万相.*待接入/ })).toBeDisabled()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
   await user.selectOptions(model, 'mock-mj-image')
@@ -169,7 +181,7 @@ test('exposes the verified MJ image settings with persistent accessible controls
 
 test('opens a searchable three-tab style gallery with ten categories and complete cards', async () => {
   const user = userEvent.setup()
-  render(<ImageGenerationPanel data={makeData()} />)
+  render(<ImageGenerationPanel {...panelProps(makeData())} />)
   const styleTrigger = screen.getByRole('button', { name: '风格' })
   await user.click(styleTrigger)
 
@@ -221,7 +233,7 @@ test('requires prompt or media and a visible cost before local image submission'
       activeVersionId: 'blank-version',
     },
   })
-  render(<ImageGenerationPanel data={data} />)
+  render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
   const submit = within(panel).getByRole('button', {
     name: '生成图片，预计成本 15',
@@ -241,7 +253,8 @@ test('requires prompt or media and a visible cost before local image submission'
 test('exposes canvas reference mode controls without creating an edge locally', async () => {
   const user = userEvent.setup()
   const data = makeData()
-  const view = render(<ImageGenerationPanel data={data} />)
+  const props = panelProps(data)
+  const view = render(<ImageGenerationPanel {...props} />)
 
   const referenceTrigger = screen.getByRole('button', { name: '参考' })
   await user.click(referenceTrigger)
@@ -250,7 +263,7 @@ test('exposes canvas reference mode controls without creating an edge locally', 
   )
 
   view.rerender(
-    <ImageGenerationPanel data={{ ...data, imageReferenceSelecting: true }} />,
+    <ImageGenerationPanel {...props} data={{ ...data, imageReferenceSelecting: true }} />,
   )
   const mode = screen.getByRole('region', { name: '从画布选择参考' })
   expect(mode).toHaveTextContent('从画布选择参考')

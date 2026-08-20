@@ -409,7 +409,6 @@ function chooseContextNode(
 
 function chooseContextUpload(clientX = 420, clientY = 300) {
   contextMenuPane(clientX, clientY)
-  act(() => screen.getByRole('menuitem', { name: '添加资源' }).click())
   act(() => screen.getByRole('menuitem', { name: '上传' }).click())
 }
 
@@ -886,8 +885,12 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '图片 01' }))
     const imageActions = screen.getByRole('toolbar', { name: '图片主操作' })
-    for (const action of ['图生图', '图片高清', '参考', '标记', '风格']) {
+    for (const action of ['参考', '标记', '风格']) {
       expect(within(imageActions).getByRole('button', { name: action })).toBeVisible()
+    }
+    const quickAttempts = screen.getByRole('toolbar', { name: '图片快捷尝试' })
+    for (const action of ['图生图', '图片高清']) {
+      expect(within(quickAttempts).getByRole('button', { name: action })).toBeVisible()
     }
     expect(
       screen.queryByRole('button', { name: '生成分镜' }),
@@ -2033,6 +2036,43 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
+  test('opens the recorded downstream picker when a source connection ends on blank canvas', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 860, y: 420 })
+
+    act(() => latestFlowProps?.onConnectStart?.({}, {}))
+    act(() => {
+      latestFlowProps?.onConnectEnd?.(
+        { clientX: 640, clientY: 360 },
+        {
+          isValid: false,
+          fromNode: { id: 'video' },
+          fromHandle: { type: 'source' },
+        },
+      )
+    })
+
+    const picker = screen.getByRole('menu', { name: '引用该节点生成' })
+    expect(picker).toHaveTextContent('视频片段')
+    await user.click(within(picker).getByRole('menuitem', { name: '图片' }))
+
+    const currentProject = useProjectStore.getState().activeProject
+    const created = currentProject?.nodes.find(
+      ({ title, position }) => title.startsWith('图片') && position.x === 860 && position.y === 420,
+    )
+    expect(created).toBeDefined()
+    expect(currentProject?.edges).toContainEqual(
+      expect.objectContaining({ sourceNodeId: 'video', targetNodeId: created?.id }),
+    )
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => useProjectStore.getState().undo())
+    expect(useProjectStore.getState().activeProject?.nodes).not.toContainEqual(
+      expect.objectContaining({ id: created?.id }),
+    )
+  })
+
   test('normalizes an invalid drag that starts from a target handle', async () => {
     let finishSave: (() => void) | undefined
     const save = vi.fn(
@@ -2615,7 +2655,7 @@ describe('creative canvas', () => {
     expect(fitView).toHaveBeenLastCalledWith({ duration: 320, padding: 0.18 })
 
     await user.keyboard('{Tab}')
-    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
+    expect(screen.getByRole('menu', { name: '添加节点' })).toBeVisible()
   })
 
   test('runs generation, undo, redo, and safe deletion only from an eligible canvas selection', async () => {
@@ -2695,7 +2735,9 @@ describe('creative canvas', () => {
         .activeProject?.nodes.find(({ id }) => id === 'video')?.modelProviderId,
     ).toBe('mock-seedance-video')
 
-    await user.click(within(panel).getByRole('button', { name: '生成视频' }))
+    await user.click(
+      within(panel).getByRole('button', { name: '生成视频，预计成本 20' }),
+    )
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       nodeId: 'video',
@@ -3128,22 +3170,24 @@ describe('creative canvas', () => {
 
     expect(contextMenuPane()).toHaveBeenCalledOnce()
     expect(screen.getByRole('menu', { name: '画布快捷菜单' })).toBeVisible()
-    expect(screen.getByRole('menuitem', { name: '添加节点' })).toHaveFocus()
-    expect(screen.getByRole('menuitem', { name: '添加资源' })).toBeVisible()
-    expect(screen.queryByRole('menuitem', { name: '粘贴' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '上传' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: '保存到我的资产' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: '添加节点' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+    expect(screen.queryByRole('menuitem', { name: '添加资源' })).not.toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
     await waitFor(() => expect(canvas).toHaveFocus())
   })
 
-  test('opens generation history from resources and inserts one completed result at the menu point', async () => {
+  test('opens generation history from the add-node dock and inserts one completed result at the canvas point', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow({ x: 688, y: 412 })
-    contextMenuPane(470, 330)
-    await user.click(screen.getByRole('menuitem', { name: '添加资源' }))
-    await user.click(screen.getByRole('menuitem', { name: '从生成历史选择' }))
+    await user.click(screen.getByRole('button', { name: '添加节点' }))
+    const addMenu = screen.getByRole('menu', { name: '添加节点' })
+    await user.click(within(addMenu).getByRole('menuitem', { name: '从生成历史选择' }))
 
     const history = screen.getByRole('complementary', { name: '历史' })
     await user.click(
@@ -3321,7 +3365,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(cases.length)
   })
 
-  test('shows the same two groups on a node menu and restores node focus after Escape', async () => {
+  test('shows the recorded node menu actions and restores node focus after Escape', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow()
@@ -3336,9 +3380,11 @@ describe('creative canvas', () => {
       currentTarget: character,
     }, node))
 
+    expect(screen.getByRole('menuitem', { name: '上传' })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: '添加节点' })).toBeVisible()
-    expect(screen.getByRole('menuitem', { name: '添加资源' })).toBeVisible()
-    expect(screen.queryByRole('menuitem', { name: '保存到我的资产' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '保存到我的资产' })).toBeEnabled()
+    expect(screen.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+    expect(screen.queryByRole('menuitem', { name: '添加资源' })).not.toBeInTheDocument()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(character).toHaveFocus())
   })

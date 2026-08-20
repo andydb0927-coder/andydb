@@ -3,7 +3,7 @@ import {
   Position,
   type NodeProps,
 } from '@xyflow/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   BookOpenText,
   Clapperboard,
@@ -11,6 +11,8 @@ import {
   Film,
   Globe2,
   Image,
+  Images,
+  Maximize2,
   MonitorPlay,
   Pencil,
   RefreshCw,
@@ -188,6 +190,9 @@ export function CreativeNodeShell({
     onFocusComplete,
   } = data
   const selectRef = useRef<HTMLButtonElement>(null)
+  const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
+  const [imageToImage, setImageToImage] = useState(false)
+  const [upscalePending, setUpscalePending] = useState(false)
   const KindIcon = kindIcons[node.kind]
   const specializedDetails = node.details
   const activeVersion = node.versions.find(
@@ -199,8 +204,18 @@ export function CreativeNodeShell({
   const imageGenerationNode =
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
     node.videoTool === undefined
+  const videoGenerationNode =
+    node.kind === 'video' &&
+    node.videoTool === undefined &&
+    specializedDetails === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
-  const expandableMedia = imageGenerationNode || videoMedia || node.videoTool !== undefined || node.effectTool !== undefined || specializedDetails !== undefined
+  const liblibMediaNode = imageGenerationNode || videoGenerationNode
+  const expandableMedia = liblibMediaNode || node.videoTool !== undefined || node.effectTool !== undefined || specializedDetails !== undefined
+
+  useEffect(() => {
+    setImageToImage(false)
+    setUpscalePending(false)
+  }, [node.id])
 
   useEffect(() => {
     if (!focusOnMount) return
@@ -244,7 +259,7 @@ export function CreativeNodeShell({
           imageMedia ? ' creative-node--image-media' : ''
         }${videoMedia ? ' creative-node--video-media' : ''}${
           specializedDetails ? ' creative-node--specialized' : ''
-        }${
+        }${liblibMediaNode ? ' creative-node--liblib-media' : ''}${
           expandableMedia && contextual ? ' creative-node--expanded' : ''
         }`}
       >
@@ -283,6 +298,11 @@ export function CreativeNodeShell({
                 className="creative-node__media"
                 style={{ transform: `rotate(${(node.rotationQuarterTurns ?? 0) * 90}deg)` }}
               />
+            ) : liblibMediaNode ? (
+              <span className="creative-node__media-placeholder">
+                <KindIcon aria-hidden="true" />
+                <span>尚未添加{imageGenerationNode ? '图片' : '视频'}</span>
+              </span>
             ) : null)}
           {imageMedia && asset.width && asset.height ? (
             <span className="creative-node__dimensions">{asset.width} × {asset.height}</span>
@@ -295,7 +315,7 @@ export function CreativeNodeShell({
               <span className="creative-node__result-count-label">1 个结果</span>
             </>
           ) : null}
-          {!specializedDetails && !hidePrompt && !imageMedia && !videoMedia ? (
+          {!specializedDetails && !hidePrompt && !imageMedia && !videoMedia && !liblibMediaNode ? (
             <span className="creative-node__prompt">
               {activeVersion?.prompt ?? '尚未生成内容'}
             </span>
@@ -306,13 +326,34 @@ export function CreativeNodeShell({
             <StatusText status={job.status === 'cancelled' ? 'idle' : job.status}>
               {statusCopy[job.status]}
             </StatusText>
-          ) : (
+          ) : liblibMediaNode ? null : (
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
+        {imageGenerationNode && contextual ? (
+          <div
+            className="creative-node__quick-attempts nodrag"
+            role="toolbar"
+            aria-label="图片快捷尝试"
+          >
+            <span>尝试：</span>
+            <button
+              type="button"
+              aria-pressed={imageToImage}
+              onClick={() => setImageToImage((enabled) => !enabled)}
+            >
+              <Images aria-hidden="true" />图生图
+            </button>
+            <button
+              ref={upscaleTriggerRef}
+              type="button"
+              onClick={() => setUpscalePending(true)}
+            >
+              <Maximize2 aria-hidden="true" />图片高清
+            </button>
+          </div>
+        ) : null}
         {imageGenerationNode ? <ImageResults data={data} /> : null}
-        {imageGenerationNode && contextual ? <ImageGenerationPanel data={data} /> : null}
-        {videoMedia && contextual ? <VideoGenerationPanel data={data} /> : null}
         {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
         {specializedDetails && contextual ? <SpecializedNodeDetailsPanel data={data} /> : null}
@@ -333,6 +374,7 @@ export function CreativeNodeShell({
         />
         <Handle
           id="dependency-source"
+          className="creative-node__source-handle"
           type="source"
           position={Position.Right}
           style={expandableMedia && contextual ? { top: 112 } : undefined}
@@ -347,6 +389,22 @@ export function CreativeNodeShell({
           }}
         />
       </article>
+      {imageGenerationNode && contextual ? (
+        <div className="creative-node-composer">
+          <ImageGenerationPanel
+            data={data}
+            imageToImage={imageToImage}
+            upscalePending={upscalePending}
+            onUpscalePendingChange={setUpscalePending}
+            upscaleTriggerRef={upscaleTriggerRef}
+          />
+        </div>
+      ) : null}
+      {videoGenerationNode && contextual ? (
+        <div className="creative-node-composer creative-node-composer--video">
+          <VideoGenerationPanel data={data} />
+        </div>
+      ) : null}
       {contextual ? <NodeActions data={data} /> : null}
     </div>
   )

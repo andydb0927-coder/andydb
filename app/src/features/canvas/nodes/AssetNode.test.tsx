@@ -144,6 +144,20 @@ test('keeps image nodes folded until they become the current selection', async (
 
   view.rerender(renderWith({ ...baseData, selected: true, contextual: true }))
   const generation = screen.getByRole('region', { name: 'L1 生成参数' })
+  const mediaCard = screen.getByRole('article')
+  expect(mediaCard).toHaveClass('creative-node--liblib-media')
+  expect(mediaCard).not.toContainElement(generation)
+  expect(generation.parentElement).toHaveClass('creative-node-composer')
+  expect(
+    within(generation)
+      .getAllByRole('toolbar', { name: '图片主操作' })[0]
+      ?.querySelectorAll('button'),
+  ).toHaveLength(3)
+  expect(
+    within(within(generation).getByRole('toolbar', { name: '图片主操作' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['参考', '标记', '风格'])
   expect(within(generation).getByLabelText('提示词')).toHaveValue('雾中茶山')
   expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
     'mock-mj-image',
@@ -159,6 +173,63 @@ test('keeps image nodes folded until they become the current selection', async (
   )
   await user.click(screen.getByRole('button', { name: '确认设为主图' }))
   expect(onSetActiveResult).toHaveBeenCalledWith('result-2')
+})
+
+test('keeps Liblib image attempts inside an empty media card and opens the composer on demand', async () => {
+  const user = userEvent.setup()
+  const onSelect = vi.fn()
+  const data = {
+    node: {
+      id: 'empty-image',
+      kind: 'image' as const,
+      title: '图片节点 1',
+      position: { x: 0, y: 0 },
+      versions: [{ id: 'v1', createdAt: '2026-08-20T00:00:00.000Z', prompt: '' }],
+      activeVersionId: 'v1',
+      sourceChanged: false,
+    },
+    selected: true,
+    contextual: true,
+    actionsPlacement: 'after' as const,
+    connectionMode: false,
+    connectionSource: false,
+    focusOnMount: false,
+    focusRequestVersion: 0,
+    onAction: vi.fn(),
+    onSelect,
+    onHandleActivate: vi.fn(),
+    onFocusComplete: vi.fn(),
+    onDelete: vi.fn(),
+  }
+
+  render(
+    <div style={{ width: 1000, height: 800 }}>
+      <ReactFlowProvider>
+        <ReactFlow
+          nodes={[{
+            id: 'empty-image',
+            type: 'image',
+            position: { x: 0, y: 0 },
+            initialWidth: 320,
+            initialHeight: 240,
+            data,
+          }]}
+          edges={[]}
+          nodeTypes={{ image: AssetNode }}
+        />
+      </ReactFlowProvider>
+    </div>,
+  )
+
+  const card = screen.getByRole('article')
+  expect(within(card).getByText('尝试：')).toBeVisible()
+  expect(within(card).getByRole('button', { name: '图生图' })).toBeVisible()
+  expect(within(card).getByRole('button', { name: '图片高清' })).toBeVisible()
+  expect(within(card).getByText('尚未添加图片')).toBeVisible()
+
+  await user.click(within(card).getByRole('button', { name: '图生图' }))
+  expect(onSelect).not.toHaveBeenCalled()
+  expect(screen.getByRole('status')).toHaveTextContent('已切换图生图模式')
 })
 
 type TestNodeDetails = Record<string, unknown> & { type: string }

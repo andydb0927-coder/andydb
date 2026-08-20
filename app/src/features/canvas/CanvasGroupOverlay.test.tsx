@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -32,4 +32,32 @@ test('exposes a non-blocking visual group with keyboard-operable select and ungr
   await user.click(screen.getByRole('button', { name: '取消分组：分组 01' }))
   expect(onSelect).toHaveBeenCalledOnce()
   expect(onUngroup).toHaveBeenCalledOnce()
+})
+
+test('offers the recorded group toolbar and three arrangement modes', async () => {
+  const user = userEvent.setup()
+  const onArrange = vi.fn()
+  const onDuplicate = vi.fn()
+  render(
+    <CanvasGroupOverlay
+      group={group}
+      bounds={{ x: 20, y: 40, width: 600, height: 360 }}
+      selected
+      onSelect={vi.fn()}
+      onUngroup={vi.fn()}
+      onArrange={onArrange}
+      onDuplicate={onDuplicate}
+      onFeedback={vi.fn()}
+    />,
+  )
+
+  const toolbar = screen.getByRole('toolbar', { name: '分组 01 组合操作' })
+  for (const action of ['排列', '保存到资产', '创建副本', '复制', '打组', '添加到 Chat']) {
+    expect(within(toolbar).getByRole('button', { name: action })).toBeVisible()
+  }
+  await user.click(within(toolbar).getByRole('button', { name: '排列' }))
+  await user.click(screen.getByRole('menuitem', { name: '水平排列' }))
+  expect(onArrange).toHaveBeenCalledWith('horizontal')
+  await user.click(within(toolbar).getByRole('button', { name: '创建副本' }))
+  expect(onDuplicate).toHaveBeenCalledOnce()
 })
