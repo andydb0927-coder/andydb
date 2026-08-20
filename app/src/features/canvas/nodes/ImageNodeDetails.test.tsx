@@ -252,7 +252,13 @@ test('requires prompt or media and a visible cost before local image submission'
   expect(within(panel).getByRole('button', { name: '翻译提示词' })).toBeDisabled()
   expect(within(panel).getByText('翻译服务未接入，本地演示暂不可用。')).toBeVisible()
 
-  await user.type(within(panel).getByLabelText('提示词'), '雨夜角色特写')
+  const prompt = within(panel).getByLabelText('提示词')
+  await user.type(prompt, '雨夜角色特写')
+  expect(prompt).toHaveTextContent('雨夜角色特写')
+  fireEvent.blur(prompt)
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    prompt: '雨夜角色特写',
+  })
   expect(submit).toBeEnabled()
   await user.click(submit)
   expect(data.onLocalImageGenerate).toHaveBeenCalledOnce()

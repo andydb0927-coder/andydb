@@ -299,9 +299,10 @@ export function ImageGenerationPanel({
     ({ id }) => id === data.node.activeVersionId,
   )
   const imageGeneration = data.node.imageGeneration
-  const [prompt, setPrompt] = useState(
-    imageGeneration?.prompt ?? activeVersion?.prompt ?? '',
-  )
+  const initialPrompt = imageGeneration?.prompt ?? activeVersion?.prompt ?? ''
+  const [prompt, setPrompt] = useState(initialPrompt)
+  const promptRef = useRef<HTMLDivElement>(null)
+  const promptDraftRef = useRef(initialPrompt)
   const [settings, setSettings] = useState({
     ...defaultImageGenerationSettings,
     ...imageGeneration,
@@ -342,7 +343,15 @@ export function ImageGenerationPanel({
   }, [marking])
 
   useEffect(() => {
-    setPrompt(imageGeneration?.prompt ?? activeVersion?.prompt ?? '')
+    const nextPrompt = imageGeneration?.prompt ?? activeVersion?.prompt ?? ''
+    promptDraftRef.current = nextPrompt
+    setPrompt(nextPrompt)
+    if (
+      promptRef.current &&
+      promptRef.current.textContent !== nextPrompt
+    ) {
+      promptRef.current.textContent = nextPrompt
+    }
   }, [activeVersion?.prompt, data.node.id, imageGeneration?.prompt])
 
   useEffect(() => {
@@ -470,6 +479,7 @@ export function ImageGenerationPanel({
         </section>
       ) : null}
       <div
+        ref={promptRef}
         className="image-generation-panel__prompt"
         role="textbox"
         aria-label="提示词"
@@ -477,11 +487,17 @@ export function ImageGenerationPanel({
         aria-placeholder="可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜"
         contentEditable
         suppressContentEditableWarning
-        onInput={(event) => setPrompt(event.currentTarget.textContent ?? '')}
-        onBlur={() => data.onUpdateImageGenerationSettings?.({ prompt })}
-      >
-        {prompt}
-      </div>
+        onInput={(event) => {
+          const nextPrompt = event.currentTarget.textContent ?? ''
+          promptDraftRef.current = nextPrompt
+          setPrompt(nextPrompt)
+        }}
+        onBlur={() =>
+          data.onUpdateImageGenerationSettings?.({
+            prompt: promptDraftRef.current,
+          })
+        }
+      />
       <div className="image-generation-panel__controls">
         <label className="image-generation-panel__model">
           <span className="visually-hidden">图片模型</span>
