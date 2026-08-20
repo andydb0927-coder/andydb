@@ -20,6 +20,10 @@ export type ModelParameterName =
   | 'quality'
   | 'sound'
   | 'resolution'
+  | 'count'
+  | 'onlineSearch'
+  | 'materialValidation'
+  | 'autoLink'
 
 export type ModelParameterDefinition =
   | {
@@ -118,6 +122,14 @@ export function providerOptionLabel(provider: ModelProvider) {
     providerPricingLabel(provider),
     provider.kind === 'demo' ? provider.badge ?? '演示' : '待接入',
   ].join(' · ')
+}
+
+export function providerDefaultParameters(provider: ModelProvider) {
+  return Object.fromEntries(
+    Object.entries(provider.parameterSchema).flatMap(([name, definition]) =>
+      definition ? [[name, definition.defaultValue]] : [],
+    ),
+  ) as Record<string, string | boolean>
 }
 
 export class ProviderRegistry {
@@ -243,6 +255,36 @@ const videoSchema: ModelParameterSchema = {
     defaultValue: '1280×720',
     options: ['1280×720', '1920×1080'],
   },
+  count: { type: 'enum', defaultValue: '1', options: ['1'] },
+  autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const seedanceVideoSchema: ModelParameterSchema = {
+  aspectRatio: {
+    type: 'enum',
+    defaultValue: '16:9',
+    options: ['Auto', '16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
+  },
+  duration: {
+    type: 'enum',
+    defaultValue: '5',
+    options: Array.from({ length: 12 }, (_, index) => String(index + 4)),
+  },
+  quality: {
+    type: 'enum',
+    defaultValue: '720P',
+    options: ['480P', '720P', '1080P', '4K'],
+  },
+  sound: { type: 'boolean', defaultValue: true },
+  resolution: {
+    type: 'enum',
+    defaultValue: '1280×720',
+    options: ['854×480', '1280×720', '1920×1080', '3840×2160'],
+  },
+  count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
+  onlineSearch: { type: 'boolean', defaultValue: true },
+  materialValidation: { type: 'boolean', defaultValue: true },
+  autoLink: { type: 'boolean', defaultValue: true },
 }
 
 function abortError(message: string) {
@@ -285,6 +327,14 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
         const assetId = crypto.randomUUID()
         const video = request.targetKind === 'video'
         const audio = request.targetKind === 'audio'
+        const requestedDuration = Number(
+          request.parameters?.duration ??
+            config.parameterSchema.duration?.defaultValue ??
+            3,
+        )
+        const durationSeconds = Number.isFinite(requestedDuration)
+          ? requestedDuration
+          : 3
         return {
           asset: audio
             ? {
@@ -302,7 +352,7 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
                   mimeType: 'video/mp4',
                   width: 1280,
                   height: 720,
-                  durationSeconds: 3.041,
+                  durationSeconds,
                 }
               : {
                   id: assetId,
@@ -369,10 +419,10 @@ export function createDefaultProviderRegistry() {
     demoProvider({
       id: 'mock-seedance-video',
       name: 'Mock Studio',
-      modelName: 'Seedance 风格视频',
+      modelName: 'Seedance 2.0',
       capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: videoSchema,
-      pricing: { amount: 20, currency: 'credits', unit: 'generation' },
+      parameterSchema: seedanceVideoSchema,
+      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/seedance-video',
     }),
     demoProvider({
@@ -401,8 +451,8 @@ export function createDefaultProviderRegistry() {
       name: 'Seedance',
       modelName: 'Seedance 官方 API',
       capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: videoSchema,
-      pricing: { amount: 20, currency: 'credits', unit: 'generation' },
+      parameterSchema: seedanceVideoSchema,
+      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
     }),
     placeholderProvider({

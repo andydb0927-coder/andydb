@@ -143,12 +143,13 @@ test('renders the verified video generation controls, disabled modes, and cost',
 
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
-  expect(model).toHaveValue('mock-kling-video')
+  expect(model).toHaveValue('mock-seedance-video')
+  expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.0.*135 积分\/次.*演示/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Mock Studio.*可灵风格视频.*24 积分\/次.*演示/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Kling.*待接入/ })).toBeDisabled()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
-  await user.selectOptions(model, 'mock-seedance-video')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-video')
+  await user.selectOptions(model, 'mock-kling-video')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-video')
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeDisabled()
@@ -161,12 +162,38 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
   expect(within(panel).getByLabelText('画质')).toHaveValue('720P')
-  expect(within(panel).getByLabelText('声音')).toHaveValue('关闭')
+  expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
   expect(within(panel).getByLabelText('智能分镜')).not.toBeChecked()
-  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
 
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
+  expect(within(panel).getByLabelText('联网搜索')).toBeChecked()
+  expect(within(panel).getByLabelText('自动校验素材')).toBeChecked()
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
+})
+
+test('recomputes video defaults, price, and advanced switches from the selected model', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  const view = render(renderVideo(data))
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+
+  expect(within(panel).getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+  expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
+  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
+
+  view.rerender(renderVideo({
+    ...data,
+    node: { ...data.node, modelProviderId: 'mock-kling-video' },
+  }))
+
+  expect(within(panel).getByText('16:9 · 标准 · 3s · 1个')).toBeVisible()
+  expect(within(panel).getByLabelText('声音')).toHaveValue('关闭')
+  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
+  await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
+  expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
+  expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
+  expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
 })
 
 test('exposes frame confirmations and all seven reference controls without mutating on escape', async () => {

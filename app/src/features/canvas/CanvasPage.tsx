@@ -31,7 +31,10 @@ import { CollaborationRepository } from '../collaboration/collaboration-reposito
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
-import { defaultProviderRegistry } from '../generation/model-provider-registry'
+import {
+  defaultProviderRegistry,
+  providerDefaultParameters,
+} from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import type {
   GenerationAdapter,
@@ -342,20 +345,29 @@ function buildGenerationRequest(
     operation === 'generate-video'
       ? 'video'
       : savedConfig?.targetKind ?? (node.kind === 'video' ? 'video' : 'image')
-  const requestedProviderId = savedConfig?.providerId ?? node.modelProviderId
-  const registeredProvider = requestedProviderId
-    ? defaultProviderRegistry.list().find(({ id }) => id === requestedProviderId)
+  const defaultProviderId =
+    targetKind === 'video' ? 'mock-seedance-video' : undefined
+  const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
+  const configuredProvider = configuredProviderId
+    ? defaultProviderRegistry.list().find(({ id }) => id === configuredProviderId)
     : undefined
-  const registeredProviderId = registeredProvider &&
-    registeredProvider.capabilities.some((capability) =>
+  const supportsTarget = (provider: typeof configuredProvider) =>
+    Boolean(provider?.capabilities.some((capability) =>
       targetKind === 'video'
         ? capability === 'text-to-video' || capability === 'image-to-video'
         : targetKind === 'audio'
           ? capability === 'audio'
           : capability === 'text-to-image' || capability === 'image-to-image',
-    )
-    ? registeredProvider.id
+    ))
+  const fallbackProvider = defaultProviderId
+    ? defaultProviderRegistry.list().find(({ id }) => id === defaultProviderId)
     : undefined
+  const registeredProvider = supportsTarget(configuredProvider)
+    ? configuredProvider
+    : supportsTarget(fallbackProvider)
+      ? fallbackProvider
+      : undefined
+  const registeredProviderId = registeredProvider?.id
 
   return {
     projectId: project.id,
@@ -364,9 +376,16 @@ function buildGenerationRequest(
     targetKind,
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
-    ...(savedConfig?.parameters
-      ? { parameters: { ...savedConfig.parameters } }
-      : {}),
+    ...(registeredProviderId && registeredProvider
+      ? {
+          parameters: {
+            ...providerDefaultParameters(registeredProvider),
+            ...savedConfig?.parameters,
+          },
+        }
+      : savedConfig?.parameters
+        ? { parameters: { ...savedConfig.parameters } }
+        : {}),
     referenceAssets: savedConfig?.referenceAssets.length
       ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
       : asset
@@ -1561,7 +1580,44 @@ export function CanvasPage({
           onSelectModelProvider: (providerId) => {
             const provider = defaultProviderRegistry.require(providerId)
             if (provider.kind !== 'demo') return
-            updateNode(node.id, { modelProviderId: providerId })
+            updateNode(node.id, {
+              modelProviderId: providerId,
+              generationConfig: {
+                targetKind: node.kind === 'video' ? 'video' : 'image',
+                providerId,
+                parameters: providerDefaultParameters(provider),
+                referenceAssets:
+                  node.generationConfig?.referenceAssets.map((reference) => ({
+                    ...reference,
+                  })) ?? [],
+              },
+            })
+          },
+          onUpdateVideoGenerationParameters: (parameters) => {
+            const provider = defaultProviderRegistry.require(
+              node.modelProviderId ?? 'mock-seedance-video',
+            )
+            if (provider.kind !== 'demo') return
+            const previousParameters =
+              node.generationConfig?.providerId === provider.id
+                ? node.generationConfig.parameters
+                : undefined
+            updateNode(node.id, {
+              modelProviderId: provider.id,
+              generationConfig: {
+                targetKind: 'video',
+                providerId: provider.id,
+                parameters: {
+                  ...providerDefaultParameters(provider),
+                  ...previousParameters,
+                  ...parameters,
+                },
+                referenceAssets:
+                  node.generationConfig?.referenceAssets.map((reference) => ({
+                    ...reference,
+                  })) ?? [],
+              },
+            })
           },
           onStartImageReferenceSelection: (trigger) =>
             startImageReferenceSelection(node.id, trigger),

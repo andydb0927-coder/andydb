@@ -1046,6 +1046,17 @@ describe('creative canvas', () => {
     expect(video.kind).toBe('video')
     expect(video.generationConfig).toMatchObject({
       targetKind: 'video',
+      providerId: 'mock-seedance-video',
+      parameters: {
+        aspectRatio: '16:9',
+        duration: '5',
+        quality: '720P',
+        sound: true,
+        count: '1',
+        onlineSearch: true,
+        materialValidation: true,
+        autoLink: true,
+      },
       referenceAssets: [{ url: '/demo/shot-rooftop.png' }],
     })
     expect(project.edges).toContainEqual(
@@ -2726,23 +2737,45 @@ describe('creative canvas', () => {
     const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
     await user.selectOptions(
       within(panel).getByRole('combobox', { name: '模型' }),
-      'mock-seedance-video',
+      'mock-kling-video',
     )
 
     expect(
       useProjectStore
         .getState()
-        .activeProject?.nodes.find(({ id }) => id === 'video')?.modelProviderId,
-    ).toBe('mock-seedance-video')
+        .activeProject?.nodes.find(({ id }) => id === 'video'),
+    ).toMatchObject({
+      modelProviderId: 'mock-kling-video',
+      generationConfig: {
+        targetKind: 'video',
+        providerId: 'mock-kling-video',
+        parameters: {
+          aspectRatio: '16:9',
+          duration: '3',
+          quality: '标准',
+          sound: false,
+          count: '1',
+          autoLink: true,
+        },
+      },
+    })
 
     await user.click(
-      within(panel).getByRole('button', { name: '生成视频，预计成本 20' }),
+      within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
     )
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       nodeId: 'video',
       targetKind: 'video',
-      providerId: 'mock-seedance-video',
+      providerId: 'mock-kling-video',
+      parameters: {
+        aspectRatio: '16:9',
+        duration: '3',
+        quality: '标准',
+        sound: false,
+        count: '1',
+        autoLink: true,
+      },
     })
   })
 

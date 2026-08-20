@@ -54,6 +54,9 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
     settings: Partial<ImageGenerationSettings>,
   ): void
   onSelectModelProvider?(providerId: string): void
+  onUpdateVideoGenerationParameters?(
+    parameters: Record<string, string | number | boolean>,
+  ): void
   onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
   onEndImageReferenceSelection?(returnToNode: boolean): void
   onLocalImageGenerate?(): void

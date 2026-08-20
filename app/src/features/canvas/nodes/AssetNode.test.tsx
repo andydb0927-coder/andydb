@@ -158,6 +158,11 @@ test('keeps image nodes folded until they become the current selection', async (
       .getAllByRole('button')
       .map((button) => button.textContent),
   ).toEqual(['参考', '标记', '风格'])
+  expect(
+    within(screen.getByRole('toolbar', { name: '图片快捷尝试' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['图生图', '图片高清'])
   expect(within(generation).getByLabelText('提示词')).toHaveValue('雾中茶山')
   expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
     'mock-mj-image',
@@ -175,8 +180,7 @@ test('keeps image nodes folded until they become the current selection', async (
   expect(onSetActiveResult).toHaveBeenCalledWith('result-2')
 })
 
-test('keeps Liblib image attempts inside an empty media card and opens the composer on demand', async () => {
-  const user = userEvent.setup()
+test('keeps an empty Liblib image node to the three model-supported composer actions', () => {
   const onSelect = vi.fn()
   const data = {
     node: {
@@ -222,14 +226,14 @@ test('keeps Liblib image attempts inside an empty media card and opens the compo
   )
 
   const card = screen.getByRole('article')
-  expect(within(card).getByText('尝试：')).toBeVisible()
-  expect(within(card).getByRole('button', { name: '图生图' })).toBeVisible()
-  expect(within(card).getByRole('button', { name: '图片高清' })).toBeVisible()
   expect(within(card).getByText('尚未添加图片')).toBeVisible()
-
-  await user.click(within(card).getByRole('button', { name: '图生图' }))
+  expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('toolbar', { name: '图片主操作' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['参考', '标记', '风格'])
   expect(onSelect).not.toHaveBeenCalled()
-  expect(screen.getByRole('status')).toHaveTextContent('已切换图生图模式')
 })
 
 type TestNodeDetails = Record<string, unknown> & { type: string }

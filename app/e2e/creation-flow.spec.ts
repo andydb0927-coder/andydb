@@ -339,11 +339,18 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   const generation = page.getByRole('region', { name: '视频 01 生成参数' })
   await expect(generation).toBeVisible()
   await expect(generation.getByLabel('提示词')).toHaveAttribute('maxlength', '2000')
-  await expect(generation.getByLabel('模型')).toHaveValue('mock-kling-video')
+  await expect(generation.getByLabel('模型')).toHaveValue('mock-seedance-video')
   await expect(
-    generation.getByRole('option', { name: /Mock Studio.*可灵风格视频.*24 积分\/次.*演示/ }),
+    generation.getByRole('option', { name: /Mock Studio.*Seedance 2.0.*135 积分\/次.*演示/ }),
   ).toBeEnabled()
-  await expect(generation.getByText('预计成本 24')).toBeVisible()
+  await expect(generation.getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+  await expect(generation.getByLabel('声音')).toHaveValue('开启')
+  await expect(generation.getByText('预计成本 135')).toBeVisible()
+  await generation.getByRole('button', { name: '展开高级设置' }).click()
+  await expect(generation.getByLabel('联网搜索')).toBeChecked()
+  await expect(generation.getByLabel('自动校验素材')).toBeChecked()
+  await expect(generation.getByLabel('智能引用 AutoLink')).toBeChecked()
+  await generation.getByRole('button', { name: '收起高级设置' }).click()
 
   const mediaTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
   await expect(mediaTools.getByRole('button')).toHaveCount(11)

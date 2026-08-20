@@ -13,7 +13,12 @@ import { createPortal } from 'react-dom'
 import type { VideoDerivedTool } from '../../project/model'
 import {
   defaultProviderRegistry,
+  providerDefaultParameters,
   providerOptionLabel,
+} from '../../generation/model-provider-registry'
+import type {
+  ModelParameterName,
+  ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
@@ -69,6 +74,35 @@ const characterSamples = [
   '古风男主',
   '古风女主',
 ] as const
+
+function enumOptions(
+  provider: ModelProvider,
+  name: ModelParameterName,
+  fallback: readonly string[],
+) {
+  const definition = provider.parameterSchema[name]
+  return definition?.type === 'enum' ? definition.options : fallback
+}
+
+function parameterString(
+  parameters: Record<string, string | number | boolean>,
+  name: ModelParameterName,
+  fallback: string,
+) {
+  const value = parameters[name]
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : fallback
+}
+
+function parameterBoolean(
+  parameters: Record<string, string | number | boolean>,
+  name: ModelParameterName,
+  fallback: boolean,
+) {
+  const value = parameters[name]
+  return typeof value === 'boolean' ? value : fallback
+}
 
 function ToolConfirmation({
   tool,
@@ -215,9 +249,33 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   ])
   const selectedProvider =
     providers.find(({ id }) => id === data.node.modelProviderId) ??
-    providers.find(({ id }) => id === 'mock-kling-video') ??
+    providers.find(({ id }) => id === 'mock-seedance-video') ??
     providers.find(({ kind }) => kind === 'demo')!
+  const providerDefaults = providerDefaultParameters(selectedProvider)
+  const savedParameters =
+    data.node.generationConfig?.providerId === selectedProvider.id
+      ? data.node.generationConfig.parameters
+      : undefined
+  const parameters = { ...providerDefaults, ...savedParameters }
+  const aspectRatio = parameterString(parameters, 'aspectRatio', '16:9')
+  const duration = parameterString(parameters, 'duration', '5')
+  const quality = parameterString(parameters, 'quality', '720P')
+  const count = parameterString(parameters, 'count', '1')
+  const sound = parameterBoolean(parameters, 'sound', true)
   const cost = selectedProvider.pricing.amount
+  const advancedParameters = [
+    ['onlineSearch', '联网搜索'],
+    ['materialValidation', '自动校验素材'],
+    ['autoLink', '智能引用 AutoLink'],
+  ] as const
+  const supportedAdvancedParameters = advancedParameters.filter(
+    ([name]) => selectedProvider.parameterSchema[name]?.type === 'boolean',
+  )
+
+  const updateParameter = (
+    name: ModelParameterName,
+    value: string | boolean,
+  ) => data.onUpdateVideoGenerationParameters?.({ [name]: value })
 
   useEffect(() => {
     setAdvanced(false)
@@ -309,8 +367,8 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           <option>首尾帧</option>
           <option>图片参考</option>
         </select></label>
-        <span className="video-generation-panel__parameter-row">16:9 · 720P · 5s · 1个</span>
-        <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" defaultValue="关闭"><option>关闭</option><option>开启</option></select></label>
+        <span className="video-generation-panel__parameter-row">{aspectRatio} · {quality} · {duration}s · {count}个</span>
+        <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" value={sound ? '开启' : '关闭'} onChange={(event) => updateParameter('sound', event.target.value === '开启')}><option>关闭</option><option>开启</option></select></label>
         <button
           type="button"
           aria-label={advanced ? '收起高级设置' : '展开高级设置'}
@@ -325,10 +383,19 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         </button>
       </div>
       {advanced ? (
-        <label className="video-generation-panel__autolink">
-          <input type="checkbox" aria-label="智能引用 AutoLink" defaultChecked />
-          智能引用 AutoLink
-        </label>
+        <div className="video-generation-panel__advanced-settings">
+          {supportedAdvancedParameters.map(([name, label]) => (
+            <label key={name} className="video-generation-panel__autolink">
+              <input
+                type="checkbox"
+                aria-label={label}
+                checked={parameterBoolean(parameters, name, true)}
+                onChange={(event) => updateParameter(name, event.target.checked)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       ) : null}
 
       {workflowOpen ? (
@@ -351,10 +418,10 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             <button type="button" onClick={() => setSurface('references')}><AtSign aria-hidden="true" />{referenceCount} @</button>
           </div>
           <div className="video-generation-panel__selectors">
-            <label>比例<select aria-label="比例" defaultValue="16:9"><option>16:9</option><option>1:1</option><option>9:16</option></select></label>
-            <label>时长<select aria-label="时长" defaultValue="5">{Array.from({ length: 13 }, (_, index) => index + 3).map((seconds) => <option key={seconds} value={seconds}>{seconds} 秒</option>)}</select></label>
-            <label>生成数量<select aria-label="生成数量" defaultValue="1"><option value="1">1 个</option></select></label>
-            <label>画质<select aria-label="画质" defaultValue="720P"><option>720P</option><option>1080P</option><option>4K</option></select></label>
+            <label>比例<select aria-label="比例" value={aspectRatio} onChange={(event) => updateParameter('aspectRatio', event.target.value)}>{enumOptions(selectedProvider, 'aspectRatio', ['16:9']).map((option) => <option key={option}>{option}</option>)}</select></label>
+            <label>时长<select aria-label="时长" value={duration} onChange={(event) => updateParameter('duration', event.target.value)}>{enumOptions(selectedProvider, 'duration', ['5']).map((seconds) => <option key={seconds} value={seconds}>{seconds} 秒</option>)}</select></label>
+            <label>生成数量<select aria-label="生成数量" value={count} onChange={(event) => updateParameter('count', event.target.value)}>{enumOptions(selectedProvider, 'count', ['1']).map((option) => <option key={option} value={option}>{option} 个</option>)}</select></label>
+            <label>画质<select aria-label="画质" value={quality} onChange={(event) => updateParameter('quality', event.target.value)}>{enumOptions(selectedProvider, 'quality', ['720P']).map((option) => <option key={option}>{option}</option>)}</select></label>
             <label className="video-generation-panel__toggle"><input type="checkbox" aria-label="智能分镜" />智能分镜</label>
           </div>
           <div id="video-mode-reasons" className="video-generation-panel__reasons" role="note" aria-label="生成模式禁用原因">

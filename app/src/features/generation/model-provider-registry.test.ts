@@ -59,6 +59,20 @@ describe('model provider registry', () => {
       kind: 'placeholder',
       officialApiEndpoint: 'https://api.klingai.com/v1/videos/generations',
     })
+    expect(registry.require('mock-seedance-video')).toMatchObject({
+      modelName: 'Seedance 2.0',
+      parameterSchema: {
+        aspectRatio: { type: 'enum', defaultValue: '16:9' },
+        duration: { type: 'enum', defaultValue: '5' },
+        quality: { type: 'enum', defaultValue: '720P' },
+        sound: { type: 'boolean', defaultValue: true },
+        count: { type: 'enum', defaultValue: '1' },
+        onlineSearch: { type: 'boolean', defaultValue: true },
+        materialValidation: { type: 'boolean', defaultValue: true },
+        autoLink: { type: 'boolean', defaultValue: true },
+      },
+      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
+    })
   })
 
   test('filters image and video selectors by declared capability', () => {
@@ -142,6 +156,33 @@ describe('model provider registry', () => {
       creditsSpent: 15,
     })
     expect(jobs.some(({ status, progress }) => status === 'running' && progress === 55)).toBe(true)
+  })
+
+  test('uses the selected video model defaults for local result metadata and billing', async () => {
+    vi.useFakeTimers()
+    const registry = createDefaultProviderRegistry()
+    const pending = registry.generate(
+      {
+        projectId: 'project-video',
+        nodeId: 'video-1',
+        operation: 'regenerate',
+        targetKind: 'video',
+        providerId: 'mock-seedance-video',
+        prompt: '雨夜横移镜头',
+        referenceAssets: [],
+      },
+      { signal: new AbortController().signal },
+    )
+
+    await vi.advanceTimersByTimeAsync(1200)
+    await expect(pending).resolves.toMatchObject({
+      asset: { kind: 'video', durationSeconds: 5 },
+      usage: {
+        providerId: 'mock-seedance-video',
+        modelName: 'Seedance 2.0',
+        cost: 135,
+      },
+    })
   })
 
   test('dispatches local export through the same provider registry', async () => {

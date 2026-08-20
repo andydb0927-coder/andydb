@@ -330,7 +330,7 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
-        {imageGenerationNode && contextual ? (
+        {imageGenerationNode && imageMedia && contextual ? (
           <div
             className="creative-node__quick-attempts nodrag"
             role="toolbar"
