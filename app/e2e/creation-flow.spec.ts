@@ -579,6 +579,75 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   expect(errors).toEqual([])
 })
 
+test('marquee-selects every node with the left mouse button and exposes combination controls', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const viewport = page.locator('.react-flow__viewport')
+  let previousTransform = ''
+  await expect
+    .poll(async () => {
+      const transform = (await viewport.getAttribute('style')) ?? ''
+      const stable = transform === previousTransform
+      previousTransform = transform
+      return stable
+    })
+    .toBe(true)
+
+  const nodes = page.locator('.react-flow__node')
+  const nodeCount = await nodes.count()
+  const drag = await page.locator('.react-flow__pane').evaluate((pane) => {
+    const paneRect = pane.getBoundingClientRect()
+    const nodeRects = Array.from(
+      pane.querySelectorAll<HTMLElement>('.react-flow__node'),
+      (node) => node.getBoundingClientRect(),
+    )
+    if (nodeRects.length < 2) {
+      throw new Error('Need at least two nodes to marquee-select')
+    }
+    const left = Math.min(...nodeRects.map((rect) => rect.left))
+    const top = Math.min(...nodeRects.map((rect) => rect.top))
+    const right = Math.max(...nodeRects.map((rect) => rect.right))
+    const bottom = Math.max(...nodeRects.map((rect) => rect.bottom))
+    return {
+      start: {
+        x: Math.max(paneRect.left + 2, left - 18),
+        y: Math.max(paneRect.top + 2, top - 18),
+      },
+      end: {
+        x: Math.min(paneRect.right - 2, right + 18),
+        y: Math.min(paneRect.bottom - 2, bottom + 18),
+      },
+    }
+  })
+
+  await page.mouse.move(drag.start.x, drag.start.y)
+  await page.mouse.down({ button: 'left' })
+  await page.mouse.move(drag.end.x, drag.end.y, { steps: 12 })
+  await page.mouse.up({ button: 'left' })
+
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(nodeCount)
+  const toolbar = page.getByRole('toolbar', {
+    name: `已选 ${nodeCount} 个节点 组合操作`,
+  })
+  await expect(toolbar).toBeVisible()
+  for (const action of [
+    '排列',
+    '保存到资产',
+    '创建副本',
+    '复制',
+    '打组',
+    '添加到 Chat',
+  ]) {
+    await expect(toolbar.getByRole('button', { name: action })).toBeVisible()
+  }
+
+  await toolbar.getByRole('button', { name: '打组' }).click()
+  await expect(page.getByRole('group', { name: '节点分组：分组 01' })).toBeVisible()
+})
+
 test('creates an undoable node copy at the real Option-drag drop point', async ({
   page,
 }) => {

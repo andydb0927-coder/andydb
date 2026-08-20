@@ -61,3 +61,28 @@ test('offers the recorded group toolbar and three arrangement modes', async () =
   await user.click(within(toolbar).getByRole('button', { name: '创建副本' }))
   expect(onDuplicate).toHaveBeenCalledOnce()
 })
+
+test('treats a marquee selection as an unpersisted combination until the user groups it', async () => {
+  const user = userEvent.setup()
+  const onGroup = vi.fn()
+  render(
+    <CanvasGroupOverlay
+      group={{ ...group, id: '__selection__', title: '已选 2 个节点' }}
+      bounds={{ x: 20, y: 40, width: 600, height: 360 }}
+      selected
+      temporary
+      onSelect={vi.fn()}
+      onUngroup={vi.fn()}
+      onGroup={onGroup}
+    />,
+  )
+
+  expect(
+    screen.getByRole('group', { name: '节点组合：已选 2 个节点' }),
+  ).toBeVisible()
+  expect(
+    screen.queryByRole('button', { name: '选择分组：已选 2 个节点' }),
+  ).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '打组' }))
+  expect(onGroup).toHaveBeenCalledOnce()
+})

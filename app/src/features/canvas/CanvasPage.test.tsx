@@ -2568,12 +2568,20 @@ describe('creative canvas', () => {
 
     await user.keyboard('h')
 
-    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: false })
+    expect(latestFlowProps).toMatchObject({
+      panOnDrag: true,
+      nodesDraggable: false,
+      selectionOnDrag: false,
+    })
     expect(screen.getByRole('status')).toHaveTextContent('已切换抓手工具')
     expect(latestFlowProps?.edges.every((edge) => edge.data?.visible === true)).toBe(true)
 
     await user.keyboard('v')
-    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(latestFlowProps).toMatchObject({
+      panOnDrag: [1, 2],
+      nodesDraggable: true,
+      selectionOnDrag: true,
+    })
     expect(screen.getByRole('status')).toHaveTextContent('已切换移动工具')
   })
 
@@ -2589,7 +2597,7 @@ describe('creative canvas', () => {
     await user.keyboard('hd')
     expect(directorInput).toHaveValue('hd')
     await user.keyboard('{Enter}')
-    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(latestFlowProps).toMatchObject({ panOnDrag: [1, 2], nodesDraggable: true })
     expect(useProjectStore.getState().activeProject).toBe(before)
     expect(screen.queryByRole('dialog', { name: '自由生成节点' })).not.toBeInTheDocument()
 
@@ -2606,7 +2614,7 @@ describe('creative canvas', () => {
     expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
     await user.keyboard('h')
     await user.keyboard('d')
-    expect(latestFlowProps).toMatchObject({ panOnDrag: true, nodesDraggable: true })
+    expect(latestFlowProps).toMatchObject({ panOnDrag: [1, 2], nodesDraggable: true })
     expect(useProjectStore.getState().activeProject).toBe(before)
   })
 
@@ -2969,6 +2977,7 @@ describe('creative canvas', () => {
     expect(latestFlowProps).toMatchObject({
       zoomOnScroll: true,
       panOnScroll: false,
+      panOnDrag: [1, 2],
       panActivationKeyCode: 'Space',
       selectionOnDrag: true,
       zoomOnDoubleClick: false,
@@ -3059,7 +3068,28 @@ describe('creative canvas', () => {
       ])
     })
 
-    await user.click(screen.getByRole('button', { name: '分组' }))
+    const selectionOverlay = screen.getByRole('group', {
+      name: '节点组合：已选 2 个节点',
+    })
+    expect(selectionOverlay).toBeVisible()
+    const selectionToolbar = screen.getByRole('toolbar', {
+      name: '已选 2 个节点 组合操作',
+    })
+    for (const action of [
+      '排列',
+      '保存到资产',
+      '创建副本',
+      '复制',
+      '打组',
+      '添加到 Chat',
+    ]) {
+      expect(
+        within(selectionToolbar).getByRole('button', { name: action }),
+      ).toBeVisible()
+    }
+    expect(useProjectStore.getState().activeProject?.groups ?? []).toEqual([])
+
+    await user.click(within(selectionToolbar).getByRole('button', { name: '打组' }))
     expect(useProjectStore.getState().activeProject?.groups).toEqual([
       expect.objectContaining({ title: '分组 01', nodeIds: ['character', 'scene'] }),
     ])
@@ -3681,6 +3711,23 @@ describe('creative canvas', () => {
     doubleClickPane(900, 640)
     expect(screen.getAllByRole('dialog', { name: '选择节点类型' })).toHaveLength(1)
     expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBe(firstDialog)
+  })
+
+  test('recognizes React Flow pointer-up pairs as a pane double click while marquee selection is enabled', () => {
+    renderCanvas()
+    initializeFlow()
+
+    act(() => {
+      latestFlowProps?.onPaneClick?.({ clientX: 420, clientY: 300, detail: 0 })
+    })
+    expect(
+      screen.queryByRole('dialog', { name: '选择节点类型' }),
+    ).not.toBeInTheDocument()
+
+    act(() => {
+      latestFlowProps?.onPaneClick?.({ clientX: 422, clientY: 302, detail: 0 })
+    })
+    expect(screen.getByRole('dialog', { name: '选择节点类型' })).toBeVisible()
   })
 
   test('discards a pending draft when the project route changes', async () => {

@@ -20,8 +20,10 @@ interface CanvasGroupOverlayProps {
   group: CanvasGroup
   bounds: CanvasGroupBounds
   selected?: boolean
+  temporary?: boolean
   onSelect(): void
   onUngroup(): void
+  onGroup?(): void
   onArrange?(mode: 'grid' | 'horizontal' | 'vertical'): void
   onDuplicate?(): void
   onContinue?(trigger: HTMLButtonElement): void
@@ -32,8 +34,10 @@ export function CanvasGroupOverlay({
   group,
   bounds,
   selected = false,
+  temporary = false,
   onSelect,
   onUngroup,
+  onGroup,
   onArrange,
   onDuplicate,
   onContinue,
@@ -48,9 +52,10 @@ export function CanvasGroupOverlay({
 
   return (
     <section
-      aria-label={`节点分组：${group.title}`}
+      aria-label={`${temporary ? '节点组合' : '节点分组'}：${group.title}`}
       className="canvas-group-overlay"
       data-selected={selected}
+      data-temporary={temporary}
       role="group"
       style={{
         left: bounds.x,
@@ -97,7 +102,11 @@ export function CanvasGroupOverlay({
           <button type="button" aria-label="复制" onClick={() => onFeedback?.('已复制组合，可用创建副本粘贴到画布。')}>
             <Copy aria-hidden="true" />复制
           </button>
-          <button type="button" aria-label="打组" onClick={onUngroup}>
+          <button
+            type="button"
+            aria-label="打组"
+            onClick={temporary ? onGroup : onUngroup}
+          >
             <Group aria-hidden="true" />打组<ChevronDown aria-hidden="true" />
           </button>
           <button type="button" aria-label="添加到 Chat" onClick={() => onFeedback?.('已将组合添加到本地 Chat 上下文。')}>
@@ -105,26 +114,28 @@ export function CanvasGroupOverlay({
           </button>
         </div>
       ) : null}
-      <div className="canvas-group-overlay__controls nodrag nopan">
-        <button
-          aria-label={`选择分组：${group.title}`}
-          className="focus-visible"
-          type="button"
-          onClick={onSelect}
-        >
-          <Group aria-hidden="true" />
-          {group.title}
-        </button>
-        <button
-          aria-label={`取消分组：${group.title}`}
-          className="focus-visible"
-          title="取消分组"
-          type="button"
-          onClick={onUngroup}
-        >
-          <Ungroup aria-hidden="true" />
-        </button>
-      </div>
+      {!temporary ? (
+        <div className="canvas-group-overlay__controls nodrag nopan">
+          <button
+            aria-label={`选择分组：${group.title}`}
+            className="focus-visible"
+            type="button"
+            onClick={onSelect}
+          >
+            <Group aria-hidden="true" />
+            {group.title}
+          </button>
+          <button
+            aria-label={`取消分组：${group.title}`}
+            className="focus-visible"
+            title="取消分组"
+            type="button"
+            onClick={onUngroup}
+          >
+            <Ungroup aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {selected ? (
         <button
           type="button"

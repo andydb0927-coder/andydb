@@ -598,6 +598,11 @@ export function CanvasPage({
   const nodeListTriggerRef = useRef<HTMLButtonElement>(null)
   const nodeListSelectionMadeRef = useRef(false)
   const optionDragCloneRef = useRef<OptionDragCloneState | undefined>(undefined)
+  const paneClickRef = useRef<{
+    at: number
+    clientX: number
+    clientY: number
+  } | undefined>(undefined)
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
@@ -676,6 +681,7 @@ export function CanvasPage({
     connectionTriggerRef.current = null
     imageReferenceTriggerRef.current = null
     optionDragCloneRef.current = undefined
+    paneClickRef.current = undefined
     if (contextUploadInputRef.current) contextUploadInputRef.current.value = ''
     if (workflowImportInputRef.current) workflowImportInputRef.current.value = ''
 
@@ -684,6 +690,7 @@ export function CanvasPage({
       connectionTriggerRef.current = null
       imageReferenceTriggerRef.current = null
       optionDragCloneRef.current = undefined
+      paneClickRef.current = undefined
     }
   }, [projectId])
 
@@ -1693,6 +1700,23 @@ export function CanvasPage({
       }),
     [flowNodes, project?.groups],
   )
+
+  const selectionGroupOverlay = useMemo(() => {
+    if (selectedCanvasGroup || selectedNodeIds.size < 2) return undefined
+    const nodeIds = flowNodes
+      .filter(({ id }) => selectedNodeIds.has(id))
+      .map(({ id }) => id)
+    if (nodeIds.length < 2) return undefined
+    const group: CanvasGroup = {
+      id: '__selection__',
+      title: `已选 ${nodeIds.length} 个节点`,
+      nodeIds,
+      createdAt: '',
+      updatedAt: '',
+    }
+    const bounds = measureCanvasGroup(group, flowNodes)
+    return bounds ? { group, bounds } : undefined
+  }, [flowNodes, selectedCanvasGroup, selectedNodeIds])
 
   const disconnectEdge = useCallback(
     (edgeId: string) => {
@@ -3116,7 +3140,27 @@ export function CanvasPage({
       ) {
         return
       }
-      if (event.detail < 2) return
+      if (event.detail < 2) {
+        if (event.detail !== 0) return
+        const current = {
+          at: Date.now(),
+          clientX: event.clientX,
+          clientY: event.clientY,
+        }
+        const previous = paneClickRef.current
+        paneClickRef.current = current
+        if (
+          !previous ||
+          current.at - previous.at > 400 ||
+          Math.hypot(
+            current.clientX - previous.clientX,
+            current.clientY - previous.clientY,
+          ) > 8
+        ) {
+          return
+        }
+      }
+      paneClickRef.current = undefined
       const point = canvasPoint(event.clientX, event.clientY)
       if (!point) return
       openNodeTypePicker(point, viewportRef.current ?? undefined)
@@ -4081,10 +4125,10 @@ export function CanvasPage({
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll
           panOnScroll={false}
-          panOnDrag
+          panOnDrag={activeTool === 'hand' ? true : [1, 2]}
           panActivationKeyCode="Space"
           nodesDraggable={activeTool !== 'hand'}
-          selectionOnDrag
+          selectionOnDrag={activeTool !== 'hand'}
           zoomOnDoubleClick={false}
           edgesFocusable
           deleteKeyCode={null}
@@ -4097,6 +4141,33 @@ export function CanvasPage({
           <Controls showInteractive={false} />
           {minimapVisible ? <MiniMap aria-label="画布小地图" pannable zoomable /> : null}
           <ViewportPortal>
+            {selectionGroupOverlay ? (
+              <CanvasGroupOverlay
+                key={selectionGroupOverlay.group.nodeIds.join(':')}
+                group={selectionGroupOverlay.group}
+                bounds={selectionGroupOverlay.bounds}
+                selected
+                temporary
+                onSelect={() => selectCanvasGroup(selectionGroupOverlay.group)}
+                onUngroup={handleGroupAction}
+                onGroup={handleGroupAction}
+                onArrange={(mode) =>
+                  arrangeCanvasGroup(selectionGroupOverlay.group, mode)
+                }
+                onDuplicate={() =>
+                  duplicateCanvasGroup(selectionGroupOverlay.group)
+                }
+                onFeedback={setGroupFeedback}
+                onContinue={(trigger) => {
+                  const triggerBounds = trigger.getBoundingClientRect()
+                  const point = canvasPoint(
+                    triggerBounds.left + triggerBounds.width / 2,
+                    triggerBounds.top + triggerBounds.height / 2,
+                  )
+                  if (point) openNodeTypePicker(point, trigger, 'add')
+                }}
+              />
+            ) : null}
             {canvasGroupOverlays.map(({ group, bounds }) => (
               <CanvasGroupOverlay
                 key={group.id}
