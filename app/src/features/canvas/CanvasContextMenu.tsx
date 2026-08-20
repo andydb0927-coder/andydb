@@ -9,6 +9,7 @@ import {
   Library,
   Plus,
   Sparkles,
+  Trash2,
   Type,
   Upload,
 } from 'lucide-react'
@@ -63,6 +64,7 @@ export interface CanvasContextMenuProps {
   onUpload(): void
   onOpenGenerationHistory(): void
   onAddNode(type: ContextQuickNodeType): void
+  onDeleteNode?(): void
   onClose(): void
 }
 
@@ -94,6 +96,7 @@ export function CanvasContextMenu({
   onUpload,
   onOpenGenerationHistory,
   onAddNode,
+  onDeleteNode,
   onClose,
 }: CanvasContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -254,6 +257,17 @@ export function CanvasContextMenu({
           </div>
         ) : null}
       </div>
+      {targetNodeTitle && onDeleteNode ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="canvas-context-menu__danger"
+          onClick={onDeleteNode}
+        >
+          <Trash2 aria-hidden="true" />
+          删除节点
+        </button>
+      ) : null}
     </FloatingPanel>
   )
 }

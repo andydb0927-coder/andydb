@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { runSelectedNodeManagementAction } from './canvas-node-actions'
+
 async function createCinematicProject(page: import('@playwright/test').Page) {
   await page.goto('/')
   await page.getByRole('link', { name: '新建项目', exact: true }).click()
@@ -565,7 +567,7 @@ test('preserves hidden connection data for the H hand tool and real L handle flo
   await expect(originalEdge.locator('.dependency-edge__paths')).toHaveCount(0)
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   const video = page.getByRole('button', { name: '视频 01', exact: true })
   await expect(video).toBeVisible()
 
@@ -665,7 +667,7 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   ).toBeVisible()
 
   await storyboard.click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   const video = page.getByRole('button', { name: '视频 01', exact: true })
   await expect(video).toBeVisible()
   await expect(
@@ -726,7 +728,7 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   await expect(connect).toBeFocused()
 
   await text.click()
-  await page.getByRole('button', { name: '删除节点' }).click()
+  await page.keyboard.press('Delete')
   await expect(text).toBeHidden()
 
   await page.getByRole('application', { name: '创作节点图' }).focus()
@@ -851,7 +853,7 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
 }) => {
   await createCinematicProject(page)
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
@@ -998,7 +1000,7 @@ test('cancels active toolbar choices before native handle drags', async ({
   await page.setViewportSize({ width: 1440, height: 1024 })
   await createCinematicProject(page)
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()

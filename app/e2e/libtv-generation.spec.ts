@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { runSelectedNodeManagementAction } from './canvas-node-actions'
+
 const remoteProject = {
   uuid: '11111111-2222-3333-4444-555555555555',
   name: '受控验收画布',
@@ -105,9 +107,10 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
 
   await page.getByRole('button', { name: '关闭工具箱面板' }).click()
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  const generateVideo = page.getByRole('button', { name: '生成视频' })
-  await generateVideo.focus()
-  await page.keyboard.press('Enter')
+  const generationReturnTarget = await runSelectedNodeManagementAction(
+    page,
+    '生成视频',
+  )
 
   const dialog = page.getByRole('dialog', { name: '确认 LibTV 实际生成' })
   await expect(dialog).toBeVisible()
@@ -121,10 +124,10 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
 
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect(generateVideo).toBeFocused()
+  await expect(generationReturnTarget).toBeFocused()
   expect(generationBodies).toHaveLength(0)
 
-  await page.keyboard.press('Enter')
+  await runSelectedNodeManagementAction(page, '生成视频')
   await page.getByRole('button', { name: '确认并提交 LibTV' }).click()
   await expect.poll(() => generationBodies.length).toBe(1)
 

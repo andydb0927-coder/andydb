@@ -1,9 +1,13 @@
 import {
   Download,
   Heart,
+  Images,
   Languages,
+  Maximize2,
+  ScanSearch,
   Search,
   SlidersHorizontal,
+  Sparkles,
   X,
   Zap,
 } from 'lucide-react'
@@ -274,6 +278,9 @@ function ImageStyleGallery({ onClose }: { onClose(): void }) {
 export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
   const [advanced, setAdvanced] = useState(false)
   const [styleOpen, setStyleOpen] = useState(false)
+  const [imageToImage, setImageToImage] = useState(false)
+  const [marking, setMarking] = useState(false)
+  const [upscalePending, setUpscalePending] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -286,6 +293,8 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
     ...imageGeneration,
   })
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
+  const markingTriggerRef = useRef<HTMLButtonElement>(null)
+  const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
   const hasMedia = Boolean(data.asset || data.imageReferences?.length)
   const providers = defaultProviderRegistry.matching([
     'text-to-image',
@@ -300,7 +309,23 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
   useEffect(() => {
     setAdvanced(false)
     setStyleOpen(false)
+    setImageToImage(false)
+    setMarking(false)
+    setUpscalePending(false)
   }, [data.node.id])
+
+  useEffect(() => {
+    if (!marking) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setMarking(false)
+      queueMicrotask(() => markingTriggerRef.current?.focus())
+    }
+    window.addEventListener('keydown', handleEscape, true)
+    return () => window.removeEventListener('keydown', handleEscape, true)
+  }, [marking])
 
   useEffect(() => {
     setPrompt(imageGeneration?.prompt ?? activeVersion?.prompt ?? '')
@@ -326,12 +351,90 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
     queueMicrotask(() => styleTriggerRef.current?.focus())
   }
 
+  const closeUpscale = () => {
+    setUpscalePending(false)
+    queueMicrotask(() => upscaleTriggerRef.current?.focus())
+  }
+
   return (
     <section
       className="image-generation-panel nodrag"
       role="region"
       aria-label={`${data.node.title} 生成参数`}
     >
+      <div
+        className="image-generation-panel__primary-actions"
+        role="toolbar"
+        aria-label="图片主操作"
+      >
+        <button
+          type="button"
+          aria-pressed={imageToImage}
+          onClick={() => setImageToImage((enabled) => !enabled)}
+        >
+          <Images aria-hidden="true" />图生图
+        </button>
+        <button
+          ref={upscaleTriggerRef}
+          type="button"
+          onClick={() => setUpscalePending(true)}
+        >
+          <Maximize2 aria-hidden="true" />图片高清
+        </button>
+        <button
+          type="button"
+          aria-pressed={data.imageReferenceSelecting}
+          onClick={(event) => {
+            setMarking(false)
+            data.onStartImageReferenceSelection?.(event.currentTarget)
+          }}
+        >
+          <ScanSearch aria-hidden="true" />参考
+        </button>
+        <button
+          ref={markingTriggerRef}
+          type="button"
+          aria-pressed={marking}
+          onClick={() => {
+            if (data.imageReferenceSelecting) {
+              data.onEndImageReferenceSelection?.(false)
+            }
+            setMarking((enabled) => !enabled)
+          }}
+        >
+          <ScanSearch aria-hidden="true" />标记
+        </button>
+        <button
+          ref={styleTriggerRef}
+          type="button"
+          aria-expanded={styleOpen}
+          onClick={() => {
+            setMarking(false)
+            setStyleOpen(true)
+          }}
+        >
+          <Sparkles aria-hidden="true" />风格
+        </button>
+      </div>
+      {imageToImage ? (
+        <p className="image-generation-panel__mode" role="status">
+          已切换图生图模式
+        </p>
+      ) : null}
+      {marking ? (
+        <section
+          className="image-reference-selection"
+          role="region"
+          aria-label="标记元素"
+        >
+          <strong>标记元素</strong>
+          <p>点击图片选择局部元素</p>
+          <button type="button" onClick={() => setMarking(false)}>退出标记</button>
+        </section>
+      ) : null}
+      <p className="image-generation-panel__instruction">
+        可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜
+      </p>
       <label className="image-generation-panel__prompt">
         <span>提示词</span>
         <textarea
@@ -363,26 +466,9 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
           </select>
         </label>
         <span className="model-provider-badge">演示</span>
-        <button type="button">4 张</button>
-        <button type="button">16:9</button>
-        <button type="button">自适应</button>
-        <button
-          type="button"
-          aria-pressed={data.imageReferenceSelecting}
-          onClick={(event) =>
-            data.onStartImageReferenceSelection?.(event.currentTarget)
-          }
-        >
-          参考
-        </button>
-        <button
-          ref={styleTriggerRef}
-          type="button"
-          aria-expanded={styleOpen}
-          onClick={() => setStyleOpen(true)}
-        >
-          风格
-        </button>
+        <span className="image-generation-panel__parameter-row">
+          16:9 · 标准画质 · 2K · 1张样式
+        </span>
         <button
           type="button"
           aria-label="翻译提示词"
@@ -410,7 +496,7 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
           aria-label="从画布选择参考"
         >
           <strong>从画布选择参考</strong>
-          <p>在当前画布中添加参考</p>
+          <p>点画布其他节点建立引用连线</p>
           <div>
             <button
               type="button"
@@ -519,6 +605,31 @@ export function ImageGenerationPanel({ data }: { data: CreativeNodeData }) {
         </p>
       ) : null}
       {styleOpen ? <ImageStyleGallery onClose={closeStyles} /> : null}
+      {upscalePending ? createPortal(
+        <div className="image-result-confirm nodrag">
+          <div role="alertdialog" aria-modal="true" aria-label="将添加工具节点">
+            <button type="button" aria-label="关闭添加工具节点提示" onClick={closeUpscale}>
+              <X aria-hidden="true" />
+            </button>
+            <h2>将添加工具节点</h2>
+            <p>图片高清会在当前节点下游创建一个本地工具节点，不会立即消耗积分。</p>
+            <div>
+              <button type="button" onClick={closeUpscale}>取消</button>
+              <button
+                type="button"
+                aria-label="确认添加图片高清工具节点"
+                onClick={() => {
+                  closeUpscale()
+                  data.onCreateImageToolNode?.('图片高清')
+                }}
+              >
+                确认添加
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
     </section>
   )
 }

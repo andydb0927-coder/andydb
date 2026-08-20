@@ -28,6 +28,7 @@ import {
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { CanvasPage } from './CanvasPage'
+import type { CreativeNodeAction } from './node-types'
 import { sortNodesForList } from './NodeListView'
 import { PreviewPage } from '../timeline/PreviewPage'
 import { buildWorkflowRun, type WorkflowRun } from '../workflow/workflow-model'
@@ -312,6 +313,19 @@ function renderCanvas(
   )
 }
 
+function triggerCanvasNodeAction(
+  nodeId: string,
+  action: CreativeNodeAction,
+  trigger?: HTMLElement,
+) {
+  const node = latestFlowProps?.nodes.find(({ id }) => id === nodeId)
+  const onAction = node?.data.onAction as
+    | ((nextAction: CreativeNodeAction, nextTrigger?: HTMLElement) => void)
+    | undefined
+  if (!onAction) throw new Error(`Missing canvas action handler for ${nodeId}`)
+  onAction(action, trigger)
+}
+
 function SwitchingCanvas(props: ComponentProps<typeof CanvasPage>) {
   const { repository, ...canvasProps } = props
   const navigate = useNavigate()
@@ -356,6 +370,18 @@ function contextMenuPane(clientX = 420, clientY = 300) {
   const preventDefault = vi.fn()
   act(() => latestFlowProps?.onPaneContextMenu?.({ clientX, clientY, preventDefault }))
   return preventDefault
+}
+
+function contextMenuNode(nodeId: string, clientX = 420, clientY = 300) {
+  const node = latestFlowProps?.nodes.find(({ id }) => id === nodeId)
+  if (!node) throw new Error(`Missing canvas node ${nodeId}`)
+  const preventDefault = vi.fn()
+  const stopPropagation = vi.fn()
+  act(() => latestFlowProps?.onNodeContextMenu?.(
+    { clientX, clientY, preventDefault, stopPropagation },
+    node,
+  ))
+  return { preventDefault, stopPropagation }
 }
 
 function doubleClickPane(clientX = 420, clientY = 300) {
@@ -795,7 +821,7 @@ describe('creative canvas', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('renders all creative nodes and reveals actions for the selected storyboard', async () => {
+  test('renders all creative nodes and keeps only the Liblib-compatible timeline action on a selected storyboard', async () => {
     const user = userEvent.setup()
     renderCanvas()
 
@@ -806,8 +832,8 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
 
-    for (const action of ['重生成', '扩展镜头', '生成视频']) {
-      expect(screen.getByRole('button', { name: action })).toBeVisible()
+    for (const action of ['重生成', '扩展镜头', '生成视频', '删除节点']) {
+      expect(screen.queryByRole('button', { name: action })).not.toBeInTheDocument()
     }
     expect(screen.getByRole('button', { name: '加入时间线' })).toBeVisible()
     expect(
@@ -815,7 +841,7 @@ describe('creative canvas', () => {
     ).toHaveTextContent('加入时间线')
   })
 
-  test('renders text and image kinds with compatible actions in canvas and node list', async () => {
+  test('renders text details and the five Liblib image actions without legacy node-card actions', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     const textNode: Project['nodes'][number] = {
@@ -853,13 +879,16 @@ describe('creative canvas', () => {
     renderCanvas()
 
     await user.click(screen.getByRole('button', { name: '文本 01' }))
-    expect(screen.getByRole('button', { name: '生成分镜' })).toBeVisible()
+    expect(latestFlowProps?.nodes.find(({ id }) => id === 'text-created')?.selected).toBe(true)
     expect(
       screen.queryByRole('button', { name: '重生成' }),
     ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '图片 01' }))
-    expect(screen.getByRole('button', { name: '生成视频' })).toBeVisible()
+    const imageActions = screen.getByRole('toolbar', { name: '图片主操作' })
+    for (const action of ['图生图', '图片高清', '参考', '标记', '风格']) {
+      expect(within(imageActions).getByRole('button', { name: action })).toBeVisible()
+    }
     expect(
       screen.queryByRole('button', { name: '生成分镜' }),
     ).not.toBeInTheDocument()
@@ -879,12 +908,8 @@ describe('creative canvas', () => {
     expect(
       within(nodeList).queryByRole('button', { name: '重生成 文本 01' }),
     ).not.toBeInTheDocument()
-    expect(
-      within(nodeList).getByRole('button', { name: '生成分镜 文本 01' }),
-    ).toBeVisible()
-    expect(
-      within(nodeList).getByRole('button', { name: '生成视频 图片 01' }),
-    ).toBeVisible()
+    expect(within(nodeList).getByRole('button', { name: '生成分镜 文本 01' })).toBeVisible()
+    expect(within(nodeList).getByRole('button', { name: '生成视频 图片 01' })).toBeVisible()
   })
 
   test('adds a selected canvas media node as an incoming image reference', async () => {
@@ -928,7 +953,7 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: 'L1' }))
     await user.click(screen.getByRole('button', { name: '参考' }))
     expect(screen.getByRole('region', { name: '从画布选择参考' })).toHaveTextContent(
-      '在当前画布中添加参考',
+      '点画布其他节点建立引用连线',
     )
     await user.keyboard('l')
     expect(screen.getByRole('button', { name: /^连线$/ })).toHaveAttribute(
@@ -951,13 +976,35 @@ describe('creative canvas', () => {
     )
   })
 
+  test('confirms image upscaling before inserting one connected tool node', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: '图片高清' }))
+    expect(screen.getByRole('alertdialog', { name: '将添加工具节点' })).toBeVisible()
+    expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
+
+    await user.click(screen.getByRole('button', { name: '确认添加图片高清工具节点' }))
+    const project = useProjectStore.getState().activeProject!
+    const tool = project.nodes.find(({ title }) => title === '图片高清')
+    expect(tool).toBeDefined()
+    expect(project.edges).toContainEqual(expect.objectContaining({
+      sourceNodeId: 'character',
+      targetNodeId: tool?.id,
+    }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '已创建“图片高清”工具节点并建立连接',
+    )
+  })
+
   test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
     const user = userEvent.setup()
     renderCanvas()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
 
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
     expect(screen.getByText('生成中')).toBeVisible()
     const job = useProjectStore
@@ -988,7 +1035,7 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
 
-    act(() => screen.getByRole('button', { name: '生成视频' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'generate-video'))
     await act(() => vi.advanceTimersByTimeAsync(1200))
 
     const project = useProjectStore.getState().activeProject!
@@ -1034,7 +1081,7 @@ describe('creative canvas', () => {
       generationAdapter: adapter,
     })
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    await user.click(screen.getByRole('button', { name: '生成视频' }))
+    act(() => triggerCanvasNodeAction('character', 'generate-video'))
 
     expect(
       await screen.findByRole('button', { name: '视频 01' }),
@@ -1054,7 +1101,7 @@ describe('creative canvas', () => {
     })
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
 
     expect(screen.getByRole('dialog', { name: '确认 LibTV 实际生成' })).toBeVisible()
     expect(start).not.toHaveBeenCalled()
@@ -1077,7 +1124,7 @@ describe('creative canvas', () => {
     })
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     expect(start).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
 
@@ -1114,7 +1161,7 @@ describe('creative canvas', () => {
     })
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     provider = { provider: 'demo' }
     await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
 
@@ -1139,7 +1186,7 @@ describe('creative canvas', () => {
     })
 
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     if (provider.provider === 'libtv') {
       provider = {
         provider: 'libtv',
@@ -1209,7 +1256,7 @@ describe('creative canvas', () => {
       </MemoryRouter>,
     )
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     expect(screen.getByRole('dialog', { name: '确认 LibTV 实际生成' })).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: '切换到项目 B' }))
@@ -1234,7 +1281,7 @@ describe('creative canvas', () => {
       generationPreferenceStore: libtvPreferenceStore,
     })
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '重生成' }))
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await user.click(screen.getByRole('button', { name: '确认并提交 LibTV' }))
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1))
 
@@ -1255,7 +1302,7 @@ describe('creative canvas', () => {
 
     try {
       await user.click(screen.getByRole('button', { name: '分镜 02' }))
-      await user.click(screen.getByRole('button', { name: '生成视频' }))
+      act(() => triggerCanvasNodeAction('storyboard', 'generate-video'))
       await waitFor(
         () => {
           expect(screen.getByRole('button', { name: '视频 02' })).toBeVisible()
@@ -1431,7 +1478,7 @@ describe('creative canvas', () => {
     renderCanvas()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
 
     expect(screen.getByRole('button', { name: '取消生成' })).toBeVisible()
@@ -1483,7 +1530,7 @@ describe('creative canvas', () => {
     const firstView = renderCanvas()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
     const firstJob = useProjectStore
       .getState()
@@ -1526,7 +1573,7 @@ describe('creative canvas', () => {
     const view = renderCanvas({ repository })
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
 
     view.unmount()
@@ -1542,13 +1589,13 @@ describe('creative canvas', () => {
     const firstView = renderCanvas()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(1200))
     firstView.unmount()
 
     renderCanvas()
     act(() => screen.getByRole('button', { name: '分镜 02' }).click())
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(1200))
 
     const project = useProjectStore.getState().activeProject!
@@ -1567,7 +1614,7 @@ describe('creative canvas', () => {
     const view = renderCanvas()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
     const before = useProjectStore.getState().activeProject!
     const job = before.jobs.find((candidate) => candidate.status === 'running')!
@@ -1597,7 +1644,7 @@ describe('creative canvas', () => {
     )
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
     vi.useFakeTimers()
-    act(() => screen.getByRole('button', { name: '重生成' }).click())
+    act(() => triggerCanvasNodeAction('storyboard', 'regenerate'))
     await act(() => vi.advanceTimersByTimeAsync(0))
 
     act(() => screen.getByRole('button', { name: '切换到项目 B' }).click())
@@ -1788,7 +1835,7 @@ describe('creative canvas', () => {
     const connect = screen.getByRole('button', { name: '连线' })
 
     await user.click(connect)
-    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(screen.getByText('请选择来源节点')).toBeVisible()
     expect(
       latestFlowProps?.nodes.every(
         (node) => node.data.connectionMode === true,
@@ -1976,7 +2023,7 @@ describe('creative canvas', () => {
 
     const connect = screen.getByRole('button', { name: '连线' })
     await user.click(connect)
-    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(screen.getByText('请选择来源节点')).toBeVisible()
     expect(screen.getByRole('status')).not.toHaveClass(
       'canvas-connection-hint--error',
     )
@@ -2030,19 +2077,19 @@ describe('creative canvas', () => {
     renderCanvas()
 
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    const regenerate = screen.getByRole('button', { name: '重生成' })
+    const imageToImage = screen.getByRole('button', { name: '图生图' })
     await user.click(screen.getByRole('button', { name: '连线' }))
-    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(screen.getByText('请选择来源节点')).toBeVisible()
 
-    await user.click(regenerate)
+    await user.click(imageToImage)
     act(() => {
       latestFlowProps?.onNodeClick?.(
-        { target: regenerate },
+        { target: imageToImage },
         latestFlowProps.nodes.find(({ id }) => id === 'character')!,
       )
     })
 
-    expect(screen.getByRole('status')).toHaveTextContent('请选择来源节点')
+    expect(screen.getByText('请选择来源节点')).toBeVisible()
     expect(
       latestFlowProps?.nodes.some(
         (node) => node.data.connectionSource === true,
@@ -2893,7 +2940,7 @@ describe('creative canvas', () => {
         .filter(({ selected }) => selected)
         .map(({ id }) => id),
     ).toEqual(['character', 'scene'])
-    expect(screen.getAllByRole('button', { name: '重生成' })).toHaveLength(1)
+    expect(screen.getAllByRole('toolbar', { name: '图片主操作' })).toHaveLength(1)
 
     act(() => {
       latestFlowProps?.onNodesChange([
@@ -3586,13 +3633,20 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toEqual([])
   })
 
-  test('places actions before the rightmost selected node to avoid viewport clipping', async () => {
+  test('places eligible actions before a rightmost selected node to avoid viewport clipping', async () => {
     const user = userEvent.setup()
+    const project = makeCanvasProject()
+    act(() => activate({
+      ...project,
+      nodes: project.nodes.map((node) =>
+        node.id === 'video' ? { ...node, position: { x: 1600, y: 520 } } : node,
+      ),
+    }))
     renderCanvas()
 
-    await user.click(screen.getByRole('button', { name: '成片预览' }))
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
 
-    expect(screen.getByLabelText('成片预览操作')).toHaveAttribute(
+    expect(screen.getByLabelText('视频片段操作')).toHaveAttribute(
       'data-placement',
       'before',
     )
@@ -3623,7 +3677,7 @@ describe('creative canvas', () => {
     await user.keyboard('{Escape}')
 
     expect(screen.getByRole('button', { name: '分镜 02' })).toHaveFocus()
-    expect(screen.getByRole('button', { name: '重生成' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '加入时间线' })).toBeVisible()
   })
 
   test('returns node-list focus to a viewport node with a CSS-special persisted id', async () => {
@@ -3671,10 +3725,12 @@ describe('creative canvas', () => {
   test('warns about all downstream consumers and preserves them as source-changed after deletion', async () => {
     const user = userEvent.setup()
     renderCanvas()
+    initializeFlow()
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
 
-    const deleteTrigger = screen.getByRole('button', { name: '删除节点' })
-    await user.click(deleteTrigger)
+    const deleteTrigger = screen.getByRole('button', { name: '分镜 02' })
+    contextMenuNode('storyboard')
+    await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
     const dialog = screen.getByRole('dialog', { name: '删除“分镜 02”？' })
     expect(within(dialog).getByText('视频片段')).toBeVisible()
     expect(within(dialog).getByText('成片预览')).toBeVisible()
@@ -3686,7 +3742,8 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.edges).toHaveLength(4)
     expect(deleteTrigger).toHaveFocus()
 
-    await user.click(deleteTrigger)
+    contextMenuNode('storyboard')
+    await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
     await user.click(screen.getByRole('button', { name: '仍要删除' }))
 
     const project = useProjectStore.getState().activeProject
@@ -3727,10 +3784,13 @@ describe('creative canvas', () => {
       jobs: [],
     })
     renderCanvas()
+    initializeFlow()
 
     await user.click(screen.getByRole('button', { name: 'Impact 0' }))
+    contextMenuNode('impact-0')
+    expect(screen.getByRole('menuitem', { name: '删除节点' })).toBeVisible()
     sourceReads = 0
-    await user.click(screen.getByRole('button', { name: '删除节点' }))
+    await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
 
     expect(
       screen.getByRole('dialog', { name: '删除“Impact 0”？' }),

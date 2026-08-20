@@ -50,9 +50,76 @@ function makeData(
     onStartImageReferenceSelection: vi.fn(),
     onEndImageReferenceSelection: vi.fn(),
     onLocalImageGenerate: vi.fn(),
+    onCreateImageToolNode: vi.fn(),
     ...overrides,
   }
 }
+
+test('matches the Liblib image action bar and generation copy without legacy node actions', async () => {
+  const user = userEvent.setup()
+  const data = makeData()
+  render(<ImageGenerationPanel data={data} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const actions = within(panel).getByRole('toolbar', { name: '图片主操作' })
+
+  expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
+    '图生图',
+    '图片高清',
+    '参考',
+    '标记',
+    '风格',
+  ])
+  for (const removed of ['重生成', '扩展镜头', '生成视频', '删除', '角色']) {
+    expect(within(panel).queryByRole('button', { name: removed })).not.toBeInTheDocument()
+  }
+  expect(within(panel).getByText(
+    '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
+  )).toBeVisible()
+  expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张样式')).toBeVisible()
+  expect(within(panel).getByRole('combobox', { name: '图片模型' })).toBeVisible()
+  expect(within(panel).getByText('预计成本 15')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '生成图片，预计成本 15' })).toBeEnabled()
+
+  const imageToImage = within(actions).getByRole('button', { name: '图生图' })
+  await user.click(imageToImage)
+  expect(imageToImage).toHaveAttribute('aria-pressed', 'true')
+  expect(within(panel).getByRole('status')).toHaveTextContent('已切换图生图模式')
+})
+
+test('confirms image upscaling before inserting a connected tool node', async () => {
+  const user = userEvent.setup()
+  const onCreateImageToolNode = vi.fn()
+  render(
+    <ImageGenerationPanel
+      data={makeData({ onCreateImageToolNode })}
+    />,
+  )
+
+  const trigger = screen.getByRole('button', { name: '图片高清' })
+  await user.click(trigger)
+  const dialog = screen.getByRole('alertdialog', { name: '将添加工具节点' })
+  expect(dialog).toHaveTextContent('图片高清')
+  expect(onCreateImageToolNode).not.toHaveBeenCalled()
+  await user.click(within(dialog).getByRole('button', { name: '确认添加图片高清工具节点' }))
+  expect(onCreateImageToolNode).toHaveBeenCalledWith('图片高清')
+  expect(trigger).toHaveFocus()
+})
+
+test('opens and safely exits the local element marking mode', async () => {
+  const user = userEvent.setup()
+  render(<ImageGenerationPanel data={makeData()} />)
+
+  const trigger = screen.getByRole('button', { name: '标记' })
+  await user.click(trigger)
+  expect(trigger).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('region', { name: '标记元素' })).toHaveTextContent(
+    '点击图片选择局部元素',
+  )
+
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('region', { name: '标记元素' })).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+})
 
 test('exposes the verified MJ image settings with persistent accessible controls', async () => {
   const user = userEvent.setup()
@@ -187,7 +254,7 @@ test('exposes canvas reference mode controls without creating an edge locally', 
   )
   const mode = screen.getByRole('region', { name: '从画布选择参考' })
   expect(mode).toHaveTextContent('从画布选择参考')
-  expect(mode).toHaveTextContent('在当前画布中添加参考')
+  expect(mode).toHaveTextContent('点画布其他节点建立引用连线')
   await user.click(within(mode).getByRole('button', { name: '返回节点' }))
   expect(data.onEndImageReferenceSelection).toHaveBeenCalledWith(true)
 })

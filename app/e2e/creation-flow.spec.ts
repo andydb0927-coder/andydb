@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { runSelectedNodeManagementAction } from './canvas-node-actions'
+
 async function createCinematicProject(page: import('@playwright/test').Page) {
   await page.goto('/')
   await page.getByRole('link', { name: '新建项目', exact: true }).click()
@@ -84,13 +86,13 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
   await createCinematicProject(page)
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '扩展镜头' }).click()
+  await runSelectedNodeManagementAction(page, '扩展镜头')
   await expect(
     page.getByRole('button', { name: '分镜 02', exact: true }),
   ).toBeVisible()
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
@@ -116,7 +118,7 @@ test('creator completes the minimum short-film loop', async ({ page }) => {
 
   await page.getByRole('button', { name: '分镜 02', exact: true }).focus()
   await page.keyboard.press('Enter')
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 02', exact: true }),
   ).toBeVisible()
@@ -138,7 +140,7 @@ test('filters, previews, reuses, resends, and batches generation history', async
   await createCinematicProject(page)
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
@@ -318,7 +320,7 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   await createCinematicProject(page)
   await page.getByRole('button', { name: '适配画布' }).click()
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
 
   const video = page.getByRole('button', { name: '视频 01', exact: true })
   await expect(video).toBeVisible()
@@ -396,11 +398,12 @@ test('keyboard and list view preserve core actions in a strict small layout', as
   await listStoryboard.focus()
   await page.keyboard.press('Enter')
   await expect(listStoryboard).toHaveAttribute('aria-pressed', 'true')
-  await list.getByRole('button', { name: '重生成 分镜 01' }).click()
-  await expect(list.getByText('已完成')).toBeVisible()
-  await list.getByRole('button', { name: '关闭' }).click()
+  await list.getByRole('button', { name: '扩展镜头 分镜 01' }).click()
+  await expect(list).toBeHidden()
+  await expect(page.getByRole('button', { name: '分镜 02', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: '生成视频' }).click()
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
   await expect(
     page.getByRole('button', { name: '视频 01', exact: true }),
   ).toBeVisible()
@@ -408,7 +411,7 @@ test('keyboard and list view preserve core actions in a strict small layout', as
   const videoItem = list.getByRole('listitem').filter({ hasText: '视频 01' })
   await videoItem.getByRole('button', { name: '选择 视频 01' }).click()
   await videoItem.getByRole('button', { name: '加入时间线 视频 01' }).click()
-  await list.getByRole('button', { name: '关闭' }).click()
+  await expect(list).toBeHidden()
 
   await page.setViewportSize({ width: 640, height: 360 })
   await page.getByRole('button', { name: 'Fit View' }).click()
@@ -615,8 +618,8 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     page.getByRole('button', { name: '角色参考', exact: true }),
   ).toBeVisible()
   const primaryAction = page
-    .getByLabel('角色参考操作')
-    .getByRole('button', { name: '生成视频' })
+    .getByRole('toolbar', { name: '图片主操作' })
+    .getByRole('button', { name: '图生图' })
   await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
   const modeBarBox = await page
@@ -651,7 +654,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
       return {
         blockedByWorkflowPanel: Boolean(target?.closest('.workflow-run-panel')),
         blockedByModeBar: Boolean(target?.closest('.canvas-mode-bar')),
-        action: target?.closest('button')?.getAttribute('data-action'),
+        action: target?.closest('button')?.textContent?.trim(),
         blocker: {
           tag: target?.tagName,
           className: target instanceof HTMLElement ? target.className : '',
@@ -676,11 +679,9 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
   expect(
     actionHitTarget.action,
     `primary action hit target=${JSON.stringify(actionHitTarget)}`,
-  ).toBe('generate-video')
+  ).toBe('图生图')
   await primaryAction.click()
-  await expect(
-    page.getByRole('button', { name: '视频 01', exact: true }),
-  ).toBeVisible()
+  await expect(primaryAction).toHaveAttribute('aria-pressed', 'true')
 })
 
 for (const width of [721, 720]) {
@@ -690,10 +691,7 @@ for (const width of [721, 720]) {
     await page.setViewportSize({ width, height: 778 })
     await createCinematicProject(page)
     await page.getByRole('button', { name: '角色参考', exact: true }).click()
-    await page
-      .getByLabel('角色参考操作')
-      .getByRole('button', { name: '生成视频' })
-      .click()
+    await runSelectedNodeManagementAction(page, '生成视频')
 
     const generatedNode = page.getByRole('button', {
       name: '视频 01',
@@ -814,7 +812,7 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })
   await expect(textNode).toBeVisible()
   await expect(textNode).toBeFocused()
-  await expect(page.getByLabel('文本 01操作')).toBeVisible()
+  await expect(page.getByLabel('文本 01操作')).toHaveCount(0)
 
   const imageChooser = await openUploadAtBlank(page)
   await imageChooser.setFiles('public/demo/character-lin-yuan.png')
@@ -1029,12 +1027,12 @@ test('keeps storyboard dialogue, section state, node order, and canvas linkage i
   await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toBeVisible()
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await page.getByRole('button', { name: '扩展镜头' }).click()
+  await runSelectedNodeManagementAction(page, '扩展镜头')
   await page.getByRole('button', { name: '故事板' }).click()
   await expect(page.getByRole('article', { name: '图片故事板卡 分镜 02' })).toBeVisible()
   await expect(page.getByRole('status', { name: '故事板统计' })).toContainText('总镜头数 4')
   await page.getByRole('article', { name: '图片故事板卡 分镜 02' }).getByRole('button', { name: '定位 分镜 02' }).click()
-  await page.getByRole('button', { name: '删除节点' }).click()
+  await page.keyboard.press('Delete')
   await page.getByRole('button', { name: '故事板' }).click()
   await expect(page.getByRole('article', { name: '图片故事板卡 分镜 02' })).toHaveCount(0)
   await expect(page.getByRole('status', { name: '故事板统计' })).toContainText('总镜头数 3')

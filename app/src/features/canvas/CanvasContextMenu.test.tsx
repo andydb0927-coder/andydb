@@ -13,6 +13,7 @@ function renderMenu(overrides: Partial<Parameters<typeof CanvasContextMenu>[0]> 
     onUpload: vi.fn(),
     onOpenGenerationHistory: vi.fn(),
     onAddNode: vi.fn(),
+    onDeleteNode: vi.fn(),
     onClose: vi.fn(),
     ...overrides,
   }
@@ -89,4 +90,16 @@ test('closes from Escape and outside pointer while preserving the caller-owned f
 
   fireEvent.pointerDown(document.body)
   expect(onClose).toHaveBeenCalledTimes(2)
+})
+
+test('offers deletion only for a node context menu and dispatches it', async () => {
+  const user = userEvent.setup()
+  const blank = renderMenu()
+  expect(screen.queryByRole('menuitem', { name: '删除节点' })).not.toBeInTheDocument()
+  expect(blank.onDeleteNode).not.toHaveBeenCalled()
+
+  document.body.innerHTML = ''
+  const node = renderMenu({ targetNodeTitle: '角色参考' })
+  await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
+  expect(node.onDeleteNode).toHaveBeenCalledOnce()
 })

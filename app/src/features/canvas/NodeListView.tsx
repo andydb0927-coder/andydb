@@ -8,7 +8,6 @@ import type {
 } from '../project/model'
 import { selectNodeGenerationJob } from './job-selector'
 import { isCreativeCardKind } from '../project/creative-card'
-import { primaryActionsForNode } from './node-action-policy'
 import type { CreativeNodeAction } from './node-types'
 import { useDialogKeyboard } from './dialog-keyboard'
 
@@ -148,11 +147,20 @@ export function NodeListView({
               (item) => item.track === 'video' && item.nodeId === node.id,
             )
             const primaryActions =
-              isCreativeCardKind(node.kind) ||
-              node.kind === 'text' ||
-              node.kind === 'image'
-                ? primaryActionsForNode(node.kind, false)
-                : [{ action: 'regenerate' as const, label: '重生成' }]
+              isCreativeCardKind(node.kind)
+                ? [{ action: 'edit-card' as const, label: '编辑卡片' }]
+                : node.kind === 'text'
+                  ? [{ action: 'extend-shot' as const, label: '生成分镜' }]
+                  : node.kind === 'image' ||
+                      node.kind === 'character' ||
+                      node.kind === 'scene'
+                    ? [{ action: 'generate-video' as const, label: '生成视频' }]
+                    : node.kind === 'storyboard'
+                      ? [
+                          { action: 'extend-shot' as const, label: '扩展镜头' },
+                          { action: 'generate-video' as const, label: '生成视频' },
+                        ]
+                      : [{ action: 'regenerate' as const, label: '重生成' }]
             return (
               <li key={node.id}>
                 <button

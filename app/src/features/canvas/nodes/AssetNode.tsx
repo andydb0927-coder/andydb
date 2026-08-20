@@ -14,8 +14,6 @@ import {
   MonitorPlay,
   Pencil,
   RefreshCw,
-  ScanLine,
-  Trash2,
   Type,
   UserRound,
   X,
@@ -67,13 +65,19 @@ const kindIcons = {
 function NodeActions({ data }: { data: CreativeNodeData }) {
   const actionIcons = {
     'edit-card': Pencil,
-    regenerate: RefreshCw,
-    'extend-shot': ScanLine,
-    'generate-video': Film,
     'add-to-timeline': Clapperboard,
     'cancel-generation': X,
     'retry-generation': RefreshCw,
   } as const
+
+  const actions = data.node.effectTool
+    ? []
+    : primaryActionsForNode(data.node.kind, data.asset !== undefined).filter(
+        ({ action }) => !(data.node.details && action === 'edit-card'),
+      )
+  const canCancel = data.job?.status === 'queued' || data.job?.status === 'running'
+  const canRetry = data.job?.status === 'failed' || data.job?.status === 'cancelled'
+  if (!actions.length && !canCancel && !canRetry) return null
 
   return (
     <div
@@ -81,10 +85,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
       aria-label={`${data.node.title}操作`}
       data-placement={data.actionsPlacement}
     >
-      {(data.node.effectTool
-        ? []
-        : primaryActionsForNode(data.node.kind, data.asset !== undefined)
-            .filter(({ action }) => !(data.node.details && action === 'edit-card'))).map(
+      {actions.map(
         ({ action, label }) => {
           const ActionIcon = actionIcons[action]
 
@@ -106,7 +107,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
           )
         },
       )}
-      {data.job?.status === 'queued' || data.job?.status === 'running' ? (
+      {canCancel ? (
         <button
           type="button"
           onClick={(event) =>
@@ -117,7 +118,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
           取消生成
         </button>
       ) : null}
-      {data.job?.status === 'failed' || data.job?.status === 'cancelled' ? (
+      {canRetry ? (
         <button
           type="button"
           onClick={(event) => data.onAction('retry-generation', event.currentTarget)}
@@ -126,15 +127,6 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
           重试生成
         </button>
       ) : null}
-      <button
-        type="button"
-        className="creative-node-actions__danger"
-        aria-label="删除节点"
-        onClick={(event) => data.onDelete(event.currentTarget)}
-      >
-        <Trash2 aria-hidden="true" />
-        删除
-      </button>
     </div>
   )
 }

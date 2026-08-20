@@ -1067,6 +1067,10 @@ export function CanvasPage({
       if (consumers.length === 0) {
         deleteNode(nodeId)
         removeSelectedNode(nodeId)
+        queueMicrotask(() => {
+          if (focusReturnTarget.isConnected) focusReturnTarget.focus()
+          else viewportRef.current?.focus()
+        })
         return
       }
       deleteTriggerRef.current = focusReturnTarget
@@ -1437,6 +1441,38 @@ export function CanvasPage({
     [createConnectedCanvasContent, projectId, selectOnlyNode],
   )
 
+  const createImageToolNode = useCallback(
+    (sourceNodeId: string, tool: string) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === sourceNodeId)
+      if (!currentProject || currentProject.id !== projectId || !sourceNode) return
+      const creation = buildCanvasCreation(currentProject, {
+        kind: 'storyboard',
+        title: tool,
+        content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
+        position: {
+          x: sourceNode.position.x + 360,
+          y: sourceNode.position.y + 40,
+        },
+      })
+      if (
+        !createConnectedCanvasContent(
+          sourceNode.id,
+          creation,
+          crypto.randomUUID(),
+        )
+      ) {
+        setGenerationFeedback('无法创建工具节点，请重新选择来源节点。')
+        return
+      }
+      selectOnlyNode(creation.node.id)
+      setGenerationFeedback(
+        `已创建“${tool}”工具节点并建立连接；尚未触发外部生成。`,
+      )
+    },
+    [createConnectedCanvasContent, projectId, selectOnlyNode],
+  )
+
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
     const rightmostX = Math.max(...project.nodes.map((node) => node.position.x))
@@ -1525,6 +1561,8 @@ export function CanvasPage({
             startImageReferenceSelection(node.id, trigger),
           onEndImageReferenceSelection: endImageReferenceSelection,
           onLocalImageGenerate: () => handleAction(node.id, 'regenerate'),
+          onCreateImageToolNode: (tool) =>
+            createImageToolNode(node.id, tool),
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
           onLocalVideoGenerate: () => handleAction(node.id, 'regenerate'),
@@ -1558,6 +1596,7 @@ export function CanvasPage({
     updateImageGenerationSettings,
     updateNode,
     createVideoToolNode,
+    createImageToolNode,
   ])
 
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -3542,33 +3581,6 @@ export function CanvasPage({
     setGenerationFeedback(`已应用 ${characters.length} 个角色到画布。`)
   }
 
-  const createImageToolNode = (tool: string) => {
-    const currentProject = useProjectStore.getState().activeProject
-    const sourceNode = currentProject?.nodes.find(({ id }) => id === primaryNodeId)
-    if (!currentProject || currentProject.id !== projectId || !sourceNode) return
-    const creation = buildCanvasCreation(currentProject, {
-      kind: 'storyboard',
-      title: tool,
-      content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
-      position: {
-        x: sourceNode.position.x + 360,
-        y: sourceNode.position.y + 40,
-      },
-    })
-    if (
-      !createConnectedCanvasContent(
-        sourceNode.id,
-        creation,
-        crypto.randomUUID(),
-      )
-    ) {
-      setGenerationFeedback('无法创建工具节点，请重新选择来源节点。')
-      return
-    }
-    selectOnlyNode(creation.node.id)
-    setGenerationFeedback(`已创建“${tool}”工具节点并建立连接；尚未触发外部生成。`)
-  }
-
   const closeAgent = () => {
     setAgentOpen(false)
     queueMicrotask(() => {
@@ -3929,6 +3941,15 @@ export function CanvasPage({
             onUpload={beginContextUpload}
             onOpenGenerationHistory={openContextGenerationHistory}
             onAddNode={createContextNode}
+            onDeleteNode={contextMenu.targetNodeId ? () => {
+              const targetNodeId = contextMenu.targetNodeId
+              const focusReturnTarget =
+                contextMenu.returnFocusTo ?? viewportRef.current
+              setContextMenu(undefined)
+              if (targetNodeId && focusReturnTarget) {
+                requestDelete(targetNodeId, focusReturnTarget)
+              }
+            } : undefined}
             onClose={closeContextMenu}
           />
         ) : null}
@@ -3960,7 +3981,9 @@ export function CanvasPage({
           <SelectionContextBar
             project={project}
             node={selectedWorkspaceNode}
-            onCreateToolNode={createImageToolNode}
+            onCreateToolNode={(tool) => {
+              if (primaryNodeId) createImageToolNode(primaryNodeId, tool)
+            }}
             onCreateVideoToolNode={(tool) => {
               if (primaryNodeId) createVideoToolNode(primaryNodeId, tool)
             }}
@@ -4138,7 +4161,14 @@ export function CanvasPage({
           jobs={project.jobs}
           selectedNodeId={primaryNodeId}
           onSelect={selectFromNodeList}
-          onAction={handleAction}
+          onAction={(nodeId, action) => {
+            const focusReturnTarget =
+              findCanvasNodeControl(viewportRef.current, nodeId) ??
+              viewportRef.current ??
+              undefined
+            setNodeListOpen(false)
+            handleAction(nodeId, action, focusReturnTarget)
+          }}
           onClose={closeNodeList}
         />
       ) : null}

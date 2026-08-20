@@ -1,61 +1,31 @@
 import { describe, expect, test } from 'vitest'
 
-import type { NodeKind } from '../project/model'
 import { primaryActionsForNode } from './node-action-policy'
 
-const existingActions = [
-  { action: 'regenerate', label: '重生成' },
-  { action: 'extend-shot', label: '扩展镜头' },
-  { action: 'generate-video', label: '生成视频' },
-] as const
-
 describe('canvas node action policy', () => {
-  test('offers text nodes only the compatible storyboard action', () => {
-    expect(primaryActionsForNode('text', false)).toEqual([
-      { action: 'extend-shot', label: '生成分镜' },
+  test('keeps structured card editing but removes the old generic generation actions', () => {
+    expect(primaryActionsForNode('script', false)).toEqual([
+      { action: 'edit-card', label: '编辑卡片' },
     ])
-  })
-
-  test('offers image nodes only the compatible video action', () => {
-    expect(primaryActionsForNode('image', true)).toEqual([
-      { action: 'generate-video', label: '生成视频' },
+    expect(primaryActionsForNode('character-card', false)).toEqual([
+      { action: 'edit-card', label: '编辑卡片' },
     ])
+    expect(primaryActionsForNode('worldview', false)).toEqual([
+      { action: 'edit-card', label: '编辑卡片' },
+    ])
+    for (const kind of ['text', 'image', 'character', 'scene', 'preview'] as const) {
+      expect(primaryActionsForNode(kind, true)).toEqual([])
+    }
   })
-
-  test.each([
-    'script',
-    'character-card',
-    'worldview',
-  ] satisfies NodeKind[])(
-    'offers %s nodes only the structured card editor action',
-    (kind) => {
-      expect(primaryActionsForNode(kind, false)).toEqual([
-        { action: 'edit-card', label: '编辑卡片' },
-      ])
-    },
-  )
-
-  test.each([
-    'character',
-    'scene',
-    'preview',
-  ] satisfies NodeKind[])(
-    'preserves the existing primary actions for %s nodes',
-    (kind) => {
-      expect(primaryActionsForNode(kind, false)).toEqual(existingActions)
-    },
-  )
 
   test('keeps timeline eligibility gated by a storyboard or video asset', () => {
-    expect(primaryActionsForNode('storyboard', false)).toEqual(existingActions)
+    expect(primaryActionsForNode('storyboard', false)).toEqual([])
     expect(primaryActionsForNode('storyboard', true)).toEqual([
       { action: 'add-to-timeline', label: '加入时间线' },
-      ...existingActions,
     ])
-    expect(primaryActionsForNode('video', false)).toEqual(existingActions)
+    expect(primaryActionsForNode('video', false)).toEqual([])
     expect(primaryActionsForNode('video', true)).toEqual([
       { action: 'add-to-timeline', label: '加入时间线' },
-      ...existingActions,
     ])
   })
 })
