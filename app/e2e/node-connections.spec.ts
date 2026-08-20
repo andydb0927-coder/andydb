@@ -89,9 +89,16 @@ async function readCanvasZoom(page: import('@playwright/test').Page) {
 async function setCanvasZoom(
   page: import('@playwright/test').Page,
   targetZoom: number,
+  anchor?: import('@playwright/test').Locator,
 ) {
   const currentZoom = await readCanvasZoom(page)
-  const point = await findBlankCanvasPoint(page)
+  const anchorBox = anchor ? await anchor.boundingBox() : null
+  const point = anchorBox
+    ? {
+        x: anchorBox.x + anchorBox.width / 2,
+        y: anchorBox.y + anchorBox.height / 2,
+      }
+    : await findBlankCanvasPoint(page)
   await page.mouse.move(point.x, point.y)
   await page.mouse.wheel(
     0,
@@ -1009,11 +1016,15 @@ for (const zoom of [0.35, 1, 1.8]) {
   }) => {
     await page.setViewportSize({ width: 1440, height: 1024 })
     await createCinematicProject(page)
-    await setCanvasZoom(page, zoom)
-    await expect.poll(() => readCanvasZoom(page)).toBeCloseTo(zoom, 2)
-
     const edgeLabel = '场景设定 → 分镜 01'
     const edge = page.getByLabel(edgeLabel, { exact: true })
+    await setCanvasZoom(
+      page,
+      zoom,
+      edge.locator('.dependency-edge__interaction'),
+    )
+    await expect.poll(() => readCanvasZoom(page)).toBeCloseTo(zoom, 2)
+
     const deleteAction = page.getByRole('button', {
       name: `删除连接：${edgeLabel}`,
     })

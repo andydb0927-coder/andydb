@@ -404,7 +404,7 @@ export function createDefaultProviderRegistry() {
       modelName: 'MJ 风格图片',
       capabilities: ['text-to-image', 'image-to-image'],
       parameterSchema: imageSchema,
-      pricing: { amount: 15, currency: 'credits', unit: 'generation' },
+      pricing: { amount: 18, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/mj-image',
     }),
     demoProvider({

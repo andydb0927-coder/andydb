@@ -52,7 +52,7 @@ describe('model provider registry', () => {
         aspectRatio: { type: 'enum', defaultValue: '16:9' },
         resolution: { type: 'enum', defaultValue: '1920×1080' },
       },
-      pricing: { amount: 15, currency: 'credits', unit: 'generation' },
+      pricing: { amount: 18, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/mj-image',
     })
     expect(registry.require('kling-api')).toMatchObject({
@@ -123,7 +123,7 @@ describe('model provider registry', () => {
         providerId: 'mock-mj-image',
         providerName: 'Mock Studio',
         modelName: 'MJ 风格图片',
-        cost: 15,
+        cost: 18,
         currency: 'credits',
       },
     })
@@ -145,7 +145,7 @@ describe('model provider registry', () => {
       providerId: 'mock-mj-image',
       providerName: 'Mock Studio',
       modelName: 'MJ 风格图片',
-      estimatedCost: 15,
+      estimatedCost: 18,
       progress: 0,
     })
 
@@ -153,7 +153,7 @@ describe('model provider registry', () => {
     expect(queue.get(job.id)).toMatchObject({
       status: 'succeeded',
       progress: 100,
-      creditsSpent: 15,
+      creditsSpent: 18,
     })
     expect(jobs.some(({ status, progress }) => status === 'running' && progress === 55)).toBe(true)
   })

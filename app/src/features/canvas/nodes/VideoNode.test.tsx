@@ -101,12 +101,12 @@ test('keeps a video as a folded media card until it becomes the current node', (
   expect(
     screen.getByRole('region', { name: '视频节点 16 生成参数' }),
   ).toBeVisible()
-  expect(screen.getByRole('button', { name: '连接到视频节点 16' })).toHaveStyle({
+  expect(screen.getByRole('button', { name: '连接到视频节点 16' })).not.toHaveStyle({
     top: '112px',
   })
   expect(
     screen.getByRole('button', { name: '从视频节点 16建立连接' }),
-  ).toHaveStyle({ top: '112px' })
+  ).not.toHaveStyle({ top: '112px' })
 })
 
 test('renders an empty selected video as a Liblib media card with a separate compact composer', () => {

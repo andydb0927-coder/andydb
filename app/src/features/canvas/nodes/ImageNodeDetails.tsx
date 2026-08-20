@@ -294,6 +294,7 @@ export function ImageGenerationPanel({
   const [advanced, setAdvanced] = useState(false)
   const [styleOpen, setStyleOpen] = useState(false)
   const [marking, setMarking] = useState(false)
+  const [composerExpanded, setComposerExpanded] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -324,6 +325,7 @@ export function ImageGenerationPanel({
     setAdvanced(false)
     setStyleOpen(false)
     setMarking(false)
+    setComposerExpanded(false)
   }, [data.node.id])
 
   useEffect(() => {
@@ -370,7 +372,9 @@ export function ImageGenerationPanel({
 
   return (
     <section
-      className="image-generation-panel nodrag"
+      className={`image-generation-panel nodrag${
+        composerExpanded ? ' image-generation-panel--expanded' : ''
+      }`}
       role="region"
       aria-label={`${data.node.title} 生成参数`}
     >
@@ -432,6 +436,15 @@ export function ImageGenerationPanel({
           <Sparkles aria-hidden="true" />风格
         </button>
       </div>
+      <button
+        type="button"
+        className="image-generation-panel__expand"
+        aria-label={composerExpanded ? '退出放大编辑区' : '放大编辑区'}
+        aria-pressed={composerExpanded}
+        onClick={() => setComposerExpanded((expanded) => !expanded)}
+      >
+        <Maximize2 aria-hidden="true" />
+      </button>
       {incomingReferenceCount ? (
         <span
           className="image-generation-panel__reference-count"
@@ -510,6 +523,22 @@ export function ImageGenerationPanel({
         >
           <SlidersHorizontal aria-hidden="true" />
         </button>
+        <div className="image-generation-panel__submit">
+          <span aria-label={`预计成本 ${cost}`}>
+            <Zap aria-hidden="true" />预计成本 {cost}
+          </span>
+          <button
+            type="button"
+            aria-label={`生成图片，预计成本 ${cost}`}
+            aria-describedby={!eligible ? 'image-generation-reason' : undefined}
+            title="本地演示，不连接真实生成"
+            disabled={!eligible}
+            onClick={() => data.onLocalImageGenerate?.()}
+          >
+            <ArrowUp aria-hidden="true" />
+            <span className="visually-hidden">生成</span>
+          </button>
+        </div>
       </div>
       <p id="image-translation-reason" className="image-generation-panel__reason">
         翻译服务未接入，本地演示暂不可用。
@@ -611,22 +640,6 @@ export function ImageGenerationPanel({
           </label>
         </div>
       ) : null}
-      <div className="image-generation-panel__submit">
-        <span aria-label={`预计成本 ${cost}`}>
-          <Zap aria-hidden="true" />预计成本 {cost}
-        </span>
-        <button
-          type="button"
-          aria-label={`生成图片，预计成本 ${cost}`}
-          aria-describedby={!eligible ? 'image-generation-reason' : undefined}
-          title="本地演示，不连接真实生成"
-          disabled={!eligible}
-          onClick={() => data.onLocalImageGenerate?.()}
-        >
-          <ArrowUp aria-hidden="true" />
-          <span className="visually-hidden">生成</span>
-        </button>
-      </div>
       {!eligible ? (
         <p id="image-generation-reason" className="image-generation-panel__reason">
           请输入提示词或添加参考媒体后再生成。

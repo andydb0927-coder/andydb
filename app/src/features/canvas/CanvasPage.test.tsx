@@ -2689,7 +2689,7 @@ describe('creative canvas', () => {
       ).toMatchObject({
           status: 'running',
           providerId: 'mock-mj-image',
-          estimatedCost: 15,
+          estimatedCost: 18,
         }),
     )
 

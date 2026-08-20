@@ -231,7 +231,7 @@ describe('generation queue lifecycle', () => {
       providerName: 'Mock Studio',
       modelName: 'MJ 风格图片',
       progress: 100,
-      creditsSpent: 15,
+      creditsSpent: 18,
     })
     expect(
       useProjectStore

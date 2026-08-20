@@ -11,10 +11,12 @@ import {
   Film,
   Globe2,
   Image,
+  Maximize2,
   MonitorPlay,
   Pencil,
   RefreshCw,
   Type,
+  Upload,
   UserRound,
   X,
 } from 'lucide-react'
@@ -349,7 +351,9 @@ export function CreativeNodeShell({
             ) : liblibMediaNode ? (
               <span className="creative-node__media-placeholder">
                 <KindIcon aria-hidden="true" />
-                <span>尚未添加{imageGenerationNode ? '图片' : '视频'}</span>
+                <span className="visually-hidden">
+                  尚未添加{imageGenerationNode ? '图片' : '视频'}
+                </span>
               </span>
             ) : null)}
           {imageMedia && asset.width && asset.height ? (
@@ -378,6 +382,36 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
+        {imageGenerationNode && !asset ? (
+          <div
+            className="creative-node__quick-attempts nodrag nowheel"
+            role="toolbar"
+            aria-label="图片快捷尝试"
+          >
+            <span>尝试：</span>
+            <button
+              type="button"
+              onClick={() => {
+                data.onSelect()
+                setImageToImage(true)
+              }}
+            >
+              <Upload aria-hidden="true" />
+              图生图
+            </button>
+            <button
+              ref={upscaleTriggerRef}
+              type="button"
+              onClick={() => {
+                data.onSelect()
+                setUpscalePending(true)
+              }}
+            >
+              <Maximize2 aria-hidden="true" />
+              图片高清
+            </button>
+          </div>
+        ) : null}
         {imageGenerationNode ? <ImageResults data={data} /> : null}
         {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
@@ -386,7 +420,11 @@ export function CreativeNodeShell({
           id="dependency-target"
           type="target"
           position={Position.Left}
-          style={expandableMedia && contextual ? { top: 112 } : undefined}
+          style={
+            !liblibMediaNode && expandableMedia && contextual
+              ? { top: 112 }
+              : undefined
+          }
           role="button"
           tabIndex={0}
           aria-label={`连接到${node.title}`}
@@ -402,7 +440,11 @@ export function CreativeNodeShell({
           className="creative-node__source-handle"
           type="source"
           position={Position.Right}
-          style={expandableMedia && contextual ? { top: 112 } : undefined}
+          style={
+            !liblibMediaNode && expandableMedia && contextual
+              ? { top: 112 }
+              : undefined
+          }
           role="button"
           tabIndex={0}
           aria-label={`从${node.title}建立连接`}

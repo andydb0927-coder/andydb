@@ -68,6 +68,7 @@ function makeData(
 }
 
 test('matches the Liblib image action bar and generation copy without legacy node actions', async () => {
+  const user = userEvent.setup()
   const data = makeData()
   render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
@@ -89,8 +90,13 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   )
   expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张')).toBeVisible()
   expect(within(panel).getByRole('combobox', { name: '图片模型' })).toBeVisible()
-  expect(within(panel).getByText('预计成本 15')).toBeVisible()
-  expect(within(panel).getByRole('button', { name: '生成图片，预计成本 15' })).toBeEnabled()
+  expect(within(panel).getByText('预计成本 18')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '生成图片，预计成本 18' })).toBeEnabled()
+
+  const expand = within(panel).getByRole('button', { name: '放大编辑区' })
+  await user.click(expand)
+  expect(panel).toHaveClass('image-generation-panel--expanded')
+  expect(within(panel).getByRole('button', { name: '退出放大编辑区' })).toBeVisible()
 })
 
 test('confirms image upscaling before inserting a connected tool node', async () => {
@@ -161,7 +167,7 @@ test('exposes the verified MJ image settings with persistent accessible controls
   expect(within(panel).getByLabelText('多样性')).toHaveAttribute('step', '5')
   expect(within(panel).getByLabelText('多样性')).toHaveValue('5')
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
-  expect(within(panel).getByText('预计成本 15')).toBeVisible()
+  expect(within(panel).getByText('预计成本 18')).toBeVisible()
 
   await user.type(within(panel).getByLabelText('个性化风格 P 值'), 'p-demo')
   fireEvent.blur(within(panel).getByLabelText('个性化风格 P 值'))
@@ -238,7 +244,7 @@ test('requires prompt or media and a visible cost before local image submission'
   render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
   const submit = within(panel).getByRole('button', {
-    name: '生成图片，预计成本 15',
+    name: '生成图片，预计成本 18',
   })
 
   expect(submit).toBeDisabled()

@@ -190,7 +190,7 @@ test('keeps image nodes folded until they become the current selection', async (
   expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
     'mock-mj-image',
   )
-  expect(within(generation).getByText('预计成本 15')).toBeVisible()
+  expect(within(generation).getByText('预计成本 18')).toBeVisible()
 
   await user.click(screen.getByRole('button', { name: '查看 4 张结果' }))
   const results = screen.getByRole('region', { name: 'L1 的 4 张结果' })
@@ -203,8 +203,10 @@ test('keeps image nodes folded until they become the current selection', async (
   expect(onSetActiveResult).toHaveBeenCalledWith('result-2')
 })
 
-test('keeps an empty Liblib image node to the three model-supported composer actions', () => {
+test('matches the empty Liblib image card attempts and three composer actions', async () => {
+  const user = userEvent.setup()
   const onSelect = vi.fn()
+  const onCreateImageToolNode = vi.fn()
   const data = {
     node: {
       id: 'empty-image',
@@ -227,6 +229,7 @@ test('keeps an empty Liblib image node to the three model-supported composer act
     onHandleActivate: vi.fn(),
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
+    onCreateImageToolNode,
   }
 
   render(
@@ -249,14 +252,27 @@ test('keeps an empty Liblib image node to the three model-supported composer act
   )
 
   const card = screen.getByRole('article')
-  expect(within(card).getByText('尚未添加图片')).toBeVisible()
-  expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
+  expect(within(card).getByText('尚未添加图片')).toHaveClass('visually-hidden')
+  const attempts = within(card).getByRole('toolbar', { name: '图片快捷尝试' })
+  expect(within(attempts).getByText('尝试：')).toBeVisible()
+  expect(
+    within(attempts)
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['图生图', '图片高清'])
   expect(
     within(screen.getByRole('toolbar', { name: '图片主操作' }))
       .getAllByRole('button')
       .map((button) => button.textContent),
   ).toEqual(['参考', '标记', '风格'])
-  expect(onSelect).not.toHaveBeenCalled()
+
+  await user.click(within(attempts).getByRole('button', { name: '图生图' }))
+  expect(onSelect).toHaveBeenCalledOnce()
+  expect(screen.getByRole('status')).toHaveTextContent('已切换图生图模式')
+
+  await user.click(within(attempts).getByRole('button', { name: '图片高清' }))
+  expect(screen.getByRole('alertdialog', { name: '将添加工具节点' })).toBeVisible()
+  expect(onCreateImageToolNode).not.toHaveBeenCalled()
 })
 
 type TestNodeDetails = Record<string, unknown> & { type: string }

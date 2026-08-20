@@ -269,9 +269,41 @@ test('renames a media node and accepts prompt input from the composer', async ({
 
   const character = page.getByRole('button', { name: '角色参考', exact: true })
   await character.click()
-  const title = page
+  const characterFlowNode = page
     .locator('.react-flow__node')
     .filter({ has: character })
+  const geometry = await characterFlowNode.evaluate((node) => {
+    const card = node.querySelector<HTMLElement>('.creative-node--liblib-media')!
+    const composer = node.querySelector<HTMLElement>('.creative-node-composer')!
+    const target = node.querySelector<HTMLElement>('.react-flow__handle-left')!
+    const source = node.querySelector<HTMLElement>('.react-flow__handle-right')!
+    const cardStyle = getComputedStyle(card)
+    const composerStyle = getComputedStyle(composer)
+    const targetAfter = getComputedStyle(target, '::after')
+    const sourceAfter = getComputedStyle(source, '::after')
+    return {
+      cardWidth: Number.parseFloat(cardStyle.width),
+      cardHeight: Number.parseFloat(cardStyle.height),
+      composerWidth: Number.parseFloat(composerStyle.width),
+      targetContent: targetAfter.content,
+      sourceContent: sourceAfter.content,
+    }
+  })
+  expect(geometry.cardWidth).toBe(624)
+  expect(geometry.cardWidth / geometry.cardHeight).toBeCloseTo(16 / 9, 2)
+  expect(geometry.composerWidth).toBe(660)
+  expect(geometry.targetContent).toBe('"+"')
+  expect(geometry.sourceContent).toBe('"+"')
+  await expect.poll(() => characterFlowNode.evaluate((node) => {
+    const target = node.querySelector<HTMLElement>('.react-flow__handle-left')!
+    const source = node.querySelector<HTMLElement>('.react-flow__handle-right')!
+    return [
+      getComputedStyle(target, '::after').opacity,
+      getComputedStyle(source, '::after').opacity,
+    ]
+  })).toEqual(['1', '1'])
+
+  const title = characterFlowNode
     .getByRole('textbox', { name: '节点名称' })
   await title.fill('雨夜角色')
   await title.press('Enter')
@@ -579,8 +611,8 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   await page.getByRole('button', { name: '历史记录' }).click()
   const history = page.getByRole('complementary', { name: '历史' })
   await expect(history).toContainText('Mock Studio · MJ 风格图片')
-  await expect(history).toContainText('消耗 15 积分')
-  await expect(page.getByText('105 积分', { exact: true })).toHaveText('105 积分')
+  await expect(history).toContainText('消耗 18 积分')
+  await expect(page.getByText('102 积分', { exact: true })).toHaveText('102 积分')
   await page.getByRole('button', { name: '关闭历史面板' }).click()
 
   await page.getByRole('button', { name: 'Agent', exact: true }).click()

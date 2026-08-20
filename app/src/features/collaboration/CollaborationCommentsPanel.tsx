@@ -38,6 +38,7 @@ export function CollaborationCommentsPanel({
     if (!narrowFloating) return
     const media = window.matchMedia('(max-width: 800px)')
     const update = () => setCollapsed(media.matches)
+    update()
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [narrowFloating])

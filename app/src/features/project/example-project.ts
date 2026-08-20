@@ -95,7 +95,7 @@ export function buildRecipeProject(
         id: 'scene-reference',
         kind: 'scene',
         title: '场景设定',
-        position: { x: 390, y: 210 },
+        position: { x: 80, y: 520 },
         versions: [
           {
             id: 'version-scene-reference',
