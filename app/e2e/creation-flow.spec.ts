@@ -409,6 +409,32 @@ test('persists image parameters and creates a canvas-selected media reference', 
   ).toBeVisible()
 })
 
+test('opens the Liblib image template catalog and inserts one confirmed tool node', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+  await page.getByRole('button', { name: '场景设定', exact: true }).click()
+  const panel = page.getByRole('region', { name: '场景设定 生成参数' })
+  const trigger = panel.getByRole('button', { name: '图片创作模板' })
+
+  await trigger.click()
+  const catalog = panel.getByRole('dialog', { name: '图片创作模板' })
+  await expect(catalog.getByRole('group')).toHaveCount(4)
+  await expect(catalog.getByRole('button')).toHaveCount(15)
+  await catalog.getByRole('button', { name: '720全景' }).click()
+  const confirmation = page.getByRole('alertdialog', {
+    name: '添加720全景工具节点',
+  })
+  await expect(confirmation).toContainText('不会立即消耗积分')
+  await confirmation.getByRole('button', { name: '确认添加720全景工具节点' }).click()
+
+  await expect(page.getByRole('button', { name: '720全景', exact: true })).toBeVisible()
+  await expect(
+    page.getByLabel('场景设定 → 720全景', { exact: true }),
+  ).toBeVisible()
+})
+
 test('keeps video drafts local and inserts confirmed derived nodes atomically', async ({
   page,
 }) => {

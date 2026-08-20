@@ -2,6 +2,7 @@ import {
   ArrowUp,
   ChevronDown,
   Download,
+  Grid3X3,
   Heart,
   Images,
   Languages,
@@ -135,6 +136,58 @@ const imageAspectRatioOptions = [
   '9:21',
 ] as const
 const imageCountOptions = [1, 2, 4] as const
+
+type ImageTemplateCategory = 'story' | 'texture' | 'space' | 'setting'
+
+interface ImageCreationTemplate {
+  label: string
+  category: ImageTemplateCategory
+  featured?: boolean
+}
+
+const imageCreationTemplateColumns: ReadonlyArray<
+  ReadonlyArray<{ title: string; items: readonly ImageCreationTemplate[] }>
+> = [
+  [
+    {
+      title: '分镜叙事',
+      items: [
+        { label: '调度故事板', category: 'story', featured: true },
+        { label: '故事板', category: 'story', featured: true },
+        { label: '25宫格连贯分镜', category: 'story' },
+        { label: '剧情推演四宫格', category: 'story' },
+        { label: '画面推演 - 3秒后', category: 'story' },
+        { label: '画面推演 - 5秒前', category: 'story' },
+      ],
+    },
+    {
+      title: '质感调节',
+      items: [
+        { label: '人像质感调节', category: 'texture', featured: true },
+        { label: '电影级光影校正', category: 'texture' },
+      ],
+    },
+  ],
+  [
+    {
+      title: '空间与机位',
+      items: [
+        { label: '720全景', category: 'space' },
+        { label: '多机位九宫格', category: 'space' },
+      ],
+    },
+    {
+      title: '设定图',
+      items: [
+        { label: '角色脸部三视图', category: 'setting' },
+        { label: '角色设定图', category: 'setting' },
+        { label: '角色三视图', category: 'setting' },
+        { label: '场景设定图', category: 'setting' },
+        { label: '产品设定图', category: 'setting' },
+      ],
+    },
+  ],
+]
 
 type ImageParameterKey =
   | 'quality'
@@ -421,6 +474,97 @@ function ImageParameterPicker({
   )
 }
 
+function ImageTemplateIcon({ category }: { category: ImageTemplateCategory }) {
+  if (category === 'texture') return <Sparkles aria-hidden="true" />
+  if (category === 'space') return <Maximize2 aria-hidden="true" />
+  if (category === 'setting') return <ScanSearch aria-hidden="true" />
+  return <Images aria-hidden="true" />
+}
+
+function ImageTemplatePicker({
+  triggerRef,
+  onSelect,
+  onClose,
+}: {
+  triggerRef: RefObject<HTMLButtonElement | null>
+  onSelect(template: string): void
+  onClose(restoreFocus: boolean): void
+}) {
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      onClose(true)
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return
+      if (
+        pickerRef.current?.contains(event.target) ||
+        triggerRef.current?.contains(event.target)
+      ) {
+        return
+      }
+      onClose(false)
+    }
+    window.addEventListener('keydown', handleKeyDown, true)
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+    }
+  }, [onClose, triggerRef])
+
+  return (
+    <div
+      ref={pickerRef}
+      className="image-template-picker nodrag nowheel"
+      role="dialog"
+      aria-label="图片创作模板"
+    >
+      {imageCreationTemplateColumns.map((column, columnIndex) => (
+        <div className="image-template-picker__column" key={columnIndex}>
+          {column.map((group) => {
+            const headingId = `image-template-${group.title}`
+            return (
+              <section
+                key={group.title}
+                role="group"
+                aria-labelledby={headingId}
+                className="image-template-picker__group"
+              >
+                <h3 id={headingId}>{group.title}</h3>
+                <div>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => onSelect(item.label)}
+                    >
+                      <span className="image-template-picker__icon">
+                        <ImageTemplateIcon category={item.category} />
+                        {item.featured ? (
+                          <span
+                            className="image-template-picker__new-dot"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                      </span>
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ImageGenerationPanel({
   data,
   imageToImage,
@@ -441,6 +585,8 @@ export function ImageGenerationPanel({
   const [marking, setMarking] = useState(false)
   const [composerExpanded, setComposerExpanded] = useState(false)
   const [parametersOpen, setParametersOpen] = useState(false)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<string>()
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -456,6 +602,7 @@ export function ImageGenerationPanel({
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
   const parameterTriggerRef = useRef<HTMLButtonElement>(null)
+  const templateTriggerRef = useRef<HTMLButtonElement>(null)
   const incomingReferenceCount =
     data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
   const hasMedia = Boolean(data.asset || incomingReferenceCount)
@@ -475,6 +622,8 @@ export function ImageGenerationPanel({
     setMarking(false)
     setComposerExpanded(false)
     setParametersOpen(false)
+    setTemplatesOpen(false)
+    setPendingTemplate(undefined)
   }, [data.node.id])
 
   useEffect(() => {
@@ -489,6 +638,19 @@ export function ImageGenerationPanel({
     window.addEventListener('keydown', handleEscape, true)
     return () => window.removeEventListener('keydown', handleEscape, true)
   }, [marking])
+
+  useEffect(() => {
+    if (!pendingTemplate) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setPendingTemplate(undefined)
+      queueMicrotask(() => templateTriggerRef.current?.focus())
+    }
+    window.addEventListener('keydown', handleEscape, true)
+    return () => window.removeEventListener('keydown', handleEscape, true)
+  }, [pendingTemplate])
 
   useEffect(() => {
     const nextPrompt = imageGeneration?.prompt ?? activeVersion?.prompt ?? ''
@@ -532,6 +694,18 @@ export function ImageGenerationPanel({
     if (restoreFocus) {
       queueMicrotask(() => parameterTriggerRef.current?.focus())
     }
+  }
+
+  const closeTemplates = (restoreFocus: boolean) => {
+    setTemplatesOpen(false)
+    if (restoreFocus) {
+      queueMicrotask(() => templateTriggerRef.current?.focus())
+    }
+  }
+
+  const closeTemplateConfirmation = () => {
+    setPendingTemplate(undefined)
+    queueMicrotask(() => templateTriggerRef.current?.focus())
   }
 
   return (
@@ -682,13 +856,32 @@ export function ImageGenerationPanel({
           aria-label="图片生成参数"
           aria-haspopup="dialog"
           aria-expanded={parametersOpen}
-          onClick={() => setParametersOpen((open) => !open)}
+          onClick={() => {
+            setTemplatesOpen(false)
+            setParametersOpen((open) => !open)
+          }}
         >
           <span>
             {settings.aspectRatio} · {settings.quality} · {settings.resolution} ·{' '}
             {settings.count}张
           </span>
           <ChevronDown aria-hidden="true" />
+        </button>
+        <button
+          ref={templateTriggerRef}
+          type="button"
+          className="image-generation-panel__template-trigger"
+          aria-label="图片创作模板"
+          aria-haspopup="dialog"
+          aria-expanded={templatesOpen}
+          onClick={() => {
+            setMarking(false)
+            setParametersOpen(false)
+            setTemplatesOpen((open) => !open)
+          }}
+        >
+          <Grid3X3 aria-hidden="true" />
+          <span className="image-template-picker__new-dot" aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -729,6 +922,16 @@ export function ImageGenerationPanel({
           triggerRef={parameterTriggerRef}
           onChange={updateSetting}
           onClose={closeParameters}
+        />
+      ) : null}
+      {templatesOpen ? (
+        <ImageTemplatePicker
+          triggerRef={templateTriggerRef}
+          onSelect={(template) => {
+            setTemplatesOpen(false)
+            setPendingTemplate(template)
+          }}
+          onClose={closeTemplates}
         />
       ) : null}
       <p id="image-translation-reason" className="image-generation-panel__reason">
@@ -853,6 +1056,42 @@ export function ImageGenerationPanel({
                 onClick={() => {
                   closeUpscale()
                   data.onCreateImageToolNode?.('图片高清')
+                }}
+              >
+                确认添加
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+      {pendingTemplate ? createPortal(
+        <div className="image-result-confirm nodrag">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={`添加${pendingTemplate}工具节点`}
+          >
+            <button
+              type="button"
+              aria-label="关闭添加工具节点提示"
+              onClick={closeTemplateConfirmation}
+            >
+              <X aria-hidden="true" />
+            </button>
+            <h2>将添加工具节点</h2>
+            <p>
+              {pendingTemplate}会在当前节点下游创建一个本地工具节点，不会立即消耗积分。
+            </p>
+            <div>
+              <button type="button" onClick={closeTemplateConfirmation}>取消</button>
+              <button
+                type="button"
+                aria-label={`确认添加${pendingTemplate}工具节点`}
+                onClick={() => {
+                  const template = pendingTemplate
+                  setPendingTemplate(undefined)
+                  data.onCreateImageToolNode?.(template)
                 }}
               >
                 确认添加

@@ -159,6 +159,70 @@ test('opens the complete Liblib image parameter picker and persists its live sum
   expect(trigger).toHaveFocus()
 })
 
+test('opens the grouped Liblib image template catalog and confirms a local derived node', async () => {
+  const user = userEvent.setup()
+  const data = makeData()
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const trigger = within(panel).getByRole('button', { name: '图片创作模板' })
+
+  await user.click(trigger)
+  const dialog = within(panel).getByRole('dialog', { name: '图片创作模板' })
+  expect(within(dialog).getByRole('group', { name: '分镜叙事' })).toBeVisible()
+  expect(within(dialog).getByRole('group', { name: '质感调节' })).toBeVisible()
+  expect(within(dialog).getByRole('group', { name: '空间与机位' })).toBeVisible()
+  expect(within(dialog).getByRole('group', { name: '设定图' })).toBeVisible()
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual([
+    '调度故事板',
+    '故事板',
+    '25宫格连贯分镜',
+    '剧情推演四宫格',
+    '画面推演 - 3秒后',
+    '画面推演 - 5秒前',
+    '人像质感调节',
+    '电影级光影校正',
+    '720全景',
+    '多机位九宫格',
+    '角色脸部三视图',
+    '角色设定图',
+    '角色三视图',
+    '场景设定图',
+    '产品设定图',
+  ])
+
+  await user.keyboard('{Escape}')
+  expect(within(panel).queryByRole('dialog', { name: '图片创作模板' })).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+
+  await user.click(trigger)
+  const panoramaCatalog = within(panel).getByRole('dialog', {
+    name: '图片创作模板',
+  })
+  await user.click(
+    within(panoramaCatalog).getByRole('button', { name: '720全景' }),
+  )
+  const confirmation = screen.getByRole('alertdialog', {
+    name: '添加720全景工具节点',
+  })
+  expect(confirmation).toHaveTextContent('将添加工具节点')
+  expect(confirmation).toHaveTextContent('不会立即消耗积分')
+  expect(data.onCreateImageToolNode).not.toHaveBeenCalled()
+  await user.click(within(confirmation).getByRole('button', { name: '取消' }))
+  expect(trigger).toHaveFocus()
+
+  await user.click(trigger)
+  const storyboardCatalog = within(panel).getByRole('dialog', {
+    name: '图片创作模板',
+  })
+  await user.click(
+    within(storyboardCatalog).getByRole('button', { name: '调度故事板' }),
+  )
+  await user.click(
+    screen.getByRole('button', { name: '确认添加调度故事板工具节点' }),
+  )
+  expect(data.onCreateImageToolNode).toHaveBeenCalledWith('调度故事板')
+})
+
 test('confirms image upscaling before inserting a connected tool node', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()
