@@ -4,6 +4,7 @@ import {
   Hand,
   History,
   Keyboard,
+  Library,
   Plus,
   Unplug,
   UsersRound,
@@ -99,8 +100,12 @@ export function CanvasToolbar({
           <Wrench aria-hidden="true" />
           <span>工具箱</span>
         </button>
-        <button type="button" aria-label="素材库" onClick={() => onOpenPanel?.('assets')}>
+        <button type="button" aria-label="资产管理" onClick={() => onOpenPanel?.('assets')}>
           <FolderOpen aria-hidden="true" />
+          <span>资产管理</span>
+        </button>
+        <button type="button" aria-label="素材库" onClick={() => onOpenPanel?.('library')}>
+          <Library aria-hidden="true" />
           <span>素材库</span>
         </button>
         <button type="button" aria-label="角色库" onClick={() => onOpenPanel?.('characters')}>

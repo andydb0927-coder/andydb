@@ -2727,7 +2727,6 @@ select {
   position: relative;
   width: 270px;
   min-height: 152px;
-  margin-top: 30px;
   border-color: var(--neutral-white-a18);
   border-radius: var(--radius-menu);
   background: var(--surface-floating);
@@ -2748,28 +2747,26 @@ select {
   border-radius: inherit;
 }
 
-.creative-node--liblib-media .creative-node__heading {
+.creative-node__floating-title {
   position: absolute;
   top: -30px;
   left: 0;
+  display: flex;
   width: 100%;
+  min-height: 24px;
+  align-items: center;
   justify-content: flex-start;
   gap: var(--space-2);
   color: var(--text-muted);
   pointer-events: none;
 }
 
-.creative-node--liblib-media .creative-node__kind {
-  gap: 0;
-  font-size: 0;
-}
-
-.creative-node--liblib-media .creative-node__kind svg {
+.creative-node__floating-title svg {
   width: 18px;
   height: 18px;
 }
 
-.creative-node--liblib-media .creative-node__heading strong {
+.creative-node__floating-title strong {
   color: var(--text-muted);
   font-size: 0.875rem;
   font-weight: 500;
@@ -2798,45 +2795,6 @@ select {
 .creative-node__media-placeholder > span {
   color: var(--text-muted);
   font-size: 0.625rem;
-}
-
-.creative-node__quick-attempts {
-  position: absolute;
-  z-index: 3;
-  bottom: var(--space-3);
-  left: var(--space-3);
-  display: grid;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-subtle);
-  font-size: 0.5625rem;
-  padding: 4px 7px;
-  border-radius: var(--radius-button);
-  background: var(--surface-panel);
-  backdrop-filter: blur(8px);
-}
-
-.creative-node__quick-attempts button {
-  display: inline-flex;
-  min-height: 24px;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  color: var(--text-muted);
-  background: transparent;
-  font-size: 0.625rem;
-  cursor: pointer;
-}
-
-.creative-node__quick-attempts button:hover,
-.creative-node__quick-attempts button[aria-pressed='true'] {
-  color: var(--text-primary);
-}
-
-.creative-node__quick-attempts svg {
-  width: 12px;
-  height: 12px;
 }
 
 .creative-node__source-handle::after {
@@ -2881,6 +2839,11 @@ select {
 
 .creative-node-composer :is(button, input, textarea, select, label, [role='button']) {
   pointer-events: auto;
+}
+
+.canvas-page__viewport:has(.creative-node-composer) .react-flow__controls {
+  top: var(--space-4);
+  bottom: auto;
 }
 
 .react-flow__node:has(.creative-node--expanded) {
@@ -3516,20 +3479,19 @@ select {
 }
 
 .image-generation-panel__prompt {
-  display: grid;
+  display: block;
   min-height: 82px;
-  gap: var(--space-1);
-  color: var(--text-muted);
-  font-size: 0.6875rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  outline: none;
+  white-space: pre-wrap;
 }
 
-.image-generation-panel__prompt > span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.image-generation-panel__prompt:empty::before {
+  color: var(--text-muted);
+  content: attr(aria-placeholder);
+  pointer-events: none;
 }
 
 .image-generation-panel__primary-actions {
@@ -9737,6 +9699,38 @@ select {
   margin-top: var(--space-3);
 }
 
+.material-library__section {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--neutral-white-a10);
+  border-radius: var(--radius-card);
+  background: var(--neutral-white-a03);
+}
+
+.material-library__preview {
+  width: 112px;
+  aspect-ratio: 1.6;
+  border-radius: var(--radius-button);
+  background:
+    radial-gradient(circle at 72% 28%, var(--effect-a), transparent 28%),
+    radial-gradient(circle at 28% 72%, var(--effect-b), transparent 34%),
+    linear-gradient(135deg, var(--effect-c), var(--surface-canvas));
+}
+
+.material-library__section div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.material-library__section p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
 .resource-panel__controls,
 .character-library__filters {
   display: flex;
@@ -11329,6 +11323,31 @@ select {
 }
 
 @media (max-width: 800px) {
+  .creative-node-composer {
+    left: 0;
+    width: 260px;
+    transform: none;
+  }
+
+  .creative-node-composer :is(
+    .image-generation-panel__primary-actions,
+    .video-generation-panel__primary-actions
+  ) {
+    flex-wrap: wrap;
+  }
+
+  .creative-node-composer .image-generation-panel__controls,
+  .creative-node-composer .video-generation-panel__compact-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .creative-node-composer :is(
+    .image-generation-panel__parameter-row,
+    .video-generation-panel__parameter-row
+  ) {
+    grid-column: 1 / -1;
+  }
+
   .canvas-top-bar {
     grid-template-columns: minmax(132px, 1fr) auto minmax(188px, auto);
     gap: var(--space-1);

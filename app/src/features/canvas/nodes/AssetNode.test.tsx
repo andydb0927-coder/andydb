@@ -145,25 +145,31 @@ test('keeps image nodes folded until they become the current selection', async (
   view.rerender(renderWith({ ...baseData, selected: true, contextual: true }))
   const generation = screen.getByRole('region', { name: 'L1 生成参数' })
   const mediaCard = screen.getByRole('article')
+  const floatingTitle = screen.getByText('L1').closest('.creative-node__floating-title')
   expect(mediaCard).toHaveClass('creative-node--liblib-media')
+  expect(floatingTitle).toBeVisible()
+  expect(mediaCard).not.toContainElement(floatingTitle as HTMLElement)
+  expect(floatingTitle?.nextElementSibling).toBe(mediaCard)
   expect(mediaCard).not.toContainElement(generation)
   expect(generation.parentElement).toHaveClass('creative-node-composer')
   expect(
     within(generation)
       .getAllByRole('toolbar', { name: '图片主操作' })[0]
       ?.querySelectorAll('button'),
-  ).toHaveLength(3)
+  ).toHaveLength(5)
   expect(
     within(within(generation).getByRole('toolbar', { name: '图片主操作' }))
       .getAllByRole('button')
       .map((button) => button.textContent),
-  ).toEqual(['参考', '标记', '风格'])
-  expect(
-    within(screen.getByRole('toolbar', { name: '图片快捷尝试' }))
-      .getAllByRole('button')
-      .map((button) => button.textContent),
-  ).toEqual(['图生图', '图片高清'])
-  expect(within(generation).getByLabelText('提示词')).toHaveValue('雾中茶山')
+  ).toEqual(['图生图', '图片高清', '参考', '标记', '风格'])
+  expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
+  const prompt = within(generation).getByRole('textbox', { name: '提示词' })
+  expect(prompt).toHaveAttribute('contenteditable', 'true')
+  expect(prompt).toHaveAttribute(
+    'aria-placeholder',
+    '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
+  )
+  expect(prompt).toHaveTextContent('雾中茶山')
   expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
     'mock-mj-image',
   )

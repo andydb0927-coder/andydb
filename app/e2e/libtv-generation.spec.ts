@@ -173,8 +173,8 @@ test('runs the complete LibTV provider path behind intercepted local evidence', 
 
   await page.reload()
   await expect(page.getByRole('button', { name: '视频 01', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '素材库' }).click()
-  const generatedAsset = page.getByRole('complementary', { name: '资产' })
+  await page.getByRole('button', { name: '资产管理' }).click()
+  const generatedAsset = page.getByRole('complementary', { name: '资产管理' })
   const generatedVideoCard = generatedAsset.getByRole('article', { name: '素材 视频 01' })
   await expect(generatedVideoCard).toBeVisible()
   await expect(generatedVideoCard).toContainText('生成结果 · VIDEO')

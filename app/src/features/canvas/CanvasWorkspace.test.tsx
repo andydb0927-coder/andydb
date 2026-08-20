@@ -211,7 +211,7 @@ test('shows local assets, generation history and the complete four-group shortcu
   const { rerender } = render(
     <WorkspaceSidePanel panel="assets" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
-  expect(screen.getByRole('complementary', { name: '资产' })).toHaveTextContent('角色图')
+  expect(screen.getByRole('complementary', { name: '资产管理' })).toHaveTextContent('角色图')
 
   rerender(
     <WorkspaceSidePanel panel="history" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,

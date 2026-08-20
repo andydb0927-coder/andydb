@@ -194,8 +194,11 @@ async function fitCreatedCardsIntoView(page: Page, titles: string[]) {
 async function connectCards(page: Page, source: string, target: string) {
   await fitCreatedCardsIntoView(page, [source, target])
   await page.getByRole('button', { name: '连线', exact: true }).click()
-  await page.getByRole('button', { name: source, exact: true }).click()
-  await page.getByRole('button', { name: target, exact: true }).click()
+  // Fit View can make dense cards overlap visually. Keyboard activation is the
+  // same accessible node-selection path and is stable even when a neighbouring
+  // card covers the pointer centre.
+  await page.getByRole('button', { name: source, exact: true }).press('Enter')
+  await page.getByRole('button', { name: target, exact: true }).press('Enter')
   await expect(page.getByLabel(`${source} → ${target}`, { exact: true })).toBeVisible()
 }
 
@@ -254,8 +257,8 @@ test('creates, links, edits, and reloads structured creative cards', async ({
   await expect(page.getByLabel('雨夜重逢 → 林渊角色卡', { exact: true })).toBeVisible()
   await expect(page.getByLabel('林渊角色卡 → 潮汐城世界观', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: '素材库' }).click()
-  const assets = page.getByRole('complementary', { name: '资产' })
+  await page.getByRole('button', { name: '资产管理' }).click()
+  const assets = page.getByRole('complementary', { name: '资产管理' })
   await expect(assets.getByText('潮汐城参考.png', { exact: true })).toBeVisible()
   expect(browserErrors).toEqual([])
 })

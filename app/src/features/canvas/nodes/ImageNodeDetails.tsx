@@ -2,7 +2,9 @@ import {
   ArrowUp,
   Download,
   Heart,
+  Images,
   Languages,
+  Maximize2,
   ScanSearch,
   Search,
   SlidersHorizontal,
@@ -277,12 +279,14 @@ function ImageStyleGallery({ onClose }: { onClose(): void }) {
 export function ImageGenerationPanel({
   data,
   imageToImage,
+  onImageToImageChange,
   upscalePending,
   onUpscalePendingChange,
   upscaleTriggerRef,
 }: {
   data: CreativeNodeData
   imageToImage: boolean
+  onImageToImageChange(enabled: boolean): void
   upscalePending: boolean
   onUpscalePendingChange(pending: boolean): void
   upscaleTriggerRef: RefObject<HTMLButtonElement | null>
@@ -375,6 +379,24 @@ export function ImageGenerationPanel({
         role="toolbar"
         aria-label="图片主操作"
       >
+        {hasMedia ? (
+          <>
+            <button
+              type="button"
+              aria-pressed={imageToImage}
+              onClick={() => onImageToImageChange(!imageToImage)}
+            >
+              <Images aria-hidden="true" />图生图
+            </button>
+            <button
+              ref={upscaleTriggerRef}
+              type="button"
+              onClick={() => onUpscalePendingChange(true)}
+            >
+              <Maximize2 aria-hidden="true" />图片高清
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
           aria-pressed={data.imageReferenceSelecting}
@@ -434,20 +456,19 @@ export function ImageGenerationPanel({
           <button type="button" onClick={() => setMarking(false)}>退出标记</button>
         </section>
       ) : null}
-      <p className="image-generation-panel__instruction">
-        可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜
-      </p>
-      <label className="image-generation-panel__prompt">
-        <span>提示词</span>
-        <textarea
-          value={prompt}
-          rows={4}
-          onChange={(event) => setPrompt(event.target.value)}
-          onBlur={() =>
-            data.onUpdateImageGenerationSettings?.({ prompt })
-          }
-        />
-      </label>
+      <div
+        className="image-generation-panel__prompt"
+        role="textbox"
+        aria-label="提示词"
+        aria-multiline="true"
+        aria-placeholder="可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={(event) => setPrompt(event.currentTarget.textContent ?? '')}
+        onBlur={() => data.onUpdateImageGenerationSettings?.({ prompt })}
+      >
+        {prompt}
+      </div>
       <div className="image-generation-panel__controls">
         <label className="image-generation-panel__model">
           <span className="visually-hidden">图片模型</span>

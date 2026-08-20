@@ -1,8 +1,11 @@
 import {
   AudioLines,
+  ClipboardCopy,
   ClipboardPaste,
   ChevronRight,
   Clapperboard,
+  Copy,
+  CopyPlus,
   Film,
   FileClock,
   FileText,
@@ -11,11 +14,13 @@ import {
   Plus,
   Redo2,
   Save,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Type,
   Undo2,
   Upload,
+  UserRoundPlus,
 } from 'lucide-react'
 import {
   useEffect,
@@ -74,6 +79,11 @@ export interface CanvasContextMenuProps {
   onRedo(): void
   onPaste(): void
   onSaveToAssets(): void
+  onComplianceCheck?(): void
+  onCreateSubject?(): void
+  onCopyNode?(): void
+  onDuplicateNode?(): void
+  onCopyToClipboard?(): void
   onDeleteNode?(): void
   onClose(): void
 }
@@ -112,6 +122,11 @@ export function CanvasContextMenu({
   onRedo,
   onPaste,
   onSaveToAssets,
+  onComplianceCheck,
+  onCreateSubject,
+  onCopyNode,
+  onDuplicateNode,
+  onCopyToClipboard,
   onDeleteNode,
   onClose,
 }: CanvasContextMenuProps) {
@@ -185,24 +200,57 @@ export function CanvasContextMenu({
         <strong>{targetNodeTitle ?? '画布快捷操作'}</strong>
       </div>
 
-      <button ref={firstItemRef} type="button" role="menuitem" onClick={onUpload}>
-        <Upload aria-hidden="true" />
-        上传
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        disabled={!canSaveToAssets}
-        onClick={onSaveToAssets}
-      >
-        <Save aria-hidden="true" />
-        保存到我的资产
-      </button>
+      {targetNodeTitle ? (
+        <>
+          <button ref={firstItemRef} type="button" role="menuitem" onClick={onComplianceCheck}>
+            <ShieldCheck aria-hidden="true" />合规校验
+          </button>
+          <button type="button" role="menuitem" disabled={!canSaveToAssets} onClick={onSaveToAssets}>
+            <Save aria-hidden="true" />保存到我的资产
+          </button>
+          <button type="button" role="menuitem" onClick={onCreateSubject}>
+            <UserRoundPlus aria-hidden="true" />创建主体
+          </button>
+          <button type="button" role="menuitem" onClick={onCopyNode}>
+            <Copy aria-hidden="true" />复制
+          </button>
+          <button type="button" role="menuitem" onClick={onDuplicateNode}>
+            <CopyPlus aria-hidden="true" />创建副本
+          </button>
+          <button type="button" role="menuitem" disabled={!canPaste} onClick={onPaste}>
+            <ClipboardPaste aria-hidden="true" />粘贴
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="canvas-context-menu__danger"
+            aria-label="删除节点"
+            onClick={onDeleteNode}
+          >
+            <Trash2 aria-hidden="true" />删除 <kbd>⌘⌫</kbd>
+          </button>
+          <button type="button" role="menuitem" onClick={onCopyToClipboard}>
+            <ClipboardCopy aria-hidden="true" />复制到剪贴板
+          </button>
+        </>
+      ) : (
+        <>
+          <button ref={firstItemRef} type="button" role="menuitem" onClick={onUpload}>
+            <Upload aria-hidden="true" />上传
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canSaveToAssets}
+            onClick={onSaveToAssets}
+          >
+            <Save aria-hidden="true" />保存到我的资产
+          </button>
 
-      <div
-        className="canvas-context-menu__branch"
-        onPointerEnter={() => setSubmenu('nodes')}
-      >
+          <div
+            className="canvas-context-menu__branch"
+            onPointerEnter={() => setSubmenu('nodes')}
+          >
         <button
           type="button"
           role="menuitem"
@@ -237,31 +285,19 @@ export function CanvasContextMenu({
             ))}
           </div>
         ) : null}
-      </div>
-      <div className="canvas-context-menu__separator" role="separator" />
-      <button type="button" role="menuitem" aria-label="撤销" disabled={!canUndo} onClick={onUndo}>
-        <Undo2 aria-hidden="true" />
-        撤销 <kbd>⌘Z</kbd>
-      </button>
-      <button type="button" role="menuitem" aria-label="重做" disabled={!canRedo} onClick={onRedo}>
-        <Redo2 aria-hidden="true" />
-        重做 <kbd>⇧⌘Z</kbd>
-      </button>
-      <button type="button" role="menuitem" aria-label="粘贴" disabled={!canPaste} onClick={onPaste}>
-        <ClipboardPaste aria-hidden="true" />
-        粘贴 <kbd>⌘V</kbd>
-      </button>
-      {targetNodeTitle && onDeleteNode ? (
-        <button
-          type="button"
-          role="menuitem"
-          className="canvas-context-menu__danger"
-          onClick={onDeleteNode}
-        >
-          <Trash2 aria-hidden="true" />
-          删除节点
-        </button>
-      ) : null}
+          </div>
+          <div className="canvas-context-menu__separator" role="separator" />
+          <button type="button" role="menuitem" aria-label="撤销" disabled={!canUndo} onClick={onUndo}>
+            <Undo2 aria-hidden="true" />撤销 <kbd>⌘Z</kbd>
+          </button>
+          <button type="button" role="menuitem" aria-label="重做" disabled={!canRedo} onClick={onRedo}>
+            <Redo2 aria-hidden="true" />重做 <kbd>⇧⌘Z</kbd>
+          </button>
+          <button type="button" role="menuitem" aria-label="粘贴" disabled={!canPaste} onClick={onPaste}>
+            <ClipboardPaste aria-hidden="true" />粘贴 <kbd>⌘V</kbd>
+          </button>
+        </>
+      )}
     </FloatingPanel>
   )
 }

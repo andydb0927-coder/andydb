@@ -7,6 +7,7 @@ import {
   AssetLibraryPanel,
   CharacterLibraryPanel,
   EffectToolboxPanel,
+  MaterialLibraryPanel,
 } from './CanvasResourcePanels'
 
 const project: Project = {
@@ -93,7 +94,7 @@ test('searches, filters, renames, moves, deletes and sends library assets', asyn
   const onInsert = vi.fn()
   render(<AssetLibraryPanel project={project} onInsert={onInsert} />)
 
-  const dialog = screen.getByRole('dialog', { name: '素材库' })
+  const dialog = screen.getByRole('dialog', { name: '资产管理' })
   expect(within(dialog).getByRole('tree', { name: '文件夹' })).toBeVisible()
   await user.type(within(dialog).getByRole('searchbox', { name: '搜索素材' }), '雨夜')
   expect(within(dialog).getByRole('article', { name: '素材 雨夜长街' })).toBeVisible()
@@ -131,6 +132,20 @@ test('searches, filters, renames, moves, deletes and sends library assets', asyn
   await user.pointer({ target: renamed, keys: '[MouseRight]' })
   await user.click(screen.getByRole('menuitem', { name: '删除' }))
   expect(within(dialog).queryByRole('article', { name: '素材 蓝调雨夜' })).not.toBeInTheDocument()
+})
+
+test('offers style and effect library entries as canvas reference nodes', async () => {
+  const user = userEvent.setup()
+  const onInsert = vi.fn()
+  render(<MaterialLibraryPanel onInsert={onInsert} />)
+
+  const dialog = screen.getByRole('dialog', { name: '素材库' })
+  expect(within(dialog).getByRole('region', { name: '风格库' })).toBeVisible()
+  expect(within(dialog).getByRole('region', { name: '特效库' })).toBeVisible()
+  await user.click(within(dialog).getByRole('button', { name: '添加风格参考节点' }))
+  expect(onInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: 'style' }))
+  await user.click(within(dialog).getByRole('button', { name: '添加特效参考节点' }))
+  expect(onInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: 'effect' }))
 })
 
 test('filters character cards, previews four images and applies selected characters', async () => {

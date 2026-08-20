@@ -11,8 +11,6 @@ import {
   Film,
   Globe2,
   Image,
-  Images,
-  Maximize2,
   MonitorPlay,
   Pencil,
   RefreshCw,
@@ -250,6 +248,12 @@ export function CreativeNodeShell({
 
   return (
     <div className="creative-node-layout">
+      {liblibMediaNode ? (
+        <div className="creative-node__floating-title" aria-hidden="true">
+          <KindIcon />
+          <strong>{node.title}</strong>
+        </div>
+      ) : null}
       <article
         className={`creative-node creative-node--${node.kind}${
           selected ? ' creative-node--selected' : ''
@@ -271,15 +275,17 @@ export function CreativeNodeShell({
           data-canvas-node-id={node.id}
           onClick={data.onSelect}
         >
-          <span className="creative-node__heading">
-            <span className="creative-node__kind">
-              <KindIcon aria-hidden="true" />
-              {specializedDetails
-                ? specializedNodeTypeCopy[specializedDetails.type]
-                : kindCopy[node.kind]}
+          {!liblibMediaNode ? (
+            <span className="creative-node__heading">
+              <span className="creative-node__kind">
+                <KindIcon aria-hidden="true" />
+                {specializedDetails
+                  ? specializedNodeTypeCopy[specializedDetails.type]
+                  : kindCopy[node.kind]}
+              </span>
+              <strong>{node.title}</strong>
             </span>
-            <strong>{node.title}</strong>
-          </span>
+          ) : null}
           {specializedDetails ? null : preview ??
             (asset?.kind === 'video' ? (
               <video
@@ -330,29 +336,6 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
-        {imageGenerationNode && imageMedia && contextual ? (
-          <div
-            className="creative-node__quick-attempts nodrag"
-            role="toolbar"
-            aria-label="图片快捷尝试"
-          >
-            <span>尝试：</span>
-            <button
-              type="button"
-              aria-pressed={imageToImage}
-              onClick={() => setImageToImage((enabled) => !enabled)}
-            >
-              <Images aria-hidden="true" />图生图
-            </button>
-            <button
-              ref={upscaleTriggerRef}
-              type="button"
-              onClick={() => setUpscalePending(true)}
-            >
-              <Maximize2 aria-hidden="true" />图片高清
-            </button>
-          </div>
-        ) : null}
         {imageGenerationNode ? <ImageResults data={data} /> : null}
         {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
@@ -394,6 +377,7 @@ export function CreativeNodeShell({
           <ImageGenerationPanel
             data={data}
             imageToImage={imageToImage}
+            onImageToImageChange={setImageToImage}
             upscalePending={upscalePending}
             onUpscalePendingChange={setUpscalePending}
             upscaleTriggerRef={upscaleTriggerRef}

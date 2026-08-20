@@ -127,7 +127,11 @@ test('renders an empty selected video as a Liblib media card with a separate com
 
   const card = screen.getByRole('article')
   const composer = screen.getByRole('region', { name: '视频节点 7 生成参数' })
+  const floatingTitle = screen.getByText('视频节点 7').closest('.creative-node__floating-title')
   expect(card).toHaveClass('creative-node--liblib-media')
+  expect(floatingTitle).toBeVisible()
+  expect(card).not.toContainElement(floatingTitle as HTMLElement)
+  expect(floatingTitle?.nextElementSibling).toBe(card)
   expect(card).not.toContainElement(composer)
   expect(composer.parentElement).toHaveClass('creative-node-composer')
   expect(within(composer).getByRole('toolbar', { name: '视频主操作' })).toBeVisible()

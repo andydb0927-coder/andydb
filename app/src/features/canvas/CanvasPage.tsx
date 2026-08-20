@@ -129,6 +129,7 @@ import { CanvasGroupOverlay } from './CanvasGroupOverlay'
 import type {
   CharacterProfile,
   EffectTemplate,
+  MaterialLibraryEntry,
   WorkspaceAsset,
 } from './CanvasResourcePanels'
 import {
@@ -228,6 +229,11 @@ interface CanvasContextMenuState {
   flowPosition: CanvasNodePosition
   targetNodeId?: string
   returnFocusTo?: HTMLElement
+}
+
+interface CanvasClipboardState {
+  projectId: string
+  nodeIds: string[]
 }
 
 interface ContextResourcePlacement {
@@ -571,6 +577,8 @@ export function CanvasPage({
     useState<NodeTypePickerState>()
   const [contextMenu, setContextMenu] =
     useState<CanvasContextMenuState>()
+  const [canvasClipboard, setCanvasClipboard] =
+    useState<CanvasClipboardState>()
   const [contextUploadPlacement, setContextUploadPlacement] =
     useState<ContextResourcePlacement>()
   const [historyPlacement, setHistoryPlacement] =
@@ -3264,6 +3272,9 @@ export function CanvasPage({
 
   const contextNodeId = contextMenu?.targetNodeId ?? primaryNodeId
   const contextNode = project?.nodes.find(({ id }) => id === contextNodeId)
+  const contextNodeAsset = contextNode
+    ? project?.assets.find(({ id }) => contextNode.versions.some(({ assetId }) => assetId === id))
+    : undefined
   const canUseGenerationHistory = Boolean(
     project?.jobs.some(
       (job) =>
@@ -3284,6 +3295,89 @@ export function CanvasPage({
     setContextMenu(undefined)
     queueMicrotask(() => contextUploadInputRef.current?.click())
   }, [contextMenu])
+
+  const copyContextNode = useCallback(() => {
+    if (!contextMenu?.targetNodeId || !project) return
+    setCanvasClipboard({ projectId: project.id, nodeIds: [contextMenu.targetNodeId] })
+    setGenerationFeedback(`已复制“${contextNode?.title ?? '节点'}”，可在画布中粘贴。`)
+    setContextMenu(undefined)
+  }, [contextMenu?.targetNodeId, contextNode?.title, project])
+
+  const duplicateContextNode = useCallback(() => {
+    if (!contextMenu?.targetNodeId) return
+    const duplicatedIds = duplicateNodes([contextMenu.targetNodeId], { x: 48, y: 48 })
+    if (duplicatedIds.length) {
+      setSelectedNodeIds(new Set(duplicatedIds))
+      setPrimaryNodeId(duplicatedIds.at(-1))
+      setSelectedEdgeIds(new Set())
+      setGenerationFeedback('已在右下方创建节点副本。')
+    }
+    setContextMenu(undefined)
+  }, [contextMenu?.targetNodeId, duplicateNodes])
+
+  const pasteContextNodes = useCallback(() => {
+    const source = contextMenu
+    const clipboard = canvasClipboard
+    const currentProject = useProjectStore.getState().activeProject
+    if (!source || !clipboard || !currentProject || clipboard.projectId !== currentProject.id) return
+    const origin = currentProject.nodes.find(({ id }) => id === clipboard.nodeIds[0])?.position
+    if (!origin) return
+    const duplicatedIds = duplicateNodes(clipboard.nodeIds, {
+      x: source.flowPosition.x - origin.x,
+      y: source.flowPosition.y - origin.y,
+    })
+    if (duplicatedIds.length) {
+      setSelectedNodeIds(new Set(duplicatedIds))
+      setPrimaryNodeId(duplicatedIds.at(-1))
+      setSelectedEdgeIds(new Set())
+      setGenerationFeedback(`已粘贴 ${duplicatedIds.length} 个节点。`)
+    }
+    setContextMenu(undefined)
+  }, [canvasClipboard, contextMenu, duplicateNodes])
+
+  const createSubjectFromContextNode = useCallback(() => {
+    const source = contextMenu
+    const currentProject = useProjectStore.getState().activeProject
+    const sourceNode = currentProject?.nodes.find(({ id }) => id === source?.targetNodeId)
+    if (!source || !currentProject || !sourceNode) return
+    const nodeId = crypto.randomUUID()
+    const versionId = crypto.randomUUID()
+    const title = `${sourceNode.title} 主体`
+    createCanvasContent({
+      node: {
+        id: nodeId,
+        kind: 'character',
+        title,
+        position: { x: sourceNode.position.x + 340, y: sourceNode.position.y },
+        versions: [{
+          id: versionId,
+          createdAt: new Date().toISOString(),
+          prompt: `从“${sourceNode.title}”创建的主体参考`,
+        }],
+        activeVersionId: versionId,
+        sourceChanged: false,
+      },
+    })
+    selectOnlyNode(nodeId)
+    createdNodeFocusRef.current = nodeId
+    setFocusRequestVersion((version) => version + 1)
+    setContextMenu(undefined)
+    setGenerationFeedback(`已从“${sourceNode.title}”创建主体节点。`)
+  }, [contextMenu, createCanvasContent, selectOnlyNode])
+
+  const copyContextNodeToSystemClipboard = useCallback(() => {
+    if (!contextNode || !project) return
+    const snapshot = JSON.stringify({
+      node: contextNode,
+      edges: project.edges.filter(
+        ({ sourceNodeId, targetNodeId }) => sourceNodeId === contextNode.id || targetNodeId === contextNode.id,
+      ),
+    }, null, 2)
+    void navigator.clipboard?.writeText(snapshot).catch(() => undefined)
+    setCanvasClipboard({ projectId: project.id, nodeIds: [contextNode.id] })
+    setContextMenu(undefined)
+    setGenerationFeedback(`已将“${contextNode.title}”的 JSON 复制到剪贴板。`)
+  }, [contextNode, project])
 
   const beginPickerUpload = useCallback(() => {
     const source = nodeTypePicker
@@ -3780,6 +3874,37 @@ export function CanvasPage({
     setGenerationFeedback(`已将素材“${record.name}”发送到画布。`)
   }
 
+  const insertMaterialReference = (entry: MaterialLibraryEntry) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const prefix = entry.kind === 'style' ? '风格参考' : '特效参考'
+    const count = currentProject.nodes.filter(({ title }) => title.startsWith(prefix)).length
+    const title = `${prefix} ${String(count + 1).padStart(2, '0')}`
+    const versionId = crypto.randomUUID()
+    const nodeId = crypto.randomUUID()
+    const creation: CanvasCreation = {
+      node: {
+        id: nodeId,
+        kind: 'image',
+        title,
+        position: canvasCenterPosition(),
+        versions: [{
+          id: versionId,
+          createdAt: new Date().toISOString(),
+          prompt: `${entry.name}：${entry.description}`,
+        }],
+        activeVersionId: versionId,
+        sourceChanged: false,
+      },
+    }
+    createCanvasContent(creation)
+    selectOnlyNode(nodeId)
+    createdNodeFocusRef.current = nodeId
+    setFocusRequestVersion((version) => version + 1)
+    setWorkspacePanel(undefined)
+    setGenerationFeedback(`已添加“${title}”。`)
+  }
+
   const applyCharactersToCanvas = (characters: CharacterProfile[]) => {
     const currentProject = useProjectStore.getState().activeProject
     if (!currentProject || currentProject.id !== projectId || !characters.length) return
@@ -4221,8 +4346,10 @@ export function CanvasPage({
             }
             canUndo={canUndo}
             canRedo={canRedo}
-            canPaste={false}
-            canSaveToAssets={Boolean(contextMenu.targetNodeId && contextNode)}
+            canPaste={Boolean(canvasClipboard?.projectId === project.id)}
+            canSaveToAssets={Boolean(
+              contextNode && (contextMenu.targetNodeId || contextNodeAsset),
+            )}
             onUpload={beginContextUpload}
             onAddNode={createContextNode}
             onUndo={() => {
@@ -4233,13 +4360,23 @@ export function CanvasPage({
               setContextMenu(undefined)
               redo()
             }}
-            onPaste={() => undefined}
+            onPaste={pasteContextNodes}
             onSaveToAssets={() => {
               setContextMenu(undefined)
               if (contextNode) {
                 setGenerationFeedback(`已将“${contextNode.title}”保存到本地资产。`)
               }
             }}
+            onComplianceCheck={() => {
+              setContextMenu(undefined)
+              if (contextNode) {
+                setGenerationFeedback(`“${contextNode.title}”已通过本地演示合规校验。`)
+              }
+            }}
+            onCreateSubject={createSubjectFromContextNode}
+            onCopyNode={copyContextNode}
+            onDuplicateNode={duplicateContextNode}
+            onCopyToClipboard={copyContextNodeToSystemClipboard}
             onDeleteNode={contextMenu.targetNodeId ? () => {
               const targetNodeId = contextMenu.targetNodeId
               const focusReturnTarget =
@@ -4388,6 +4525,7 @@ export function CanvasPage({
             onDeleteHistoryJobs={deleteHistoryJobs}
             onInsertAsset={insertWorkspaceAsset}
             onInsertEffect={insertEffectTemplate}
+            onInsertMaterial={insertMaterialReference}
             onInsertHistoryResult={useHistoryResult}
             onResendHistoryJob={resendHistoryJob}
             onSelectNode={openWorkspaceNode}

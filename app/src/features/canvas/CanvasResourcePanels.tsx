@@ -21,6 +21,70 @@ export interface EffectTemplate {
   colors: [string, string, string]
 }
 
+export interface MaterialLibraryEntry {
+  id: 'style-reference' | 'effect-reference'
+  kind: 'style' | 'effect'
+  name: string
+  description: string
+  colors: [string, string, string]
+}
+
+const materialLibraryEntries: MaterialLibraryEntry[] = [
+  {
+    id: 'style-reference',
+    kind: 'style',
+    name: '电影胶片风格',
+    description: '作为下游生成的风格参考',
+    colors: ['#b99862', '#563227', '#181516'],
+  },
+  {
+    id: 'effect-reference',
+    kind: 'effect',
+    name: '雨夜粒子特效',
+    description: '作为下游画面的特效参考',
+    colors: ['#7cc8db', '#344a69', '#151929'],
+  },
+]
+
+export function MaterialLibraryPanel({
+  onInsert,
+}: {
+  onInsert(entry: MaterialLibraryEntry): void
+}) {
+  return (
+    <div className="canvas-resource-dialog material-library" role="dialog" aria-label="素材库">
+      <div className="resource-panel__intro">
+        <span>REFERENCE LIBRARY</span>
+        <h3>风格与特效参考</h3>
+        <p>选择后在画布中插入参考节点，不会触发真实生成。</p>
+      </div>
+      {materialLibraryEntries.map((entry) => (
+        <section key={entry.id} className="material-library__section" aria-label={entry.kind === 'style' ? '风格库' : '特效库'}>
+          <span
+            className="material-library__preview"
+            style={{
+              '--effect-a': entry.colors[0],
+              '--effect-b': entry.colors[1],
+              '--effect-c': entry.colors[2],
+            } as CSSProperties}
+          />
+          <div>
+            <strong>{entry.name}</strong>
+            <p>{entry.description}</p>
+          </div>
+          <button
+            type="button"
+            aria-label={`添加${entry.kind === 'style' ? '风格' : '特效'}参考节点`}
+            onClick={() => onInsert(entry)}
+          >
+            <Send aria-hidden="true" />添加到画布
+          </button>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 const effectTemplates: EffectTemplate[] = [
   ['light', '光效', ['#f7d778', '#ff8f70', '#6439d5']],
   ['smoke', '烟雾', ['#cbd4e6', '#69768f', '#202536']],
@@ -280,7 +344,7 @@ export function AssetLibraryPanel({
   }
 
   return (
-    <div className="canvas-resource-dialog asset-library" role="dialog" aria-label="素材库">
+    <div className="canvas-resource-dialog asset-library" role="dialog" aria-label="资产管理">
       <div className="resource-panel__controls">
         <label className="resource-panel__search">
           <Search aria-hidden="true" />

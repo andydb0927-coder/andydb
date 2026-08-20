@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasToolbar } from './CanvasToolbar'
 
-test('exposes the nine-item Liblib creation dock', async () => {
+test('exposes asset management and the Liblib material library as separate dock entries', async () => {
   const user = userEvent.setup()
   const onToolChange = vi.fn()
   const onAddNode = vi.fn()
@@ -32,6 +32,7 @@ test('exposes the nine-item Liblib creation dock', async () => {
     '移动',
     '连线',
     '打开工具箱',
+    '资产管理',
     '素材库',
     '角色库',
     '历史记录',
@@ -43,6 +44,10 @@ test('exposes the nine-item Liblib creation dock', async () => {
   expect(onAddNode).toHaveBeenCalledOnce()
   await user.click(screen.getByRole('button', { name: '角色库' }))
   expect(onOpenPanel).toHaveBeenCalledWith('characters')
+  await user.click(screen.getByRole('button', { name: '资产管理' }))
+  expect(onOpenPanel).toHaveBeenCalledWith('assets')
+  await user.click(screen.getByRole('button', { name: '素材库' }))
+  expect(onOpenPanel).toHaveBeenCalledWith('library')
   await user.click(screen.getByRole('button', { name: '移动' }))
   expect(onToolChange).toHaveBeenCalledWith('select', expect.any(HTMLButtonElement))
   for (const label of ['剧本卡', '角色卡', '世界观卡', '文本', '图片', '分镜', '视频']) {

@@ -10,6 +10,7 @@ function panelProps(data: CreativeNodeData) {
   return {
     data,
     imageToImage: false,
+    onImageToImageChange: vi.fn(),
     upscalePending: false,
     onUpscalePendingChange: vi.fn(),
     upscaleTriggerRef: createRef<HTMLButtonElement>(),
@@ -73,6 +74,8 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   const actions = within(panel).getByRole('toolbar', { name: '图片主操作' })
 
   expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
+    '图生图',
+    '图片高清',
     '参考',
     '标记',
     '风格',
@@ -80,9 +83,10 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   for (const removed of ['重生成', '扩展镜头', '生成视频', '删除', '角色']) {
     expect(within(panel).queryByRole('button', { name: removed })).not.toBeInTheDocument()
   }
-  expect(within(panel).getByText(
+  expect(within(panel).getByRole('textbox', { name: '提示词' })).toHaveAttribute(
+    'aria-placeholder',
     '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
-  )).toBeVisible()
+  )
   expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张')).toBeVisible()
   expect(within(panel).getByRole('combobox', { name: '图片模型' })).toBeVisible()
   expect(within(panel).getByText('预计成本 15')).toBeVisible()
@@ -95,16 +99,14 @@ test('confirms image upscaling before inserting a connected tool node', async ()
   const upscaleTriggerRef = createRef<HTMLButtonElement>()
   const onUpscalePendingChange = vi.fn()
   render(
-    <>
-      <button ref={upscaleTriggerRef} type="button">图片高清</button>
-      <ImageGenerationPanel
-        data={makeData({ onCreateImageToolNode })}
-        imageToImage={false}
-        upscalePending
-        onUpscalePendingChange={onUpscalePendingChange}
-        upscaleTriggerRef={upscaleTriggerRef}
-      />
-    </>,
+    <ImageGenerationPanel
+      data={makeData({ onCreateImageToolNode })}
+      imageToImage={false}
+      onImageToImageChange={vi.fn()}
+      upscalePending
+      onUpscalePendingChange={onUpscalePendingChange}
+      upscaleTriggerRef={upscaleTriggerRef}
+    />,
   )
 
   const trigger = screen.getByRole('button', { name: '图片高清' })

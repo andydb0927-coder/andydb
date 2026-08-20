@@ -885,13 +885,10 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '图片 01' }))
     const imageActions = screen.getByRole('toolbar', { name: '图片主操作' })
-    for (const action of ['参考', '标记', '风格']) {
+    for (const action of ['图生图', '图片高清', '参考', '标记', '风格']) {
       expect(within(imageActions).getByRole('button', { name: action })).toBeVisible()
     }
-    const quickAttempts = screen.getByRole('toolbar', { name: '图片快捷尝试' })
-    for (const action of ['图生图', '图片高清']) {
-      expect(within(quickAttempts).getByRole('button', { name: action })).toBeVisible()
-    }
+    expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '生成分镜' }),
     ).not.toBeInTheDocument()
@@ -3214,6 +3211,7 @@ describe('creative canvas', () => {
       '移动',
       '连线',
       '打开工具箱',
+      '资产管理',
       '素材库',
       '角色库',
       '历史记录',
@@ -3443,13 +3441,50 @@ describe('creative canvas', () => {
       currentTarget: character,
     }, node))
 
-    expect(screen.getByRole('menuitem', { name: '上传' })).toBeVisible()
-    expect(screen.getByRole('menuitem', { name: '添加节点' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '合规校验' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '创建主体' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '复制' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: '创建副本' })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: '保存到我的资产' })).toBeEnabled()
     expect(screen.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
-    expect(screen.queryByRole('menuitem', { name: '添加资源' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '复制到剪贴板' })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: '上传' })).not.toBeInTheDocument()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(character).toHaveFocus())
+  })
+
+  test('executes node compliance, copy, paste, duplicate, subject and system-copy commands', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 820, y: 460 })
+    const initialCount = useProjectStore.getState().activeProject!.nodes.length
+
+    contextMenuNode('character')
+    await user.click(screen.getByRole('menuitem', { name: '合规校验' }))
+    expect(screen.getByText('“角色参考”已通过本地演示合规校验。')).toBeVisible()
+
+    contextMenuNode('character')
+    await user.click(screen.getByRole('menuitem', { name: '复制' }))
+    contextMenuPane(620, 380)
+    const paste = screen.getByRole('menuitem', { name: '粘贴' })
+    expect(paste).toBeEnabled()
+    await user.click(paste)
+    expect(useProjectStore.getState().activeProject!.nodes).toHaveLength(initialCount + 1)
+
+    contextMenuNode('character')
+    await user.click(screen.getByRole('menuitem', { name: '创建副本' }))
+    expect(useProjectStore.getState().activeProject!.nodes).toHaveLength(initialCount + 2)
+
+    contextMenuNode('character')
+    await user.click(screen.getByRole('menuitem', { name: '创建主体' }))
+    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
+      kind: 'character',
+      title: '角色参考 主体',
+    })
+
+    contextMenuNode('character')
+    await user.click(screen.getByRole('menuitem', { name: '复制到剪贴板' }))
+    expect(screen.getByText('已将“角色参考”的 JSON 复制到剪贴板。')).toBeVisible()
   })
 
   test.each([
@@ -4017,10 +4052,10 @@ describe('canvas top bar', () => {
     initializeFlow()
     const pastBefore = useProjectStore.getState().past
 
-    await user.click(screen.getByRole('button', { name: '素材库' }))
-    expect(screen.getByRole('complementary', { name: '资产' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '资产管理' }))
+    expect(screen.getByRole('complementary', { name: '资产管理' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: '快捷键' }))
-    expect(screen.queryByRole('complementary', { name: '资产' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '资产管理' })).not.toBeInTheDocument()
     expect(screen.getByRole('complementary', { name: '快捷键' })).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: '显示小地图' }))
@@ -4060,13 +4095,28 @@ describe('canvas top bar', () => {
       useProjectStore.getState().activeProject!.nodes.at(-1)?.effectTool?.intensity,
     ).toBe(42)
 
-    await user.click(screen.getByRole('button', { name: '素材库' }))
-    const assets = screen.getByRole('dialog', { name: '素材库' })
+    await user.click(screen.getByRole('button', { name: '资产管理' }))
+    const assets = screen.getByRole('dialog', { name: '资产管理' })
     await user.click(within(assets).getByRole('button', { name: '发送分镜 02到画布' }))
     expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
       kind: 'image',
       title: '分镜 02',
       position: { x: 640, y: 360 },
+    })
+
+    await user.click(screen.getByRole('button', { name: '素材库' }))
+    const materials = screen.getByRole('dialog', { name: '素材库' })
+    await user.click(within(materials).getByRole('button', { name: '添加风格参考节点' }))
+    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      title: '风格参考 01',
+      position: { x: 640, y: 360 },
+    })
+    await user.click(screen.getByRole('button', { name: '素材库' }))
+    await user.click(screen.getByRole('button', { name: '添加特效参考节点' }))
+    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      title: '特效参考 01',
     })
 
     await user.click(screen.getByRole('button', { name: '角色库' }))
@@ -4079,8 +4129,8 @@ describe('canvas top bar', () => {
       kind: 'character',
       title: '程野',
     })
-    expect(useProjectStore.getState().activeProject!.nodes).toHaveLength(initialCount + 3)
-    expect(useProjectStore.getState().past.length).toBeGreaterThanOrEqual(3)
+    expect(useProjectStore.getState().activeProject!.nodes).toHaveLength(initialCount + 5)
+    expect(useProjectStore.getState().past.length).toBeGreaterThanOrEqual(5)
   })
 
   test('keeps a multi-angle draft side-effect free before atomically creating its tool node and edge', async () => {

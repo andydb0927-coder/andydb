@@ -707,7 +707,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     page.getByRole('button', { name: '角色参考', exact: true }),
   ).toBeVisible()
   const primaryAction = page
-    .getByRole('toolbar', { name: '图片快捷尝试' })
+    .getByRole('toolbar', { name: '图片主操作' })
     .getByRole('button', { name: '图生图' })
   await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
@@ -924,6 +924,22 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await expect(imageNode).toBeVisible()
   await expect(imageNode.locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/)
 
+  await imageNode.click({ button: 'right' })
+  const nodeMenu = page.getByRole('menu', { name: '画布快捷菜单' })
+  await expect(nodeMenu.getByRole('menuitem')).toHaveCount(8)
+  await expect(nodeMenu.getByRole('menuitem').allTextContents()).resolves.toEqual([
+    '合规校验',
+    '保存到我的资产',
+    '创建主体',
+    '复制',
+    '创建副本',
+    '粘贴',
+    '删除 ⌘⌫',
+    '复制到剪贴板',
+  ])
+  await nodeMenu.getByRole('menuitem', { name: '合规校验' }).click()
+  await expect(page.getByRole('status')).toContainText('已通过本地演示合规校验')
+
   await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
   await expect(
     page.getByRole('button', { name: '逐帧拉片 01', exact: true }),
@@ -950,17 +966,29 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
     page.getByRole('button', { name: '文本 02', exact: true }),
   ).toBeHidden()
 
+  // The selected media node now owns a separate composer below its compact
+  // card. Select the text node first so that composer is dismissed before the
+  // pointer drag starts, matching the user-visible single-selection contract.
+  await textNode.press('Enter')
+  await expect(textNode).toBeFocused()
   const textFlowNode = page.locator('.react-flow__node').filter({ has: textNode })
   const beforeDrag = await textFlowNode.boundingBox()
   expect(beforeDrag).not.toBeNull()
-  await page.mouse.move(
-    beforeDrag!.x + beforeDrag!.width / 2,
-    beforeDrag!.y + 20,
-  )
+  const dragPoint = await textFlowNode.evaluate((node) => {
+    const rect = node.getBoundingClientRect()
+    for (let y = rect.top + 12; y < rect.bottom - 12; y += 12) {
+      for (let x = rect.left + 12; x < rect.right - 12; x += 12) {
+        const target = document.elementFromPoint(x, y)
+        if (target && node.contains(target)) return { x, y }
+      }
+    }
+    throw new Error('No unobstructed drag point found on the text node')
+  })
+  await page.mouse.move(dragPoint.x, dragPoint.y)
   await page.mouse.down()
   await page.mouse.move(
-    beforeDrag!.x + beforeDrag!.width / 2 + 96,
-    beforeDrag!.y + 84,
+    dragPoint.x + 96,
+    dragPoint.y + 64,
     { steps: 8 },
   )
   await page.mouse.up()
@@ -1044,8 +1072,8 @@ test('inserts local effects, managed assets, and filtered characters from the do
   await effectSettings.getByLabel('强度').fill('42')
   await expect(effectSettings.getByLabel('强度')).toHaveValue('42')
 
-  await page.getByRole('button', { name: '素材库' }).click()
-  const assets = page.getByRole('dialog', { name: '素材库' })
+  await page.getByRole('button', { name: '资产管理' }).click()
+  const assets = page.getByRole('dialog', { name: '资产管理' })
   await expect(assets.getByRole('tree', { name: '文件夹' })).toBeVisible()
   await assets.getByRole('searchbox', { name: '搜索素材' }).fill('角色参考')
   const originalAsset = assets.getByRole('article', { name: '素材 角色参考' })
@@ -1062,6 +1090,16 @@ test('inserts local effects, managed assets, and filtered characters from the do
   await expect(renamedAsset).toContainText('灵感收集')
   await renamedAsset.getByRole('button', { name: '发送角色参考库到画布' }).click()
   await expect(page.getByRole('button', { name: '角色参考库', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: '素材库' }).click()
+  const materials = page.getByRole('dialog', { name: '素材库' })
+  await expect(materials.getByRole('region', { name: '风格库' })).toBeVisible()
+  await expect(materials.getByRole('region', { name: '特效库' })).toBeVisible()
+  await materials.getByRole('button', { name: '添加风格参考节点' }).click()
+  await expect(page.getByRole('button', { name: '风格参考 01', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '素材库' }).click()
+  await page.getByRole('button', { name: '添加特效参考节点' }).click()
+  await expect(page.getByRole('button', { name: '特效参考 01', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '角色库' }).click()
   const characters = page.getByRole('dialog', { name: '角色库' })

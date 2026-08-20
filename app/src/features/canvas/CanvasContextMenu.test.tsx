@@ -19,6 +19,11 @@ function renderMenu(overrides: Partial<Parameters<typeof CanvasContextMenu>[0]> 
     onRedo: vi.fn(),
     onPaste: vi.fn(),
     onSaveToAssets: vi.fn(),
+    onComplianceCheck: vi.fn(),
+    onCreateSubject: vi.fn(),
+    onCopyNode: vi.fn(),
+    onDuplicateNode: vi.fn(),
+    onCopyToClipboard: vi.fn(),
     onDeleteNode: vi.fn(),
     onClose: vi.fn(),
     ...overrides,
@@ -80,7 +85,7 @@ test('closes from Escape and outside pointer while preserving the caller-owned f
   renderMenu({ targetNodeTitle: '角色参考', onClose })
 
   expect(screen.getByText('角色参考')).toBeVisible()
-  expect(screen.getByRole('menuitem', { name: '上传' })).toHaveFocus()
+  expect(screen.getByRole('menuitem', { name: '合规校验' })).toHaveFocus()
   await user.keyboard('{Escape}')
   expect(onClose).toHaveBeenCalledOnce()
 
@@ -88,7 +93,7 @@ test('closes from Escape and outside pointer while preserving the caller-owned f
   expect(onClose).toHaveBeenCalledTimes(2)
 })
 
-test('offers deletion only for a node context menu and dispatches it', async () => {
+test('shows the exact node menu operations and dispatches each command', async () => {
   const user = userEvent.setup()
   const blank = renderMenu()
   expect(screen.queryByRole('menuitem', { name: '删除节点' })).not.toBeInTheDocument()
@@ -96,6 +101,25 @@ test('offers deletion only for a node context menu and dispatches it', async () 
 
   document.body.innerHTML = ''
   const node = renderMenu({ targetNodeTitle: '角色参考' })
+  const menu = screen.getByRole('menu', { name: '画布快捷菜单' })
+  expect(
+    within(menu).getAllByRole('menuitem').map((item) => item.textContent?.trim()),
+  ).toEqual([
+    '合规校验',
+    '保存到我的资产',
+    '创建主体',
+    '复制',
+    '创建副本',
+    '粘贴',
+    '删除 ⌘⌫',
+    '复制到剪贴板',
+  ])
+  expect(within(menu).queryByRole('menuitem', { name: '上传' })).not.toBeInTheDocument()
+  await user.click(within(menu).getByRole('menuitem', { name: '合规校验' }))
+  expect(node.onComplianceCheck).toHaveBeenCalledOnce()
+
+  document.body.innerHTML = ''
+  const deleteNode = renderMenu({ targetNodeTitle: '角色参考' })
   await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
-  expect(node.onDeleteNode).toHaveBeenCalledOnce()
+  expect(deleteNode.onDeleteNode).toHaveBeenCalledOnce()
 })

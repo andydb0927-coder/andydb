@@ -35,8 +35,10 @@ import {
   AssetLibraryPanel,
   CharacterLibraryPanel,
   EffectToolboxPanel,
+  MaterialLibraryPanel,
   type CharacterProfile,
   type EffectTemplate,
+  type MaterialLibraryEntry,
   type WorkspaceAsset,
 } from './CanvasResourcePanels'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
@@ -48,6 +50,7 @@ export type WorkspacePanel =
   | 'models'
   | 'toolbox'
   | 'assets'
+  | 'library'
   | 'characters'
   | 'history'
   | 'shortcuts'
@@ -70,7 +73,8 @@ const panelCopy: Record<WorkspacePanel, string> = {
   nodes: '节点',
   models: '模型设置',
   toolbox: '工具箱',
-  assets: '资产',
+  assets: '资产管理',
+  library: '素材库',
   characters: '角色库',
   history: '历史',
   shortcuts: '快捷键',
@@ -354,6 +358,7 @@ interface WorkspaceSidePanelProps {
   onDeleteHistoryJobs?(jobIds: string[]): void
   onInsertAsset?(asset: WorkspaceAsset): void
   onInsertEffect?(template: EffectTemplate): void
+  onInsertMaterial?(entry: MaterialLibraryEntry): void
   onInsertHistoryResult?(jobId: string): void
   onResendHistoryJob?(jobId: string): void
   onSelectNode(nodeId: string): void
@@ -369,6 +374,7 @@ export function WorkspaceSidePanel({
   onDeleteHistoryJobs,
   onInsertAsset,
   onInsertEffect,
+  onInsertMaterial,
   onInsertHistoryResult,
   onResendHistoryJob,
   onSelectNode,
@@ -436,6 +442,10 @@ export function WorkspaceSidePanel({
 
       {panel === 'assets' ? (
         <AssetLibraryPanel project={project} onInsert={(asset) => onInsertAsset?.(asset)} />
+      ) : null}
+
+      {panel === 'library' ? (
+        <MaterialLibraryPanel onInsert={(entry) => onInsertMaterial?.(entry)} />
       ) : null}
 
       {panel === 'characters' ? (
