@@ -3406,7 +3406,7 @@ export function CanvasPage({
 
   const beginPickerUpload = useCallback(() => {
     const source = nodeTypePicker
-    if (!source || source.mode !== 'add') return
+    if (!source || source.mode === 'reference') return
     setContextUploadPlacement({
       projectId: source.projectId,
       position: source.position,
@@ -3418,7 +3418,7 @@ export function CanvasPage({
 
   const openPickerGenerationHistory = useCallback(() => {
     const source = nodeTypePicker
-    if (!source || source.mode !== 'add' || !canUseGenerationHistory) return
+    if (!source || source.mode === 'reference' || !canUseGenerationHistory) return
     setHistoryPlacement({
       projectId: source.projectId,
       position: source.position,

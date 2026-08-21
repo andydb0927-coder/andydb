@@ -4,7 +4,69 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasNodeTypePicker } from './CanvasNodeTypePicker'
 
-test('offers Liblib generation types plus existing media nodes', async () => {
+test('renders the Liblib double-click menu with grouped nodes and resources', async () => {
+  const user = userEvent.setup()
+  const onSelect = vi.fn()
+  const onUpload = vi.fn()
+  const onOpenGenerationHistory = vi.fn()
+  render(
+    <CanvasNodeTypePicker
+      anchor={{ x: 420, y: 260 }}
+      bounds={{ width: 960, height: 720 }}
+      canUseGenerationHistory
+      onClose={vi.fn()}
+      onSelect={onSelect}
+      onUpload={onUpload}
+      onOpenGenerationHistory={onOpenGenerationHistory}
+    />,
+  )
+
+  const picker = screen.getByRole('dialog', { name: '选择节点类型' })
+  expect(picker).toBeVisible()
+  expect(picker).toHaveTextContent('添加节点')
+  expect(
+    [...picker.querySelectorAll<HTMLButtonElement>(':scope > .canvas-node-type-picker__free-list > button')]
+      .map((button) => button.getAttribute('aria-label') ?? button.textContent?.trim()),
+  ).toEqual([
+    '文本',
+    '图片',
+    '视频',
+    '智能剪辑 Beta',
+    '导演台 NEW',
+    '逐帧拉片 SD2.5',
+    '音频',
+    '脚本',
+    '素材库',
+    '上传',
+    '从生成历史选择',
+  ])
+  expect(picker).toHaveTextContent('添加资源')
+  expect(screen.getByRole('button', { name: '脚本' })).toHaveAttribute(
+    'aria-haspopup',
+    'menu',
+  )
+  expect(screen.getByRole('button', { name: '素材库' })).toHaveAttribute(
+    'aria-haspopup',
+    'menu',
+  )
+
+  await user.click(screen.getByRole('button', { name: '脚本' }))
+  const scriptMenu = screen.getByRole('menu', { name: '脚本子菜单' })
+  expect(
+    Array.from(scriptMenu.querySelectorAll('[role="menuitem"]')).map((button) =>
+      button.getAttribute('aria-label') ?? button.textContent?.trim(),
+    ),
+  ).toEqual(['故事脚本生成', '脚本节点', '世界观卡'])
+  await user.click(screen.getByRole('menuitem', { name: '世界观卡' }))
+  expect(onSelect).toHaveBeenCalledWith('worldview')
+
+  await user.click(screen.getByRole('button', { name: '上传' }))
+  await user.click(screen.getByRole('button', { name: '从生成历史选择' }))
+  expect(onUpload).toHaveBeenCalledOnce()
+  expect(onOpenGenerationHistory).toHaveBeenCalledOnce()
+})
+
+test('opens the material submenu without losing the recorded quick types', async () => {
   const user = userEvent.setup()
   const onSelect = vi.fn()
   render(
@@ -16,25 +78,38 @@ test('offers Liblib generation types plus existing media nodes', async () => {
     />,
   )
 
-  const picker = screen.getByRole('dialog', { name: '选择节点类型' })
-  expect(picker).toBeVisible()
-  for (const name of [
-    '故事脚本生成',
+  await user.click(screen.getByRole('button', { name: '素材库' }))
+  const materialMenu = screen.getByRole('menu', { name: '素材库子菜单' })
+  expect(
+    Array.from(materialMenu.querySelectorAll('[role="menuitem"]')).map((button) =>
+      button.getAttribute('aria-label') ?? button.textContent?.trim(),
+    ),
+  ).toEqual([
     '角色三视图',
     '全能参考生视频 SD2.5',
     '音频生视频 SD2.5',
-    '世界观卡',
-    '文本',
-    '图片',
-    '分镜',
-    '视频',
-  ]) {
-    expect(screen.getByRole('button', { name })).toBeVisible()
-  }
-  expect(screen.getAllByText('SD2.5')).toHaveLength(2)
+    '素材库节点',
+  ])
 
-  await user.click(screen.getByRole('button', { name: /全能参考生视频/ }))
+  await user.click(screen.getByRole('menuitem', { name: '全能参考生视频 SD2.5' }))
   expect(onSelect).toHaveBeenCalledWith('reference-video')
+})
+
+test('keeps a submenu inside the picker when neither side fits', async () => {
+  const user = userEvent.setup()
+  render(
+    <CanvasNodeTypePicker
+      anchor={{ x: 360, y: 360 }}
+      bounds={{ width: 721, height: 778 }}
+      onClose={vi.fn()}
+      onSelect={vi.fn()}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '素材库' }))
+  expect(screen.getByRole('menu', { name: '素材库子菜单' })).toHaveClass(
+    'canvas-node-type-picker__free-submenu--overlay',
+  )
 })
 
 test('closes on Escape', async () => {

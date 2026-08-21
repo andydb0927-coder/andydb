@@ -388,6 +388,23 @@ function doubleClickPane(clientX = 420, clientY = 300) {
   act(() => latestFlowProps?.onPaneClick?.({ clientX, clientY, detail: 2 }))
 }
 
+function chooseFreeNode(
+  label:
+    | '故事脚本生成'
+    | '角色三视图'
+    | '全能参考生视频 SD2.5'
+    | '音频生视频 SD2.5'
+    | '世界观卡',
+) {
+  const branch =
+    label === '故事脚本生成' || label === '世界观卡'
+      ? '脚本'
+      : '素材库'
+  const picker = screen.getByRole('dialog', { name: '选择节点类型' })
+  act(() => within(picker).getByRole('button', { name: branch }).click())
+  act(() => within(picker).getByRole('menuitem', { name: label }).click())
+}
+
 function chooseContextNode(
   label:
     | '文本'
@@ -2220,7 +2237,7 @@ describe('creative canvas', () => {
 
     initializeFlow()
     doubleClickPane()
-    screen.getByRole('button', { name: '故事脚本生成' }).focus()
+    screen.getByRole('button', { name: '文本' }).focus()
     await user.keyboard('l')
 
     expect(
@@ -3354,6 +3371,38 @@ describe('creative canvas', () => {
     expect(screen.queryByRole('complementary', { name: '历史' })).not.toBeInTheDocument()
   })
 
+  test('keeps upload and generation history functional from the double-click menu', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    initializeFlow({ x: 612, y: 428 })
+
+    doubleClickPane(420, 300)
+    let picker = screen.getByRole('dialog', { name: '选择节点类型' })
+    await user.click(within(picker).getByRole('button', { name: '上传' }))
+    await user.upload(
+      screen.getByLabelText('上传画布图片'),
+      new File(['image'], 'double-click.png', { type: 'image/png' }),
+    )
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      title: 'double-click.png',
+      position: { x: 612, y: 428 },
+    })
+
+    doubleClickPane(460, 340)
+    picker = screen.getByRole('dialog', { name: '选择节点类型' })
+    await user.click(
+      within(picker).getByRole('button', { name: '从生成历史选择' }),
+    )
+    const history = screen.getByRole('complementary', { name: '历史' })
+    await user.click(within(history).getByRole('button', { name: '使用 分镜 02' }))
+    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+      kind: 'image',
+      position: { x: 612, y: 428 },
+      versions: [{ prompt: '分镜 02 创作描述', assetId: 'asset-shot' }],
+    })
+  })
+
   test('prefills a new canvas node from the complete history config and resends only after confirmation', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
@@ -3449,8 +3498,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
-  test('maps Liblib quick types onto existing undoable node models', async () => {
-    const user = userEvent.setup()
+  test('maps Liblib quick types onto existing undoable node models', () => {
     renderCanvas()
     initializeFlow({ x: 580, y: 410 })
 
@@ -3464,7 +3512,7 @@ describe('creative canvas', () => {
 
     for (const item of cases) {
       doubleClickPane(500, 320)
-      await user.click(screen.getByRole('button', { name: item.button }))
+      chooseFreeNode(item.button)
       expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
         kind: item.kind,
         title: expect.stringContaining(item.title),
@@ -3610,7 +3658,7 @@ describe('creative canvas', () => {
       initializeFlow({ x: 360, y: 280 })
 
       doubleClickPane(360, 280)
-      await user.click(screen.getByRole('button', { name: toolLabel }))
+      chooseFreeNode(toolLabel)
       const created = useProjectStore.getState().activeProject?.nodes.at(-1)
       expect(created).toMatchObject({ kind, position: { x: 360, y: 280 } })
       await user.click(
@@ -3649,7 +3697,7 @@ describe('creative canvas', () => {
     initializeFlow({ x: 480, y: 320 })
 
     doubleClickPane(480, 320)
-    await user.click(screen.getByRole('button', { name: '世界观卡' }))
+    chooseFreeNode('世界观卡')
     await user.click(screen.getByRole('button', { name: /^世界观卡/ }))
     await user.click(screen.getByRole('button', { name: '编辑卡片' }))
     await user.clear(screen.getByLabelText('标题'))

@@ -1010,13 +1010,33 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   const typePicker = page.getByRole('dialog', { name: '选择节点类型' })
   await expect(typePicker).toBeVisible()
   await expect(
-    typePicker.getByRole('button', { name: '故事脚本生成', exact: true }),
+    typePicker.getByRole('button', { name: '文本', exact: true }),
   ).toBeFocused()
+  expect(
+    await typePicker.locator('.canvas-node-type-picker__free-list > button')
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('aria-label')),
+      ),
+  ).toEqual([
+    '文本',
+    '图片',
+    '视频',
+    '智能剪辑 Beta',
+    '导演台 NEW',
+    '逐帧拉片 SD2.5',
+    '音频',
+    '脚本',
+    '素材库',
+    '上传',
+    '从生成历史选择',
+  ])
+  await typePicker.getByRole('button', { name: '素材库', exact: true }).click()
+  const materialMenu = typePicker.getByRole('menu', { name: '素材库子菜单' })
   await expect(
-    typePicker.getByRole('button', { name: '全能参考生视频 SD2.5' }),
+    materialMenu.getByRole('menuitem', { name: '全能参考生视频 SD2.5' }),
   ).toBeVisible()
   await expect(
-    typePicker.getByRole('button', { name: '音频生视频 SD2.5' }),
+    materialMenu.getByRole('menuitem', { name: '音频生视频 SD2.5' }),
   ).toBeVisible()
   await typePicker.getByRole('button', { name: '文本', exact: true }).click()
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })

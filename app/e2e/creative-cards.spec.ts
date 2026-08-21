@@ -97,10 +97,14 @@ async function createQuickCardAtBlank(
 ) {
   const point = await findBlankCanvasPoint(page, reverse)
   await page.mouse.dblclick(point.x, point.y)
-  await page
-    .getByRole('dialog', { name: '选择节点类型' })
-    .getByRole('button', { name: label, exact: true })
+  const picker = page.getByRole('dialog', { name: '选择节点类型' })
+  await picker
+    .getByRole('button', {
+      name: label === '角色三视图' ? '素材库' : '脚本',
+      exact: true,
+    })
     .click()
+  await picker.getByRole('menuitem', { name: label, exact: true }).click()
 }
 
 async function createScriptCard(page: Page) {

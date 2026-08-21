@@ -104,6 +104,33 @@ test('keeps the empty-canvas starter reachable at 721 by 778', async ({ page }) 
   }
   await expect(dock).toBeVisible()
 
+  await page.locator('.react-flow__pane').dblclick({ position: { x: 300, y: 220 } })
+  const picker = page.getByRole('dialog', { name: '选择节点类型' })
+  await expect(picker).toBeVisible()
+  await picker.getByRole('button', { name: '素材库', exact: true }).click()
+  const materialMenu = picker.getByRole('menu', { name: '素材库子菜单' })
+  await expect(materialMenu).toBeVisible()
+  const pickerGeometry = await Promise.all([picker, materialMenu].map((locator) =>
+    locator.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        viewport: { width: innerWidth, height: innerHeight },
+      }
+    }),
+  ))
+  for (const rect of pickerGeometry) {
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+    expect(rect.top).toBeGreaterThanOrEqual(0)
+    expect(rect.right).toBeLessThanOrEqual(rect.viewport.width)
+    expect(rect.bottom).toBeLessThanOrEqual(rect.viewport.height)
+  }
+  await page.keyboard.press('Escape')
+  await expect(picker).toHaveCount(0)
+
   await starter.getByRole('button', { name: '全能参考生视频 SD2.5' }).click()
   await expect(
     page.getByRole('button', { name: '全能参考生视频 01', exact: true }),
