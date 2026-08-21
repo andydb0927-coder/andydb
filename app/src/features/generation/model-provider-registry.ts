@@ -6,6 +6,10 @@ import type {
   GenerationRequest,
   GenerationResult,
 } from './generation-adapter'
+import {
+  createKlingLiveProvider,
+  type KlingLiveProviderOptions,
+} from './kling-live-provider'
 
 export type ModelCapability =
   | 'text-to-image'
@@ -60,8 +64,9 @@ export interface ModelProvider {
   id: string
   name: string
   modelName: string
-  kind: 'demo' | 'placeholder'
+  kind: 'demo' | 'placeholder' | 'live'
   badge?: '演示'
+  disabledReason?: string
   capabilities: readonly ModelCapability[]
   parameterSchema: ModelParameterSchema
   pricing: ModelProviderPricing
@@ -124,13 +129,25 @@ export function providerPricingLabel(provider: ModelProvider) {
 }
 
 export function providerOptionLabel(provider: ModelProvider) {
+  const status =
+    provider.kind === 'demo'
+      ? provider.badge ?? '演示'
+      : provider.disabledReason
+        ? provider.disabledReason
+        : provider.kind === 'live'
+          ? '开发直连'
+          : '待接入'
   return [
     provider.name,
     provider.modelName,
     providerCapabilityLabel(provider),
     providerPricingLabel(provider),
-    provider.kind === 'demo' ? provider.badge ?? '演示' : '待接入',
+    status,
   ].join(' · ')
+}
+
+export function isProviderEnabled(provider: ModelProvider) {
+  return provider.kind !== 'placeholder' && provider.disabledReason === undefined
 }
 
 export function providerDefaultParameters(provider: ModelProvider) {
@@ -199,6 +216,11 @@ export class ProviderRegistry {
     context: ProviderExecutionContext,
   ): Promise<GenerationResult> {
     const provider = this.resolve(request)
+    if (!isProviderEnabled(provider)) {
+      throw new Error(
+        provider.disabledReason ?? `${provider.name} API 尚未配置；当前仅提供接口占位。`,
+      )
+    }
     const result = await provider.generate(request, context)
     return {
       ...result,
@@ -405,7 +427,13 @@ function placeholderProvider(
   }
 }
 
-export function createDefaultProviderRegistry() {
+export interface DefaultProviderRegistryOptions {
+  kling?: KlingLiveProviderOptions
+}
+
+export function createDefaultProviderRegistry(
+  options: DefaultProviderRegistryOptions = {},
+) {
   return new ProviderRegistry([
     demoProvider({
       id: 'mock-mj-image',
@@ -446,15 +474,7 @@ export function createDefaultProviderRegistry() {
       pricing: { amount: 6, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/audio',
     }),
-    placeholderProvider({
-      id: 'kling-api',
-      name: 'Kling',
-      modelName: 'Kling 官方 API',
-      capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: videoSchema,
-      pricing: { amount: 24, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'https://api.klingai.com/v1/videos/generations',
-    }),
+    createKlingLiveProvider(options.kling),
     placeholderProvider({
       id: 'seedance-api',
       name: 'Seedance',

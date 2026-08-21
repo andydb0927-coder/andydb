@@ -19,7 +19,15 @@ import type {
   GenerationAdapter,
   GenerationResult,
 } from '../generation/generation-adapter'
+import { EphemeralGenerationResultStore } from '../generation/ephemeral-generation-result-store'
+import {
+  klingMinLoopConfigFixture,
+  klingMinLoopCreateSuccessFixture,
+  klingMinLoopSuccessFixture,
+} from '../generation/fixtures/kling-min-loop.fixture'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
+import { createDefaultProviderRegistry } from '../generation/model-provider-registry'
+import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import type { LibraryAssetRecord } from '../assets/library-model'
 import { defaultImageGenerationSettings, type Project } from '../project/model'
 import {
@@ -980,6 +988,71 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.assets).toContainEqual(
       injectedResult.asset,
     )
+  })
+
+  test('shows a live result from memory without persisting jobs, assets, or versions', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'video'
+        ? {
+            ...node,
+            modelProviderId: 'kling-api',
+            versions: [{
+              id: 'version-video-live',
+              createdAt: project.createdAt,
+              prompt: '雨夜街道，摄影机缓慢向前推进',
+            }],
+            activeVersionId: 'version-video-live',
+            generationConfig: {
+              targetKind: 'video',
+              providerId: 'kling-api',
+              parameters: { aspectRatio: '16:9', duration: '5' },
+              referenceAssets: [],
+            },
+          }
+        : node,
+    )
+    const before = structuredClone(project)
+    act(() => activate(project))
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify(klingMinLoopCreateSuccessFixture)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(klingMinLoopSuccessFixture)))
+    const providerRegistry = createDefaultProviderRegistry({
+      kling: {
+        ...klingMinLoopConfigFixture,
+        fetchFn,
+        pollIntervalMs: 0,
+        createAuthorization: async () => 'Bearer fixture-token',
+      },
+    })
+    const ephemeralGenerationResultStore =
+      new EphemeralGenerationResultStore()
+    const save = vi.fn().mockResolvedValue(undefined)
+
+    renderCanvas({
+      repository: { load: async () => undefined, save },
+      generationAdapter: new RegistryGenerationAdapter(providerRegistry),
+      providerRegistry,
+      ephemeralGenerationResultStore,
+    })
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    await user.click(
+      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
+    )
+
+    await waitFor(() => {
+      expect(document.querySelector('video')).toHaveAttribute(
+        'src',
+        'https://media.fixture.invalid/kling-result.mp4',
+      )
+    })
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+    expect(save).not.toHaveBeenCalled()
+    expect(
+      ephemeralGenerationResultStore.get('project-canvas', 'video'),
+    ).toMatchObject({ persistence: 'ephemeral' })
   })
 
   test('requires explicit LibTV confirmation and Cancel creates no job', async () => {

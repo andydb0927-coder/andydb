@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import type { VideoDerivedTool } from '../../project/model'
 import {
   defaultProviderRegistry,
+  isProviderEnabled,
   providerDefaultParameters,
   providerOptionLabel,
 } from '../../generation/model-provider-registry'
@@ -243,7 +244,8 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const activeVersion = data.node.versions.find(({ id }) => id === data.node.activeVersionId)
   const referenceCount =
     data.incomingReferenceCount ?? data.videoReferences?.length ?? 0
-  const providers = defaultProviderRegistry.matching([
+  const providerRegistry = data.providerRegistry ?? defaultProviderRegistry
+  const providers = providerRegistry.matching([
     'text-to-video',
     'image-to-video',
   ])
@@ -263,6 +265,10 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const count = parameterString(parameters, 'count', '1')
   const sound = parameterBoolean(parameters, 'sound', true)
   const cost = selectedProvider.pricing.amount
+  const selectedProviderEnabled = isProviderEnabled(selectedProvider)
+  const liveConfigurationReason = providers.find(
+    ({ id }) => id === 'kling-api',
+  )?.disabledReason
   const advancedParameters = [
     ['onlineSearch', '联网搜索'],
     ['materialValidation', '自动校验素材'],
@@ -353,13 +359,15 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             <option
               key={provider.id}
               value={provider.id}
-              disabled={provider.kind === 'placeholder'}
+              disabled={!isProviderEnabled(provider)}
             >
               {providerOptionLabel(provider)}
             </option>
           ))}
         </select></label>
-        <span className="model-provider-badge">演示</span>
+        <span className="model-provider-badge">
+          {selectedProvider.kind === 'live' ? '开发直连' : '演示'}
+        </span>
         <label><span className="visually-hidden">生成模式</span><select aria-label="生成模式" aria-describedby="video-mode-reasons" defaultValue="全能参考">
           <option disabled>文生视频</option>
           <option>全能参考</option>
@@ -378,10 +386,27 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           <SlidersHorizontal aria-hidden="true" />
         </button>
         <span className="video-generation-panel__cost" aria-label={`预计成本 ${cost}`}><Zap aria-hidden="true" /><span className="visually-hidden">预计成本 </span>{cost}</span>
-        <button type="button" className="video-generation-panel__generate" aria-label={`生成视频，预计成本 ${cost}`} title="本地演示，不连接真实生成" onClick={data.onLocalVideoGenerate}>
+        <button
+          type="button"
+          className="video-generation-panel__generate"
+          aria-label={`生成视频，预计成本 ${cost}`}
+          title={
+            selectedProvider.disabledReason ??
+            (selectedProvider.kind === 'live'
+              ? '可灵开发直连验证'
+              : '本地演示，不连接真实生成')
+          }
+          disabled={!selectedProviderEnabled}
+          onClick={data.onLocalVideoGenerate}
+        >
           <ArrowUp aria-hidden="true" />
         </button>
       </div>
+      {liveConfigurationReason ? (
+        <p className="video-generation-panel__reasons" role="note">
+          {liveConfigurationReason}
+        </p>
+      ) : null}
       {advanced ? (
         <div className="video-generation-panel__advanced-settings">
           {supportedAdvancedParameters.map(([name, label]) => (

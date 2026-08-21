@@ -27,6 +27,7 @@ export interface GenerationResult {
   version: NodeVersion
   asset: Asset
   usage?: GenerationUsage
+  persistence?: 'project' | 'ephemeral'
 }
 
 export interface GenerationDispatchMetadata {

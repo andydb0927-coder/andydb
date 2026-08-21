@@ -30,7 +30,7 @@ const exportSettings: ExportSettings = {
 afterEach(() => vi.useRealTimers())
 
 describe('model provider registry', () => {
-  test('publishes demo models and callable real-provider placeholders behind one contract', () => {
+  test('publishes demo models, a gated live provider, and placeholders behind one contract', () => {
     const registry = createDefaultProviderRegistry()
 
     expect(registry.list().map(({ id }) => id)).toEqual([
@@ -56,8 +56,10 @@ describe('model provider registry', () => {
       officialApiEndpoint: 'mock://local/mj-image',
     })
     expect(registry.require('kling-api')).toMatchObject({
-      kind: 'placeholder',
-      officialApiEndpoint: 'https://api.klingai.com/v1/videos/generations',
+      kind: 'live',
+      disabledReason: '可灵开发验证配置未完成',
+      capabilities: ['text-to-video'],
+      officialApiEndpoint: 'https://api.klingai.com/v1/videos/text2video',
     })
     expect(registry.require('mock-seedance-video')).toMatchObject({
       modelName: 'Seedance 2.0',
@@ -94,7 +96,7 @@ describe('model provider registry', () => {
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
   })
 
-  test('rejects duplicate provider ids and never performs network work for placeholders', async () => {
+  test('rejects duplicate provider ids and never performs network work while live configuration is disabled', async () => {
     const registry = createDefaultProviderRegistry()
     const provider = registry.require('kling-api')
     expect(() => registry.register(provider)).toThrow('Provider already registered: kling-api')
@@ -104,7 +106,7 @@ describe('model provider registry', () => {
         { ...imageRequest, providerId: 'kling-api', targetKind: 'video' },
         { signal: new AbortController().signal },
       ),
-    ).rejects.toThrow('Kling API 尚未配置')
+    ).rejects.toThrow('可灵开发验证配置未完成')
   })
 
   test('dispatches mock generation with progress, cost and deterministic result metadata', async () => {

@@ -10,6 +10,7 @@ import type {
   NodeKind,
   VideoDerivedTool,
 } from '../project/model'
+import type { ProviderRegistry } from '../generation/model-provider-registry'
 import { AssetNode } from './nodes/AssetNode'
 import { CreativeCardNode } from './nodes/CreativeCardNode'
 import { PreviewNode } from './nodes/PreviewNode'
@@ -33,6 +34,7 @@ export interface CreativeNodeProps {
 }
 
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
+  providerRegistry?: ProviderRegistry
   asset?: Asset
   imageResults?: Array<{ id: string; asset: Asset }>
   imageReferences?: Array<{ id: string; title: string; asset: Asset }>

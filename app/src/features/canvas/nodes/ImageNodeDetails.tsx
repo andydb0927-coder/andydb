@@ -23,6 +23,7 @@ import {
 } from '../../project/model'
 import {
   defaultProviderRegistry,
+  isProviderEnabled,
   providerOptionLabel,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
@@ -839,7 +840,7 @@ export function ImageGenerationPanel({
               <option
                 key={provider.id}
                 value={provider.id}
-                disabled={provider.kind === 'placeholder'}
+                disabled={!isProviderEnabled(provider)}
               >
                 {provider.id === 'mock-mj-image'
                   ? 'Lib Image'

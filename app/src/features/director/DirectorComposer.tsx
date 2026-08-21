@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom'
 import { builtinAgentSkills } from '../agent/builtin-skills'
 import {
   defaultProviderRegistry,
+  isProviderEnabled,
   providerOptionLabel,
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
@@ -394,8 +395,8 @@ export function DirectorComposer({
       </section>
 
       <div className="agent-model-grid">
-        <label>图片模型<select value={preferences.imageProviderId} onChange={(event) => updatePreferences({ imageProviderId: event.target.value })}>{imageProviders.map((provider) => <option key={provider.id} value={provider.id} disabled={provider.kind === 'placeholder'}>{providerOptionLabel(provider)}</option>)}</select></label>
-        <label>视频模型<select value={preferences.videoProviderId} onChange={(event) => updatePreferences({ videoProviderId: event.target.value })}>{videoProviders.map((provider) => <option key={provider.id} value={provider.id} disabled={provider.kind === 'placeholder'}>{providerOptionLabel(provider)}</option>)}</select></label>
+        <label>图片模型<select value={preferences.imageProviderId} onChange={(event) => updatePreferences({ imageProviderId: event.target.value })}>{imageProviders.map((provider) => <option key={provider.id} value={provider.id} disabled={!isProviderEnabled(provider)}>{providerOptionLabel(provider)}</option>)}</select></label>
+        <label>视频模型<select value={preferences.videoProviderId} onChange={(event) => updatePreferences({ videoProviderId: event.target.value })}>{videoProviders.map((provider) => <option key={provider.id} value={provider.id} disabled={!isProviderEnabled(provider)}>{providerOptionLabel(provider)}</option>)}</select></label>
         <p>模型选择只保存到本机，不会发起第三方请求。</p>
       </div>
 

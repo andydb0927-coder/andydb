@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ChangeEvent,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
@@ -33,7 +34,9 @@ import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
 import {
   defaultProviderRegistry,
+  isProviderEnabled,
   providerDefaultParameters,
+  type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import type {
@@ -42,6 +45,10 @@ import type {
 } from '../generation/generation-adapter'
 import { GenerationConfirmationDialog } from '../generation/GenerationConfirmationDialog'
 import { GenerationQueue } from '../generation/generation-queue'
+import {
+  defaultEphemeralGenerationResultStore,
+  type EphemeralGenerationResultStore,
+} from '../generation/ephemeral-generation-result-store'
 import {
   createGenerationProviderPreferenceStore,
   type GenerationProviderPreferenceStore,
@@ -323,6 +330,7 @@ function buildGenerationRequest(
   node: Project['nodes'][number],
   operation: GenerationRequest['operation'],
   prompt: string,
+  providerRegistry: ProviderRegistry,
 ): GenerationRequest {
   const activeVersion = node.versions.find(
     (version) => version.id === node.activeVersionId,
@@ -339,7 +347,7 @@ function buildGenerationRequest(
     targetKind === 'video' ? 'mock-seedance-video' : undefined
   const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
   const configuredProvider = configuredProviderId
-    ? defaultProviderRegistry.list().find(({ id }) => id === configuredProviderId)
+    ? providerRegistry.list().find(({ id }) => id === configuredProviderId)
     : undefined
   const supportsTarget = (provider: typeof configuredProvider) =>
     Boolean(provider?.capabilities.some((capability) =>
@@ -350,7 +358,7 @@ function buildGenerationRequest(
           : capability === 'text-to-image' || capability === 'image-to-image',
     ))
   const fallbackProvider = defaultProviderId
-    ? defaultProviderRegistry.list().find(({ id }) => id === defaultProviderId)
+    ? providerRegistry.list().find(({ id }) => id === defaultProviderId)
     : undefined
   const registeredProvider = supportsTarget(configuredProvider)
     ? configuredProvider
@@ -444,6 +452,8 @@ export interface CanvasPageProps {
   libraryRepository?: Pick<AssetLibraryRepository, 'list'> &
     Partial<Pick<AssetLibraryRepository, 'save'>>
   generationAdapter?: GenerationAdapter
+  providerRegistry?: ProviderRegistry
+  ephemeralGenerationResultStore?: EphemeralGenerationResultStore
   generationPreferenceStore?: GenerationProviderPreferenceStore
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
 }
@@ -452,6 +462,8 @@ export function CanvasPage({
   repository = defaultRepository,
   libraryRepository = defaultLibraryRepository,
   generationAdapter = defaultGenerationAdapter,
+  providerRegistry = defaultProviderRegistry,
+  ephemeralGenerationResultStore = defaultEphemeralGenerationResultStore,
   generationPreferenceStore = browserGenerationPreferenceStore,
   collaborationRepository = defaultCollaborationRepository,
 }: CanvasPageProps) {
@@ -549,6 +561,11 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const ephemeralGenerationResults = useSyncExternalStore(
+    ephemeralGenerationResultStore.subscribe,
+    ephemeralGenerationResultStore.getSnapshot,
+    ephemeralGenerationResultStore.getSnapshot,
+  )
   const [canvasExportSession, setCanvasExportSession] =
     useState<CanvasExportSession>()
   const [workflowImportSession, setWorkflowImportSession] =
@@ -717,6 +734,12 @@ export function CanvasPage({
         },
         onJobChange(job) {
           if (job.projectId !== projectId) return
+          if (job.providerId === 'kling-api') {
+            if (job.status === 'failed') {
+              setGenerationFeedback(job.error ?? '可灵生成失败')
+            }
+            return
+          }
           if (job.status !== 'succeeded') {
             useProjectStore
               .getState()
@@ -726,6 +749,15 @@ export function CanvasPage({
         onSuccess(job, result) {
           if (job.projectId !== projectId) {
             throw new Error('Generation callback route mismatch')
+          }
+          if (result.persistence === 'ephemeral') {
+            ephemeralGenerationResultStore.set(
+              job.projectId!,
+              job.nodeId,
+              result,
+            )
+            setGenerationFeedback('可灵临时结果已显示，刷新页面后失效。')
+            return
           }
           useProjectStore
             .getState()
@@ -744,7 +776,12 @@ export function CanvasPage({
           if (generatedNode) selectOnlyNode(generatedNode.id)
         },
       }),
-    [generationAdapter, projectId, selectOnlyNode],
+    [
+      ephemeralGenerationResultStore,
+      generationAdapter,
+      projectId,
+      selectOnlyNode,
+    ],
   )
 
   useEffect(() => {
@@ -926,6 +963,7 @@ export function CanvasPage({
             node,
             job.operation,
             job.prompt,
+            providerRegistry,
           )
           const selection = currentLibTvSelection(generationPreferenceStore)
           if (selection) {
@@ -965,6 +1003,7 @@ export function CanvasPage({
         node,
         action,
         activeVersion?.prompt ?? currentProject.intent,
+        providerRegistry,
       )
       const selection = currentLibTvSelection(generationPreferenceStore)
       if (selection) {
@@ -984,7 +1023,7 @@ export function CanvasPage({
         generationQueue.enqueue(request)
       }
     },
-    [generationPreferenceStore, generationQueue, projectId],
+    [generationPreferenceStore, generationQueue, projectId, providerRegistry],
   )
 
   const confirmRemoteGeneration = useCallback(() => {
@@ -1392,9 +1431,13 @@ export function CanvasPage({
       const activeVersion = node.versions.find(
         (version) => version.id === node.activeVersionId,
       )
-      const asset = project.assets.find(
+      const persistedAsset = project.assets.find(
         (candidate) => candidate.id === activeVersion?.assetId,
       )
+      const ephemeralAsset = ephemeralGenerationResults.get(
+        JSON.stringify([project.id, node.id]),
+      )?.asset
+      const asset = ephemeralAsset ?? persistedAsset
       const job = selectNodeGenerationJob(node, project.jobs)
       const selected = selectedNodeIds.has(node.id)
       const imageResults = node.imageResults?.flatMap((result) => {
@@ -1429,6 +1472,7 @@ export function CanvasPage({
         selected,
         data: {
           node,
+          providerRegistry,
           asset,
           imageResults,
           imageReferences: incomingMediaReferences,
@@ -1469,8 +1513,8 @@ export function CanvasPage({
           onUpdateImageGenerationSettings: (settings) =>
             updateImageGenerationSettings(node.id, settings),
           onSelectModelProvider: (providerId) => {
-            const provider = defaultProviderRegistry.require(providerId)
-            if (provider.kind !== 'demo') return
+            const provider = providerRegistry.require(providerId)
+            if (!isProviderEnabled(provider)) return
             updateNode(node.id, {
               modelProviderId: providerId,
               generationConfig: {
@@ -1485,10 +1529,10 @@ export function CanvasPage({
             })
           },
           onUpdateVideoGenerationParameters: (parameters) => {
-            const provider = defaultProviderRegistry.require(
+            const provider = providerRegistry.require(
               node.modelProviderId ?? 'mock-seedance-video',
             )
-            if (provider.kind !== 'demo') return
+            if (!isProviderEnabled(provider)) return
             const previousParameters =
               node.generationConfig?.providerId === provider.id
                 ? node.generationConfig.parameters
@@ -1542,6 +1586,8 @@ export function CanvasPage({
     imageReferenceTargetId,
     primaryNodeId,
     project,
+    providerRegistry,
+    ephemeralGenerationResults,
     requestDelete,
     selectedNodeIds,
     setActiveImageResult,
