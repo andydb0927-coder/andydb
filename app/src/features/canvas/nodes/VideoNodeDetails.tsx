@@ -7,7 +7,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import type { VideoDerivedTool } from '../../project/model'
@@ -249,6 +249,8 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
   const [modeNotice, setModeNotice] = useState<string>()
   const activeVersion = data.node.versions.find(({ id }) => id === data.node.activeVersionId)
+  const [prompt, setPrompt] = useState(activeVersion?.prompt ?? '')
+  const promptDraftRef = useRef(activeVersion?.prompt ?? '')
   const referenceCount =
     data.incomingReferenceCount ?? data.videoReferences?.length ?? 0
   const providerRegistry = data.providerRegistry ?? defaultProviderRegistry
@@ -313,6 +315,12 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   }, [data.node.id])
 
   useEffect(() => {
+    const nextPrompt = activeVersion?.prompt ?? ''
+    promptDraftRef.current = nextPrompt
+    setPrompt(nextPrompt)
+  }, [activeVersion?.prompt, data.node.id])
+
+  useEffect(() => {
     if (configuredMode === generationMode) return
     setModeNotice(modeAdjustmentMessage(configuredMode, generationMode))
     data.onUpdateVideoGenerationParameters?.({ generationMode })
@@ -373,7 +381,21 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           aria-label="提示词"
           maxLength={2000}
           rows={4}
-          defaultValue={activeVersion?.prompt}
+          value={prompt}
+          onInput={(event) => {
+            promptDraftRef.current = event.currentTarget.value
+            setPrompt(event.currentTarget.value)
+          }}
+          onBlur={(event) => {
+            const nextTarget = event.relatedTarget
+            if (
+              nextTarget instanceof HTMLElement &&
+              nextTarget.closest('.video-generation-panel__generate')
+            ) {
+              return
+            }
+            data.onUpdateVideoPrompt?.(promptDraftRef.current)
+          }}
           placeholder="描述你想要生成的画面内容，@引用素材"
         />
       </label>
@@ -453,7 +475,9 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
               : '本地演示，不连接真实生成')
           }
           disabled={!selectedProviderEnabled}
-          onClick={data.onLocalVideoGenerate}
+          onClick={() =>
+            data.onLocalVideoGenerate?.(promptDraftRef.current)
+          }
         >
           <ArrowUp aria-hidden="true" />
         </button>

@@ -180,6 +180,24 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
 })
 
+test('submits the current prompt draft through the video generate button', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  render(renderVideo(data))
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+  const prompt = within(panel).getByLabelText('提示词')
+
+  await user.clear(prompt)
+  await user.type(prompt, '雨夜霓虹街道，摄影机缓慢向前推进')
+  await user.click(
+    within(panel).getByRole('button', { name: '生成视频，预计成本 135' }),
+  )
+
+  expect(data.onLocalVideoGenerate).toHaveBeenCalledWith(
+    '雨夜霓虹街道，摄影机缓慢向前推进',
+  )
+})
+
 test('recomputes video defaults, price, and advanced switches from the selected model', async () => {
   const user = userEvent.setup()
   const data = makeData(true)

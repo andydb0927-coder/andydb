@@ -109,6 +109,23 @@ describe('project domain', () => {
     expect(projectWithFixture.nodes[0].versions).toHaveLength(1)
   })
 
+  test('updates only the active node version prompt for composer generation', () => {
+    const project = useProjectStore.getState().activeProject!
+    const node = project.nodes[0]
+
+    useProjectStore
+      .getState()
+      .updateActiveNodePrompt(node.id, '雨夜霓虹街道，摄影机缓慢向前推进')
+
+    const updated = useProjectStore
+      .getState()
+      .activeProject?.nodes.find(({ id }) => id === node.id)
+    expect(
+      updated?.versions.find(({ id }) => id === updated.activeVersionId)?.prompt,
+    ).toBe('雨夜霓虹街道，摄影机缓慢向前推进')
+    expect(useProjectStore.getState().saveStatus).toBe('dirty')
+  })
+
   test('merges an imported workflow atomically and undo restores the prior graph', () => {
     const before = useProjectStore.getState().activeProject!
     const importedNode = {

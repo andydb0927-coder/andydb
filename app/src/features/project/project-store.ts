@@ -71,6 +71,7 @@ interface ProjectStore {
     edges: Project['edges']
   }) => boolean
   updateNode: (nodeId: string, changes: NodeUpdates) => void
+  updateActiveNodePrompt: (nodeId: string, prompt: string) => void
   updateCreativeCard: (nodeId: string, draft: CreativeCardDraft) => void
   updateNodePositions: (
     positions: Array<{ nodeId: string; position: CanvasNode['position'] }>,
@@ -571,6 +572,33 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                           ),
                         },
                       }),
+                }
+              : node,
+          ),
+        })
+      })
+    },
+
+    updateActiveNodePrompt: (nodeId, prompt) => {
+      commit((project) => {
+        const source = project.nodes.find(({ id }) => id === nodeId)
+        const activeVersion = source?.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        if (!source || !activeVersion || activeVersion.prompt === prompt) {
+          return project
+        }
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  versions: node.versions.map((version) =>
+                    version.id === node.activeVersionId
+                      ? { ...version, prompt }
+                      : version,
+                  ),
                 }
               : node,
           ),

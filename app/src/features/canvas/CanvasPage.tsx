@@ -421,6 +421,25 @@ function buildGenerationRequest(
   }
 }
 
+function generationEligibilityFailure(
+  request: GenerationRequest,
+  providerRegistry: ProviderRegistry,
+) {
+  if (!request.prompt.trim() && request.referenceAssets.length === 0) {
+    return '请输入提示词或添加参考素材后再生成。'
+  }
+  if (request.providerId) {
+    const provider = providerRegistry.list().find(
+      ({ id }) => id === request.providerId,
+    )
+    if (!provider) return '当前节点绑定的生成模型不存在。'
+    if (!isProviderEnabled(provider)) {
+      return provider.disabledReason ?? '当前生成模型暂不可用。'
+    }
+  }
+  return undefined
+}
+
 function downstreamConsumers(project: Project, nodeId: string) {
   const outgoing = new Map<string, string[]>()
   for (const edge of project.edges) {
@@ -515,6 +534,9 @@ export function CanvasPage({
     (state) => state.updateImageGenerationSettings,
   )
   const updateNode = useProjectStore((state) => state.updateNode)
+  const updateActiveNodePrompt = useProjectStore(
+    (state) => state.updateActiveNodePrompt,
+  )
   const rotateImageNode = useProjectStore((state) => state.rotateImageNode)
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
@@ -749,9 +771,21 @@ export function CanvasPage({
         },
         onJobChange(job) {
           if (job.projectId !== projectId) return
-          if (job.providerId === 'kling-api') {
-            if (job.status === 'failed') {
-              setGenerationFeedback(job.error ?? '可灵生成失败')
+          const jobProviderId =
+            job.providerId ?? job.generationConfig?.providerId
+          if (jobProviderId === 'kling-api') {
+            if (job.status === 'queued') {
+              setGenerationFeedback('可灵生成任务已提交。')
+            } else if (job.status === 'running') {
+              setGenerationFeedback(
+                job.progress
+                  ? `可灵生成中 ${job.progress}%`
+                  : '可灵生成中…',
+              )
+            } else if (job.status === 'failed') {
+              setGenerationFeedback(job.error ?? '可灵生成失败。')
+            } else if (job.status === 'cancelled') {
+              setGenerationFeedback('可灵生成已取消。')
             }
             return
           }
@@ -902,6 +936,7 @@ export function CanvasPage({
       nodeId: string,
       action: CreativeNodeAction,
       explicitFocusTarget?: HTMLElement,
+      promptOverride?: string,
     ) => {
       const currentProject = useProjectStore.getState().activeProject
       const node = currentProject?.nodes.find(
@@ -980,6 +1015,14 @@ export function CanvasPage({
             job.prompt,
             providerRegistry,
           )
+          const eligibilityFailure = generationEligibilityFailure(
+            request,
+            providerRegistry,
+          )
+          if (eligibilityFailure) {
+            setGenerationFeedback(eligibilityFailure)
+            return
+          }
           const selection = currentLibTvSelection(generationPreferenceStore)
           if (selection) {
             const activeElement = document.activeElement
@@ -998,6 +1041,43 @@ export function CanvasPage({
           } else {
             generationQueue.retry(job, request)
           }
+        }
+        return
+      }
+
+      if (action === 'generate') {
+        const request = buildGenerationRequest(
+          currentProject,
+          node,
+          'regenerate',
+          promptOverride ?? activeVersion?.prompt ?? currentProject.intent,
+          providerRegistry,
+        )
+        const eligibilityFailure = generationEligibilityFailure(
+          request,
+          providerRegistry,
+        )
+        if (eligibilityFailure) {
+          setGenerationFeedback(eligibilityFailure)
+          return
+        }
+        const selection = currentLibTvSelection(generationPreferenceStore)
+        if (selection) {
+          const activeElement = document.activeElement
+          setPendingRemoteGeneration({
+            kind: 'enqueue',
+            request,
+            selection,
+            returnFocusTo:
+              explicitFocusTarget ??
+              (activeElement instanceof HTMLElement
+                ? activeElement
+                : document.body),
+          })
+          setGenerationFeedback(undefined)
+        } else {
+          setGenerationFeedback('生成任务已提交。')
+          generationQueue.enqueue(request)
         }
         return
       }
@@ -1089,10 +1169,10 @@ export function CanvasPage({
     ) => {
       switch (command.type) {
         case 'regenerate':
-          handleAction(command.nodeId, 'regenerate', focusReturnTarget)
+          handleAction(command.nodeId, 'generate', focusReturnTarget)
           return
         case 'replace-node':
-          handleAction(command.nodeId, 'regenerate', focusReturnTarget)
+          handleAction(command.nodeId, 'generate', focusReturnTarget)
           return
         case 'extend-shot':
           handleAction(command.sourceNodeId, 'extend-shot', focusReturnTarget)
@@ -1580,15 +1660,20 @@ export function CanvasPage({
               },
             })
           },
+          onUpdateVideoPrompt: (prompt) =>
+            updateActiveNodePrompt(node.id, prompt),
           onStartImageReferenceSelection: (trigger) =>
             startImageReferenceSelection(node.id, trigger),
           onEndImageReferenceSelection: endImageReferenceSelection,
-          onLocalImageGenerate: () => handleAction(node.id, 'regenerate'),
+          onLocalImageGenerate: () => handleAction(node.id, 'generate'),
           onCreateImageToolNode: (tool) =>
             createImageToolNode(node.id, tool),
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
-          onLocalVideoGenerate: () => handleAction(node.id, 'regenerate'),
+          onLocalVideoGenerate: (prompt) => {
+            updateActiveNodePrompt(node.id, prompt)
+            handleAction(node.id, 'generate', undefined, prompt)
+          },
           onUpdateEffectTool: (changes) => {
             if (!node.effectTool) return
             updateNode(node.id, {
@@ -1619,6 +1704,7 @@ export function CanvasPage({
     setActiveImageResult,
     startImageReferenceSelection,
     updateImageGenerationSettings,
+    updateActiveNodePrompt,
     updateNode,
     createVideoToolNode,
     createImageToolNode,
@@ -2919,11 +3005,11 @@ export function CanvasPage({
       (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
       !node.videoTool
     ) {
-      handleAction(node.id, 'regenerate')
+      handleAction(node.id, 'generate')
       return true
     }
     if (node.kind === 'video' && !node.videoTool) {
-      handleAction(node.id, 'regenerate')
+      handleAction(node.id, 'generate')
       return true
     }
     if (node.kind === 'storyboard') {

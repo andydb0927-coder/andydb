@@ -19,6 +19,7 @@ import { VideoNode } from './nodes/VideoNode'
 
 export type CreativeNodeAction =
   | 'edit-card'
+  | 'generate'
   | 'regenerate'
   | 'extend-shot'
   | 'generate-video'
@@ -60,12 +61,13 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onUpdateVideoGenerationParameters?(
     parameters: Record<string, string | number | boolean>,
   ): void
+  onUpdateVideoPrompt?(prompt: string): void
   onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
   onEndImageReferenceSelection?(returnToNode: boolean): void
   onLocalImageGenerate?(): void
   onCreateImageToolNode?(tool: string): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
-  onLocalVideoGenerate?(): void
+  onLocalVideoGenerate?(prompt: string): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
   onUpdateNodeDetails?(details: CanvasNodeDetails): void
 }

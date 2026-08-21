@@ -6,6 +6,10 @@ test('switches Kling live to text-to-video and submits the supported request', a
   page,
 }) => {
   const createBodies: Array<Record<string, unknown>> = []
+  let releaseCreateRequest: (() => void) | undefined
+  const createRequestGate = new Promise<void>((resolve) => {
+    releaseCreateRequest = resolve
+  })
 
   await page.route('https://media.fixture.invalid/e2e-kling-result.mp4', (route) =>
     route.fulfill({ status: 200, contentType: 'video/mp4', body: '' }),
@@ -19,6 +23,7 @@ test('switches Kling live to text-to-video and submits the supported request', a
     ) {
       const body = request.postDataJSON() as Record<string, unknown>
       createBodies.push(body)
+      await createRequestGate
       await route.fulfill({
         status: 200,
         json: { code: 0, data: { id: 'e2e-kling-task', status: 'submitted' } },
@@ -74,6 +79,8 @@ test('switches Kling live to text-to-video and submits the supported request', a
   await expect(panel.getByRole('status')).toContainText(
     '当前模型不支持全能参考，已自动切换为文生视频',
   )
+  const prompt = panel.getByRole('textbox', { name: '提示词' })
+  await prompt.fill('雨夜霓虹街道，摄影机缓慢向前推进')
 
   const generate = panel.getByRole('button', {
     name: '生成视频，预计成本 24',
@@ -82,7 +89,12 @@ test('switches Kling live to text-to-video and submits the supported request', a
   await generate.click()
 
   await expect.poll(() => createBodies.length).toBe(1)
+  await expect(
+    page.getByRole('status').filter({ hasText: /已提交|生成中/ }),
+  ).toBeVisible()
+  releaseCreateRequest?.()
   expect(createBodies[0]).toMatchObject({
+    prompt: '雨夜霓虹街道，摄影机缓慢向前推进',
     settings: {
       audio: 'off',
       resolution: '720p',

@@ -2808,9 +2808,9 @@ describe('creative canvas', () => {
       },
     })
 
-    await user.click(
-      within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
-    )
+    const generate = latestFlowProps?.nodes.find(({ id }) => id === 'video')
+      ?.data.onLocalVideoGenerate as ((prompt: string) => void) | undefined
+    act(() => generate?.('雨夜霓虹街道，摄影机缓慢向前推进'))
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       nodeId: 'video',
@@ -2916,11 +2916,53 @@ describe('creative canvas', () => {
       within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
     )
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(screen.getByText(/可灵生成中/)).toBeVisible()
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       providerId: 'kling-api',
       parameters: { generationMode: '文生视频' },
       referenceAssets: [],
     })
+  })
+
+  test('rejects an explicit generate action when the node has no prompt or media', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'video'
+        ? {
+            ...node,
+            versions: node.versions.map((version) => ({
+              ...version,
+              prompt: '',
+              assetId: undefined,
+            })),
+            generationConfig: {
+              targetKind: 'video',
+              providerId: 'mock-seedance-video',
+              parameters: { generationMode: '文生视频' },
+              referenceAssets: [],
+            },
+          }
+        : node,
+    )
+    act(() => activate(project))
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+    })
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    await user.click(
+      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
+    )
+
+    expect(start).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '请输入提示词或添加参考素材后再生成',
+    )
   })
 
   test('duplicates selected nodes at the Option-drag drop position without moving originals', () => {
