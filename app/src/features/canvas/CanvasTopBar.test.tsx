@@ -118,5 +118,5 @@ test('edits the project title and exposes local membership controls', async () =
   expect(screen.getByRole('button', { name: '积分超市' })).toBeVisible()
   expect(screen.getByRole('button', { name: /会员中心/ })).toHaveTextContent('限时4.0折')
   expect(screen.getByText('120 积分')).toBeVisible()
-  expect(screen.getByRole('button', { name: '用户头像' })).toBeVisible()
+  expect(screen.getByRole('button', { name: /用户头像/ })).toBeVisible()
 })

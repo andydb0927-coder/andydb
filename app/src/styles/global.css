@@ -142,6 +142,35 @@ html {
   background: var(--surface-canvas);
 }
 
+html[data-canvas-theme='light'] {
+  color-scheme: light;
+  --surface-canvas: #ece8e2;
+  --surface-node: #f7f3ed;
+  --surface-floating: #fffdf9;
+  --surface-panel: rgb(255 253 249 / 96%);
+  --surface-panel-strong: rgb(255 253 249 / 99%);
+  --surface-control: rgb(38 27 20 / 5%);
+  --surface-control-hover: rgb(38 27 20 / 9%);
+  --surface-control-active: rgb(var(--brand-primary-rgb) / 12%);
+  --surface-backdrop: rgb(28 22 18 / 30%);
+  --text-primary: #241c17;
+  --text-secondary: #51463e;
+  --text-muted: #746a62;
+  --text-disabled: #aaa29b;
+  --border-subtle: rgb(45 35 28 / 9%);
+  --border-default: rgb(45 35 28 / 14%);
+  --border-strong: rgb(45 35 28 / 20%);
+  --neutral-white-a03: rgb(32 24 19 / 3%);
+  --neutral-white-a04: rgb(32 24 19 / 4%);
+  --neutral-white-a05: rgb(32 24 19 / 5%);
+  --neutral-white-a06: rgb(32 24 19 / 6%);
+  --neutral-white-a08: rgb(32 24 19 / 8%);
+  --neutral-white-a10: rgb(32 24 19 / 10%);
+  --neutral-white-a12: rgb(32 24 19 / 12%);
+  --neutral-white-a14: rgb(32 24 19 / 14%);
+  --neutral-white-a18: rgb(32 24 19 / 18%);
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -9141,6 +9170,7 @@ select {
 }
 
 .canvas-top-bar .canvas-top-bar__avatar {
+  position: relative;
   width: 30px;
   min-width: 30px;
   padding: 0;
@@ -9148,6 +9178,531 @@ select {
   color: var(--text-inverse);
   background: linear-gradient(145deg, var(--brand-secondary-bright), var(--brand-secondary));
   font-weight: 800;
+}
+
+.canvas-account-menu {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.canvas-account-menu__avatar-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--surface-panel-strong);
+  border-radius: var(--radius-pill);
+  background: var(--status-error);
+}
+
+.canvas-account-menu__popover {
+  position: fixed;
+  z-index: 90;
+  top: 60px;
+  right: 12px;
+  width: min(410px, calc(100vw - 24px));
+  max-height: min(720px, calc(100vh - 76px));
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
+  color: var(--text-primary);
+  background: var(--surface-panel-strong);
+  box-shadow: var(--shadow-overlay);
+  overscroll-behavior: contain;
+  animation: account-panel-in var(--motion-standard) var(--ease-emphasized);
+}
+
+@keyframes account-panel-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.canvas-account-menu__profile {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--surface-control-hover);
+}
+
+.canvas-account-menu__profile-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  background: linear-gradient(145deg, #28c987, #169a68);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.canvas-account-menu__profile > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3px var(--space-2);
+}
+
+.canvas-account-menu__profile strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-account-menu__profile small {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.canvas-account-menu__badges {
+  display: flex;
+  gap: 3px;
+}
+
+.canvas-account-menu__badges em {
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  background: var(--neutral-white-a08);
+  font-size: 0.5625rem;
+  font-style: normal;
+}
+
+.canvas-account-menu__badges em:first-child {
+  color: #50d6f2;
+  background: rgb(31 172 203 / 16%);
+}
+
+.canvas-account-menu__scope {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.625rem;
+  white-space: nowrap;
+}
+
+.canvas-account-menu__membership,
+.canvas-account-menu__quota {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, rgb(var(--brand-secondary-rgb) / 13%), var(--surface-control));
+}
+
+.canvas-account-menu__membership > div:first-child,
+.canvas-account-menu__quota > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.canvas-account-menu__membership strong,
+.canvas-account-menu__quota strong {
+  font-size: 0.75rem;
+}
+
+.canvas-account-menu__membership span {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.canvas-account-menu__membership button,
+.canvas-account-menu__quota button,
+.canvas-account-detail__section-heading button {
+  min-height: 0;
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+  cursor: pointer;
+  font-size: 0.625rem;
+}
+
+.canvas-account-menu__progress {
+  height: 3px;
+  margin: var(--space-2) 0;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-white-a10);
+}
+
+.canvas-account-menu__progress span {
+  display: block;
+  width: 72%;
+  height: 100%;
+  background: var(--brand-secondary-bright);
+}
+
+.canvas-account-menu__membership p,
+.canvas-account-menu__quota p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.625rem;
+}
+
+.canvas-account-menu__quota {
+  background: var(--surface-control);
+}
+
+.canvas-account-menu__quota strong {
+  color: #3ed1f1;
+}
+
+.canvas-account-menu__quota > div span {
+  display: flex;
+  margin-left: auto;
+  gap: 3px;
+}
+
+.canvas-account-menu__quota p {
+  margin-top: var(--space-2);
+}
+
+.canvas-account-menu__actions {
+  display: grid;
+  gap: 1px;
+  margin-top: var(--space-2);
+}
+
+.canvas-account-menu__action {
+  display: grid;
+  width: 100%;
+  min-height: 38px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  justify-content: stretch;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.canvas-account-menu__action:hover {
+  background: var(--surface-control-hover);
+}
+
+.canvas-account-menu__action-icon,
+.canvas-account-menu__action-trailing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-account-menu__action :is(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.canvas-account-menu__action-trailing {
+  color: var(--text-muted);
+}
+
+.canvas-account-menu__theme {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 6px;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  background: var(--surface-control-hover);
+}
+
+.canvas-account-menu__theme i {
+  position: absolute;
+  z-index: -1;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--neutral-white-a12);
+  transition: left var(--motion-standard) var(--ease-standard);
+}
+
+.canvas-account-menu__theme i[data-active='light'] { left: 2px; }
+.canvas-account-menu__theme i[data-active='dark'] { left: 27px; }
+
+.canvas-account-menu__notification-badge {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  background: var(--status-error);
+  font-size: 0.625rem;
+}
+
+.canvas-account-menu__honesty {
+  margin: var(--space-2) var(--space-2) 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.625rem;
+  text-align: center;
+}
+
+.canvas-account-detail__backdrop {
+  position: fixed;
+  z-index: 140;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--surface-backdrop);
+  backdrop-filter: blur(8px);
+}
+
+.canvas-account-detail {
+  width: min(500px, calc(100vw - 32px));
+  max-height: min(680px, calc(100vh - 32px));
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
+  color: var(--text-primary);
+  background: var(--surface-panel-strong);
+  box-shadow: var(--shadow-overlay);
+}
+
+.canvas-account-detail button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  background: var(--surface-control);
+  cursor: pointer;
+}
+
+.canvas-account-detail button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-control-hover);
+}
+
+.canvas-account-detail button:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.canvas-account-detail > header,
+.canvas-account-detail > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.canvas-account-detail > header {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.canvas-account-detail > header div {
+  display: grid;
+  gap: 2px;
+}
+
+.canvas-account-detail > header span {
+  color: var(--text-muted);
+  font-size: 0.625rem;
+}
+
+.canvas-account-detail h2,
+.canvas-account-detail h3,
+.canvas-account-detail p {
+  margin: 0;
+}
+
+.canvas-account-detail h2 { font-size: 1rem; }
+.canvas-account-detail h3 { font-size: 0.8125rem; }
+
+.canvas-account-detail > header button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+.canvas-account-detail__body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.canvas-account-detail__body label {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.canvas-account-detail__body input:not([type='checkbox']):not([type='radio']) {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  background: var(--surface-control);
+}
+
+.canvas-account-detail__hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.canvas-account-detail__hero > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--brand-secondary-bright);
+}
+
+.canvas-account-detail__hero div {
+  display: grid;
+  gap: 2px;
+}
+
+.canvas-account-detail__hero span,
+.canvas-account-detail__switch small {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.canvas-account-detail dl,
+.canvas-account-detail article {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.canvas-account-detail dl > div,
+.canvas-account-detail__section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.canvas-account-detail dt { color: var(--text-muted); }
+.canvas-account-detail dd { margin: 0; color: var(--text-primary); }
+
+.canvas-account-detail__primary,
+.canvas-account-detail__secondary {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+}
+
+.canvas-account-detail__primary {
+  border-color: var(--brand-primary-a42);
+  background: var(--brand-primary-a24);
+}
+
+.canvas-account-detail__success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--status-success);
+}
+
+.canvas-account-detail__success svg { width: 16px; }
+
+.canvas-account-detail__switch {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.canvas-account-detail__switch span {
+  display: grid;
+  gap: 2px;
+}
+
+.canvas-account-detail__switch input {
+  width: 36px;
+  height: 20px;
+  accent-color: var(--brand-primary);
+}
+
+.canvas-account-detail code {
+  padding: var(--space-2);
+  border-radius: var(--radius-button);
+  color: var(--brand-secondary-bright);
+  background: var(--surface-canvas);
+}
+
+.canvas-account-detail fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.canvas-account-detail fieldset label {
+  display: flex;
+  min-height: 38px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-button);
+  background: var(--surface-control);
+}
+
+.canvas-account-detail > footer {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.canvas-account-detail > footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.canvas-account-detail > footer span svg { width: 15px; }
+
+.canvas-account-detail > footer button {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border-color: var(--brand-secondary-a42);
 }
 
 .canvas-workflow-layer {
@@ -11771,8 +12326,7 @@ select {
 
 @media (max-width: 1350px) {
   .canvas-top-bar__commerce,
-  .canvas-top-bar__balance,
-  .canvas-top-bar__avatar {
+  .canvas-top-bar__balance {
     display: none !important;
   }
 }
@@ -11791,8 +12345,7 @@ select {
   }
 
   .canvas-top-bar__commerce,
-  .canvas-top-bar__balance,
-  .canvas-top-bar__avatar {
+  .canvas-top-bar__balance {
     display: none !important;
   }
 }

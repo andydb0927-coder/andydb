@@ -17,6 +17,7 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 import { StatusText } from '../../ui/StatusText'
+import { CanvasAccountMenu } from '../account/CanvasAccountMenu'
 import type { PersistenceStatus } from '../project/project-store'
 import type { WorkspaceMode } from './CanvasWorkspace'
 
@@ -189,7 +190,7 @@ export function CanvasTopBar({
           会员中心 <em>限时4.0折</em>
         </button>
         <span className="canvas-top-bar__balance"><Coins aria-hidden="true" />{creditBalance} 积分</span>
-        <button type="button" className="canvas-top-bar__avatar" aria-label="用户头像">安</button>
+        <CanvasAccountMenu creditBalance={creditBalance} />
         <div className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button
             type="button"

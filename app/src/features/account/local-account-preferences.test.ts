@@ -34,6 +34,10 @@ describe('local account preferences', () => {
       displayName: '本机创作者',
       aiWatermark: true,
       inAppNotifications: true,
+      themeMode: 'dark',
+      notificationUnreadCount: 2,
+      consumeOrder: 'balanced',
+      accountScope: 'team',
     })
   })
 
@@ -65,9 +69,33 @@ describe('local account preferences', () => {
       displayName: '安迪导演',
       aiWatermark: false,
       inAppNotifications: false,
+      themeMode: 'dark',
+      notificationUnreadCount: 2,
+      consumeOrder: 'balanced',
+      accountScope: 'team',
       updatedAt: '2026-08-13T09:00:00.000Z',
     })
     expect(storage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).not.toContain('token')
+  })
+
+  test('persists account menu theme, quota order, notification, and scope preferences', () => {
+    const store = createLocalAccountPreferenceStore(storage)
+
+    const saved = store.write({
+      ...store.read(),
+      themeMode: 'light',
+      notificationUnreadCount: 0,
+      consumeOrder: 'image-first',
+      accountScope: 'personal',
+    })
+
+    expect(saved).toMatchObject({
+      themeMode: 'light',
+      notificationUnreadCount: 0,
+      consumeOrder: 'image-first',
+      accountScope: 'personal',
+    })
+    expect(createLocalAccountPreferenceStore(storage).read()).toMatchObject(saved)
   })
 
   test('falls back for a blank name and tolerates unavailable storage', () => {
