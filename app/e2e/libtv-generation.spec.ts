@@ -35,8 +35,7 @@ const catalog = {
 }
 
 async function createCinematicProject(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: '新建项目', exact: true }).click()
+  await page.goto('/projects/new?recipe=cinematic-story')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 

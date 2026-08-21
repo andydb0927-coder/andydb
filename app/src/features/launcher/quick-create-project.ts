@@ -1,6 +1,6 @@
 import { redirect, type LoaderFunctionArgs } from 'react-router-dom'
 
-import type { Project } from '../project/model'
+import { createProject, type Project } from '../project/model'
 import {
   ProjectRepository,
   WirelessCanvasDatabase,
@@ -31,14 +31,13 @@ function formatProjectTimestamp(now: Date): string {
 }
 
 export function buildQuickProject(requestUrl: string, now = new Date()): Project {
-  const requestedRecipe = findRecipe(
+  const recipe = findRecipe(
     new URL(requestUrl).searchParams.get(RECIPE_QUERY_PARAM),
   )
-  const recipe = requestedRecipe ?? recipeDefinitions[0]
-  const project = buildRecipeProject(
-    `从${recipe.title}开始自由创作`,
-    recipe,
-  )
+  const intent = `从${(recipe ?? recipeDefinitions[0]).title}开始自由创作`
+  const project = recipe
+    ? buildRecipeProject(intent, recipe)
+    : createProject('未命名项目', intent)
 
   return {
     ...project,

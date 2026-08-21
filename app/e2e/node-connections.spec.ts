@@ -3,8 +3,7 @@ import { expect, test } from '@playwright/test'
 import { runSelectedNodeManagementAction } from './canvas-node-actions'
 
 async function createCinematicProject(page: import('@playwright/test').Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: '新建项目', exact: true }).click()
+  await page.goto('/projects/new?recipe=cinematic-story')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 

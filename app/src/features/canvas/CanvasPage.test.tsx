@@ -2557,6 +2557,46 @@ describe('creative canvas', () => {
     expect(screen.getByRole('button', { name: '显示连线' })).toBeEnabled()
   })
 
+  test('shows the Liblib starter on an empty project and creates the first node through the shared quick path', async () => {
+    const user = userEvent.setup()
+    const project = {
+      ...makeCanvasProject(),
+      assets: [],
+      nodes: [],
+      edges: [],
+      timeline: [],
+      jobs: [],
+      exportJobs: [],
+      groups: [],
+    }
+    act(() => activate(project))
+    renderCanvas()
+    initializeFlow({ x: 640, y: 360 })
+
+    const starter = screen.getByRole('region', { name: '开始创作' })
+    expect(starter).toHaveTextContent(/双击画布.*自由生成节点/)
+    expect(
+      within(starter).getAllByRole('button').map((button) => button.getAttribute('aria-label')),
+    ).toEqual([
+      '故事脚本生成',
+      '角色三视图',
+      '全能参考生视频 SD2.5',
+      '音频生视频 SD2.5',
+    ])
+
+    await user.click(within(starter).getByRole('button', { name: '角色三视图' }))
+
+    expect(screen.queryByRole('region', { name: '开始创作' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '角色三视图 01' })).toBeVisible()
+    expect(useProjectStore.getState().activeProject?.nodes).toEqual([
+      expect.objectContaining({
+        kind: 'character-card',
+        title: '角色三视图 01',
+        position: { x: 640, y: 360 },
+      }),
+    ])
+  })
+
   test('switches between the real hand and move tools with H and V without hiding connections', async () => {
     const user = userEvent.setup()
     renderCanvas()

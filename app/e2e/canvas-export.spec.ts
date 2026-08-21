@@ -1,8 +1,7 @@
 import { expect, test, type Download, type Page } from '@playwright/test'
 
 async function createProject(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: '新建项目', exact: true }).click()
+  await page.goto('/projects/new?recipe=cinematic-story')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 

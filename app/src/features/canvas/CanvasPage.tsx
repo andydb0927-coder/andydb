@@ -117,6 +117,7 @@ import {
   type NodeTypePickerMode,
   type QuickNodeType,
 } from './CanvasNodeTypePicker'
+import { CanvasEmptyStarter } from './CanvasEmptyStarter'
 import {
   CanvasAgentPanel,
   CanvasStoryboardView,
@@ -2721,6 +2722,20 @@ export function CanvasPage({
     ],
   )
 
+  const createStarterNode = useCallback(
+    (type: QuickNodeType) => {
+      const rect = viewportRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const point = canvasPoint(
+        rect.left + rect.width / 2,
+        rect.top + Math.min(rect.height * 0.42, rect.height - 240),
+      )
+      if (!point) return
+      createQuickNodeAt(type, point.flowPosition, 'picker')
+    },
+    [canvasPoint, createQuickNodeAt],
+  )
+
   const createContextNode = useCallback(
     (type: ContextQuickNodeType) => {
       const source = contextMenu
@@ -4326,6 +4341,16 @@ export function CanvasPage({
             ))}
           </ViewportPortal>
         </ReactFlow>
+        {project?.nodes.length === 0 &&
+        !nodeTypePicker &&
+        !pendingPlacement &&
+        !contextMenu &&
+        !editingCard ? (
+          <CanvasEmptyStarter
+            disabled={!flowInstance}
+            onSelect={createStarterNode}
+          />
+        ) : null}
         <CanvasToolbar
           activeTool={activeTool}
           connectionsVisible={connectionsVisible}

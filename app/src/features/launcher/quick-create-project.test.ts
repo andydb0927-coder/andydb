@@ -4,7 +4,7 @@ import type { Project } from '../project/model'
 import { createQuickProjectRedirect } from './quick-create-project'
 
 describe('quick project creation', () => {
-  test('persists an automatically named cinematic project and redirects to its canvas', async () => {
+  test('persists an automatically named empty project and redirects to its starter canvas', async () => {
     const repository = {
       save: vi.fn(async (_project: Project) => undefined),
     }
@@ -21,16 +21,13 @@ describe('quick project creation', () => {
       title: '未命名项目 · 2026-08-13 18:08',
       intent: '从电影感叙事开始自由创作',
     })
-    expect(savedProject.nodes.map((node) => node.kind)).toEqual([
-      'character',
-      'scene',
-      'storyboard',
-    ])
+    expect(savedProject.nodes).toEqual([])
+    expect(savedProject.edges).toEqual([])
     expect(response.status).toBe(302)
     expect(response.headers.get('Location')).toBe(`/project/${savedProject.id}`)
   })
 
-  test('honors a valid recipe query and falls back safely for an unknown recipe', async () => {
+  test('honors a valid recipe query and falls back to an empty canvas for an unknown recipe', async () => {
     const projects: Project[] = []
     const repository = {
       save: vi.fn(async (project: Project) => {
@@ -50,6 +47,12 @@ describe('quick project creation', () => {
     )
 
     expect(projects[0].intent).toBe('从品牌氛围片开始自由创作')
+    expect(projects[0].nodes.map((node) => node.kind)).toEqual([
+      'character',
+      'scene',
+      'storyboard',
+    ])
     expect(projects[1].intent).toBe('从电影感叙事开始自由创作')
+    expect(projects[1].nodes).toEqual([])
   })
 })

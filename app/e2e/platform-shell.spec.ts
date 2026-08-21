@@ -20,6 +20,29 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   const projectTitle = await page.getByRole('heading', { level: 1 }).textContent()
   expect(projectTitle).toMatch(/^未命名项目 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
 
+  const starter = page.getByRole('region', { name: '开始创作' })
+  await expect(starter).toContainText('双击画布')
+  await expect(starter).toContainText('自由生成节点')
+  await expect(starter.getByRole('button')).toHaveCount(4)
+  await expect(starter.getByRole('button', { name: '故事脚本生成' })).toBeVisible()
+  await expect(starter.getByRole('button', { name: '角色三视图' })).toBeVisible()
+  await expect(starter.getByRole('button', { name: '全能参考生视频 SD2.5' })).toBeVisible()
+  await expect(starter.getByRole('button', { name: '音频生视频 SD2.5' })).toBeVisible()
+  await expect(page.locator('.react-flow__node')).toHaveCount(0)
+
+  await page.reload()
+  await expect(page.getByRole('region', { name: '开始创作' })).toBeVisible()
+  await page
+    .getByRole('region', { name: '开始创作' })
+    .getByRole('button', { name: '故事脚本生成' })
+    .click()
+  await expect(page.getByRole('button', { name: '故事脚本 01', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: '开始创作' })).toHaveCount(0)
+  await expect(page.getByText('已保存')).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: '故事脚本 01', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: '开始创作' })).toHaveCount(0)
+
   await page.getByRole('button', { name: '发布与分享' }).click()
   await page
     .getByRole('menu', { name: '发布与分享菜单' })
@@ -30,4 +53,60 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   await expect(page.getByRole('heading', { name: '全部项目' })).toBeVisible()
 
   expect(browserErrors).toEqual([])
+})
+
+test('keeps the empty-canvas starter reachable at 721 by 778', async ({ page }) => {
+  await page.setViewportSize({ width: 721, height: 778 })
+  await page.goto('/')
+  await page.getByRole('link', { name: '新建项目', exact: true }).click()
+
+  const starter = page.getByRole('region', { name: '开始创作' })
+  const dock = page.getByRole('toolbar', { name: '画布模式工具' })
+  await expect(starter.getByRole('button')).toHaveCount(4)
+  const geometry = await starter.evaluate((element) => {
+    const starterRect = element.getBoundingClientRect()
+    const dockRect = document
+      .querySelector('.canvas-mode-bar')
+      ?.getBoundingClientRect()
+    const buttons = [...element.querySelectorAll('button')].map((button) => {
+      const rect = button.getBoundingClientRect()
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+      }
+    })
+    return {
+      starter: {
+        left: starterRect.left,
+        top: starterRect.top,
+        right: starterRect.right,
+        bottom: starterRect.bottom,
+      },
+      dock: dockRect
+        ? { left: dockRect.left, top: dockRect.top, right: dockRect.right, bottom: dockRect.bottom }
+        : undefined,
+      buttons,
+      viewport: { width: innerWidth, height: innerHeight },
+    }
+  })
+  expect(geometry.starter.left).toBeGreaterThanOrEqual(0)
+  expect(geometry.starter.top).toBeGreaterThanOrEqual(0)
+  expect(geometry.starter.right).toBeLessThanOrEqual(geometry.viewport.width)
+  expect(geometry.starter.bottom).toBeLessThanOrEqual(geometry.viewport.height)
+  expect(geometry.starter.bottom).toBeLessThanOrEqual(geometry.dock!.top)
+  for (const button of geometry.buttons) {
+    expect(button.left).toBeGreaterThanOrEqual(0)
+    expect(button.top).toBeGreaterThanOrEqual(0)
+    expect(button.right).toBeLessThanOrEqual(geometry.viewport.width)
+    expect(button.bottom).toBeLessThanOrEqual(geometry.viewport.height)
+  }
+  await expect(dock).toBeVisible()
+
+  await starter.getByRole('button', { name: '全能参考生视频 SD2.5' }).click()
+  await expect(
+    page.getByRole('button', { name: '全能参考生视频 01', exact: true }),
+  ).toBeVisible()
+  await expect(starter).toHaveCount(0)
 })
