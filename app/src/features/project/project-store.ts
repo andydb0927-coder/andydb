@@ -25,7 +25,6 @@ import {
   updateCreativeCardProject,
   type CreativeCardDraft,
 } from './creative-card'
-import type { WorkflowNodeRun } from '../workflow/workflow-model'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -105,11 +104,6 @@ interface ProjectStore {
   applyGenerationSuccess: (
     projectId: string,
     job: GenerationJob,
-    result: GenerationResult,
-  ) => void
-  applyWorkflowGenerationSuccess: (
-    projectId: string,
-    nodeRun: WorkflowNodeRun,
     result: GenerationResult,
   ) => void
   addToTimeline: (item: TimelineItem) => void
@@ -1331,115 +1325,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
               past: [...state.past, baseline],
               future: [],
             }
-          : {}),
-      }))
-    },
-
-    applyWorkflowGenerationSuccess: (projectId, nodeRun, result) => {
-      const project = get().projectsById[projectId]
-      const source = project?.nodes.find((node) => node.id === nodeRun.nodeId)
-      if (
-        !project ||
-        !source ||
-        nodeRun.request.projectId !== projectId ||
-        nodeRun.request.nodeId !== nodeRun.nodeId ||
-        nodeRun.status !== 'running'
-      ) {
-        throw new Error('Workflow project or source mismatch')
-      }
-      if (project.assets.some((asset) => asset.id === result.asset.id)) {
-        throw new Error('Workflow asset ID collision')
-      }
-      if (
-        project.nodes.some((node) =>
-          node.versions.some((version) => version.id === result.version.id),
-        )
-      ) {
-        throw new Error('Workflow version ID collision')
-      }
-      if (
-        result.version.assetId !== result.asset.id ||
-        result.version.generationJobId !== nodeRun.id
-      ) {
-        throw new Error('Workflow result reference mismatch')
-      }
-      if (project.jobs.some((job) => job.id === nodeRun.id)) {
-        throw new Error('Workflow job ID collision')
-      }
-
-      const timestamp = new Date().toISOString()
-      const job: GenerationJob = {
-        id: nodeRun.id,
-        projectId,
-        nodeId: nodeRun.nodeId,
-        status: 'succeeded',
-        prompt: nodeRun.request.prompt,
-        createdAt: nodeRun.startedAt ?? timestamp,
-        updatedAt: timestamp,
-        assetId: result.asset.id,
-        operation: nodeRun.request.operation,
-        attempt: nodeRun.attempt,
-        sequence:
-          project.jobs.reduce(
-            (latest, candidate) => Math.max(latest, candidate.sequence ?? 0),
-            0,
-          ) + 1,
-        generationConfig: {
-          targetKind: nodeRun.request.targetKind,
-          ...(nodeRun.request.providerId
-            ? { providerId: nodeRun.request.providerId }
-            : {}),
-          ...(nodeRun.request.parameters
-            ? { parameters: { ...nodeRun.request.parameters } }
-            : {}),
-          referenceAssets: nodeRun.request.referenceAssets.map((reference) => ({
-            ...reference,
-          })),
-        },
-        ...(result.usage
-          ? {
-              providerId: result.usage.providerId,
-              providerName: result.usage.providerName,
-              modelName: result.usage.modelName,
-              progress: 100,
-              estimatedCost: result.usage.cost,
-              creditsSpent: result.usage.cost,
-            }
-          : {}),
-      }
-      const versioned = withUpdatedTimestamp({
-        ...project,
-        assets: [...project.assets, result.asset],
-        jobs: [...project.jobs, job],
-        nodes: project.nodes.map((node) =>
-          node.id === source.id
-            ? {
-                ...node,
-                versions: [...node.versions, result.version],
-                activeVersionId: result.version.id,
-                sourceChanged: false,
-              }
-            : node,
-        ),
-      })
-      const downstream = findDownstream(versioned, source.id)
-      const next: Project = {
-        ...versioned,
-        nodes: versioned.nodes.map((node) =>
-          downstream.nodeIds.has(node.id)
-            ? { ...node, sourceChanged: true }
-            : node,
-        ),
-        edges: versioned.edges.map((edge) =>
-          downstream.edgeIds.has(edge.id)
-            ? { ...edge, sourceChanged: true }
-            : edge,
-        ),
-      }
-      set((state) => ({
-        projectsById: { ...state.projectsById, [projectId]: next },
-        ...(state.activeProjectId === projectId
-          ? { activeProject: next, saveStatus: 'dirty' as const }
           : {}),
       }))
     },

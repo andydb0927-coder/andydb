@@ -49,8 +49,6 @@ import {
 import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
 import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
-import type { MembershipPlanId } from '../membership/membership-model'
-import { MembershipRepository } from '../membership/membership-repository'
 import {
   defaultImageGenerationSettings,
   type CanvasCreation,
@@ -75,15 +73,6 @@ import {
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
-import { WorkflowRunPanel } from '../workflow/WorkflowRunPanel'
-import {
-  buildWorkflowRun,
-  executableWorkflowNodes,
-  type WorkflowExecutionMode,
-  type WorkflowRun,
-} from '../workflow/workflow-model'
-import { WorkflowRepository } from '../workflow/workflow-repository'
-import { WorkflowRunner } from '../workflow/workflow-runner'
 import { downloadBlob } from '../timeline/timeline-export'
 import {
   CanvasToolbar,
@@ -171,10 +160,6 @@ import {
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
-type CanvasWorkflowRepository = Pick<
-  WorkflowRepository,
-  'listByProject' | 'save'
->
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 type CanvasNodePosition = Project['nodes'][number]['position']
 
@@ -280,10 +265,7 @@ type PendingRemoteGeneration =
 const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
-const defaultWorkflowRepository = new WorkflowRepository(defaultDatabase)
 const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
-const defaultMembershipRepository = new MembershipRepository(defaultDatabase)
-const defaultWorkflowGenerationAdapter = new RegistryGenerationAdapter()
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
@@ -463,10 +445,7 @@ export interface CanvasPageProps {
     Partial<Pick<AssetLibraryRepository, 'save'>>
   generationAdapter?: GenerationAdapter
   generationPreferenceStore?: GenerationProviderPreferenceStore
-  workflowRepository?: CanvasWorkflowRepository
-  workflowGenerationAdapter?: GenerationAdapter
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
-  membershipStore?: Pick<MembershipRepository, 'get'>
 }
 
 export function CanvasPage({
@@ -474,10 +453,7 @@ export function CanvasPage({
   libraryRepository = defaultLibraryRepository,
   generationAdapter = defaultGenerationAdapter,
   generationPreferenceStore = browserGenerationPreferenceStore,
-  workflowRepository = defaultWorkflowRepository,
-  workflowGenerationAdapter = defaultWorkflowGenerationAdapter,
   collaborationRepository = defaultCollaborationRepository,
-  membershipStore = defaultMembershipRepository,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -547,8 +523,6 @@ export function CanvasPage({
     () => new Set(),
   )
   const selectedEdgeId = [...selectedEdgeIds].at(-1)
-  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([])
-  const [membershipPlan, setMembershipPlan] = useState<MembershipPlanId>('free')
   const [dragPreview, setDragPreview] = useState<DragPreviewState>({
     positions: {},
   })
@@ -719,15 +693,6 @@ export function CanvasPage({
     )
   }, [minimapVisible, snapToGrid])
 
-  useEffect(() => {
-    let active = true
-    void membershipStore.get().then(
-      (subscription) => { if (active) setMembershipPlan(subscription.plan) },
-      () => { if (active) setMembershipPlan('free') },
-    )
-    return () => { active = false }
-  }, [membershipStore])
-
   const toggleConnectionsVisibility = useCallback(() => {
     const nextConnectionsVisible = !connectionsVisible
     if (!nextConnectionsVisible) setSelectedEdgeIds(new Set())
@@ -782,40 +747,6 @@ export function CanvasPage({
     [generationAdapter, projectId, selectOnlyNode],
   )
 
-  const workflowRunner = useMemo(
-    () =>
-      new WorkflowRunner({
-        adapter: workflowGenerationAdapter,
-        onRunChange(run) {
-          if (run.projectId !== projectId) return
-          setWorkflowRuns((current) =>
-            current.some(({ id }) => id === run.id)
-              ? current.map((candidate) =>
-                  candidate.id === run.id ? run : candidate,
-                )
-              : [run, ...current],
-          )
-        },
-        persistRun: (run) => workflowRepository.save(run),
-        async onNodeSuccess(nodeRun, result) {
-          if (nodeRun.request.projectId !== projectId) {
-            throw new Error('Workflow callback route mismatch')
-          }
-          const state = useProjectStore.getState()
-          if (state.activeProjectId !== nodeRun.request.projectId) {
-            throw new Error('Workflow active project mismatch')
-          }
-          state.applyWorkflowGenerationSuccess(
-            nodeRun.request.projectId,
-            nodeRun,
-            result,
-          )
-          await useProjectStore.getState().persistActive(repository)
-        },
-      }),
-    [projectId, repository, workflowGenerationAdapter, workflowRepository],
-  )
-
   useEffect(() => {
     generationQueue.resume()
     return () => {
@@ -829,35 +760,6 @@ export function CanvasPage({
       }
     }
   }, [generationQueue, projectId, repository])
-
-  useEffect(() => () => workflowRunner.dispose(), [workflowRunner])
-
-  useEffect(() => {
-    const activeProjectId = project?.id
-    if (!activeProjectId || activeProjectId !== projectId) return
-    let active = true
-    setWorkflowRuns([])
-
-    const hydrateWorkflowRuns = async () => {
-      try {
-        const runs = await workflowRepository.listByProject(activeProjectId)
-        if (!active) return
-        setWorkflowRuns(runs)
-        for (const run of runs) {
-          if (run.status === 'pending' || run.status === 'running') {
-            void workflowRunner.resume(run)
-          }
-        }
-      } catch {
-        if (active) setWorkflowRuns([])
-      }
-    }
-    void hydrateWorkflowRuns()
-
-    return () => {
-      active = false
-    }
-  }, [project?.id, projectId, workflowRepository, workflowRunner])
 
   useEffect(() => {
     if (!project || saveStatus !== 'dirty') return
@@ -1154,43 +1056,6 @@ export function CanvasPage({
       }
     },
     [handleAction, requestDelete],
-  )
-
-  const workflowSelectedCount = useMemo(
-    () =>
-      project
-        ? executableWorkflowNodes(project, selectedNodeIds).length
-        : 0,
-    [project, selectedNodeIds],
-  )
-
-  const createWorkflowRun = useCallback(
-    (mode: WorkflowExecutionMode) => {
-      const currentProject = useProjectStore.getState().activeProject
-      if (!currentProject || currentProject.id !== projectId) return
-      try {
-        const run = buildWorkflowRun(currentProject, selectedNodeIds, mode)
-        void workflowRunner.execute(run)
-      } catch {
-        return
-      }
-    },
-    [projectId, selectedNodeIds, workflowRunner],
-  )
-
-  const cancelWorkflowRun = useCallback(
-    (runId: string) => {
-      void workflowRunner.cancel(runId)
-    },
-    [workflowRunner],
-  )
-
-  const retryWorkflowNode = useCallback(
-    (runId: string, nodeRunId: string) => {
-      const run = workflowRuns.find(({ id }) => id === runId)
-      if (run) void workflowRunner.retryNode(run, nodeRunId)
-    },
-    [workflowRunner, workflowRuns],
   )
 
   const cancelConnection = useCallback((restoreFocus = true) => {
@@ -4586,16 +4451,6 @@ export function CanvasPage({
               onExecute={handleDirectorCommand}
             />
           </CanvasAgentPanel>
-        ) : null}
-        {project && workspaceMode === 'workflow' ? (
-          <WorkflowRunPanel
-            selectedCount={workflowSelectedCount}
-            runs={workflowRuns}
-            onCreate={createWorkflowRun}
-            onCancel={cancelWorkflowRun}
-            onRetryNode={retryWorkflowNode}
-            membershipPlan={membershipPlan}
-          />
         ) : null}
         {project && commentNode && workspaceMode === 'workflow' ? (
           <CollaborationCommentsPanel

@@ -823,16 +823,12 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
   const modeBarBox = await page
     .getByRole('toolbar', { name: '画布模式工具' })
     .boundingBox()
-  const workflowPanelBox = await page
-    .getByRole('complementary', { name: '工作流运行面板' })
-    .boundingBox()
   const viewport = await page.evaluate(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
   }))
   expect(actionBox).not.toBeNull()
   expect(modeBarBox).not.toBeNull()
-  expect(workflowPanelBox).not.toBeNull()
   expect(actionBox!.x).toBeGreaterThanOrEqual(0)
   expect(actionBox!.y).toBeGreaterThanOrEqual(0)
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(viewport.width)
@@ -850,7 +846,6 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
     ({ x, y }) => {
       const target = document.elementFromPoint(x, y)
       return {
-        blockedByWorkflowPanel: Boolean(target?.closest('.workflow-run-panel')),
         blockedByModeBar: Boolean(target?.closest('.canvas-mode-bar')),
         action: target?.closest('button')?.textContent?.trim(),
         blocker: {
@@ -869,10 +864,6 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
       y: actionBox!.y + actionBox!.height / 2,
     },
   )
-  expect(
-    actionHitTarget.blockedByWorkflowPanel,
-    `primary action=${JSON.stringify(actionBox)}, workflow panel=${JSON.stringify(workflowPanelBox)}`,
-  ).toBe(false)
   expect(actionHitTarget.blockedByModeBar).toBe(false)
   expect(
     actionHitTarget.action,

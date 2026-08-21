@@ -5,7 +5,6 @@ import {
   deriveLibraryRecord,
   type LibraryAssetRecord,
 } from '../assets/library-model'
-import type { WorkflowRun } from '../workflow/workflow-model'
 import type { TimelineProject } from '../timeline/timeline-project'
 import type { PublishedWork } from '../community/community-model'
 import type { Collaborator, ChangeComment } from '../collaboration/collaboration-model'
@@ -19,7 +18,6 @@ import type {
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
   libraryAssets!: Table<LibraryAssetRecord, string>
-  workflowRuns!: Table<WorkflowRun, string>
   timelineProjects!: Table<TimelineProject, string>
   publishedWorks!: Table<PublishedWork, string>
   collaborators!: Table<Collaborator, string>

@@ -6,28 +6,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { makeProjectFixture } from '../../test/fixtures'
 import { createTimelineProject } from '../timeline/timeline-project'
 import { TimelineExportPanel } from '../timeline/TimelineExportPanel'
-import { WorkflowRunPanel } from '../workflow/WorkflowRunPanel'
-
-test('guides free members to upgrade instead of starting batch workflows', async () => {
-  const user = userEvent.setup()
-  const onCreate = vi.fn()
-  render(<MemoryRouter>
-    <WorkflowRunPanel
-      selectedCount={2}
-      runs={[]}
-      membershipPlan="free"
-      onCreate={onCreate}
-      onCancel={vi.fn()}
-      onRetryNode={vi.fn()}
-    />
-  </MemoryRouter>,
-  )
-
-  expect(screen.getByRole('button', { name: '创建运行' })).toBeDisabled()
-  expect(screen.getByRole('link', { name: '升级到专业版' })).toHaveAttribute('href', '/#membership')
-  await user.click(screen.getByRole('button', { name: '创建运行' }))
-  expect(onCreate).not.toHaveBeenCalled()
-})
 
 test('keeps JSON free while creator-only export actions show an upgrade guide', async () => {
   const user = userEvent.setup()

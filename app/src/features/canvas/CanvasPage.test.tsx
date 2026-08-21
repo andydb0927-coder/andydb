@@ -31,7 +31,6 @@ import { CanvasPage } from './CanvasPage'
 import type { CreativeNodeAction } from './node-types'
 import { sortNodesForList } from './NodeListView'
 import { PreviewPage } from '../timeline/PreviewPage'
-import { buildWorkflowRun, type WorkflowRun } from '../workflow/workflow-model'
 
 interface FlowNodeFixture {
   id: string
@@ -295,19 +294,10 @@ function renderCanvas(
     repository: noOpCanvasRepository,
   },
 ) {
-  const membershipStore = props.membershipStore ?? {
-    get: async () => ({
-      id: 'local-membership' as const,
-      plan: 'professional' as const,
-      status: 'active' as const,
-      startedAt: '2026-08-13T08:00:00.000Z',
-      updatedAt: '2026-08-13T08:00:00.000Z',
-    }),
-  }
   return render(
     <MemoryRouter initialEntries={['/project/project-canvas']}>
       <Routes>
-        <Route path="/project/:projectId" element={<CanvasPage {...props} membershipStore={membershipStore} />} />
+        <Route path="/project/:projectId" element={<CanvasPage {...props} />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -451,139 +441,12 @@ afterEach(() => {
 })
 
 describe('creative canvas', () => {
-  test('creates a parallel local workflow from selected executable nodes and attaches results', async () => {
-    const user = userEvent.setup()
-    const workflowStarts: string[] = []
-    const savedRuns: WorkflowRun[] = []
-    const singleGenerationAdapter: GenerationAdapter = {
-      start: vi.fn(async () => {
-        throw new Error('single-node adapter must not run')
-      }),
-    }
-    const workflowAdapter: GenerationAdapter = {
-      async start(request) {
-        workflowStarts.push(request.nodeId)
-        const assetId = `workflow-asset-${request.nodeId}`
-        return {
-          asset: {
-            id: assetId,
-            kind: request.targetKind,
-            url: `/demo/${request.nodeId}.png`,
-            mimeType: request.targetKind === 'video' ? 'video/mp4' : 'image/png',
-          },
-          version: {
-            id: `workflow-version-${request.nodeId}`,
-            createdAt: '2026-08-13T10:00:00.000Z',
-            prompt: request.prompt,
-            assetId,
-          },
-        }
-      },
-    }
-    renderCanvas({
-      repository: noOpCanvasRepository,
-      generationAdapter: singleGenerationAdapter,
-      generationPreferenceStore: libtvPreferenceStore,
-      workflowGenerationAdapter: workflowAdapter,
-      workflowRepository: {
-        listByProject: async () => [],
-        save: async (run) => {
-          savedRuns.push(run)
-        },
-      },
-    })
+  test('does not mount the retired workflow run panel', () => {
+    renderCanvas()
 
-    act(() =>
-      latestFlowProps?.onNodesChange([
-        { type: 'select', id: 'character', selected: true },
-        { type: 'select', id: 'storyboard', selected: true },
-        { type: 'select', id: 'video', selected: true },
-      ]),
-    )
-
-    expect(screen.getByText('已选 2 个可执行节点')).toBeVisible()
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: '执行模式' }),
-      'parallel',
-    )
-    await user.click(screen.getByRole('button', { name: '创建运行' }))
-
-    await waitFor(() =>
-      expect(
-        screen.getByRole('article', { name: /^运行 / }),
-      ).toHaveTextContent('已成功'),
-    )
-    expect(workflowStarts.sort()).toEqual(['storyboard', 'video'])
-    expect(singleGenerationAdapter.start).not.toHaveBeenCalled()
     expect(
-      useProjectStore
-        .getState()
-        .activeProject?.nodes.find(({ id }) => id === 'storyboard')?.activeVersionId,
-    ).toBe('workflow-version-storyboard')
-    expect(
-      useProjectStore
-        .getState()
-        .activeProject?.nodes.find(({ id }) => id === 'video')?.activeVersionId,
-    ).toBe('workflow-version-video')
-    expect(savedRuns.at(-1)?.status).toBe('succeeded')
-  })
-
-  test('hydrates and resumes an interrupted workflow while skipping succeeded nodes', async () => {
-    const project = makeCanvasProject()
-    const original = buildWorkflowRun(
-      project,
-      ['storyboard', 'video'],
-      'serial',
-    )
-    const interrupted: WorkflowRun = {
-      ...original,
-      status: 'running',
-      nodes: original.nodes.map((node, index) => ({
-        ...node,
-        status: index === 0 ? 'succeeded' : 'running',
-        progress: index === 0 ? 100 : 50,
-      })),
-    }
-    const starts: string[] = []
-    renderCanvas({
-      repository: noOpCanvasRepository,
-      workflowGenerationAdapter: {
-        async start(request) {
-          starts.push(request.nodeId)
-          const assetId = `resumed-asset-${request.nodeId}`
-          return {
-            asset: {
-              id: assetId,
-              kind: request.targetKind,
-              url: '/demo/resumed.png',
-              mimeType: request.targetKind === 'video' ? 'video/mp4' : 'image/png',
-            },
-            version: {
-              id: `resumed-version-${request.nodeId}`,
-              createdAt: '2026-08-13T10:00:00.000Z',
-              prompt: request.prompt,
-              assetId,
-            },
-          }
-        },
-      },
-      workflowRepository: {
-        listByProject: async () => [interrupted],
-        save: async () => undefined,
-      },
-    })
-
-    await waitFor(() =>
-      expect(
-        screen.getByRole('article', { name: /^运行 / }),
-      ).toHaveTextContent('已成功'),
-    )
-    expect(starts).toEqual(['video'])
-    expect(
-      useProjectStore
-        .getState()
-        .activeProject?.nodes.find(({ id }) => id === 'video')?.activeVersionId,
-    ).toBe('resumed-version-video')
+      screen.queryByRole('complementary', { name: '工作流运行面板' }),
+    ).not.toBeInTheDocument()
   })
 
   test('announces a persisted asset attach success from route state', () => {
