@@ -6,6 +6,8 @@ import { GenerationQueue } from './generation-queue'
 import {
   ProviderRegistry,
   createDefaultProviderRegistry,
+  defaultVideoGenerationMode,
+  resolveVideoGenerationMode,
 } from './model-provider-registry'
 import { RegistryGenerationAdapter } from './registry-generation-adapter'
 
@@ -94,6 +96,18 @@ describe('model provider registry', () => {
       'tongyi-api',
     ])
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
+  })
+
+  test('resolves video modes from the selected provider capabilities', () => {
+    const registry = createDefaultProviderRegistry()
+    const flexible = registry.require('mock-seedance-video')
+    const textOnly = registry.require('kling-api')
+
+    expect(resolveVideoGenerationMode(flexible, defaultVideoGenerationMode)).toBe(
+      '全能参考',
+    )
+    expect(resolveVideoGenerationMode(textOnly, '全能参考')).toBe('文生视频')
+    expect(resolveVideoGenerationMode(textOnly, '文生视频')).toBe('文生视频')
   })
 
   test('rejects duplicate provider ids and never performs network work while live configuration is disabled', async () => {

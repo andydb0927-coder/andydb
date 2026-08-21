@@ -1,8 +1,10 @@
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
+import { klingMinLoopConfigFixture } from '../../generation/fixtures/kling-min-loop.fixture'
+import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { VideoNode } from './VideoNode'
 import { VideoToolDetails } from './VideoNodeDetails'
@@ -62,6 +64,7 @@ function makeData(contextual: boolean): CreativeNodeData {
     onDelete: vi.fn(),
     onCreateVideoToolNode: vi.fn(),
     onSelectModelProvider: vi.fn(),
+    onUpdateVideoGenerationParameters: vi.fn(),
     onLocalVideoGenerate: vi.fn(),
   }
 }
@@ -159,12 +162,10 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-video')
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
-  expect(within(mode).getByRole('option', { name: '文生视频' })).toBeDisabled()
+  expect(within(mode).getByRole('option', { name: '文生视频' })).toBeEnabled()
   expect(within(mode).getByRole('option', { name: '图片参考' })).toBeEnabled()
   await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
-  expect(
-    within(panel).getByText(/文生视频：当前节点已绑定全能参考配置/),
-  ).toBeVisible()
+  expect(within(panel).queryByText(/当前节点已绑定全能参考配置/)).not.toBeInTheDocument()
   expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
   expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
@@ -201,6 +202,84 @@ test('recomputes video defaults, price, and advanced switches from the selected 
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
   expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
   expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
+})
+
+test('switches an unsupported mode to the first mode supported by the selected model', async () => {
+  const user = userEvent.setup()
+  const registry = createDefaultProviderRegistry({
+    kling: klingMinLoopConfigFixture,
+  })
+  const data = makeData(true)
+  data.providerRegistry = registry
+  data.node = {
+    ...data.node,
+    modelProviderId: 'mock-seedance-video',
+    generationConfig: {
+      targetKind: 'video',
+      providerId: 'mock-seedance-video',
+      parameters: { generationMode: '全能参考' },
+      referenceAssets: [],
+    },
+  }
+  const view = render(renderVideo(data))
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+
+  await user.selectOptions(within(panel).getByLabelText('模型'), 'kling-api')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('kling-api')
+
+  view.rerender(renderVideo({
+    ...data,
+    node: {
+      ...data.node,
+      modelProviderId: 'kling-api',
+      generationConfig: {
+        targetKind: 'video',
+        providerId: 'kling-api',
+        parameters: { generationMode: '文生视频' },
+        referenceAssets: [],
+      },
+    },
+  }))
+
+  const mode = within(panel).getByLabelText('生成模式')
+  expect(mode).toHaveValue('文生视频')
+  expect(within(mode).getByRole('option', { name: '文生视频' })).toBeEnabled()
+  for (const label of ['全能参考', '图生视频', '首尾帧', '图片参考']) {
+    expect(within(mode).getByRole('option', { name: label })).toBeDisabled()
+  }
+  expect(within(panel).getByRole('status')).toHaveTextContent(
+    '当前模型不支持全能参考，已自动切换为文生视频',
+  )
+})
+
+test('repairs an unsupported saved mode when a text-only video node is first rendered', async () => {
+  const registry = createDefaultProviderRegistry({
+    kling: klingMinLoopConfigFixture,
+  })
+  const data = makeData(true)
+  data.providerRegistry = registry
+  data.node = {
+    ...data.node,
+    modelProviderId: 'kling-api',
+    generationConfig: {
+      targetKind: 'video',
+      providerId: 'kling-api',
+      parameters: { generationMode: '全能参考' },
+      referenceAssets: [],
+    },
+  }
+
+  render(renderVideo(data))
+
+  expect(screen.getByLabelText('生成模式')).toHaveValue('文生视频')
+  await waitFor(() => {
+    expect(data.onUpdateVideoGenerationParameters).toHaveBeenCalledWith({
+      generationMode: '文生视频',
+    })
+  })
+  expect(screen.getByRole('status')).toHaveTextContent(
+    '当前模型不支持全能参考，已自动切换为文生视频',
+  )
 })
 
 test('exposes frame confirmations and all seven reference controls without mutating on escape', async () => {

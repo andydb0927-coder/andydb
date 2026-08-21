@@ -12,14 +12,20 @@ import { createPortal } from 'react-dom'
 
 import type { VideoDerivedTool } from '../../project/model'
 import {
+  defaultVideoGenerationMode,
   defaultProviderRegistry,
+  isVideoGenerationMode,
   isProviderEnabled,
+  providerSupportsVideoGenerationMode,
   providerDefaultParameters,
   providerOptionLabel,
+  resolveVideoGenerationMode,
+  videoGenerationModeDefinitions,
 } from '../../generation/model-provider-registry'
 import type {
   ModelParameterName,
   ModelProvider,
+  VideoGenerationMode,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
@@ -241,6 +247,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const [workflowOpen, setWorkflowOpen] = useState(false)
   const [surface, setSurface] = useState<VideoSurface>()
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
+  const [modeNotice, setModeNotice] = useState<string>()
   const activeVersion = data.node.versions.find(({ id }) => id === data.node.activeVersionId)
   const referenceCount =
     data.incomingReferenceCount ?? data.videoReferences?.length ?? 0
@@ -259,6 +266,15 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
       ? data.node.generationConfig.parameters
       : undefined
   const parameters = { ...providerDefaults, ...savedParameters }
+  const configuredMode = isVideoGenerationMode(parameters.generationMode)
+    ? parameters.generationMode
+    : defaultVideoGenerationMode
+  const generationMode =
+    resolveVideoGenerationMode(selectedProvider, configuredMode) ??
+    defaultVideoGenerationMode
+  const unsupportedModes = videoGenerationModeDefinitions.filter(
+    ({ mode }) => !providerSupportsVideoGenerationMode(selectedProvider, mode),
+  )
   const aspectRatio = parameterString(parameters, 'aspectRatio', '16:9')
   const duration = parameterString(parameters, 'duration', '5')
   const quality = parameterString(parameters, 'quality', '720P')
@@ -283,12 +299,24 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
     value: string | boolean,
   ) => data.onUpdateVideoGenerationParameters?.({ [name]: value })
 
+  const modeAdjustmentMessage = (
+    from: VideoGenerationMode,
+    to: VideoGenerationMode,
+  ) => `当前模型不支持${from}，已自动切换为${to}。`
+
   useEffect(() => {
     setAdvanced(false)
     setWorkflowOpen(false)
     setSurface(undefined)
     setPendingTool(undefined)
+    setModeNotice(undefined)
   }, [data.node.id])
+
+  useEffect(() => {
+    if (configuredMode === generationMode) return
+    setModeNotice(modeAdjustmentMessage(configuredMode, generationMode))
+    data.onUpdateVideoGenerationParameters?.({ generationMode })
+  }, [configuredMode, data, generationMode])
 
   useEffect(() => {
     if (!surface && !pendingTool) return
@@ -353,7 +381,20 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <label><span className="visually-hidden">模型</span><select
           aria-label="模型"
           value={selectedProvider.id}
-          onChange={(event) => data.onSelectModelProvider?.(event.target.value)}
+          onChange={(event) => {
+            const nextProvider = providers.find(
+              ({ id }) => id === event.target.value,
+            )
+            const nextMode = nextProvider
+              ? resolveVideoGenerationMode(nextProvider, generationMode)
+              : undefined
+            setModeNotice(
+              nextMode && nextMode !== generationMode
+                ? modeAdjustmentMessage(generationMode, nextMode)
+                : undefined,
+            )
+            data.onSelectModelProvider?.(event.target.value)
+          }}
         >
           {providers.map((provider) => (
             <option
@@ -368,12 +409,27 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <span className="model-provider-badge">
           {selectedProvider.kind === 'live' ? '开发直连' : '演示'}
         </span>
-        <label><span className="visually-hidden">生成模式</span><select aria-label="生成模式" aria-describedby="video-mode-reasons" defaultValue="全能参考">
-          <option disabled>文生视频</option>
-          <option>全能参考</option>
-          <option>图生视频</option>
-          <option>首尾帧</option>
-          <option>图片参考</option>
+        <label><span className="visually-hidden">生成模式</span><select
+          aria-label="生成模式"
+          aria-describedby="video-mode-reasons"
+          value={generationMode}
+          onChange={(event) => {
+            setModeNotice(undefined)
+            updateParameter(
+              'generationMode',
+              event.target.value as VideoGenerationMode,
+            )
+          }}
+        >
+          {videoGenerationModeDefinitions.map(({ mode }) => (
+            <option
+              key={mode}
+              value={mode}
+              disabled={!providerSupportsVideoGenerationMode(selectedProvider, mode)}
+            >
+              {mode}
+            </option>
+          ))}
         </select></label>
         <span className="video-generation-panel__parameter-row">{aspectRatio} · {quality} · {duration}s · {count}个</span>
         <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" value={sound ? '开启' : '关闭'} onChange={(event) => updateParameter('sound', event.target.value === '开启')}><option>关闭</option><option>开启</option></select></label>
@@ -402,6 +458,11 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           <ArrowUp aria-hidden="true" />
         </button>
       </div>
+      {modeNotice ? (
+        <p className="video-generation-panel__reasons" role="status" aria-live="polite">
+          {modeNotice}
+        </p>
+      ) : null}
       {liveConfigurationReason ? (
         <p className="video-generation-panel__reasons" role="note">
           {liveConfigurationReason}
@@ -450,12 +511,18 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             <label className="video-generation-panel__toggle"><input type="checkbox" aria-label="智能分镜" />智能分镜</label>
           </div>
           <div id="video-mode-reasons" className="video-generation-panel__reasons" role="note" aria-label="生成模式禁用原因">
-            <span>文生视频：当前节点已绑定全能参考配置，请新建文生视频节点。</span>
+            {unsupportedModes.map(({ mode, capability }) => (
+              <span key={mode}>
+                {mode}：当前模型不支持{capability === 'text-to-video' ? '文生视频' : '参考素材生视频'}。
+              </span>
+            ))}
             <span>智能续写：当前节点没有可续写的视频结果。</span>
           </div>
         </section>
       ) : (
-        <span id="video-mode-reasons" className="visually-hidden">文生视频：当前节点已绑定全能参考配置，请新建文生视频节点。</span>
+        <span id="video-mode-reasons" className="visually-hidden">
+          {unsupportedModes.map(({ mode }) => `${mode}不可用。`).join(' ')}
+        </span>
       )}
 
       {pendingTool ? (

@@ -21,6 +21,7 @@ export type ModelCapability =
 export type ModelParameterName =
   | 'aspectRatio'
   | 'duration'
+  | 'generationMode'
   | 'quality'
   | 'sound'
   | 'resolution'
@@ -79,6 +80,53 @@ export interface ModelProvider {
     request: ProviderExportRequest,
     context: ProviderExecutionContext,
   ): Promise<ExportResult>
+}
+
+export const videoGenerationModeDefinitions = [
+  { mode: '文生视频', capability: 'text-to-video' },
+  { mode: '全能参考', capability: 'image-to-video' },
+  { mode: '图生视频', capability: 'image-to-video' },
+  { mode: '首尾帧', capability: 'image-to-video' },
+  { mode: '图片参考', capability: 'image-to-video' },
+] as const satisfies readonly {
+  mode: string
+  capability: ModelCapability
+}[]
+
+export type VideoGenerationMode =
+  (typeof videoGenerationModeDefinitions)[number]['mode']
+
+export const defaultVideoGenerationMode: VideoGenerationMode = '全能参考'
+
+export function isVideoGenerationMode(
+  value: unknown,
+): value is VideoGenerationMode {
+  return videoGenerationModeDefinitions.some(({ mode }) => mode === value)
+}
+
+export function providerSupportsVideoGenerationMode(
+  provider: ModelProvider,
+  mode: VideoGenerationMode,
+) {
+  const definition = videoGenerationModeDefinitions.find(
+    (candidate) => candidate.mode === mode,
+  )
+  return Boolean(
+    definition && provider.capabilities.includes(definition.capability),
+  )
+}
+
+export function resolveVideoGenerationMode(
+  provider: ModelProvider,
+  requestedMode: unknown = defaultVideoGenerationMode,
+): VideoGenerationMode | undefined {
+  const preferred = isVideoGenerationMode(requestedMode)
+    ? requestedMode
+    : defaultVideoGenerationMode
+  if (providerSupportsVideoGenerationMode(provider, preferred)) return preferred
+  return videoGenerationModeDefinitions.find(({ capability }) =>
+    provider.capabilities.includes(capability),
+  )?.mode
 }
 
 const capabilityCopy: Record<ModelCapability, string> = {

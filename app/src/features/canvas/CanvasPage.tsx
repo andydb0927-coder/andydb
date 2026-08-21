@@ -33,9 +33,12 @@ import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
 import {
+  defaultVideoGenerationMode,
   defaultProviderRegistry,
+  isVideoGenerationMode,
   isProviderEnabled,
   providerDefaultParameters,
+  resolveVideoGenerationMode,
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
@@ -378,11 +381,21 @@ function buildGenerationRequest(
           count: normalizedImageSettings.count,
         }
       : undefined
-  const parameters = {
+  const parameters: Record<string, string | number | boolean> = {
     ...(registeredProvider ? providerDefaultParameters(registeredProvider) : {}),
     ...savedConfig?.parameters,
     ...imageParameters,
   }
+  if (targetKind === 'video' && registeredProvider) {
+    parameters.generationMode =
+      resolveVideoGenerationMode(
+        registeredProvider,
+        parameters.generationMode ?? defaultVideoGenerationMode,
+      ) ?? defaultVideoGenerationMode
+  }
+  const generationMode = isVideoGenerationMode(parameters.generationMode)
+    ? parameters.generationMode
+    : undefined
 
   return {
     projectId: project.id,
@@ -392,17 +405,19 @@ function buildGenerationRequest(
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
     ...(Object.keys(parameters).length ? { parameters } : {}),
-    referenceAssets: savedConfig?.referenceAssets.length
-      ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
-      : asset
-      ? [
-          {
-            url: asset.url,
-            kind: asset.kind,
-            mimeType: asset.mimeType,
-          },
-        ]
-      : [],
+    referenceAssets: generationMode === '文生视频'
+      ? []
+      : savedConfig?.referenceAssets.length
+        ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
+        : asset
+          ? [
+              {
+                url: asset.url,
+                kind: asset.kind,
+                mimeType: asset.mimeType,
+              },
+            ]
+          : [],
   }
 }
 
@@ -1515,12 +1530,23 @@ export function CanvasPage({
           onSelectModelProvider: (providerId) => {
             const provider = providerRegistry.require(providerId)
             if (!isProviderEnabled(provider)) return
+            const previousMode = isVideoGenerationMode(
+              node.generationConfig?.parameters?.generationMode,
+            )
+              ? node.generationConfig.parameters.generationMode
+              : defaultVideoGenerationMode
+            const generationMode = node.kind === 'video'
+              ? resolveVideoGenerationMode(provider, previousMode)
+              : undefined
             updateNode(node.id, {
               modelProviderId: providerId,
               generationConfig: {
                 targetKind: node.kind === 'video' ? 'video' : 'image',
                 providerId,
-                parameters: providerDefaultParameters(provider),
+                parameters: {
+                  ...providerDefaultParameters(provider),
+                  ...(generationMode ? { generationMode } : {}),
+                },
                 referenceAssets:
                   node.generationConfig?.referenceAssets.map((reference) => ({
                     ...reference,
@@ -2468,6 +2494,37 @@ export function CanvasPage({
         }
       }
 
+      if (creation.node.kind === 'video') {
+        const provider =
+          providerRegistry.list().find(
+            ({ id }) => id === 'mock-seedance-video',
+          ) ??
+          providerRegistry.matching(['text-to-video', 'image-to-video']).find(
+            isProviderEnabled,
+          )
+        const generationMode = provider
+          ? resolveVideoGenerationMode(provider, defaultVideoGenerationMode)
+          : undefined
+        if (provider && generationMode) {
+          creation = {
+            ...creation,
+            node: {
+              ...creation.node,
+              modelProviderId: provider.id,
+              generationConfig: {
+                targetKind: 'video',
+                providerId: provider.id,
+                parameters: {
+                  ...providerDefaultParameters(provider),
+                  generationMode,
+                },
+                referenceAssets: [],
+              },
+            },
+          }
+        }
+      }
+
       if (
         dependencyContext &&
         (creation.node.kind === 'image' ||
@@ -2497,7 +2554,7 @@ export function CanvasPage({
 
       return creation
     },
-    [],
+    [providerRegistry],
   )
 
   const createQuickNodeAt = useCallback(

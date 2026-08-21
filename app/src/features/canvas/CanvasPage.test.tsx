@@ -1007,7 +1007,11 @@ describe('creative canvas', () => {
             generationConfig: {
               targetKind: 'video',
               providerId: 'kling-api',
-              parameters: { aspectRatio: '16:9', duration: '5' },
+              parameters: {
+                aspectRatio: '16:9',
+                duration: '5',
+                generationMode: '文生视频',
+              },
               referenceAssets: [],
             },
           }
@@ -2867,6 +2871,56 @@ describe('creative canvas', () => {
     expect(
       screen.getByText('请输入提示词或添加参考媒体后再生成。'),
     ).toBeVisible()
+  })
+
+  test('persists the live text mode and excludes media references after switching to Kling', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    const providerRegistry = createDefaultProviderRegistry({
+      kling: klingMinLoopConfigFixture,
+    })
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+      providerRegistry,
+    })
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
+    expect(within(panel).getByLabelText('生成模式')).toHaveValue('全能参考')
+
+    await user.selectOptions(
+      within(panel).getByLabelText('模型'),
+      'kling-api',
+    )
+
+    expect(within(panel).getByLabelText('生成模式')).toHaveValue('文生视频')
+    expect(within(panel).getByRole('status')).toHaveTextContent(
+      '当前模型不支持全能参考，已自动切换为文生视频',
+    )
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'video'),
+    ).toMatchObject({
+      modelProviderId: 'kling-api',
+      generationConfig: {
+        providerId: 'kling-api',
+        parameters: { generationMode: '文生视频' },
+      },
+    })
+
+    await user.click(
+      within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
+    )
+    await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(start.mock.calls[0]?.[0]).toMatchObject({
+      providerId: 'kling-api',
+      parameters: { generationMode: '文生视频' },
+      referenceAssets: [],
+    })
   })
 
   test('duplicates selected nodes at the Option-drag drop position without moving originals', () => {
