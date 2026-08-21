@@ -23,20 +23,19 @@
 
 ## 2. 已核对的实现契约
 
-实现读取 5 项环境变量，其中 1 项是运行模式，4 项是可灵配置：
+实现读取 4 项环境变量，其中 1 项是运行模式，3 项是可灵配置：
 
 | 变量 | 用途 | 必填条件 |
 | --- | --- | --- |
 | `VITE_GENERATION_MODE` | 生成模式 | 必须等于 `kling-direct-dev` |
-| `VITE_KLING_ACCESS_KEY` | 临时开发 Access Key | 开发直连必填 |
-| `VITE_KLING_SECRET_KEY` | 临时开发 Secret Key | 开发直连必填 |
+| `VITE_KLING_API_KEY` | 临时开发 API Key | 开发直连必填 |
 | `VITE_KLING_API_BASE` | 官方 API 基地址 | 开发直连必填，实施当天复核 |
 | `VITE_KLING_MODEL_ID` | 已开通的单模型 ID | 开发直连必填，实施当天复核 |
 
 配置门行为：
 
 - 注册表始终注册 `kling-api`，类型为 `live`；
-- 只有模式为 `kling-direct-dev` 且 4 项可灵配置全部存在时，Provider 才可用；
+- 只有模式为 `kling-direct-dev` 且 3 项可灵配置全部存在时，Provider 才可用；
 - 缺少任意一项时，模型选项和生成入口保持禁用，并显示“可灵开发验证配置未完成”；
 - 缺配置时不得发送请求，也不得改用 Mock 冒充真实生成；
 - 默认 `mock` 模式与现有本地演示行为保持不变。
@@ -47,10 +46,9 @@
 
 ```dotenv
 VITE_GENERATION_MODE=kling-direct-dev
-VITE_KLING_ACCESS_KEY=<临时开发 Access Key>
-VITE_KLING_SECRET_KEY=<临时开发 Secret Key>
+VITE_KLING_API_KEY=<临时开发 API Key>
 VITE_KLING_API_BASE=<实施当天确认的官方 API 基地址>
-VITE_KLING_MODEL_ID=<已开通的单模型 ID>
+VITE_KLING_MODEL_ID=kling-2.6
 ```
 
 注意：`VITE_*` 会被 Vite 注入浏览器代码，不具备保密能力。本配置仅用于本机短期协议验证；生产必须改用服务端代理。
@@ -91,7 +89,7 @@ VITE_KLING_MODEL_ID=<已开通的单模型 ID>
    ```
 
 4. 只打开 `http://127.0.0.1:4173/`；
-5. 打开浏览器开发者工具，只观察状态码、请求时序和脱敏后的响应结构，不复制授权头或完整签名 URL。
+5. 打开浏览器开发者工具，只观察状态码、请求时序和脱敏后的响应结构，不复制授权头或完整防盗链 URL。
 
 ### 5.2 进入画布并提交一次生成
 
@@ -125,7 +123,7 @@ VITE_KLING_MODEL_ID=<已开通的单模型 ID>
 
 ## 6. 观测记录模板
 
-记录时只保存脱敏信息。任务 ID 可保留首尾各 4 位；结果只记录域名，不记录完整签名 URL。
+记录时只保存脱敏信息。任务 ID 可保留首尾各 4 位；结果只记录域名，不记录完整防盗链 URL。
 
 ### 6.1 基本信息
 
@@ -181,7 +179,7 @@ VITE_KLING_MODEL_ID=<已开通的单模型 ID>
 | --- | --- | --- | --- | --- | --- | --- |
 | 创建任务 / 轮询 / 解析 / 播放 |  |  |  |  |  |  |
 
-严禁记录：Access Key、Secret Key、完整 `Authorization` 头、完整签名 URL、完整 HAR。
+严禁记录：API Key、完整 `Authorization` 头、完整防盗链 URL、完整 HAR。
 
 ## 7. 成功判定
 

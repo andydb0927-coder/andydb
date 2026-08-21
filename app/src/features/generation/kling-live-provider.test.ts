@@ -10,6 +10,7 @@ import {
   klingMinLoopInvalidUrlFixture,
   klingMinLoopProcessingFixture,
   klingMinLoopRateLimitedFixture,
+  klingMinLoopRequestIdFixture,
   klingMinLoopSuccessFixture,
   klingMinLoopTimeoutFixture,
   klingMinLoopUnauthorizedFixture,
@@ -30,7 +31,7 @@ function createProvider(fetchFn: typeof fetch, overrides = {}) {
     fetchFn,
     pollIntervalMs: 0,
     maxPollAttempts: 3,
-    createAuthorization: async () => 'Bearer fixture-token',
+    requestIdFactory: () => klingMinLoopRequestIdFixture,
     ...overrides,
   })
 }
@@ -61,16 +62,20 @@ describe('kling live provider', () => {
     expect(provider.disabledReason).toBeUndefined()
     expect(fetchFn).toHaveBeenCalledTimes(3)
     expect(fetchFn.mock.calls[0]?.[0]).toBe(
-      'https://fixture.kling.invalid/v1/videos/text2video',
+      'https://fixture.kling.invalid/text-to-video/kling-2.6',
     )
     expect(fetchFn.mock.calls[0]?.[1]).toMatchObject({
       method: 'POST',
-      headers: expect.objectContaining({ Authorization: 'Bearer fixture-token' }),
+      headers: expect.objectContaining({ Authorization: 'Bearer fixture-api-key' }),
       body: JSON.stringify(klingMinLoopCreateRequestFixture),
     })
     expect(fetchFn.mock.calls[1]?.[0]).toBe(
-      'https://fixture.kling.invalid/v1/videos/text2video/fixture-kling-task',
+      'https://fixture.kling.invalid/tasks?external_task_ids=fixture-request-id',
     )
+    expect(fetchFn.mock.calls[1]?.[1]).toMatchObject({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: 'Bearer fixture-api-key' }),
+    })
     expect(result).toMatchObject({
       persistence: 'ephemeral',
       asset: {
@@ -90,8 +95,7 @@ describe('kling live provider', () => {
     const fetchFn = vi.fn<typeof fetch>()
     const provider = createKlingLiveProvider({
       mode: 'kling-direct-dev',
-      accessKey: '',
-      secretKey: '',
+      apiKey: '',
       apiBase: '',
       modelId: '',
       fetchFn,

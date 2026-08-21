@@ -1024,7 +1024,7 @@ describe('creative canvas', () => {
         ...klingMinLoopConfigFixture,
         fetchFn,
         pollIntervalMs: 0,
-        createAuthorization: async () => 'Bearer fixture-token',
+        requestIdFactory: () => 'fixture-request-id',
       },
     })
     const ephemeralGenerationResultStore =

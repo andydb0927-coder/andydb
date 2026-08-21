@@ -2,11 +2,12 @@ import type { GenerationRequest } from '../generation-adapter'
 
 export const klingMinLoopConfigFixture = {
   mode: 'kling-direct-dev',
-  accessKey: 'fixture-access-key',
-  secretKey: 'fixture-secret-key',
+  apiKey: 'fixture-api-key',
   apiBase: 'https://fixture.kling.invalid',
-  modelId: 'fixture-kling-text-to-video',
+  modelId: 'kling-2.6',
 } as const
+
+export const klingMinLoopRequestIdFixture = 'fixture-request-id'
 
 export const klingMinLoopGenerationRequestFixture: GenerationRequest = {
   projectId: 'fixture-project',
@@ -18,15 +19,25 @@ export const klingMinLoopGenerationRequestFixture: GenerationRequest = {
   parameters: {
     aspectRatio: '16:9',
     duration: '5',
+    resolution: '1080P',
+    sound: true,
+    watermark: false,
   },
   referenceAssets: [],
 }
 
 export const klingMinLoopCreateRequestFixture = {
-  model_name: 'fixture-kling-text-to-video',
   prompt: '雨夜街道，摄影机缓慢向前推进',
-  aspect_ratio: '16:9',
-  duration: '5',
+  settings: {
+    audio: 'native',
+    resolution: '1080p',
+    aspect_ratio: '16:9',
+    duration: 5,
+  },
+  options: {
+    external_task_id: klingMinLoopRequestIdFixture,
+    watermark_info: { enabled: false },
+  },
 } as const
 
 export const klingMinLoopCreateSuccessFixture = {
@@ -34,8 +45,8 @@ export const klingMinLoopCreateSuccessFixture = {
   message: 'SUCCEED',
   request_id: 'fixture-create-request',
   data: {
-    task_id: 'fixture-kling-task',
-    task_status: 'submitted',
+    id: 'fixture-kling-task',
+    status: 'submitted',
   },
 } as const
 
@@ -43,30 +54,34 @@ export const klingMinLoopProcessingFixture = {
   code: 0,
   message: 'SUCCEED',
   request_id: 'fixture-status-processing',
-  data: {
-    task_id: 'fixture-kling-task',
-    task_status: 'processing',
-    task_result: { videos: [] },
-  },
+  data: [{
+    id: 'fixture-kling-task',
+    external_task_id: klingMinLoopRequestIdFixture,
+    status: 'processing',
+    outputs: [],
+  }],
 } as const
 
 export const klingMinLoopSuccessFixture = {
   code: 0,
   message: 'SUCCEED',
   request_id: 'fixture-status-success',
-  data: {
-    task_id: 'fixture-kling-task',
-    task_status: 'succeed',
-    task_result: {
-      videos: [
-        {
-          id: 'fixture-video-result',
-          url: 'https://media.fixture.invalid/kling-result.mp4',
-          duration: '5',
-        },
-      ],
-    },
-  },
+  data: [{
+    id: 'fixture-kling-task',
+    external_task_id: klingMinLoopRequestIdFixture,
+    status: 'succeeded',
+    outputs: [
+      {
+        type: 'image',
+        url: 'https://media.fixture.invalid/ignored-poster.jpg',
+      },
+      {
+        type: 'video',
+        url: 'https://media.fixture.invalid/kling-result.mp4',
+        duration: 5,
+      },
+    ],
+  }],
 } as const
 
 export const klingMinLoopUnauthorizedFixture = {
@@ -89,11 +104,13 @@ export const klingMinLoopFailedFixture = {
   code: 0,
   message: 'SUCCEED',
   request_id: 'fixture-status-failed',
-  data: {
-    task_id: 'fixture-kling-task',
-    task_status: 'failed',
-    task_status_msg: 'fixture content rejected',
-  },
+  data: [{
+    id: 'fixture-kling-task',
+    external_task_id: klingMinLoopRequestIdFixture,
+    status: 'failed',
+    message: 'fixture content rejected',
+    outputs: [],
+  }],
 } as const
 
 export const klingMinLoopTimeoutFixture = {
@@ -104,16 +121,12 @@ export const klingMinLoopTimeoutFixture = {
 export const klingMinLoopInvalidUrlFixture = {
   ...klingMinLoopSuccessFixture,
   request_id: 'fixture-status-invalid-url',
-  data: {
-    ...klingMinLoopSuccessFixture.data,
-    task_result: {
-      videos: [
-        {
-          id: 'fixture-invalid-video-result',
-          url: 'javascript:alert(1)',
-          duration: '5',
-        },
-      ],
-    },
-  },
+  data: [{
+    ...klingMinLoopSuccessFixture.data[0],
+    outputs: [{
+      type: 'video',
+      url: 'javascript:alert(1)',
+      duration: 5,
+    }],
+  }],
 } as const

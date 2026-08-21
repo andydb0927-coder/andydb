@@ -109,10 +109,9 @@ VITE_GENERATION_API_BASE=/api
 
 ```dotenv
 VITE_GENERATION_MODE=kling-direct-dev
-VITE_KLING_ACCESS_KEY=temporary-development-key
-VITE_KLING_SECRET_KEY=temporary-development-secret
+VITE_KLING_API_KEY=temporary-development-api-key
 VITE_KLING_API_BASE=official-endpoint-confirmed-before-implementation
-VITE_KLING_MODEL_ID=official-model-id-confirmed-before-implementation
+VITE_KLING_MODEL_ID=kling-2.6
 ```
 
 这些变量只允许使用低额度、可随时撤销的开发凭证；不得提交到 Git，不得配置到公开 Preview/Production 静态站点。验证完成后应立即撤销或轮换。
@@ -122,10 +121,9 @@ VITE_KLING_MODEL_ID=official-model-id-confirmed-before-implementation
 生产环境必须由同源服务端代理或 Serverless Function 保管密钥；这些变量不带 `VITE_` 前缀，也不得返回给浏览器：
 
 ```dotenv
-KLING_ACCESS_KEY=production-secret
-KLING_SECRET_KEY=production-secret
+KLING_API_KEY=production-secret
 KLING_API_BASE=official-endpoint-confirmed-before-implementation
-KLING_MODEL_ID=official-model-id-confirmed-before-implementation
+KLING_MODEL_ID=kling-2.6
 ALLOWED_ORIGINS=https://canvas.example.com
 ```
 
@@ -151,7 +149,7 @@ Preview 页面应明显标注“演示”或“Preview”，避免用户把本�
 - [ ] 演示供应商标识可见，生成操作不请求真实第三方 API；
 - [ ] 同一浏览器刷新后本地项目仍存在，换浏览器不承诺同步；
 - [ ] 控制台无未处理错误，静态资源无 404；
-- [ ] 不存在 `VITE_KLING_ACCESS_KEY`、`VITE_KLING_SECRET_KEY` 或其他真实密钥；
+- [ ] 不存在 `VITE_KLING_API_KEY` 或其他真实密钥；
 - [ ] 深链回退、HTTPS、缓存和音视频加载正常。
 
 ## 10. 回滚

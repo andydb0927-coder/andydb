@@ -59,7 +59,7 @@ describe('model provider registry', () => {
       kind: 'live',
       disabledReason: '可灵开发验证配置未完成',
       capabilities: ['text-to-video'],
-      officialApiEndpoint: 'https://api.klingai.com/v1/videos/text2video',
+      officialApiEndpoint: 'https://api.klingai.com/text-to-video/kling-2.6',
     })
     expect(registry.require('mock-seedance-video')).toMatchObject({
       modelName: 'Seedance 2.0',

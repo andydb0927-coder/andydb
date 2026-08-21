@@ -7,93 +7,53 @@ import type {
 } from './model-provider-registry'
 
 const configurationError = '可灵开发验证配置未完成'
-const textToVideoPath = '/v1/videos/text2video'
+const defaultApiBase = 'https://api.klingai.com'
+const defaultModelId = 'kling-2.6'
 
 export interface KlingLiveProviderOptions {
   mode?: string
-  accessKey?: string
-  secretKey?: string
+  apiKey?: string
   apiBase?: string
   modelId?: string
   fetchFn?: typeof fetch
   pollIntervalMs?: number
   maxPollAttempts?: number
-  now?: () => number
-  createAuthorization?: (
-    accessKey: string,
-    secretKey: string,
-    now: number,
-  ) => Promise<string>
+  requestIdFactory?: () => string
 }
 
 interface KlingCreateResponse {
   code?: unknown
+  message?: unknown
   data?: {
-    task_id?: unknown
+    id?: unknown
+    status?: unknown
   }
 }
 
-interface KlingVideoResult {
-  id?: unknown
+interface KlingOutput {
+  type?: unknown
   url?: unknown
   duration?: unknown
 }
 
-interface KlingStatusResponse {
+interface KlingTask {
+  id?: unknown
+  external_task_id?: unknown
+  status?: unknown
+  message?: unknown
+  outputs?: KlingOutput[]
+}
+
+interface KlingTasksResponse {
   code?: unknown
-  data?: {
-    task_id?: unknown
-    task_status?: unknown
-    task_status_msg?: unknown
-    task_result?: {
-      videos?: KlingVideoResult[]
-    }
-  }
+  message?: unknown
+  data?: KlingTask[]
 }
 
 function envValue(name: string) {
   const env = import.meta.env as Record<string, string | undefined>
   const value = env[name]
   return typeof value === 'string' ? value.trim() : ''
-}
-
-function base64Url(value: Uint8Array | string) {
-  const text =
-    typeof value === 'string'
-      ? value
-      : String.fromCharCode(...value)
-  return btoa(text)
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replace(/=+$/u, '')
-}
-
-async function createKlingAuthorization(
-  accessKey: string,
-  secretKey: string,
-  now: number,
-) {
-  const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const currentSeconds = Math.floor(now / 1000)
-  const payload = base64Url(
-    JSON.stringify({
-      iss: accessKey,
-      exp: currentSeconds + 1800,
-      nbf: currentSeconds - 5,
-    }),
-  )
-  const unsigned = `${header}.${payload}`
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secretKey),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const signature = new Uint8Array(
-    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(unsigned)),
-  )
-  return `Bearer ${unsigned}.${base64Url(signature)}`
 }
 
 function waitForPoll(delayMs: number, signal: AbortSignal) {
@@ -155,9 +115,31 @@ function durationSeconds(value: unknown, fallback: unknown) {
   return Number.isFinite(duration) && duration > 0 ? duration : 5
 }
 
+function durationSetting(value: unknown): 5 | 10 {
+  return Number(value) === 10 ? 10 : 5
+}
+
+function aspectRatioSetting(value: unknown): '16:9' | '9:16' | '1:1' {
+  return value === '9:16' || value === '1:1' ? value : '16:9'
+}
+
+function resolutionSetting(value: unknown): '720p' | '1080p' {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return normalized === '1080p' || normalized === '1920×1080'
+    ? '1080p'
+    : '720p'
+}
+
+function booleanSetting(value: unknown, fallback: boolean) {
+  if (typeof value === 'boolean') return value
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return fallback
+}
+
 function liveResult(
   request: GenerationRequest,
-  video: KlingVideoResult,
+  video: KlingOutput,
 ): GenerationResult {
   const assetId = crypto.randomUUID()
   return {
@@ -182,29 +164,28 @@ export function createKlingLiveProvider(
   options: KlingLiveProviderOptions = {},
 ): ModelProvider {
   const mode = options.mode ?? envValue('VITE_GENERATION_MODE')
-  const accessKey = options.accessKey ?? envValue('VITE_KLING_ACCESS_KEY')
-  const secretKey = options.secretKey ?? envValue('VITE_KLING_SECRET_KEY')
+  const apiKey = options.apiKey ?? envValue('VITE_KLING_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_KLING_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_KLING_MODEL_ID')
   const enabled = Boolean(
     mode === 'kling-direct-dev' &&
-      accessKey &&
-      secretKey &&
+      apiKey &&
       apiBase &&
       modelId,
   )
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const pollIntervalMs = options.pollIntervalMs ?? 1500
   const maxPollAttempts = options.maxPollAttempts ?? 80
-  const now = options.now ?? Date.now
-  const authorizationFactory =
-    options.createAuthorization ?? createKlingAuthorization
-  const createUrl = `${normalizedBaseUrl(apiBase || 'https://api.klingai.com')}${textToVideoPath}`
+  const requestIdFactory =
+    options.requestIdFactory ?? (() => crypto.randomUUID())
+  const resolvedModelId = modelId || defaultModelId
+  const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
+  const createUrl = `${resolvedApiBase}/text-to-video/${encodeURIComponent(resolvedModelId)}`
 
   const provider: ModelProvider = {
     id: 'kling-api',
     name: 'Kling',
-    modelName: modelId || 'Kling 官方 API',
+    modelName: modelId || 'Kling 2.6 官方 API',
     kind: 'live',
     ...(enabled ? {} : { disabledReason: configurationError }),
     capabilities: ['text-to-video'],
@@ -219,6 +200,12 @@ export function createKlingLiveProvider(
         defaultValue: '5',
         options: ['5', '10'],
       },
+      resolution: {
+        type: 'enum',
+        defaultValue: '720p',
+        options: ['720p', '1080p'],
+      },
+      sound: { type: 'boolean', defaultValue: false },
       count: { type: 'enum', defaultValue: '1', options: ['1'] },
     },
     pricing: { amount: 24, currency: 'credits', unit: 'generation' },
@@ -231,35 +218,49 @@ export function createKlingLiveProvider(
       }
       if (!request.prompt.trim()) throw new Error('可灵文生视频需要提示词')
 
-      const authorization = await authorizationFactory(
-        accessKey,
-        secretKey,
-        now(),
-      )
+      const requestId = requestIdFactory()
       const headers = {
-        Authorization: authorization,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       }
       const createResponse = await fetchFn(createUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model_name: modelId,
           prompt: request.prompt,
-          aspect_ratio: String(request.parameters?.aspectRatio ?? '16:9'),
-          duration: String(request.parameters?.duration ?? '5'),
+          settings: {
+            audio: booleanSetting(request.parameters?.sound, false)
+              ? 'native'
+              : 'off',
+            resolution: resolutionSetting(request.parameters?.resolution),
+            aspect_ratio: aspectRatioSetting(request.parameters?.aspectRatio),
+            duration: durationSetting(request.parameters?.duration),
+          },
+          options: {
+            external_task_id: requestId,
+            watermark_info: {
+              enabled: booleanSetting(request.parameters?.watermark, false),
+            },
+          },
         }),
         signal: context.signal,
       })
       assertSuccessfulResponse(createResponse)
       const createBody = await readJson(createResponse) as KlingCreateResponse
-      const taskId = createBody.data?.task_id
-      if (createBody.code !== 0 || typeof taskId !== 'string' || !taskId) {
+      const taskId = createBody.data?.id
+      const createStatus = createBody.data?.status
+      if (
+        createBody.code !== 0 ||
+        typeof taskId !== 'string' ||
+        !taskId ||
+        typeof createStatus !== 'string' ||
+        !createStatus
+      ) {
         throw new Error('可灵创建任务响应格式异常')
       }
       context.onProgress?.(10)
 
-      const statusUrl = `${createUrl}/${encodeURIComponent(taskId)}`
+      const statusUrl = `${resolvedApiBase}/tasks?external_task_ids=${encodeURIComponent(requestId)}`
       for (let attempt = 0; attempt < maxPollAttempts; attempt += 1) {
         await waitForPoll(pollIntervalMs, context.signal)
         const statusResponse = await fetchFn(statusUrl, {
@@ -268,34 +269,41 @@ export function createKlingLiveProvider(
           signal: context.signal,
         })
         assertSuccessfulResponse(statusResponse)
-        const statusBody = await readJson(statusResponse) as KlingStatusResponse
-        const data = statusBody.data
+        const statusBody = await readJson(statusResponse) as KlingTasksResponse
+        const tasks = statusBody.data
+        const task = Array.isArray(tasks)
+          ? tasks.find(({ external_task_id }) => external_task_id === requestId) ??
+            tasks.find(({ id }) => id === taskId)
+          : undefined
         if (
           statusBody.code !== 0 ||
-          !data ||
-          data.task_id !== taskId ||
-          typeof data.task_status !== 'string'
+          !task ||
+          typeof task.status !== 'string'
         ) {
           throw new Error('可灵任务状态响应格式异常')
         }
-        if (data.task_status === 'failed') {
+        if (task.status === 'failed') {
           throw new Error(
-            `可灵生成失败：${safeFailureMessage(data.task_status_msg)}`,
+            `可灵生成失败：${safeFailureMessage(task.message ?? statusBody.message)}`,
           )
         }
         if (
-          data.task_status === 'succeed' ||
-          data.task_status === 'succeeded'
+          task.status === 'succeed' ||
+          task.status === 'succeeded' ||
+          task.status === 'completed'
         ) {
-          const video = data.task_result?.videos?.[0]
+          const video = task.outputs?.find(({ type }) => type === 'video')
           if (!video) throw new Error('可灵结果 URL 无效')
           const result = liveResult(request, video)
           context.onProgress?.(100)
           return result
         }
         if (
-          data.task_status !== 'submitted' &&
-          data.task_status !== 'processing'
+          task.status !== 'submitted' &&
+          task.status !== 'pending' &&
+          task.status !== 'queued' &&
+          task.status !== 'processing' &&
+          task.status !== 'running'
         ) {
           throw new Error('可灵任务状态响应格式异常')
         }

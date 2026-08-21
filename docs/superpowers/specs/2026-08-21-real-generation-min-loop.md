@@ -85,10 +85,10 @@ Provider 内部完成“创建任务 → 轮询 → 解析结果”，对画布�
 点击生成
   → 前端资格校验
   → 读取 kling-live 单模型配置
-  → 创建可灵生成任务
-  → 获得 taskId
-  → 定时查询该 taskId
-  → 成功时提取首个 HTTPS 视频 URL
+  → 以 requestId 作为 external_task_id 创建可灵生成任务
+  → 获得官方 taskId
+  → 按 external_task_id 定时查询任务数组
+  → 成功时从 outputs 提取 type=video 的 HTTPS URL
   → 写入当前页面内存态
   → 节点播放器立即显示结果
 ```
@@ -111,17 +111,19 @@ Provider 内部完成“创建任务 → 轮询 → 解析结果”，对画布�
 
 Kling Provider 将通用请求映射为官方文生视频请求：
 
-- 模型标识来自环境配置；
-- 提示词来自当前节点；
-- 比例、时长仅允许官方 Schema 中的值；
-- 第一版不发送参考素材、声音、多结果或高级参数；
-- 鉴权头由开发直连模块或生产代理生成；
+- 创建地址为 `{BASE}/text-to-video/kling-2.6`，模型标识仍由环境配置集中管理；
+- 鉴权固定为 `Authorization: Bearer API_Key`，不再生成 AK/SK JWT；
+- 请求体固定为 `prompt`、`settings` 与 `options` 三部分；
+- `settings.audio` 只允许 `off | native`，`resolution` 只允许 `720p | 1080p`，`aspect_ratio` 只允许 `16:9 | 9:16 | 1:1`，`duration` 只允许数值 `5 | 10`；
+- `options.external_task_id` 必须使用本次请求的 `requestId`，`watermark_info.enabled` 为布尔值；
+- 第一版不发送参考素材或多结果；
 - 日志只记录 requestId、taskId、状态码和耗时，不记录密钥或完整鉴权头。
 
-创建成功必须返回可追踪的 `taskId`。如果官方响应结构不符合预期，立即失败，不猜测字段。
+创建成功响应必须符合 `{code: 0, data: {id, status}}` 并返回可追踪的 `taskId`。如果官方响应结构不符合预期，立即失败，不猜测字段。
 
 ### 5.3 状态轮询
 
+- 查询地址为 `{BASE}/tasks?external_task_ids={requestId}`；
 - 首次查询在创建成功后短暂等待再开始；
 - 使用有上限的间隔与总超时，不做无限轮询；
 - 每次查询受同一个 `AbortSignal` 控制；
@@ -135,14 +137,14 @@ Kling Provider 将通用请求映射为官方文生视频请求：
 
 ### 5.4 结果校验与直显
 
-成功响应按官方 Schema 提取首个结果，并校验：
+成功响应的 `data` 是任务数组；适配器先匹配本次 `external_task_id`，再从对应任务的 `outputs` 中寻找 `type=video` 的结果，并校验：
 
 - URL 使用 HTTPS；
 - URL 可作为视频媒体源；
-- 结果属于本次 `taskId`；
+- 结果属于本次 `external_task_id` 或创建响应中的 `taskId`；
 - 当前节点仍然存在且本次请求仍是该节点的最新请求。
 
-校验通过后把 URL 写入内存态，并在节点内使用现有播放器直显。不得自动下载、转存或写入生成历史。界面显示“临时结果，刷新后失效”，并允许用户在 URL 有效期内手动预览或下载。
+校验通过后把 URL 写入内存态，并在节点内使用现有播放器直显。官方结果 URL 带防盗链且有效期约 30 天；验证阶段不得自动下载、转存或写入生成历史。界面显示“临时结果，刷新后失效”，并允许用户在 URL 有效期内手动预览或下载。
 
 ## 6. 配置与密钥注入
 
@@ -158,10 +160,9 @@ VITE_GENERATION_MODE=mock
 
 ```dotenv
 VITE_GENERATION_MODE=kling-direct-dev
-VITE_KLING_ACCESS_KEY=temporary-development-key
-VITE_KLING_SECRET_KEY=temporary-development-secret
+VITE_KLING_API_KEY=temporary-development-api-key
 VITE_KLING_API_BASE=official-endpoint-confirmed-before-implementation
-VITE_KLING_MODEL_ID=official-model-id-confirmed-before-implementation
+VITE_KLING_MODEL_ID=kling-2.6
 ```
 
 约束：
@@ -187,10 +188,9 @@ GET  /api/generation/kling/:taskId
 服务端代理或 Serverless Function 使用不带 `VITE_` 前缀的环境变量：
 
 ```dotenv
-KLING_ACCESS_KEY=production-secret
-KLING_SECRET_KEY=production-secret
+KLING_API_KEY=production-secret
 KLING_API_BASE=official-endpoint-confirmed-before-implementation
-KLING_MODEL_ID=official-model-id-confirmed-before-implementation
+KLING_MODEL_ID=kling-2.6
 ALLOWED_ORIGINS=https://canvas.example.com
 ```
 
@@ -227,7 +227,7 @@ interface EphemeralGenerationResult {
   projectId: string
   nodeId: string
   requestId: string
-  providerId: 'kling-live'
+  providerId: 'kling-api'
   modelId: string
   resultUrl: string
   receivedAt: string
@@ -250,7 +250,7 @@ interface EphemeralGenerationResult {
 | 结果 URL 缺失/不安全 | 结果格式异常，无法展示 | 不写内存结果 |
 | URL 过期 | 临时结果已失效，请重新生成 | 清除播放器临时源 |
 
-所有错误信息必须经过安全化，不能把鉴权头、Secret、完整官方响应或内部堆栈展示给用户。开发日志也必须对 Access Key、Secret 与令牌做脱敏。
+所有错误信息必须经过安全化，不能把鉴权头、API Key、完整官方响应或内部堆栈展示给用户。开发日志也必须对 API Key 与令牌做脱敏。
 
 ## 9. 测试方案（后续实施时）
 
@@ -259,7 +259,7 @@ interface EphemeralGenerationResult {
 1. ProviderRegistry 在 `mock` 模式下仍只默认选择演示 Provider；
 2. 缺少开发配置时 `kling-live` 为禁用态并给出原因；
 3. 通用请求只映射允许的最小字段；
-4. 创建任务成功后按 taskId 查询，成功时正确提取首个 HTTPS URL；
+4. 创建任务成功后按 `external_task_id` 查询，成功时正确提取首个 `type=video` 的 HTTPS URL；
 5. 401、403、429、5xx、失败状态、超时、Abort 和非法 URL 都有确定结果；
 6. 多次点击不会为同一节点产生并发 live 请求；
 7. 过期请求不能覆盖同节点较新的结果；
@@ -286,7 +286,7 @@ interface EphemeralGenerationResult {
 - 点击一次生成只创建一个可灵任务；
 - 仅使用一个明确配置的可灵模型和文生视频能力；
 - 运行状态清晰，不伪造进度；
-- 官方成功结果的第一个 URL 在发起节点中直接播放；
+- 官方成功结果中首个 `type=video` 的 URL 在发起节点中直接播放；
 - URL 不进入本地或远端持久化，刷新即消失；
 - 不接对象存储、数据库和持久化任务队列；
 - Mock 模式仍是默认模式，现有本地演示行为不变；
