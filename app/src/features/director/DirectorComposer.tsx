@@ -71,12 +71,18 @@ interface SkillChoice {
 const PREFERENCES_KEY = 'wireless-canvas.agent-panel.v1'
 
 function defaultPreferences(registry: ProviderRegistry): AgentPreferences {
+  const imageProviders = registry.matching(['text-to-image', 'image-to-image'])
+  const videoProviders = registry.matching(['text-to-video', 'image-to-video'])
   return {
     version: 1,
     imageProviderId:
-      registry.matching(['text-to-image', 'image-to-image']).find(({ kind }) => kind === 'demo')?.id ?? '',
+      imageProviders.find(({ id }) => id === 'mock-mj-image')?.id ??
+      imageProviders.find(({ kind }) => kind === 'demo')?.id ??
+      '',
     videoProviderId:
-      registry.matching(['text-to-video', 'image-to-video']).find(({ kind }) => kind === 'demo')?.id ?? '',
+      videoProviders.find(({ id }) => id === 'mock-kling-video')?.id ??
+      videoProviders.find(({ kind }) => kind === 'demo')?.id ??
+      '',
     generationMode: 'manual',
     autoGenerate: false,
     browserNotifications: false,

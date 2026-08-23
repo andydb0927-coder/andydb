@@ -382,9 +382,9 @@ test('selects a text LLM tier and fills locally generated text with model proven
   const model = within(panel).getByRole('combobox', { name: '文本模型' })
 
   expect(within(model).getAllByRole('option').map((option) => option.textContent)).toEqual([
-    '基础文案 · 8 积分',
-    '深度脚本 · 12 积分',
-    '灵感扩展 · 15 积分',
+    'GVLM 3.1 Flash · 基础文案 · 8 积分',
+    'GVLM 3.1 · 深度脚本 · 12 积分',
+    'CVLM 5.5 · 灵感扩展 · 15 积分',
   ])
   expect(within(panel).getByText('预计成本 8')).toBeVisible()
   expect(within(panel).getByText('本地演示')).toBeVisible()
@@ -399,7 +399,7 @@ test('selects a text LLM tier and fills locally generated text with model proven
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
     expect.objectContaining({
       content: expect.stringContaining('雨夜重逢宣传文案'),
-      generatedByModel: '深度脚本',
+      generatedByModel: 'GVLM 3.1 · 深度脚本',
     }),
   )
   expect(within(panel).getByRole('status')).toHaveTextContent('本地演示生成完成')
@@ -440,7 +440,7 @@ test('generates a local script draft from outline and scene count', async () => 
 
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
     expect.objectContaining({
-      generatedByModel: '深度脚本',
+      generatedByModel: 'GVLM 3.1 · 深度脚本',
       chapters: [
         expect.objectContaining({ title: '场次 01', summary: expect.stringContaining('河灯') }),
         expect.objectContaining({ title: '场次 02', summary: expect.stringContaining('河灯') }),

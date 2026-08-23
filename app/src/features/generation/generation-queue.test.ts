@@ -229,7 +229,7 @@ describe('generation queue lifecycle', () => {
     expect(queue.get(job.id)).toMatchObject({
       providerId: 'mock-mj-image',
       providerName: 'Mock Studio',
-      modelName: 'MJ 风格图片',
+      modelName: 'Lib Image',
       progress: 100,
       creditsSpent: 18,
     })

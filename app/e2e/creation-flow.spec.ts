@@ -653,7 +653,7 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   await page.keyboard.press('Enter')
   await page.getByRole('button', { name: '历史记录' }).click()
   const history = page.getByRole('complementary', { name: '历史' })
-  await expect(history).toContainText('Mock Studio · MJ 风格图片')
+  await expect(history).toContainText('Mock Studio · Lib Image')
   await expect(history).toContainText('消耗 18 积分')
   await expect(page.getByText('102 积分', { exact: true })).toHaveText('102 积分')
   await page.getByRole('button', { name: '关闭历史面板' }).click()
@@ -1316,7 +1316,7 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await textPanel.getByRole('textbox', { name: '文本生成提示词' }).fill('雨巷中的河灯旁白')
   await textPanel.getByRole('button', { name: '生成文本，预计成本 12' }).click()
   await expect(textPanel.getByRole('textbox', { name: '文本内容' })).toHaveValue(/\u96e8\u5df7\u4e2d\u7684\u6cb3\u706f\u65c1\u767d/)
-  await expect(textPanel.getByText('来源模型：深度脚本')).toBeVisible()
+  await expect(textPanel.getByText('来源模型：GVLM 3.1 · 深度脚本')).toBeVisible()
   await expect(textPanel.getByRole('status')).toContainText('本地演示生成完成')
 
   await openAddNodeAtBlank(page, '脚本')
@@ -1328,7 +1328,7 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await scriptPanel.getByRole('spinbutton', { name: '场次数量' }).fill('2')
   await scriptPanel.getByRole('button', { name: '生成脚本，预计成本 12' }).click()
   await expect(scriptPanel.getByRole('list', { name: '章节列表' }).getByRole('listitem')).toHaveCount(2)
-  await expect(scriptPanel.getByText('来源模型：深度脚本')).toBeVisible()
+  await expect(scriptPanel.getByText('来源模型：GVLM 3.1 · 深度脚本')).toBeVisible()
   await expect(scriptPanel.getByText(/共 \d+ 字/)).toBeVisible()
 
   await openAddNodeAtBlank(page, '音频')

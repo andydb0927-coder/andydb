@@ -75,6 +75,7 @@ export interface ModelProvider {
   modelName: string
   kind: 'demo' | 'placeholder' | 'live'
   badge?: '演示'
+  selectorVisible?: boolean
   disabledReason?: string
   capabilities: readonly ModelCapability[]
   parameterSchema: ModelParameterSchema
@@ -262,6 +263,7 @@ export class ProviderRegistry {
 
   matching(capabilities: readonly ModelCapability[]) {
     return this.list().filter((provider) =>
+      provider.selectorVisible !== false &&
       capabilities.some((capability) => provider.capabilities.includes(capability)),
     )
   }
@@ -274,9 +276,21 @@ export class ProviderRegistry {
 
   resolve(request: GenerationRequest) {
     const capability = generationCapability(request)
+    const preferredDemoId =
+      capability === 'text-to-image' || capability === 'image-to-image'
+        ? 'mock-mj-image'
+        : capability === 'text-to-video' || capability === 'image-to-video'
+          ? 'mock-kling-video'
+          : capability === 'text'
+            ? 'mock-text-llm'
+            : capability === 'audio'
+              ? 'mock-audio'
+              : undefined
     const provider = request.providerId
       ? this.require(request.providerId)
-      : this.matching([capability]).find(({ kind }) => kind === 'demo')
+      : preferredDemoId && this.#providers.get(preferredDemoId)?.capabilities.includes(capability)
+        ? this.#providers.get(preferredDemoId)
+        : this.matching([capability]).find(({ kind }) => kind === 'demo')
     if (!provider) throw new Error(`No model provider for capability: ${capability}`)
     if (!provider.capabilities.includes(capability)) {
       throw new Error(`${provider.modelName} does not support ${capability}`)
@@ -338,13 +352,49 @@ const imageSchema: ModelParameterSchema = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
-    options: ['1:1', '4:3', '16:9', '9:16'],
+    options: [
+      '1:1',
+      '1:2',
+      '2:1',
+      '9:16',
+      '16:9',
+      '3:4',
+      '4:3',
+      '3:2',
+      '2:3',
+      '5:4',
+      '4:5',
+      '21:9',
+      '9:21',
+    ],
+  },
+  quality: {
+    type: 'enum',
+    defaultValue: '标准画质',
+    options: ['低画质', '标准画质', '高画质'],
   },
   resolution: {
     type: 'enum',
-    defaultValue: '1920×1080',
-    options: ['1024×1024', '1920×1080'],
+    defaultValue: '2K',
+    options: ['1K', '2K', '4K'],
   },
+  count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
+  autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const styleImageSchema: ModelParameterSchema = {
+  aspectRatio: {
+    type: 'enum',
+    defaultValue: '16:9',
+    options: ['1:1', '9:16', '16:9', '3:4', '4:3', '3:2', '2:3'],
+  },
+  resolution: {
+    type: 'enum',
+    defaultValue: '自适应',
+    options: ['自适应'],
+  },
+  count: { type: 'enum', defaultValue: '4', options: ['4'] },
+  autoLink: { type: 'boolean', defaultValue: true },
 }
 
 const klingImageSchema: ModelParameterSchema = {
@@ -413,6 +463,70 @@ const seedanceVideoSchema: ModelParameterSchema = {
   materialValidation: { type: 'boolean', defaultValue: true },
   autoLink: { type: 'boolean', defaultValue: true },
 }
+
+export interface LiblibModelCatalogEntry {
+  providerId: string
+  modelName: string
+  description: string
+  latency: string
+  capabilities: readonly ModelCapability[]
+}
+
+export const liblibImageModelCatalog: readonly LiblibModelCatalogEntry[] = [
+  { providerId: 'mock-mj-image', modelName: 'Lib Image', description: '最新图片模型、长文本能力突出', latency: '60s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-general-image-pro', modelName: 'General image Pro', description: '最强图片编辑模型，一致性好', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-general-image-v2', modelName: 'General image V2', description: '支持联网搜索、文字准确、速度更快', latency: '25s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-seedream-5-pro', modelName: 'Seedream 5.0 Pro', description: '精准交互式编辑，支持原生多语言排版', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-qwen-image-3', modelName: 'Qwen image 3.0', description: '复杂版面与精准文字的高质量生图', latency: '60s', capabilities: ['text-to-image'] },
+  { providerId: 'mock-style-image-v82', modelName: 'Style Image V8.2', description: '电影感、光影、人物与真实材质', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-style-image-v81', modelName: 'Style Image V8.1', description: '连贯性、细节与美学提升', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-style-image-v7', modelName: 'Style Image V7', description: '电影质感与创意能力', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-style-image-niji7', modelName: 'Style Image Niji 7', description: '动漫高审美与多样风格', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-seedream-46', modelName: 'Seedream 4.6', description: '人像一致性与平面设计', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-seedream-5-lite', modelName: 'Seedream 5.0 Lite', description: '联网搜索与中式风格', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-seedream-45', modelName: 'Seedream 4.5', description: '多角色一致性与中式风格', latency: '15s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-z-image-turbo', modelName: 'Z-image Turbo', description: '极速真实感图片', latency: '10s', capabilities: ['text-to-image'] },
+  { providerId: 'mock-general-image', modelName: 'General image', description: '图像编辑与语义理解', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-qwen-image', modelName: 'Qwen Image', description: '文字排版能力', latency: '60s', capabilities: ['text-to-image'] },
+  { providerId: 'mock-qwen-edit', modelName: 'Qwen Edit', description: '精细可控编辑', latency: '60s', capabilities: ['image-to-image'] },
+  { providerId: 'mock-seedream-40', modelName: 'Seedream 4.0', description: '中文文字与海报设计', latency: '15s', capabilities: ['text-to-image', 'image-to-image'] },
+] as const
+
+export const liblibVideoModelCatalog: readonly LiblibModelCatalogEntry[] = [
+  { providerId: 'mock-seedance-25', modelName: 'Seedance 2.5', description: '全能参考、最长30s音画同步', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-video', modelName: 'Seedance 2.0 VIP', description: '全能参考、最长15s音画同步、会员通道', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-minimax-h3', modelName: 'Minimax H3', description: '全模态输入、多参数控制', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-2-fast-vip', modelName: 'Seedance 2.0 Fast VIP', description: '快速版、最长15s音画同步', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-2-mini', modelName: 'Seedance 2.0 Mini', description: '高性价比、最长15s音画同步', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-happy-horse-11', modelName: 'Happy Horse 1.1', description: '多参生成、一致性与视听质量可控', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-happy-horse-10', modelName: 'Happy Horse 1.0', description: '多参视频生成', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-video', modelName: 'Kling O3', description: '视频编辑、参考一致性、音画同出、多镜头', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-30-turbo', modelName: 'Kling 3.0 Turbo', description: '高质感与多镜头', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-30', modelName: 'Kling 3.0', description: '高质感与多镜头', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-wan-27', modelName: 'Wan 2.7', description: '全能参考与视频编辑', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-o1', modelName: 'Kling O1', description: '编辑模型与多模态输入', latency: '3min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-wan-26', modelName: 'Wan 2.6', description: '音画同步、多机位、最长15s', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-hailuo-23-fast', modelName: 'Hailuo 2.3 Fast', description: '动作、表情与镜头快速版', latency: '1min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-hailuo-23', modelName: 'Hailuo 2.3', description: '动作、表情与镜头高质感版', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-15-pro', modelName: 'Seedance1.5 Pro', description: '音画同步、多机位、最长12s', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-10-pro', modelName: 'Seedance 1.0 Pro', description: '高精度提示词与1080P', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-10-lite', modelName: 'Seedance 1.0 Lite', description: '轻量快速生成', latency: '1min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'kling-api', modelName: 'Kling 2.6', description: '视频生成与音画同步', latency: '2min', capabilities: ['text-to-video'] },
+  { providerId: 'mock-style-video', modelName: 'Style Video', description: '稳定图生视频', latency: '2min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-hailuo-02', modelName: 'Hailuo 02', description: '稳定画质与运动特效', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-vidu-q2', modelName: 'Vidu Q2', description: '多图主体参考与精确控制', latency: '3min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-vidu-q2-pro', modelName: 'Vidu Q2 Pro', description: '主体参考视频生成', latency: '', capabilities: ['image-to-video'] },
+  { providerId: 'mock-vidu-q2-turbo', modelName: 'Vidu Q2 Turbo', description: '主体参考快速生成', latency: '', capabilities: ['image-to-video'] },
+  { providerId: 'mock-vidu-q3-pro', modelName: 'Vidu Q3 Pro', description: '主体参考与精确控制', latency: '2min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-omnihuman-15', modelName: 'OmniHuman 1.5', description: '多模态数字人视频', latency: '3min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-kling-25', modelName: 'Kling 2.5', description: '快速、稳定、高性价比', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-21', modelName: 'Kling 2.1', description: '首尾帧与图生视频', latency: '3min', capabilities: ['image-to-video'] },
+  { providerId: 'mock-wan-22', modelName: 'Wan 2.2', description: '特效玩法', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-wan-25', modelName: 'Wan 2.5', description: '特效与音画同步', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-pixverse-55', modelName: 'Pixverse V5.5', description: '丰富特效玩法', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-pixverse-5', modelName: 'Pixverse V5', description: '丰富特效玩法', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-kling-30-motion', modelName: 'Kling3.0 动作迁移', description: '1图+1视频动作控制', latency: '8min', capabilities: ['image-to-video'] },
+] as const
 
 function abortError(message: string) {
   return new DOMException(message, 'AbortError')
@@ -508,6 +622,41 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
   }
 }
 
+function imageCatalogProvider(entry: LiblibModelCatalogEntry) {
+  const styleModel = entry.providerId.startsWith('mock-style-image-')
+  return demoProvider({
+    id: entry.providerId,
+    name: 'Mock Studio',
+    modelName: entry.modelName,
+    capabilities: entry.capabilities,
+    parameterSchema: styleModel ? styleImageSchema : imageSchema,
+    pricing: {
+      amount: entry.providerId === 'mock-style-image-v82' ? 15 : 18,
+      currency: 'credits',
+      unit: 'generation',
+    },
+    officialApiEndpoint: `mock://local/liblib-image/${entry.providerId}`,
+  })
+}
+
+function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
+  const klingO3 = entry.providerId === 'mock-kling-video'
+  const seedance20 = entry.providerId === 'mock-seedance-video'
+  return demoProvider({
+    id: entry.providerId,
+    name: 'Mock Studio',
+    modelName: entry.modelName,
+    capabilities: entry.capabilities,
+    parameterSchema: klingO3 ? videoSchema : seedanceVideoSchema,
+    pricing: {
+      amount: seedance20 ? 135 : 24,
+      currency: 'credits',
+      unit: 'generation',
+    },
+    officialApiEndpoint: `mock://local/liblib-video/${entry.providerId}`,
+  })
+}
+
 function placeholderProvider(
   config: Omit<ModelProvider, 'kind' | 'generate' | 'export'>,
 ): ModelProvider {
@@ -531,19 +680,12 @@ export function createDefaultProviderRegistry(
   options: DefaultProviderRegistryOptions = {},
 ) {
   return new ProviderRegistry([
-    demoProvider({
-      id: 'mock-mj-image',
-      name: 'Mock Studio',
-      modelName: 'MJ 风格图片',
-      capabilities: ['text-to-image', 'image-to-image'],
-      parameterSchema: imageSchema,
-      pricing: { amount: 18, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'mock://local/mj-image',
-    }),
+    ...liblibImageModelCatalog.map(imageCatalogProvider),
     demoProvider({
       id: 'mock-kling-image',
       name: '可灵',
       modelName: '可灵图片',
+      selectorVisible: false,
       capabilities: ['text-to-image'],
       parameterSchema: klingImageSchema,
       pricing: { amount: 8, currency: 'credits', unit: 'generation' },
@@ -553,6 +695,7 @@ export function createDefaultProviderRegistry(
       id: 'mock-tongyi-image',
       name: '通义万相',
       modelName: '通义万相图片',
+      selectorVisible: false,
       capabilities: ['text-to-image', 'image-to-image'],
       parameterSchema: klingImageSchema,
       pricing: { amount: 6, currency: 'credits', unit: 'generation' },
@@ -568,43 +711,30 @@ export function createDefaultProviderRegistry(
       variants: [
         {
           id: 'basic-copy',
-          name: '基础文案',
+          name: 'GVLM 3.1 Flash · 基础文案',
           pricing: { amount: 8, currency: 'credits', unit: 'generation' },
           defaultParameters: { fontStyle: '正文', sceneCount: 3 },
         },
         {
           id: 'deep-script',
-          name: '深度脚本',
+          name: 'GVLM 3.1 · 深度脚本',
           pricing: { amount: 12, currency: 'credits', unit: 'generation' },
           defaultParameters: { fontStyle: '引用', sceneCount: 5 },
         },
         {
           id: 'idea-expansion',
-          name: '灵感扩展',
+          name: 'CVLM 5.5 · 灵感扩展',
           pricing: { amount: 15, currency: 'credits', unit: 'generation' },
           defaultParameters: { fontStyle: '标题', sceneCount: 4 },
         },
       ],
       officialApiEndpoint: 'mock://local/text-llm',
     }),
-    demoProvider({
-      id: 'mock-kling-video',
-      name: 'Mock Studio',
-      modelName: '可灵风格视频',
-      capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: videoSchema,
-      pricing: { amount: 24, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'mock://local/kling-video',
-    }),
-    demoProvider({
-      id: 'mock-seedance-video',
-      name: 'Mock Studio',
-      modelName: 'Seedance 2.0',
-      capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: seedanceVideoSchema,
-      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'mock://local/seedance-video',
-    }),
+    ...liblibVideoModelCatalog.map((entry) =>
+      entry.providerId === 'kling-api'
+        ? createKlingLiveProvider(options.kling)
+        : videoCatalogProvider(entry),
+    ),
     demoProvider({
       id: 'mock-audio',
       name: 'Mock Studio',
@@ -618,7 +748,7 @@ export function createDefaultProviderRegistry(
       variants: [
         {
           id: 'ambience',
-          name: '氛围音',
+          name: 'Mureka V8 · 氛围音',
           pricing: { amount: 4, currency: 'credits', unit: 'generation' },
           defaultParameters: {
             durationSeconds: 12,
@@ -629,7 +759,7 @@ export function createDefaultProviderRegistry(
         },
         {
           id: 'narration',
-          name: '人声旁白',
+          name: 'ElevenLabs V3 · 人声旁白',
           pricing: { amount: 8, currency: 'credits', unit: 'generation' },
           defaultParameters: {
             durationSeconds: 30,
@@ -640,7 +770,7 @@ export function createDefaultProviderRegistry(
         },
         {
           id: 'sound-effect',
-          name: '音效',
+          name: 'ElevenLabs V2 · 音效',
           pricing: { amount: 3, currency: 'credits', unit: 'generation' },
           defaultParameters: {
             durationSeconds: 5,
@@ -652,11 +782,11 @@ export function createDefaultProviderRegistry(
       ],
       officialApiEndpoint: 'mock://local/audio',
     }),
-    createKlingLiveProvider(options.kling),
     placeholderProvider({
       id: 'seedance-api',
       name: 'Seedance',
       modelName: 'Seedance 官方 API',
+      selectorVisible: false,
       capabilities: ['text-to-video', 'image-to-video'],
       parameterSchema: seedanceVideoSchema,
       pricing: { amount: 135, currency: 'credits', unit: 'generation' },
@@ -666,6 +796,7 @@ export function createDefaultProviderRegistry(
       id: 'tongyi-api',
       name: '通义万相',
       modelName: 'Tongyi 官方 API',
+      selectorVisible: false,
       capabilities: ['text-to-image', 'image-to-image', 'text-to-video', 'image-to-video'],
       parameterSchema: { ...imageSchema, ...videoSchema },
       pricing: { amount: 18, currency: 'credits', unit: 'generation' },

@@ -64,9 +64,9 @@ describe('complete canvas Agent workspace', () => {
 
     const imageModel = screen.getByRole('combobox', { name: '图片模型' })
     const videoModel = screen.getByRole('combobox', { name: '视频模型' })
-    expect(within(imageModel).getByRole('option', { name: /MJ 风格图片/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /可灵风格视频/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /Seedance 2.0/ })).toBeVisible()
+    expect(within(imageModel).getByRole('option', { name: /Lib Image/ })).toBeVisible()
+    expect(within(videoModel).getByRole('option', { name: /Kling O3/ })).toBeVisible()
+    expect(within(videoModel).getByRole('option', { name: /Seedance 2.0 VIP/ })).toBeVisible()
     expect(within(videoModel).getByRole('option', { name: /Kling 2\.6 官方 API/ })).toBeDisabled()
     expect(screen.getByText('模型选择只保存到本机，不会发起第三方请求。')).toBeVisible()
   })

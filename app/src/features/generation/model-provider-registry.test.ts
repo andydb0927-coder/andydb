@@ -7,6 +7,8 @@ import {
   ProviderRegistry,
   createDefaultProviderRegistry,
   defaultVideoGenerationMode,
+  liblibImageModelCatalog,
+  liblibVideoModelCatalog,
   resolveVideoGenerationMode,
 } from './model-provider-registry'
 import { RegistryGenerationAdapter } from './registry-generation-adapter'
@@ -35,30 +37,32 @@ describe('model provider registry', () => {
   test('publishes demo models, a gated live provider, and placeholders behind one contract', () => {
     const registry = createDefaultProviderRegistry()
 
-    expect(registry.list().map(({ id }) => id)).toEqual([
-      'mock-mj-image',
-      'mock-kling-image',
-      'mock-tongyi-image',
-      'mock-text-llm',
-      'mock-kling-video',
-      'mock-seedance-video',
-      'mock-audio',
-      'kling-api',
-      'seedance-api',
-      'tongyi-api',
-    ])
+    expect(registry.list().map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        'mock-mj-image',
+        'mock-kling-image',
+        'mock-tongyi-image',
+        'mock-text-llm',
+        'mock-kling-video',
+        'mock-seedance-video',
+        'mock-audio',
+        'kling-api',
+        'seedance-api',
+        'tongyi-api',
+      ]),
+    )
     expect(registry.require('mock-mj-image')).toMatchObject({
       name: 'Mock Studio',
-      modelName: 'MJ 风格图片',
+      modelName: 'Lib Image',
       kind: 'demo',
       badge: '演示',
       capabilities: ['text-to-image', 'image-to-image'],
       parameterSchema: {
         aspectRatio: { type: 'enum', defaultValue: '16:9' },
-        resolution: { type: 'enum', defaultValue: '1920×1080' },
+        resolution: { type: 'enum', defaultValue: '2K' },
       },
       pricing: { amount: 18, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'mock://local/mj-image',
+      officialApiEndpoint: 'mock://local/liblib-image/mock-mj-image',
     })
     expect(registry.require('kling-api')).toMatchObject({
       kind: 'live',
@@ -67,7 +71,7 @@ describe('model provider registry', () => {
       officialApiEndpoint: 'https://api.klingai.com/text-to-video/kling-2.6',
     })
     expect(registry.require('mock-seedance-video')).toMatchObject({
-      modelName: 'Seedance 2.0',
+      modelName: 'Seedance 2.0 VIP',
       parameterSchema: {
         aspectRatio: { type: 'enum', defaultValue: '16:9' },
         duration: { type: 'enum', defaultValue: '5' },
@@ -84,18 +88,34 @@ describe('model provider registry', () => {
       modelName: '文本 LLM',
       capabilities: ['text'],
       variants: [
-        expect.objectContaining({ id: 'basic-copy', name: '基础文案', pricing: expect.objectContaining({ amount: 8 }) }),
-        expect.objectContaining({ id: 'deep-script', name: '深度脚本', pricing: expect.objectContaining({ amount: 12 }) }),
-        expect.objectContaining({ id: 'idea-expansion', name: '灵感扩展', pricing: expect.objectContaining({ amount: 15 }) }),
+        expect.objectContaining({ id: 'basic-copy', name: 'GVLM 3.1 Flash · 基础文案', pricing: expect.objectContaining({ amount: 8 }) }),
+        expect.objectContaining({ id: 'deep-script', name: 'GVLM 3.1 · 深度脚本', pricing: expect.objectContaining({ amount: 12 }) }),
+        expect.objectContaining({ id: 'idea-expansion', name: 'CVLM 5.5 · 灵感扩展', pricing: expect.objectContaining({ amount: 15 }) }),
       ],
     })
     expect(registry.require('mock-audio')).toMatchObject({
       variants: [
-        expect.objectContaining({ id: 'ambience', name: '氛围音', pricing: expect.objectContaining({ amount: 4 }) }),
-        expect.objectContaining({ id: 'narration', name: '人声旁白', pricing: expect.objectContaining({ amount: 8 }) }),
-        expect.objectContaining({ id: 'sound-effect', name: '音效', pricing: expect.objectContaining({ amount: 3 }) }),
+        expect.objectContaining({ id: 'ambience', name: 'Mureka V8 · 氛围音', pricing: expect.objectContaining({ amount: 4 }) }),
+        expect.objectContaining({ id: 'narration', name: 'ElevenLabs V3 · 人声旁白', pricing: expect.objectContaining({ amount: 8 }) }),
+        expect.objectContaining({ id: 'sound-effect', name: 'ElevenLabs V2 · 音效', pricing: expect.objectContaining({ amount: 3 }) }),
       ],
     })
+  })
+
+  test('mirrors the audited LibLib image and video model catalogs in selector order', () => {
+    const registry = createDefaultProviderRegistry()
+    const image = registry.matching(['text-to-image', 'image-to-image'])
+    const video = registry.matching(['text-to-video', 'image-to-video'])
+
+    expect(liblibImageModelCatalog).toHaveLength(17)
+    expect(image.map(({ modelName }) => modelName)).toEqual(
+      liblibImageModelCatalog.map(({ modelName }) => modelName),
+    )
+    expect(liblibVideoModelCatalog).toHaveLength(33)
+    expect(video.map(({ modelName }) => modelName.replace(' 官方 API', ''))).toEqual(
+      liblibVideoModelCatalog.map(({ modelName }) => modelName),
+    )
+    expect(registry.require('kling-api')).toMatchObject({ kind: 'live' })
   })
 
   test('filters image and video selectors by declared capability', () => {
@@ -103,19 +123,12 @@ describe('model provider registry', () => {
     const image = registry.matching(['text-to-image', 'image-to-image'])
     const video = registry.matching(['text-to-video', 'image-to-video'])
 
-    expect(image.map(({ id }) => id)).toEqual([
-      'mock-mj-image',
-      'mock-kling-image',
-      'mock-tongyi-image',
-      'tongyi-api',
-    ])
-    expect(video.map(({ id }) => id)).toEqual([
-      'mock-kling-video',
-      'mock-seedance-video',
-      'kling-api',
-      'seedance-api',
-      'tongyi-api',
-    ])
+    expect(image.map(({ id }) => id)).toEqual(
+      liblibImageModelCatalog.map(({ providerId }) => providerId),
+    )
+    expect(video.map(({ id }) => id)).toEqual(
+      liblibVideoModelCatalog.map(({ providerId }) => providerId),
+    )
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
   })
 
@@ -196,7 +209,7 @@ describe('model provider registry', () => {
       usage: {
         providerId: 'mock-mj-image',
         providerName: 'Mock Studio',
-        modelName: 'MJ 风格图片',
+        modelName: 'Lib Image',
         cost: 18,
         currency: 'credits',
       },
@@ -229,7 +242,7 @@ describe('model provider registry', () => {
     expect(job).toMatchObject({
       providerId: 'mock-mj-image',
       providerName: 'Mock Studio',
-      modelName: 'MJ 风格图片',
+      modelName: 'Lib Image',
       estimatedCost: 18,
       progress: 0,
     })
@@ -264,7 +277,7 @@ describe('model provider registry', () => {
       asset: { kind: 'video', durationSeconds: 5 },
       usage: {
         providerId: 'mock-seedance-video',
-        modelName: 'Seedance 2.0',
+      modelName: 'Seedance 2.0 VIP',
         cost: 135,
       },
     })
