@@ -37,6 +37,9 @@ describe('model provider registry', () => {
 
     expect(registry.list().map(({ id }) => id)).toEqual([
       'mock-mj-image',
+      'mock-kling-image',
+      'mock-tongyi-image',
+      'mock-text-llm',
       'mock-kling-video',
       'mock-seedance-video',
       'mock-audio',
@@ -77,6 +80,22 @@ describe('model provider registry', () => {
       },
       pricing: { amount: 135, currency: 'credits', unit: 'generation' },
     })
+    expect(registry.require('mock-text-llm')).toMatchObject({
+      modelName: '文本 LLM',
+      capabilities: ['text'],
+      variants: [
+        expect.objectContaining({ id: 'basic-copy', name: '基础文案', pricing: expect.objectContaining({ amount: 8 }) }),
+        expect.objectContaining({ id: 'deep-script', name: '深度脚本', pricing: expect.objectContaining({ amount: 12 }) }),
+        expect.objectContaining({ id: 'idea-expansion', name: '灵感扩展', pricing: expect.objectContaining({ amount: 15 }) }),
+      ],
+    })
+    expect(registry.require('mock-audio')).toMatchObject({
+      variants: [
+        expect.objectContaining({ id: 'ambience', name: '氛围音', pricing: expect.objectContaining({ amount: 4 }) }),
+        expect.objectContaining({ id: 'narration', name: '人声旁白', pricing: expect.objectContaining({ amount: 8 }) }),
+        expect.objectContaining({ id: 'sound-effect', name: '音效', pricing: expect.objectContaining({ amount: 3 }) }),
+      ],
+    })
   })
 
   test('filters image and video selectors by declared capability', () => {
@@ -86,6 +105,8 @@ describe('model provider registry', () => {
 
     expect(image.map(({ id }) => id)).toEqual([
       'mock-mj-image',
+      'mock-kling-image',
+      'mock-tongyi-image',
       'tongyi-api',
     ])
     expect(video.map(({ id }) => id)).toEqual([
@@ -96,6 +117,43 @@ describe('model provider registry', () => {
       'tongyi-api',
     ])
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
+  })
+
+  test('publishes Liblib-aligned mock image parameters and variant-aware costs', () => {
+    const registry = createDefaultProviderRegistry()
+
+    expect(registry.require('mock-kling-image')).toMatchObject({
+      modelName: '可灵图片',
+      capabilities: ['text-to-image'],
+      parameterSchema: {
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: ['1:1', '16:9', '9:16', '2:3', '3:2'],
+        },
+      },
+      pricing: { amount: 8 },
+    })
+    expect(registry.require('mock-tongyi-image')).toMatchObject({
+      modelName: '通义万相图片',
+      capabilities: ['text-to-image', 'image-to-image'],
+      pricing: { amount: 6 },
+    })
+    expect(
+      registry.describe({
+        ...imageRequest,
+        targetKind: 'audio',
+        providerId: 'mock-audio',
+        parameters: { modelVariant: 'narration' },
+      }),
+    ).toMatchObject({ estimatedCost: 8 })
+    expect(
+      registry.describe({
+        ...imageRequest,
+        targetKind: 'audio',
+        providerId: 'mock-audio',
+        parameters: { modelVariant: 'sound-effect' },
+      }),
+    ).toMatchObject({ estimatedCost: 3 })
   })
 
   test('resolves video modes from the selected provider capabilities', () => {

@@ -12,6 +12,7 @@ import {
 } from './kling-live-provider'
 
 export type ModelCapability =
+  | 'text'
   | 'text-to-image'
   | 'image-to-image'
   | 'text-to-video'
@@ -51,6 +52,13 @@ export interface ModelProviderPricing {
   unit: 'generation' | 'second'
 }
 
+export interface ModelProviderVariant {
+  id: string
+  name: string
+  pricing: ModelProviderPricing
+  defaultParameters?: Readonly<Record<string, string | number | boolean>>
+}
+
 export interface ProviderExecutionContext {
   signal: AbortSignal
   onProgress?(percentage: number): void
@@ -72,6 +80,7 @@ export interface ModelProvider {
   parameterSchema: ModelParameterSchema
   pricing: ModelProviderPricing
   officialApiEndpoint: string
+  variants?: readonly ModelProviderVariant[]
   generate(
     request: GenerationRequest,
     context: ProviderExecutionContext,
@@ -130,6 +139,7 @@ export function resolveVideoGenerationMode(
 }
 
 const capabilityCopy: Record<ModelCapability, string> = {
+  text: '文本',
   'text-to-image': '文生图',
   'image-to-image': '图生图',
   'text-to-video': '文生视频',
@@ -153,14 +163,18 @@ function providerCost(
   const requestedCount = Number(parameters?.count ?? 1)
   const count =
     Number.isFinite(requestedCount) && requestedCount > 0 ? requestedCount : 1
-  if (provider.pricing.unit === 'generation') {
-    return provider.pricing.amount * count
+  const variant = provider.variants?.find(
+    ({ id }) => id === parameters?.modelVariant,
+  )
+  const pricing = variant?.pricing ?? provider.pricing
+  if (pricing.unit === 'generation') {
+    return pricing.amount * count
   }
   const duration = Number(
     parameters?.duration ?? provider.parameterSchema.duration?.defaultValue ?? 1,
   )
   return (
-    provider.pricing.amount *
+    pricing.amount *
     (Number.isFinite(duration) ? duration : 1) *
     count
   )
@@ -192,6 +206,27 @@ export function providerOptionLabel(provider: ModelProvider) {
     providerPricingLabel(provider),
     status,
   ].join(' · ')
+}
+
+export function modelProviderVariants(provider: ModelProvider) {
+  return provider.variants ?? []
+}
+
+export function modelProviderVariant(
+  provider: ModelProvider,
+  variantId?: string,
+) {
+  return (
+    provider.variants?.find(({ id }) => id === variantId) ??
+    provider.variants?.[0]
+  )
+}
+
+export function modelProviderVariantCost(
+  provider: ModelProvider,
+  variantId?: string,
+) {
+  return modelProviderVariant(provider, variantId)?.pricing.amount ?? provider.pricing.amount
 }
 
 export function isProviderEnabled(provider: ModelProvider) {
@@ -309,6 +344,19 @@ const imageSchema: ModelParameterSchema = {
     type: 'enum',
     defaultValue: '1920×1080',
     options: ['1024×1024', '1920×1080'],
+  },
+}
+
+const klingImageSchema: ModelParameterSchema = {
+  aspectRatio: {
+    type: 'enum',
+    defaultValue: '16:9',
+    options: ['1:1', '16:9', '9:16', '2:3', '3:2'],
+  },
+  resolution: {
+    type: 'enum',
+    defaultValue: '2K',
+    options: ['1K', '2K'],
   },
 }
 
@@ -493,6 +541,53 @@ export function createDefaultProviderRegistry(
       officialApiEndpoint: 'mock://local/mj-image',
     }),
     demoProvider({
+      id: 'mock-kling-image',
+      name: '可灵',
+      modelName: '可灵图片',
+      capabilities: ['text-to-image'],
+      parameterSchema: klingImageSchema,
+      pricing: { amount: 8, currency: 'credits', unit: 'generation' },
+      officialApiEndpoint: 'mock://local/kling-image',
+    }),
+    demoProvider({
+      id: 'mock-tongyi-image',
+      name: '通义万相',
+      modelName: '通义万相图片',
+      capabilities: ['text-to-image', 'image-to-image'],
+      parameterSchema: klingImageSchema,
+      pricing: { amount: 6, currency: 'credits', unit: 'generation' },
+      officialApiEndpoint: 'mock://local/tongyi-image',
+    }),
+    demoProvider({
+      id: 'mock-text-llm',
+      name: 'Mock Studio',
+      modelName: '文本 LLM',
+      capabilities: ['text'],
+      parameterSchema: {},
+      pricing: { amount: 8, currency: 'credits', unit: 'generation' },
+      variants: [
+        {
+          id: 'basic-copy',
+          name: '基础文案',
+          pricing: { amount: 8, currency: 'credits', unit: 'generation' },
+          defaultParameters: { fontStyle: '正文', sceneCount: 3 },
+        },
+        {
+          id: 'deep-script',
+          name: '深度脚本',
+          pricing: { amount: 12, currency: 'credits', unit: 'generation' },
+          defaultParameters: { fontStyle: '引用', sceneCount: 5 },
+        },
+        {
+          id: 'idea-expansion',
+          name: '灵感扩展',
+          pricing: { amount: 15, currency: 'credits', unit: 'generation' },
+          defaultParameters: { fontStyle: '标题', sceneCount: 4 },
+        },
+      ],
+      officialApiEndpoint: 'mock://local/text-llm',
+    }),
+    demoProvider({
       id: 'mock-kling-video',
       name: 'Mock Studio',
       modelName: '可灵风格视频',
@@ -520,6 +615,41 @@ export function createDefaultProviderRegistry(
         quality: { type: 'enum', defaultValue: '标准', options: ['标准', '高清'] },
       },
       pricing: { amount: 6, currency: 'credits', unit: 'generation' },
+      variants: [
+        {
+          id: 'ambience',
+          name: '氛围音',
+          pricing: { amount: 4, currency: 'credits', unit: 'generation' },
+          defaultParameters: {
+            durationSeconds: 12,
+            voice: '温暖女声',
+            speed: 1,
+            volume: 75,
+          },
+        },
+        {
+          id: 'narration',
+          name: '人声旁白',
+          pricing: { amount: 8, currency: 'credits', unit: 'generation' },
+          defaultParameters: {
+            durationSeconds: 30,
+            voice: '纪录片旁白',
+            speed: 0.9,
+            volume: 85,
+          },
+        },
+        {
+          id: 'sound-effect',
+          name: '音效',
+          pricing: { amount: 3, currency: 'credits', unit: 'generation' },
+          defaultParameters: {
+            durationSeconds: 5,
+            voice: '清亮少年',
+            speed: 1,
+            volume: 100,
+          },
+        },
+      ],
       officialApiEndpoint: 'mock://local/audio',
     }),
     createKlingLiveProvider(options.kling),

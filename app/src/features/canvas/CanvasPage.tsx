@@ -2404,6 +2404,10 @@ export function CanvasPage({
                 }
               : {
                   type: 'script',
+                  modelProviderId: 'mock-text-llm',
+                  modelVariant: 'deep-script',
+                  outline: '',
+                  sceneCount: 5,
                   chapters: [{
                     id: crypto.randomUUID(),
                     title: '第一章',
@@ -2510,6 +2514,9 @@ export function CanvasPage({
                 type: 'text',
                 content: config.content,
                 fontStyle: '正文',
+                modelProviderId: 'mock-text-llm',
+                modelVariant: 'basic-copy',
+                prompt: '',
               },
             },
           }
@@ -2523,7 +2530,9 @@ export function CanvasPage({
                 durationSeconds: 12,
                 voice: '温暖女声',
                 speed: 1,
-                volume: 80,
+                volume: 75,
+                modelProviderId: 'mock-audio',
+                modelVariant: 'ambience',
               },
             },
           }

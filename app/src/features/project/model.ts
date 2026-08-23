@@ -168,6 +168,10 @@ export interface TextNodeDetails {
   type: 'text'
   content: string
   fontStyle: TextFontStyle
+  modelProviderId?: string
+  modelVariant?: string
+  prompt?: string
+  generatedByModel?: string
 }
 
 export interface ScriptChapter {
@@ -179,6 +183,11 @@ export interface ScriptChapter {
 export interface ScriptNodeDetails {
   type: 'script'
   chapters: ScriptChapter[]
+  modelProviderId?: string
+  modelVariant?: string
+  outline?: string
+  sceneCount?: number
+  generatedByModel?: string
 }
 
 export interface AudioNodeDetails {
@@ -187,6 +196,8 @@ export interface AudioNodeDetails {
   voice: '温暖女声' | '沉稳男声' | '清亮少年' | '纪录片旁白'
   speed: number
   volume: number
+  modelProviderId?: string
+  modelVariant?: string
 }
 
 export interface DirectorShot {

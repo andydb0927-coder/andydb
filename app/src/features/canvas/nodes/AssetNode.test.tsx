@@ -367,6 +367,44 @@ test('keeps specialized nodes folded until selected and edits text details', asy
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({ ...details, fontStyle: '引用' })
 })
 
+test('selects a text LLM tier and fills locally generated text with model provenance', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'text',
+    content: '',
+    fontStyle: '正文',
+    modelProviderId: 'mock-text-llm',
+    modelVariant: 'basic-copy',
+    prompt: '',
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('文本 01', 'text', details)
+  const panel = screen.getByRole('region', { name: '文本 01 文本参数' })
+  const model = within(panel).getByRole('combobox', { name: '文本模型' })
+
+  expect(within(model).getAllByRole('option').map((option) => option.textContent)).toEqual([
+    '基础文案 · 8 积分',
+    '深度脚本 · 12 积分',
+    '灵感扩展 · 15 积分',
+  ])
+  expect(within(panel).getByText('预计成本 8')).toBeVisible()
+  expect(within(panel).getByText('本地演示')).toBeVisible()
+
+  await user.selectOptions(model, 'deep-script')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({ modelVariant: 'deep-script', fontStyle: '引用' }),
+  )
+  await user.type(within(panel).getByRole('textbox', { name: '文本生成提示词' }), '雨夜重逢宣传文案')
+  await user.click(within(panel).getByRole('button', { name: '生成文本，预计成本 12' }))
+
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      content: expect.stringContaining('雨夜重逢宣传文案'),
+      generatedByModel: '深度脚本',
+    }),
+  )
+  expect(within(panel).getByRole('status')).toHaveTextContent('本地演示生成完成')
+})
+
 test('shows editable script chapters, summaries, and word counts', async () => {
   const user = userEvent.setup()
   const details = {
@@ -380,6 +418,35 @@ test('shows editable script chapters, summaries, and word counts', async () => {
   await user.clear(within(panel).getByRole('textbox', { name: '第一章情节摘要' }))
   await user.type(within(panel).getByRole('textbox', { name: '第一章情节摘要' }), '河灯熄灭')
   expect(onUpdateNodeDetails).toHaveBeenCalled()
+})
+
+test('generates a local script draft from outline and scene count', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'script',
+    chapters: [],
+    modelProviderId: 'mock-text-llm',
+    modelVariant: 'deep-script',
+    outline: '',
+    sceneCount: 3,
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('脚本 01', 'script', details)
+  const panel = screen.getByRole('region', { name: '脚本 01 脚本参数' })
+
+  await user.type(within(panel).getByRole('textbox', { name: '剧情大纲' }), '一盏河灯引出失踪真相')
+  await user.clear(within(panel).getByRole('spinbutton', { name: '场次数量' }))
+  await user.type(within(panel).getByRole('spinbutton', { name: '场次数量' }), '2')
+  await user.click(within(panel).getByRole('button', { name: '生成脚本，预计成本 12' }))
+
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      generatedByModel: '深度脚本',
+      chapters: [
+        expect.objectContaining({ title: '场次 01', summary: expect.stringContaining('河灯') }),
+        expect.objectContaining({ title: '场次 02', summary: expect.stringContaining('河灯') }),
+      ],
+    }),
+  )
 })
 
 test('shows persistent audio duration, voice, speed, and volume controls', async () => {
@@ -398,6 +465,34 @@ test('shows persistent audio duration, voice, speed, and volume controls', async
   await user.clear(within(panel).getByRole('spinbutton', { name: '语速' }))
   await user.type(within(panel).getByRole('spinbutton', { name: '语速' }), '1.2')
   expect(onUpdateNodeDetails).toHaveBeenCalled()
+})
+
+test('switches audio model tiers with model-driven defaults and estimated cost', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'audio',
+    durationSeconds: 12,
+    voice: '温暖女声',
+    speed: 1,
+    volume: 80,
+    modelProviderId: 'mock-audio',
+    modelVariant: 'ambience',
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', details)
+  const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
+  const model = within(panel).getByRole('combobox', { name: '音频模型' })
+
+  expect(within(panel).getByText('预计成本 4')).toBeVisible()
+  await user.selectOptions(model, 'narration')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      modelVariant: 'narration',
+      voice: '纪录片旁白',
+      durationSeconds: 30,
+    }),
+  )
+  expect(within(panel).getByText('预计成本 8')).toBeVisible()
+  expect(within(panel).getByText('本地演示')).toBeVisible()
 })
 
 test('adds, sorts, and removes director shots with camera hints', async () => {

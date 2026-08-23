@@ -2,10 +2,22 @@ import { ArrowDown, ArrowUp, FileVideo2, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import type {
+  AudioNodeDetails,
   CanvasNodeDetails,
   DirectorNodeDetails,
+  ScriptNodeDetails,
   SmartEditNodeDetails,
+  TextFontStyle,
+  TextNodeDetails,
 } from '../../project/model'
+import {
+  defaultProviderRegistry,
+  modelProviderVariant,
+  modelProviderVariantCost,
+  modelProviderVariants,
+  type ModelCapability,
+  type ModelProvider,
+} from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
 const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
@@ -47,6 +59,370 @@ function DetailsHeading({ type }: { type: CanvasNodeDetails['type'] }) {
       <span>NODE PARAMETERS</span>
       <strong>{panelTypeCopy[type]}参数</strong>
     </header>
+  )
+}
+
+function providerForDetails(
+  data: CreativeNodeData,
+  preferredId: string | undefined,
+  capability: ModelCapability,
+) {
+  const registry = data.providerRegistry ?? defaultProviderRegistry
+  return (
+    registry.list().find(({ id }) => id === preferredId) ??
+    registry.matching([capability]).find(({ kind }) => kind === 'demo')
+  )
+}
+
+function ModelVariantField({
+  label,
+  provider,
+  value,
+  onChange,
+}: {
+  label: string
+  provider: ModelProvider
+  value: string
+  onChange(variantId: string): void
+}) {
+  return (
+    <label className="specialized-node-details__field">
+      <span>{label}</span>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
+        {modelProviderVariants(provider).map((variant) => (
+          <option key={variant.id} value={variant.id}>
+            {variant.name} · {variant.pricing.amount} 积分
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function DemoModelMeta({
+  provider,
+  variantId,
+}: {
+  provider: ModelProvider
+  variantId: string
+}) {
+  return (
+    <div className="specialized-node-details__meta">
+      <span>预计成本 {modelProviderVariantCost(provider, variantId)}</span>
+      <span title="演示 Provider 不会连接真实 API">本地演示</span>
+    </div>
+  )
+}
+
+function TextDetails({
+  data,
+  details,
+  onUpdate,
+}: {
+  data: CreativeNodeData
+  details: TextNodeDetails
+  onUpdate(details: TextNodeDetails): void
+}) {
+  const provider = providerForDetails(
+    data,
+    details.modelProviderId ?? 'mock-text-llm',
+    'text',
+  )
+  if (!provider) return <p role="status">本地文本模型未配置</p>
+  const initialVariant = modelProviderVariant(provider, details.modelVariant)
+  const [variantId, setVariantId] = useState(initialVariant?.id ?? '')
+  const [prompt, setPrompt] = useState(details.prompt ?? '')
+  const [generatedModel, setGeneratedModel] = useState(details.generatedByModel ?? '')
+  const [status, setStatus] = useState('')
+  const cost = modelProviderVariantCost(provider, variantId)
+
+  const selectVariant = (nextVariantId: string) => {
+    setVariantId(nextVariantId)
+    const variant = modelProviderVariant(provider, nextVariantId)
+    const fontStyle = variant?.defaultParameters?.fontStyle
+    onUpdate({
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: nextVariantId,
+      prompt,
+      fontStyle:
+        typeof fontStyle === 'string'
+          ? (fontStyle as TextFontStyle)
+          : details.fontStyle,
+    })
+  }
+
+  const generate = () => {
+    const cleanPrompt = prompt.trim()
+    if (!cleanPrompt) {
+      setStatus('请输入提示词后再生成。')
+      return
+    }
+    const variant = modelProviderVariant(provider, variantId)
+    const modelName = variant?.name ?? provider.modelName
+    const lead =
+      variantId === 'deep-script'
+        ? '深度脚本文案'
+        : variantId === 'idea-expansion'
+          ? '灵感扩展方案'
+          : '基础文案'
+    onUpdate({
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: variantId,
+      prompt: cleanPrompt,
+      content: `${lead}：${cleanPrompt}。本地演示结果已回填。`,
+      generatedByModel: modelName,
+    })
+    setGeneratedModel(modelName)
+    setStatus('本地演示生成完成，未连接真实 API。')
+  }
+
+  return (
+    <>
+      <ModelVariantField
+        label="文本模型"
+        provider={provider}
+        value={variantId}
+        onChange={selectVariant}
+      />
+      <label className="specialized-node-details__field">
+        <span>生成提示词</span>
+        <textarea
+          aria-label="文本生成提示词"
+          rows={3}
+          maxLength={2000}
+          value={prompt}
+          onChange={(event) => setPrompt(event.currentTarget.value)}
+          onBlur={() => onUpdate({ ...details, prompt, modelProviderId: provider.id, modelVariant: variantId })}
+        />
+      </label>
+      <DemoModelMeta provider={provider} variantId={variantId} />
+      <button
+        type="button"
+        className="specialized-node-details__primary"
+        aria-label={`生成文本，预计成本 ${cost}`}
+        disabled={!prompt.trim()}
+        title={prompt.trim() ? '本地演示' : '请输入提示词后生成'}
+        onClick={generate}
+      >
+        生成文本
+      </button>
+      {!prompt.trim() ? <small>请输入提示词后生成</small> : null}
+      {generatedModel ? <p>来源模型：{generatedModel}</p> : null}
+      {status ? <p role="status">{status}</p> : null}
+      <label className="specialized-node-details__field">
+        <span>文本内容</span>
+        <textarea
+          aria-label="文本内容"
+          rows={6}
+          maxLength={5000}
+          value={details.content}
+          onChange={(event) => onUpdate({ ...details, content: event.currentTarget.value })}
+        />
+      </label>
+      <div className="specialized-node-details__meta">
+        <span>{countCharacters(details.content)} / 5000</span>
+        <label>
+          <span>字体样式</span>
+          <select aria-label="字体样式" value={details.fontStyle} onChange={(event) => onUpdate({ ...details, fontStyle: event.currentTarget.value as typeof details.fontStyle })}>
+            {['正文', '标题', '引用', '等宽'].map((style) => <option key={style}>{style}</option>)}
+          </select>
+        </label>
+      </div>
+    </>
+  )
+}
+
+function ScriptDetails({
+  data,
+  details,
+  onUpdate,
+}: {
+  data: CreativeNodeData
+  details: ScriptNodeDetails
+  onUpdate(details: ScriptNodeDetails): void
+}) {
+  const provider = providerForDetails(
+    data,
+    details.modelProviderId ?? 'mock-text-llm',
+    'text',
+  )
+  if (!provider) return <p role="status">本地脚本模型未配置</p>
+  const defaultVariant = modelProviderVariant(provider, details.modelVariant ?? 'deep-script')
+  const [variantId, setVariantId] = useState(defaultVariant?.id ?? '')
+  const [outline, setOutline] = useState(details.outline ?? '')
+  const [sceneCountDraft, setSceneCountDraft] = useState(
+    String(details.sceneCount ?? 3),
+  )
+  const [generatedModel, setGeneratedModel] = useState(details.generatedByModel ?? '')
+  const [status, setStatus] = useState('')
+  const cost = modelProviderVariantCost(provider, variantId)
+
+  const selectVariant = (nextVariantId: string) => {
+    setVariantId(nextVariantId)
+    const defaultSceneCount = modelProviderVariant(
+      provider,
+      nextVariantId,
+    )?.defaultParameters?.sceneCount
+    const nextSceneCount =
+      typeof defaultSceneCount === 'number'
+        ? defaultSceneCount
+        : Math.min(20, Math.max(1, Number(sceneCountDraft) || 1))
+    setSceneCountDraft(String(nextSceneCount))
+    onUpdate({
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: nextVariantId,
+      outline,
+      sceneCount: nextSceneCount,
+    })
+  }
+
+  const generate = () => {
+    const cleanOutline = outline.trim()
+    if (!cleanOutline) {
+      setStatus('请输入剧情大纲后再生成。')
+      return
+    }
+    const count = Math.min(
+      20,
+      Math.max(1, Math.round(Number(sceneCountDraft) || 1)),
+    )
+    const variant = modelProviderVariant(provider, variantId)
+    const modelName = variant?.name ?? provider.modelName
+    onUpdate({
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: variantId,
+      outline: cleanOutline,
+      sceneCount: count,
+      generatedByModel: modelName,
+      chapters: Array.from({ length: count }, (_, index) => ({
+        id: createId(`script-scene-${index + 1}`),
+        title: `场次 ${String(index + 1).padStart(2, '0')}`,
+        summary: `${cleanOutline} · 第 ${index + 1} 场本地演示拆解`,
+      })),
+    })
+    setGeneratedModel(modelName)
+    setStatus('本地演示脚本生成完成，未连接真实 API。')
+  }
+
+  return (
+    <>
+      <ModelVariantField label="脚本模型" provider={provider} value={variantId} onChange={selectVariant} />
+      <label className="specialized-node-details__field">
+        <span>剧情大纲</span>
+        <textarea aria-label="剧情大纲" rows={4} maxLength={3000} value={outline} onChange={(event) => setOutline(event.currentTarget.value)} />
+      </label>
+      <label className="specialized-node-details__field">
+        <span>场次数量</span>
+        <input
+          type="number"
+          aria-label="场次数量"
+          min="1"
+          max="20"
+          step="1"
+          value={sceneCountDraft}
+          onChange={(event) => setSceneCountDraft(event.currentTarget.value)}
+          onBlur={() => {
+            const count = Math.min(
+              20,
+              Math.max(1, Math.round(Number(sceneCountDraft) || 1)),
+            )
+            setSceneCountDraft(String(count))
+            onUpdate({ ...details, outline, sceneCount: count })
+          }}
+        />
+      </label>
+      <DemoModelMeta provider={provider} variantId={variantId} />
+      <button
+        type="button"
+        className="specialized-node-details__primary"
+        aria-label={`生成脚本，预计成本 ${cost}`}
+        disabled={!outline.trim()}
+        title={outline.trim() ? '本地演示' : '请输入剧情大纲后生成'}
+        onClick={generate}
+      >生成脚本</button>
+      {!outline.trim() ? <small>请输入剧情大纲后生成</small> : null}
+      {generatedModel ? <p>来源模型：{generatedModel}</p> : null}
+      {status ? <p role="status">{status}</p> : null}
+      <ol className="specialized-node-details__chapters" aria-label="章节列表">
+        {details.chapters.map((chapter, index) => (
+          <li key={chapter.id}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <input aria-label={`${chapter.title}标题`} value={chapter.title} maxLength={60} onChange={(event) => onUpdate({ ...details, chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, title: event.currentTarget.value } : candidate) })} />
+            <textarea aria-label={`${chapter.title}情节摘要`} value={chapter.summary} rows={3} maxLength={1000} onChange={(event) => onUpdate({ ...details, chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, summary: event.currentTarget.value } : candidate) })} />
+          </li>
+        ))}
+      </ol>
+      <strong className="specialized-node-details__count">共 {details.chapters.reduce((total, chapter) => total + countCharacters(chapter.title) + countCharacters(chapter.summary), 0)} 字</strong>
+    </>
+  )
+}
+
+function AudioDetails({
+  data,
+  details,
+  onUpdate,
+}: {
+  data: CreativeNodeData
+  details: AudioNodeDetails
+  onUpdate(details: AudioNodeDetails): void
+}) {
+  const provider = providerForDetails(
+    data,
+    details.modelProviderId ?? 'mock-audio',
+    'audio',
+  )
+  if (!provider) return <p role="status">本地音频模型未配置</p>
+  const [variantId, setVariantId] = useState(
+    modelProviderVariant(provider, details.modelVariant)?.id ?? '',
+  )
+
+  const selectVariant = (nextVariantId: string) => {
+    setVariantId(nextVariantId)
+    const defaults = modelProviderVariant(provider, nextVariantId)?.defaultParameters ?? {}
+    onUpdate({
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: nextVariantId,
+      durationSeconds:
+        typeof defaults.durationSeconds === 'number'
+          ? defaults.durationSeconds
+          : details.durationSeconds,
+      voice:
+        typeof defaults.voice === 'string'
+          ? (defaults.voice as AudioNodeDetails['voice'])
+          : details.voice,
+      speed: typeof defaults.speed === 'number' ? defaults.speed : details.speed,
+      volume: typeof defaults.volume === 'number' ? defaults.volume : details.volume,
+    })
+  }
+
+  return (
+    <>
+      <ModelVariantField label="音频模型" provider={provider} value={variantId} onChange={selectVariant} />
+      <DemoModelMeta provider={provider} variantId={variantId} />
+      <div className="specialized-node-details__audio-summary">
+        <span>当前时长</span>
+        <strong>{formatDuration(details.durationSeconds)}</strong>
+      </div>
+      <label className="specialized-node-details__field">
+        <span>音色</span>
+        <select aria-label="音色" value={details.voice} onChange={(event) => onUpdate({ ...details, voice: event.currentTarget.value as typeof details.voice })}>
+          {['温暖女声', '沉稳男声', '清亮少年', '纪录片旁白'].map((voice) => <option key={voice}>{voice}</option>)}
+        </select>
+      </label>
+      <div className="specialized-node-details__split-fields">
+        <label><span>语速</span><input type="number" aria-label="语速" min="0.5" max="2" step="0.1" value={details.speed} onChange={(event) => onUpdate({ ...details, speed: Math.min(2, Math.max(0.5, Number(event.currentTarget.value) || 0.5)) })} /></label>
+        <label><span>音量</span><input type="number" aria-label="音量" min="0" max="100" step="1" value={details.volume} onChange={(event) => onUpdate({ ...details, volume: Math.min(100, Math.max(0, Number(event.currentTarget.value) || 0)) })} /></label>
+      </div>
+    </>
   )
 }
 
@@ -217,78 +593,15 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
       <DetailsHeading type={details.type} />
 
       {details.type === 'text' ? (
-        <>
-          <label className="specialized-node-details__field">
-            <span>文本内容</span>
-            <textarea
-              aria-label="文本内容"
-              rows={6}
-              maxLength={5000}
-              value={details.content}
-              onChange={(event) => update({ ...details, content: event.currentTarget.value })}
-            />
-          </label>
-          <div className="specialized-node-details__meta">
-            <span>{countCharacters(details.content)} / 5000</span>
-            <label>
-              <span>字体样式</span>
-              <select aria-label="字体样式" value={details.fontStyle} onChange={(event) => update({ ...details, fontStyle: event.currentTarget.value as typeof details.fontStyle })}>
-                {['正文', '标题', '引用', '等宽'].map((style) => <option key={style}>{style}</option>)}
-              </select>
-            </label>
-          </div>
-        </>
+        <TextDetails data={data} details={details} onUpdate={update} />
       ) : null}
 
       {details.type === 'script' ? (
-        <>
-          <ol className="specialized-node-details__chapters" aria-label="章节列表">
-            {details.chapters.map((chapter, index) => (
-              <li key={chapter.id}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <input
-                  aria-label={`${chapter.title}标题`}
-                  value={chapter.title}
-                  maxLength={60}
-                  onChange={(event) => update({
-                    ...details,
-                    chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, title: event.currentTarget.value } : candidate),
-                  })}
-                />
-                <textarea
-                  aria-label={`${chapter.title}情节摘要`}
-                  value={chapter.summary}
-                  rows={3}
-                  maxLength={1000}
-                  onChange={(event) => update({
-                    ...details,
-                    chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, summary: event.currentTarget.value } : candidate),
-                  })}
-                />
-              </li>
-            ))}
-          </ol>
-          <strong className="specialized-node-details__count">共 {details.chapters.reduce((total, chapter) => total + countCharacters(chapter.title) + countCharacters(chapter.summary), 0)} 字</strong>
-        </>
+        <ScriptDetails data={data} details={details} onUpdate={update} />
       ) : null}
 
       {details.type === 'audio' ? (
-        <>
-          <div className="specialized-node-details__audio-summary">
-            <span>当前时长</span>
-            <strong>{formatDuration(details.durationSeconds)}</strong>
-          </div>
-          <label className="specialized-node-details__field">
-            <span>音色</span>
-            <select aria-label="音色" value={details.voice} onChange={(event) => update({ ...details, voice: event.currentTarget.value as typeof details.voice })}>
-              {['温暖女声', '沉稳男声', '清亮少年', '纪录片旁白'].map((voice) => <option key={voice}>{voice}</option>)}
-            </select>
-          </label>
-          <div className="specialized-node-details__split-fields">
-            <label><span>语速</span><input type="number" aria-label="语速" min="0.5" max="2" step="0.1" value={details.speed} onChange={(event) => update({ ...details, speed: Math.min(2, Math.max(0.5, Number(event.currentTarget.value) || 0.5)) })} /></label>
-            <label><span>音量</span><input type="number" aria-label="音量" min="0" max="100" step="1" value={details.volume} onChange={(event) => update({ ...details, volume: Math.min(100, Math.max(0, Number(event.currentTarget.value) || 0)) })} /></label>
-          </div>
-        </>
+        <AudioDetails data={data} details={details} onUpdate={update} />
       ) : null}
 
       {details.type === 'director' ? <DirectorDetails details={details} onUpdate={update} /> : null}
