@@ -10,7 +10,7 @@ import {
   Sparkles,
   WandSparkles,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import type {
@@ -43,6 +43,7 @@ export interface PlatformHomeSectionsProps {
   communityRepository: HomeCommunityRepository
   disabled: boolean
   onStartPrompt(request: HomePromptRequest): void
+  recentProjects?: ReactNode
 }
 
 type ContentState =
@@ -90,6 +91,7 @@ export function PlatformHomeSections({
   communityRepository,
   disabled,
   onStartPrompt,
+  recentProjects,
 }: PlatformHomeSectionsProps) {
   const [content, setContent] = useState<ContentState>({ status: 'loading' })
   const [community, setCommunity] = useState<CommunityState>({
@@ -295,6 +297,8 @@ export function PlatformHomeSections({
           </div>
         </section>
       ) : null}
+
+      {recentProjects}
 
       <section className="home-agent" aria-labelledby="home-agent-title">
         <div className="home-section-heading">

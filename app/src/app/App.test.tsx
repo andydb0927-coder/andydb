@@ -14,7 +14,7 @@ it.each([
   ['/projects', '全部项目'],
   ['/agents', 'Skill 全开，故事走起'],
   ['/challenges', '创作者挑战赛'],
-  ['/activity/director-master', 'LibTV Skill 导演大师赛'],
+  ['/activity/director-master', '光影接力导演挑战'],
   ['/project/demo-project', '项目画布'],
   ['/project/demo-project/preview', '成片预览'],
 ])('renders %s', async (path, heading) => {

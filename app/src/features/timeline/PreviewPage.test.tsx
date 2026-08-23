@@ -354,6 +354,8 @@ describe('preview journey', () => {
     const user = userEvent.setup()
     renderPreview()
 
+    expect(screen.getByText('雨夜追寻')).toBeVisible()
+    expect(screen.getByText('时间线更改自动保存在当前浏览器')).toBeVisible()
     expect(screen.getByRole('list', { name: '主视频轨' })).toBeVisible()
     expect(screen.getByRole('row', { name: '音频轨道' })).toBeVisible()
     expect(screen.getByText('缺少片段')).toBeVisible()

@@ -69,7 +69,8 @@ describe('Agents page', () => {
     expect(within(storyboard).getByRole('img', { name: '批量生成分镜提示词封面' })).toBeVisible()
     expect(within(storyboard).getByText('无线导演')).toBeVisible()
     expect(within(storyboard).getByText('1.8K 次使用')).toBeVisible()
-    expect(within(storyboard).getByText('使用')).toBeVisible()
+    expect(within(storyboard).getByRole('button', { name: '使用批量生成分镜提示词' })).toBeVisible()
+    expect(screen.queryByRole('region', { name: 'Skill 运行面板' })).not.toBeInTheDocument()
 
     const filters = screen.getByRole('region', { name: 'Skill 分类与搜索' })
     expect(within(filters).getByRole('button', { name: '全部' })).toHaveAttribute('aria-pressed', 'true')
@@ -88,6 +89,40 @@ describe('Agents page', () => {
     expect(screen.getByRole('article', { name: '项目备份检查' })).toBeVisible()
   })
 
+  test('orders the instruction box, local browse tabs, and catalog tools without faking remote data', async () => {
+    const user = userEvent.setup()
+    setup()
+
+    const instruction = screen.getByRole('region', { name: 'Skill 创作输入' })
+    const tabs = screen.getByRole('tablist', { name: 'Skill 浏览范围' })
+    const tools = screen.getByRole('region', { name: 'Skill 分类与搜索' })
+    expect(instruction.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tabs.compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    const assetCard = await screen.findByRole('article', { name: '素材整理报告' })
+    await user.click(within(assetCard).getByRole('checkbox', { name: '启用素材整理报告' }))
+    await user.click(within(tabs).getByRole('tab', { name: '收藏' }))
+    expect(screen.getByText('“收藏”映射为当前设备已启用的 Skill。')).toBeVisible()
+    expect(screen.queryByRole('article', { name: '素材整理报告' })).not.toBeInTheDocument()
+
+    await user.click(within(tabs).getByRole('tab', { name: '我的' }))
+    expect(screen.getByText('“我的”映射为本地工作区已注册的 Skill。')).toBeVisible()
+    expect(screen.getAllByRole('article')).toHaveLength(5)
+  })
+
+  test('selects a compact card and focuses its independent run panel', async () => {
+    const user = userEvent.setup()
+    setup()
+
+    const card = await screen.findByRole('article', { name: '素材整理报告' })
+    await user.click(within(card).getByRole('button', { name: '使用素材整理报告' }))
+
+    const runner = screen.getByRole('region', { name: 'Skill 运行面板' })
+    expect(within(runner).getByRole('heading', { name: '素材整理报告' })).toBeVisible()
+    expect(within(runner).getByText('此 Skill 无需额外参数。')).toBeVisible()
+    await waitFor(() => expect(runner).toHaveFocus())
+  })
+
   test('browses five local skills and persists enable/disable controls', async () => {
     const user = userEvent.setup()
     const { enablementStore } = setup()
@@ -98,7 +133,8 @@ describe('Agents page', () => {
     expect(toggle).toBeChecked()
     await user.click(toggle)
     expect(enablementStore.setEnabled).toHaveBeenCalledWith('assets.organize-report', false)
-    expect(within(card).getByRole('button', { name: '运行技能' })).toBeDisabled()
+    await user.click(within(card).getByRole('button', { name: '使用素材整理报告' }))
+    expect(within(screen.getByRole('region', { name: 'Skill 运行面板' })).getByRole('button', { name: '运行技能' })).toBeDisabled()
   })
 
   test('executes a skill, displays a result card and writes it into a canvas node', async () => {
@@ -106,9 +142,11 @@ describe('Agents page', () => {
     const { project, repository } = setup()
 
     const card = await screen.findByRole('article', { name: '批量生成分镜提示词' })
-    await user.clear(within(card).getByLabelText('镜头数量'))
-    await user.type(within(card).getByLabelText('镜头数量'), '2')
-    await user.click(within(card).getByRole('button', { name: '运行技能' }))
+    await user.click(within(card).getByRole('button', { name: '使用批量生成分镜提示词' }))
+    const runner = screen.getByRole('region', { name: 'Skill 运行面板' })
+    await user.clear(within(runner).getByLabelText('镜头数量'))
+    await user.type(within(runner).getByLabelText('镜头数量'), '2')
+    await user.click(within(runner).getByRole('button', { name: '运行技能' }))
 
     const result = await screen.findByRole('region', { name: '技能执行结果' })
     expect(within(result).getByText(/已生成 2 条/)).toBeVisible()
@@ -127,6 +165,7 @@ describe('Agents page', () => {
     const { workspaceClient } = setup()
 
     const panel = await screen.findByRole('region', { name: '本地工作区 CLI' })
+    expect(panel).toHaveAttribute('id', 'workspace-bridge')
     expect(within(panel).getByText('CLI 桥接已连接')).toBeVisible()
     expect(within(panel).getByText('workspace.project.export')).toBeVisible()
     expect(workspaceClient.loadManifest).toHaveBeenCalledTimes(1)
@@ -162,9 +201,11 @@ describe('Agents page', () => {
 
     const slowCard = await screen.findByRole('article', { name: '慢速技能' })
     const otherCard = screen.getByRole('article', { name: '其他技能' })
-    await userEvent.click(within(slowCard).getByRole('button', { name: '运行技能' }))
-    expect(within(otherCard).getByRole('button', { name: '运行技能' })).toBeDisabled()
-    await userEvent.click(within(slowCard).getByRole('button', { name: '取消执行' }))
+    await userEvent.click(within(slowCard).getByRole('button', { name: '使用慢速技能' }))
+    const runner = screen.getByRole('region', { name: 'Skill 运行面板' })
+    await userEvent.click(within(runner).getByRole('button', { name: '运行技能' }))
+    expect(within(otherCard).getByRole('button', { name: '使用其他技能' })).toBeDisabled()
+    await userEvent.click(within(runner).getByRole('button', { name: '取消执行' }))
     resolveSlow({ title: '过期', summary: '过期', content: '过期', format: 'text' })
 
     expect(await screen.findByText('技能执行已取消')).toBeVisible()

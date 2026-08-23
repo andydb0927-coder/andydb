@@ -300,8 +300,10 @@ export function PreviewPage({
     <main className="preview-page">
       <header className="preview-page__header">
         <div>
-          <p>专业时间线剪辑</p>
+          <p>本地交付工作区</p>
           <h1>成片预览</h1>
+          {project ? <strong>{project.title}</strong> : null}
+          <span>时间线更改自动保存在当前浏览器</span>
         </div>
         {project && active?.clip.source.nodeId ? (
           <Link to={`/project/${project.id}?focus=${active.clip.source.nodeId}`}>

@@ -22,7 +22,7 @@ test('exposes asset management and the Liblib material library as separate dock 
   )
 
   expect(screen.getByRole('toolbar', { name: '画布模式工具' })).toBeVisible()
-  const primaryDock = screen.getByRole('group', { name: 'Liblib 画布工具坞' })
+  const primaryDock = screen.getByRole('group', { name: '无线画布工具坞' })
   expect(
     Array.from(primaryDock.querySelectorAll('button')).map((button) =>
       button.getAttribute('aria-label'),

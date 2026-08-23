@@ -57,7 +57,7 @@ export function CanvasToolbar({
 
   return (
     <FloatingPanel className="canvas-mode-bar" role="toolbar" aria-label="画布模式工具">
-      <div className="canvas-mode-bar__primary" role="group" aria-label="Liblib 画布工具坞">
+      <div className="canvas-mode-bar__primary" role="group" aria-label="无线画布工具坞">
         <button
           type="button"
           aria-label="添加节点"

@@ -51,6 +51,7 @@ const skillCategories = [
 ] as const
 
 type SkillCategory = (typeof skillCategories)[number]
+type SkillCatalogView = 'skills' | 'favorites' | 'mine'
 
 interface SkillPresentation {
   author: string
@@ -116,8 +117,11 @@ export function AgentsPage({
     Object.fromEntries(agentSkills.map((skill) => [skill.id, initialInput(skill)])),
   )
   const [enablementVersion, setEnablementVersion] = useState(0)
+  const [catalogView, setCatalogView] = useState<SkillCatalogView>('skills')
   const [skillCategory, setSkillCategory] = useState<SkillCategory>('全部')
   const [skillQuery, setSkillQuery] = useState('')
+  const [selectedSkillId, setSelectedSkillId] = useState('')
+  const [focusRunner, setFocusRunner] = useState(false)
   const [creativePrompt, setCreativePrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('seedance-2.5')
   const [generationMode, setGenerationMode] = useState('smart')
@@ -136,6 +140,7 @@ export function AgentsPage({
   >({ status: 'loading' })
   const abortControllerRef = useRef<AbortController | undefined>(undefined)
   const runTokenRef = useRef(0)
+  const runPanelRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     let active = true
@@ -163,18 +168,32 @@ export function AgentsPage({
     abortControllerRef.current?.abort()
   }, [])
 
+  useEffect(() => {
+    if (!focusRunner) return
+    runPanelRef.current?.focus()
+    setFocusRunner(false)
+  }, [focusRunner, selectedSkillId])
+
   const selectedProject = projects.find(({ id }) => id === selectedProjectId)
+  const selectedSkill = agentSkills.find(({ id }) => id === selectedSkillId)
   const visibleSkills = useMemo(() => {
     const normalizedQuery = skillQuery.trim().toLocaleLowerCase()
     return agentSkills.filter((skill) => {
       const presentation = skillPresentation(skill)
+      if (catalogView === 'favorites' && !enablementStore.isEnabled(skill.id)) return false
       if (skillCategory !== '全部' && presentation.category !== skillCategory) return false
       if (!normalizedQuery) return true
       return `${skill.name} ${skill.description} ${presentation.author} ${presentation.category}`
         .toLocaleLowerCase()
         .includes(normalizedQuery)
     })
-  }, [agentSkills, skillCategory, skillQuery])
+  }, [agentSkills, catalogView, enablementStore, enablementVersion, skillCategory, skillQuery])
+
+  const selectSkill = (skillId: string) => {
+    if (runningSkillId) return
+    setSelectedSkillId(skillId)
+    setFocusRunner(true)
+  }
 
   const runSkill = async (skill: AgentSkillDefinition) => {
     if (runningSkillId || !selectedProject || !enablementStore.isEnabled(skill.id)) return
@@ -252,6 +271,11 @@ export function AgentsPage({
     }
   }
 
+  const selectedSkillInput = selectedSkill ? inputs[selectedSkill.id] ?? {} : {}
+  const selectedSkillEnabled = selectedSkill
+    ? enablementStore.isEnabled(selectedSkill.id)
+    : false
+
   return (
     <main className="platform-page agents-page">
       <header className="platform-page__header">
@@ -300,6 +324,33 @@ export function AgentsPage({
         </div>
       </section>
 
+      <section className="agent-catalog-scope" aria-label="Skill 本地浏览范围">
+        <div className="agent-catalog-view-tabs" role="tablist" aria-label="Skill 浏览范围">
+          {([
+            ['skills', 'Skill'],
+            ['favorites', '收藏'],
+            ['mine', '我的'],
+          ] as const).map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              role="tab"
+              aria-selected={catalogView === view}
+              onClick={() => setCatalogView(view)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="agent-catalog-boundary" role="note">
+          {catalogView === 'favorites'
+            ? '“收藏”映射为当前设备已启用的 Skill。'
+            : catalogView === 'mine'
+              ? '“我的”映射为本地工作区已注册的 Skill。'
+              : 'Skill 列表来自当前本地运行时，不包含远程账户数据。'}
+        </p>
+      </section>
+
       <section className="agent-catalog-tools" role="region" aria-label="Skill 分类与搜索">
         <div className="agent-catalog-tabs" aria-label="Skill 分类">
           {skillCategories.map((category) => (
@@ -328,21 +379,105 @@ export function AgentsPage({
         </label>
       </section>
 
-      <label className="platform-page__project-picker">
-        执行项目
-        <select value={selectedProjectId} onChange={(event) => selectProject(event.target.value)}>
-          {projects.length ? null : <option value="">暂无本地项目</option>}
-          {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
-        </select>
-      </label>
+      {selectedSkill ? (
+        <section
+          ref={runPanelRef}
+          className="agent-skill-runner"
+          role="region"
+          aria-label="Skill 运行面板"
+          tabIndex={-1}
+        >
+          <header className="agent-skill-runner__header">
+            <div>
+              <p className="platform-page__eyebrow">SELECTED LOCAL SKILL</p>
+              <h2>{selectedSkill.name}</h2>
+              <p>{selectedSkill.description}</p>
+            </div>
+            <span data-enabled={selectedSkillEnabled}>
+              {selectedSkillEnabled ? '当前设备已启用' : '当前设备已停用'}
+            </span>
+          </header>
+
+          <label className="platform-page__project-picker">
+            执行项目
+            <select value={selectedProjectId} onChange={(event) => selectProject(event.target.value)}>
+              {projects.length ? null : <option value="">暂无本地项目</option>}
+              {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+            </select>
+          </label>
+
+          <div className="agent-skill-fields">
+            {Object.entries(selectedSkill.inputSchema.properties).length ? (
+              Object.entries(selectedSkill.inputSchema.properties).map(([key, property]) => (
+                <label key={key}>
+                  {property.label}
+                  {property.enum ? (
+                    <select
+                      value={String(selectedSkillInput[key] ?? '')}
+                      onChange={(event) => setInputs((current) => ({
+                        ...current,
+                        [selectedSkill.id]: {
+                          ...selectedSkillInput,
+                          [key]: event.target.value,
+                        },
+                      }))}
+                    >
+                      {property.enum.map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type={property.type === 'number' ? 'number' : 'text'}
+                      value={String(selectedSkillInput[key] ?? '')}
+                      min={property.minimum}
+                      max={property.maximum}
+                      onChange={(event) => setInputs((current) => ({
+                        ...current,
+                        [selectedSkill.id]: {
+                          ...selectedSkillInput,
+                          [key]: property.type === 'number'
+                            ? Number(event.target.value)
+                            : event.target.value,
+                        },
+                      }))}
+                    />
+                  )}
+                </label>
+              ))
+            ) : (
+              <p className="agent-skill-runner__empty-fields">此 Skill 无需额外参数。</p>
+            )}
+          </div>
+
+          <div className="agent-skill-runner__actions">
+            {runningSkillId === selectedSkill.id ? (
+              <button type="button" onClick={cancelSkill}>取消执行</button>
+            ) : (
+              <button
+                type="button"
+                aria-label="运行技能"
+                disabled={!selectedSkillEnabled || !selectedProject || Boolean(runningSkillId)}
+                onClick={() => void runSkill(selectedSkill)}
+              >
+                运行 Skill
+              </button>
+            )}
+            {!selectedSkillEnabled ? <p>请先在浏览卡上启用该 Skill。</p> : null}
+            {!selectedProject ? <p>需要一个真实本地项目才能运行。</p> : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="agent-skill-grid" aria-label="已注册技能">
         {visibleSkills.map((skill) => {
           const enabled = enablementStore.isEnabled(skill.id)
-          const skillInput = inputs[skill.id] ?? {}
           const presentation = skillPresentation(skill)
           return (
-            <article key={skill.id} className="agent-skill-card" aria-label={skill.name}>
+            <article
+              key={skill.id}
+              className="agent-skill-card"
+              aria-label={skill.name}
+              data-selected={selectedSkill?.id === skill.id}
+            >
               <div
                 className="agent-skill-card__cover"
                 data-tone={presentation.tone}
@@ -352,11 +487,19 @@ export function AgentsPage({
                 <span>{presentation.category}</span>
                 <strong>{presentation.coverLabel}</strong>
               </div>
-              <div className="agent-skill-card__heading">
-                <div>
+              <div className="agent-skill-card__summary">
+                <div className="agent-skill-card__heading">
                   <span>{presentation.category} · v{skill.version}</span>
                   <h2>{skill.name}</h2>
                 </div>
+                <p>{skill.description}</p>
+                <div className="agent-skill-card__meta">
+                  <span>{presentation.author}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{presentation.usage} 次使用</span>
+                </div>
+              </div>
+              <div className="agent-skill-card__actions">
                 <label className="agent-skill-toggle">
                   <input
                     type="checkbox"
@@ -369,57 +512,15 @@ export function AgentsPage({
                   />
                   {enabled ? '已启用' : '已停用'}
                 </label>
-              </div>
-              <p>{skill.description}</p>
-              <div className="agent-skill-card__meta">
-                <span>{presentation.author}</span>
-                <span aria-hidden="true">·</span>
-                <span>{presentation.usage} 次使用</span>
-              </div>
-              <div className="agent-skill-fields">
-                {Object.entries(skill.inputSchema.properties).map(([key, property]) => (
-                  <label key={key}>
-                    {property.label}
-                    {property.enum ? (
-                      <select
-                        value={String(skillInput[key] ?? '')}
-                        onChange={(event) => setInputs((current) => ({
-                          ...current,
-                          [skill.id]: { ...skillInput, [key]: event.target.value },
-                        }))}
-                      >
-                        {property.enum.map((value) => <option key={value}>{value}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        type={property.type === 'number' ? 'number' : 'text'}
-                        value={String(skillInput[key] ?? '')}
-                        min={property.minimum}
-                        max={property.maximum}
-                        onChange={(event) => setInputs((current) => ({
-                          ...current,
-                          [skill.id]: {
-                            ...skillInput,
-                            [key]: property.type === 'number' ? Number(event.target.value) : event.target.value,
-                          },
-                        }))}
-                      />
-                    )}
-                  </label>
-                ))}
-              </div>
-              {runningSkillId === skill.id ? (
-                <button type="button" onClick={cancelSkill}>取消执行</button>
-              ) : (
                 <button
                   type="button"
-                  aria-label="运行技能"
-                  disabled={!enabled || !selectedProject || Boolean(runningSkillId)}
-                  onClick={() => void runSkill(skill)}
+                  aria-label={`使用${skill.name}`}
+                  disabled={Boolean(runningSkillId)}
+                  onClick={() => selectSkill(skill.id)}
                 >
                   使用
                 </button>
-              )}
+              </div>
             </article>
           )
         })}
@@ -431,7 +532,7 @@ export function AgentsPage({
         </div>
       ) : null}
 
-      <section className="agent-cli-status" role="region" aria-labelledby="agent-cli-heading">
+      <section id="workspace-bridge" className="agent-cli-status" role="region" aria-labelledby="agent-cli-heading">
         <div>
           <p className="platform-page__eyebrow">SAME-ORIGIN WORKSPACE BRIDGE</p>
           <h2 id="agent-cli-heading">本地工作区 CLI</h2>

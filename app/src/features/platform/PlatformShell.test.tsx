@@ -92,7 +92,7 @@ describe('platform shell', () => {
     }
   })
 
-  test('exposes the compact Liblib account actions without routing to a deleted account page', () => {
+  test('exposes honest local workspace actions instead of unimplemented account or billing links', () => {
     render(
       <MemoryRouter initialEntries={['/projects']}>
         <Routes>
@@ -103,10 +103,16 @@ describe('platform shell', () => {
       </MemoryRouter>,
     )
 
-    const topbar = screen.getByRole('navigation', { name: '顶栏账户入口' })
-    expect(within(topbar).getByRole('link', { name: '积分超市' })).toHaveAttribute('href', '/#credits')
-    expect(within(topbar).getByRole('link', { name: '开通会员' })).toHaveAttribute('href', '/#membership')
-    expect(within(topbar).getByRole('link', { name: '注册/登录' })).toHaveAttribute('href', '/#login')
+    const topbar = screen.getByRole('navigation', { name: '本地工作区快捷入口' })
+    expect(within(topbar).getByText('本地模式')).toBeVisible()
+    expect(within(topbar).getByRole('link', { name: '项目' })).toHaveAttribute('href', '/projects')
+    expect(within(topbar).getByRole('link', { name: '新建画布' })).toHaveAttribute(
+      'href',
+      '/projects/new',
+    )
+    for (const unavailable of ['积分超市', '开通会员', '注册/登录']) {
+      expect(within(topbar).queryByText(unavailable)).not.toBeInTheDocument()
+    }
   })
 
   test('keeps the task drawer collapsed by default and opens it as a layout column', async () => {

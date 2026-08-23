@@ -5,7 +5,7 @@ async function createProject(page: Page) {
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 }
 
-async function openPublishMenu(page: Page) {
+async function openExportMenu(page: Page) {
   await page.getByRole('button', { name: '发布与分享' }).click()
   return page.getByRole('menu', { name: '发布与分享菜单' })
 }
@@ -25,11 +25,11 @@ test('exports canvas ranges and a complete workflow JSON snapshot', async ({ pag
   page.on('pageerror', (error) => browserErrors.push(error.message))
   await createProject(page)
 
-  let menu = await openPublishMenu(page)
+  let menu = await openExportMenu(page)
   await expect(menu.getByRole('menuitem', { name: '导出画布' })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: '导出工作流 JSON' })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: '导入工作流 JSON' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: '预览导出' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: '预览', exact: true })).toBeVisible()
   await menu.getByRole('menuitem', { name: '导出画布' }).click()
 
   const exportDialog = page.getByRole('dialog', { name: '导出画布' })
@@ -45,7 +45,7 @@ test('exports canvas ranges and a complete workflow JSON snapshot', async ({ pag
   expect(svg).toContain('<svg')
   expect(svg).toContain('data-node-id=')
 
-  menu = await openPublishMenu(page)
+  menu = await openExportMenu(page)
   await menu.getByRole('menuitem', { name: '导出画布' }).click()
   const pngDialog = page.getByRole('dialog', { name: '导出画布' })
   const pngDownloadPromise = page.waitForEvent('download')
@@ -57,7 +57,7 @@ test('exports canvas ranges and a complete workflow JSON snapshot', async ({ pag
   const png = await readDownload(pngDownload)
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
 
-  menu = await openPublishMenu(page)
+  menu = await openExportMenu(page)
   const jsonDownloadPromise = page.waitForEvent('download')
   await menu.getByRole('menuitem', { name: '导出工作流 JSON' }).click()
   const jsonDownload = await jsonDownloadPromise

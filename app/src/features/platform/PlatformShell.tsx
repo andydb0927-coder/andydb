@@ -116,10 +116,12 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
         {mode === 'standard' ? (
           <header className="platform-shell__topbar">
             <Link className="launcher-brand focus-visible" to="/">无线画布</Link>
-            <nav className="launcher-header__actions" aria-label="顶栏账户入口">
-              <Link className="launcher-header__link focus-visible" to="/#credits">积分超市</Link>
-              <Link className="launcher-header__membership focus-visible" to="/#membership">开通会员</Link>
-              <Link className="launcher-account focus-visible" to="/#login">注册/登录</Link>
+            <nav className="launcher-header__actions" aria-label="本地工作区快捷入口">
+              <span className="launcher-header__link">本地模式</span>
+              <Link className="launcher-header__link focus-visible" to="/projects">项目</Link>
+              <Link className="launcher-header__membership focus-visible" to="/projects/new">
+                新建画布
+              </Link>
             </nav>
           </header>
         ) : null}

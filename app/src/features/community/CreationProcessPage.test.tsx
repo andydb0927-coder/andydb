@@ -33,7 +33,7 @@ describe('read-only creation process', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '霜河渡 · 创作过程' })).toBeVisible()
-    expect(screen.getByText('只读模式，如需创建请点击复制项目')).toBeVisible()
+    expect(screen.getByText('只读模式；复制会在当前浏览器创建一个新项目')).toBeVisible()
     const timeline = screen.getByRole('region', { name: '时间分组节点列表' })
     expect(within(timeline).getAllByRole('article').length).toBeGreaterThan(0)
     expect(screen.getByRole('region', { name: '依赖连线' })).toBeVisible()

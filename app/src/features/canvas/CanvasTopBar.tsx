@@ -1,16 +1,12 @@
 import {
   Bot,
   ChevronDown,
-  Coins,
-  Crown,
   Download,
   FileDown,
   FileUp,
   ListTree,
   PencilLine,
   Redo2,
-  Share2,
-  ShoppingBag,
   Undo2,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
@@ -57,7 +53,6 @@ export function CanvasTopBar({
   canRedo,
   mode,
   agentOpen,
-  creditBalance = 120,
   onUndo,
   onRedo,
   onRenameProject,
@@ -72,7 +67,6 @@ export function CanvasTopBar({
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(projectTitle)
-  const [shareFeedback, setShareFeedback] = useState<string>()
 
   useEffect(() => setTitleDraft(projectTitle), [projectTitle])
 
@@ -91,9 +85,8 @@ export function CanvasTopBar({
     setEditingTitle(false)
   }
 
-  const closeShareMenu = (feedback?: string) => {
+  const closeShareMenu = () => {
     setShareMenuOpen(false)
-    if (feedback) setShareFeedback(feedback)
   }
 
   return (
@@ -181,16 +174,7 @@ export function CanvasTopBar({
           <ListTree aria-hidden="true" />
           节点列表
         </button>
-        <button type="button" className="canvas-top-bar__commerce" aria-label="积分超市">
-          <ShoppingBag aria-hidden="true" />
-          积分超市
-        </button>
-        <button type="button" className="canvas-top-bar__commerce" aria-label="会员中心 限时4.0折">
-          <Crown aria-hidden="true" />
-          会员中心 <em>限时4.0折</em>
-        </button>
-        <span className="canvas-top-bar__balance"><Coins aria-hidden="true" />{creditBalance} 积分</span>
-        <CanvasAccountMenu creditBalance={creditBalance} />
+        <CanvasAccountMenu />
         <div className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button
             type="button"
@@ -198,21 +182,16 @@ export function CanvasTopBar({
             aria-expanded={shareMenuOpen}
             onClick={() => setShareMenuOpen((open) => !open)}
           >
-            <Share2 aria-hidden="true" />
+            <Download aria-hidden="true" />
             发布与分享 <ChevronDown aria-hidden="true" />
           </button>
           {shareMenuOpen ? (
             <div className="canvas-top-bar__menu canvas-top-bar__menu--right" role="menu" aria-label="发布与分享菜单">
-              <button type="button" role="menuitem" onClick={() => closeShareMenu('本地演示未执行外部发布')}>发布作品</button>
-              <button type="button" role="menuitem" onClick={() => closeShareMenu('本地演示链接已准备')}>分享链接</button>
               {projectId ? (
                 <Link role="menuitem" to={`/project/${projectId}/preview`} onClick={() => closeShareMenu()}>预览</Link>
               ) : (
                 <button type="button" role="menuitem" disabled>预览</button>
               )}
-              <button type="button" role="menuitem" onClick={() => closeShareMenu('请先进入预览页配置本地导出')}>
-                <Download aria-hidden="true" />预览导出
-              </button>
               <button type="button" role="menuitem" disabled={!onOpenCanvasExport} onClick={() => {
                 closeShareMenu()
                 onOpenCanvasExport?.()
@@ -231,7 +210,7 @@ export function CanvasTopBar({
               }}>
                 <FileUp aria-hidden="true" />导入工作流 JSON
               </button>
-              <p>本地演示不执行外部发布</p>
+              <p>所有操作仅作用于当前本地项目</p>
             </div>
           ) : null}
         </div>
@@ -245,7 +224,6 @@ export function CanvasTopBar({
           打开 Agent
         </button>
       </div>
-      {shareFeedback ? <span className="sr-only" role="status">{shareFeedback}</span> : null}
     </header>
   )
 }

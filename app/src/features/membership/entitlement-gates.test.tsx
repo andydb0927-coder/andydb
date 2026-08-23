@@ -7,7 +7,7 @@ import { makeProjectFixture } from '../../test/fixtures'
 import { createTimelineProject } from '../timeline/timeline-project'
 import { TimelineExportPanel } from '../timeline/TimelineExportPanel'
 
-test('keeps JSON free while creator-only export actions show an upgrade guide', async () => {
+test('keeps every browser-local export available without a fake upgrade flow', async () => {
   const user = userEvent.setup()
   const onDownload = vi.fn()
   render(<MemoryRouter>
@@ -23,7 +23,8 @@ test('keeps JSON free while creator-only export actions show an upgrade guide', 
 
   await user.click(screen.getByRole('button', { name: '下载时间线 JSON' }))
   expect(onDownload).toHaveBeenCalledOnce()
-  expect(screen.getByRole('button', { name: '下载 EDL' })).toBeDisabled()
-  expect(screen.queryByRole('button', { name: '开始录制预览' })).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '升级到创作者版' })).toHaveAttribute('href', '/#membership')
+  await user.click(screen.getByRole('button', { name: '下载 EDL' }))
+  expect(onDownload).toHaveBeenCalledTimes(2)
+  expect(screen.getByRole('button', { name: '开始录制预览' })).toBeVisible()
+  expect(screen.queryByRole('link', { name: '升级到创作者版' })).not.toBeInTheDocument()
 })

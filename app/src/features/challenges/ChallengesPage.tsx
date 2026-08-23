@@ -23,6 +23,11 @@ function participantCount(count: number) {
 
 export function ChallengesPage() {
   const [filter, setFilter] = useState<ChallengeFilter>('all')
+  const filterCounts: Record<ChallengeFilter, number> = {
+    all: creatorChallenges.length,
+    ongoing: creatorChallenges.filter((challenge) => challenge.status === 'ongoing').length,
+    awarded: creatorChallenges.filter((challenge) => challenge.status === 'awarded').length,
+  }
   const visibleChallenges = creatorChallenges.filter(
     (challenge) => filter === 'all' || challenge.status === filter,
   )
@@ -45,56 +50,66 @@ export function ChallengesPage() {
         {challengeFilters.map((item) => (
           <button
             key={item.id}
+            aria-label={`${item.label} ${filterCounts[item.id]}`}
             aria-pressed={filter === item.id}
             className="focus-visible"
             type="button"
             onClick={() => setFilter(item.id)}
           >
-            {item.label}
+            <span>{item.label}</span>
+            <span className="challenge-filters__count">{filterCounts[item.id]}</span>
           </button>
         ))}
       </div>
 
       <section className="challenge-grid" aria-label="挑战赛列表">
         {visibleChallenges.map((challenge) => (
-          <article key={challenge.id} className="challenge-card">
-            <div
-              aria-label={`${challenge.title} 封面`}
-              className={`challenge-card__cover challenge-card__cover--${challenge.coverTone}`}
-              role="img"
+          <article
+            key={challenge.id}
+            aria-labelledby={`challenge-title-${challenge.id}`}
+            className="challenge-card"
+          >
+            <Link
+              aria-labelledby={`challenge-title-${challenge.id}`}
+              className="challenge-card__main-link focus-visible"
+              to={`/activity/${challenge.id}`}
             >
-              <span>{challenge.coverLabel}</span>
-              <span>LOCAL EDITION / 2026</span>
-            </div>
-            <div className="challenge-card__body">
-              <div className="challenge-card__status-row">
-                <span data-status={challenge.status}>{statusLabels[challenge.status]}</span>
-                <span>{challenge.theme}</span>
+              <div className="challenge-card__media">
+                <div
+                  aria-label={`${challenge.title} 封面`}
+                  className={`challenge-card__cover challenge-card__cover--${challenge.coverTone}`}
+                  role="img"
+                >
+                  <span>{challenge.coverLabel}</span>
+                  <span>LOCAL EDITION / 2026</span>
+                </div>
+                <span className="challenge-card__status" data-status={challenge.status}>
+                  {statusLabels[challenge.status]}
+                </span>
               </div>
-              <h2>{challenge.title}</h2>
-              <p>{challenge.summary}</p>
-              <dl className="challenge-card__facts">
-                <div>
-                  <dt><CalendarDays aria-hidden="true" />活动时间</dt>
-                  <dd>{challenge.period}</dd>
-                </div>
-                <div>
-                  <dt><Trophy aria-hidden="true" />奖金</dt>
-                  <dd>{challenge.prize}</dd>
-                </div>
-                <div>
-                  <dt><UsersRound aria-hidden="true" />参与人数</dt>
-                  <dd>{participantCount(challenge.participants)} 人参与</dd>
-                </div>
-              </dl>
-              <Link
-                aria-label={`查看 ${challenge.title}`}
-                className="challenge-card__link focus-visible"
-                to={`/activity/${challenge.id}`}
-              >
-                查看详情 <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </div>
+              <div className="challenge-card__body">
+                <p className="challenge-card__theme">{challenge.theme}</p>
+                <h2 id={`challenge-title-${challenge.id}`}>{challenge.title}</h2>
+                <p>{challenge.summary}</p>
+                <dl className="challenge-card__facts">
+                  <div>
+                    <dt><CalendarDays aria-hidden="true" />活动时间</dt>
+                    <dd>{challenge.period}</dd>
+                  </div>
+                  <div>
+                    <dt><Trophy aria-hidden="true" />奖金</dt>
+                    <dd>{challenge.prize}</dd>
+                  </div>
+                  <div>
+                    <dt><UsersRound aria-hidden="true" />参与人数</dt>
+                    <dd>{participantCount(challenge.participants)} 人参与</dd>
+                  </div>
+                </dl>
+                <span className="challenge-card__link" aria-hidden="true">
+                  查看详情 <ArrowUpRight />
+                </span>
+              </div>
+            </Link>
           </article>
         ))}
       </section>

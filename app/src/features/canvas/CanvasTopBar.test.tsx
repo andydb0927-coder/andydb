@@ -39,7 +39,7 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
   expect(onToggleAgent).toHaveBeenCalledOnce()
 })
 
-test('keeps publish and share actions explicitly local-only', async () => {
+test('exposes only real local preview and export actions', async () => {
   const user = userEvent.setup()
   const onOpenCanvasExport = vi.fn()
   const onExportWorkflow = vi.fn()
@@ -67,14 +67,14 @@ test('keeps publish and share actions explicitly local-only', async () => {
   )
   await user.click(screen.getByRole('button', { name: '发布与分享' }))
   const menu = screen.getByRole('menu', { name: '发布与分享菜单' })
-  expect(menu).toHaveTextContent('发布作品')
-  expect(menu).toHaveTextContent('分享链接')
+  expect(menu).not.toHaveTextContent('发布作品')
+  expect(menu).not.toHaveTextContent('分享链接')
   expect(menu).toHaveTextContent('预览')
   expect(menu).toHaveTextContent('导出画布')
   expect(menu).toHaveTextContent('导出工作流 JSON')
   expect(menu).toHaveTextContent('导入工作流 JSON')
   expect(menu).toHaveTextContent('预览导出')
-  expect(menu).toHaveTextContent('本地演示不执行外部发布')
+  expect(menu).toHaveTextContent('所有操作仅作用于当前本地项目')
 
   await user.click(screen.getByRole('menuitem', { name: '导出画布' }))
   expect(onOpenCanvasExport).toHaveBeenCalledOnce()
@@ -86,7 +86,7 @@ test('keeps publish and share actions explicitly local-only', async () => {
   expect(onImportWorkflow).toHaveBeenCalledOnce()
 })
 
-test('edits the project title and exposes local membership controls', async () => {
+test('edits the project title without presenting fake commerce controls', async () => {
   const user = userEvent.setup()
   const onRenameProject = vi.fn()
   render(
@@ -115,8 +115,8 @@ test('edits the project title and exposes local membership controls', async () =
   await user.type(title, '雨夜电影计划{Enter}')
   expect(onRenameProject).toHaveBeenCalledWith('雨夜电影计划')
 
-  expect(screen.getByRole('button', { name: '积分超市' })).toBeVisible()
-  expect(screen.getByRole('button', { name: /会员中心/ })).toHaveTextContent('限时4.0折')
-  expect(screen.getByText('120 积分')).toBeVisible()
-  expect(screen.getByRole('button', { name: /用户头像/ })).toBeVisible()
+  expect(screen.queryByRole('button', { name: '积分超市' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /会员中心/ })).not.toBeInTheDocument()
+  expect(screen.queryByText(/积分$/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /本地设置/ })).toBeVisible()
 })

@@ -140,7 +140,7 @@ export function CreationProcessPage({
 
       <div className="creation-process-page__notice" role="note">
         <LockKeyhole aria-hidden="true" />
-        <span>只读模式，如需创建请点击复制项目</span>
+        <span>只读模式；复制会在当前浏览器创建一个新项目</span>
       </div>
       {copyError ? <p role="alert">{copyError}</p> : null}
 

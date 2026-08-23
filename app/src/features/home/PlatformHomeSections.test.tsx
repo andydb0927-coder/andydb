@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -21,7 +22,7 @@ function makeCommunityRepository() {
   }
 }
 
-function renderHome() {
+function renderHome(recentProjects?: ReactNode) {
   const contentRepository = makeContentRepository()
   const communityRepository = makeCommunityRepository()
   const onStartPrompt = vi.fn()
@@ -32,6 +33,7 @@ function renderHome() {
         communityRepository={communityRepository}
         disabled={false}
         onStartPrompt={onStartPrompt}
+        recentProjects={recentProjects}
       />
     </MemoryRouter>,
   )
@@ -39,6 +41,32 @@ function renderHome() {
 }
 
 describe('platform home sections', () => {
+  test('places an optional recent-projects slot after features and before the Agent', async () => {
+    renderHome(<section aria-label="插入的最近项目" />)
+
+    const features = await screen.findByRole('region', { name: '产品特性轮播' })
+    const recentProjects = screen.getByRole('region', { name: '插入的最近项目' })
+    const agentHeading = screen.getByRole('heading', { name: '说出你的创意' })
+
+    expect(
+      features.compareDocumentPosition(recentProjects),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(
+      recentProjects.compareDocumentPosition(agentHeading),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  test('renders independently when the recent-projects slot is omitted', async () => {
+    renderHome()
+
+    expect(
+      await screen.findByRole('heading', { name: '说出你的创意' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('region', { name: '插入的最近项目' }),
+    ).not.toBeInTheDocument()
+  })
+
   test('renders the exact hero and six specified canvas modes', async () => {
     const { contentRepository } = renderHome()
 

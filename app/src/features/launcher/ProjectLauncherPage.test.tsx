@@ -129,6 +129,17 @@ describe('project launcher', () => {
     expect(within(recentRegion).getAllByRole('link')).toHaveLength(2)
   })
 
+  test('renders real recent projects before the Agent section in DOM order', async () => {
+    renderLauncher({ repository: makeRepository([makeProjectFixture()]) })
+
+    const recentRegion = await screen.findByRole('region', { name: '最近项目' })
+    const agentHeading = screen.getByRole('heading', { name: '说出你的创意' })
+    expect(within(recentRegion).getByRole('link', { name: /霜河渡/ })).toBeVisible()
+    expect(
+      recentRegion.compareDocumentPosition(agentHeading),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
   test('loads recent projects after StrictMode replays mount effects', async () => {
     const repository = makeRepository()
     renderLauncher({ repository, strictMode: true })

@@ -655,7 +655,7 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   const history = page.getByRole('complementary', { name: '历史' })
   await expect(history).toContainText('Mock Studio · Lib Image')
   await expect(history).toContainText('消耗 18 积分')
-  await expect(page.getByText('102 积分', { exact: true })).toHaveText('102 积分')
+  await expect(page.getByText('102 积分', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '关闭历史面板' }).click()
 
   await page.getByRole('button', { name: 'Agent', exact: true }).click()

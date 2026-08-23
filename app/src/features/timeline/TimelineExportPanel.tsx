@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
-import { canUseFeature, type MembershipPlanId } from '../membership/membership-model'
+import type { MembershipPlanId } from '../membership/membership-model'
 import type { TimelineProject } from './timeline-project'
 import {
   downloadBlob,
@@ -23,11 +22,9 @@ export function TimelineExportPanel({
   recordingSupported,
   onDownload = downloadBlob,
   onStartRecording,
-  membershipPlan = 'professional',
 }: TimelineExportPanelProps) {
   const [recording, setRecording] = useState<PreviewRecordingSession>()
   const [feedback, setFeedback] = useState<string>()
-  const advancedExportAllowed = canUseFeature(membershipPlan, 'advanced-export')
 
   const download = (kind: 'json' | 'edl') => {
     const content =
@@ -66,22 +63,17 @@ export function TimelineExportPanel({
         <button type="button" onClick={() => download('json')}>
           下载时间线 JSON
         </button>
-        <button type="button" disabled={!advancedExportAllowed} onClick={() => download('edl')}>
+        <button type="button" onClick={() => download('edl')}>
           下载 EDL
         </button>
-        {recordingSupported && advancedExportAllowed ? (
+        {recordingSupported ? (
           <button type="button" onClick={toggleRecording}>
             {recording ? '停止录制预览' : '开始录制预览'}
           </button>
-        ) : advancedExportAllowed ? (
+        ) : (
           <p>当前浏览器不支持预览流录制，可继续导出 JSON / EDL。</p>
-        ) : null}
+        )}
       </div>
-      {!advancedExportAllowed ? (
-        <p className="membership-gate">
-          EDL 与预览录制需要创作者版。<Link to="/#membership">升级到创作者版</Link>
-        </p>
-      ) : null}
       <p className="timeline-export__note">
         MediaRecorder 仅录制预览画布；本阶段不做 FFmpeg 合成与音频混流。
       </p>

@@ -77,6 +77,7 @@ describe('work detail page', () => {
       'href', '/detail/demo-work-frost-river/process',
     )
     expect(screen.getByLabelText('329 次浏览')).toBeVisible()
+    expect(screen.getByText('浏览、点赞与收藏仅保存在当前浏览器')).toBeVisible()
     expect(repository.recordView).toHaveBeenCalledTimes(1)
 
     view.rerender(

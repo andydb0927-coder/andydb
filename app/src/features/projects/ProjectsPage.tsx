@@ -307,8 +307,13 @@ export function ProjectsPage({
               </Link>
               {visibleProjects.map((project) => {
                 const thumbnail = projectThumbnail(project)
+                const titleId = `project-card-title-${project.id}`
                 return (
-                  <article key={project.id} className="project-directory-card">
+                  <article
+                    key={project.id}
+                    className="project-directory-card"
+                    aria-labelledby={titleId}
+                  >
                     <div className="project-directory-card__thumbnail">
                       {thumbnail ? (
                         <img src={thumbnail.url} alt={`${project.title} 缩略图`} />
@@ -320,8 +325,8 @@ export function ProjectsPage({
                     </div>
                     <div className="project-directory-card__heading">
                       <div>
+                        <h2 id={titleId}>{project.title}</h2>
                         <p>{formatUpdatedAt(project.updatedAt)}</p>
-                        <h2>{project.title}</h2>
                       </div>
                       <span>{project.nodes.length} 节点 · {project.assets.length} 素材</span>
                     </div>

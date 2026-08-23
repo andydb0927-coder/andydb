@@ -1,18 +1,19 @@
 import { expect, test } from '@playwright/test'
 
-test('keeps the account and team controls usable on the compact canvas', async ({ page }) => {
+test('keeps local settings usable on the compact canvas', async ({ page }) => {
   await page.setViewportSize({ width: 721, height: 778 })
   await page.goto('/projects/new?recipe=cinematic-story')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
 
-  const avatar = page.getByRole('button', { name: /用户头像/ })
+  const avatar = page.getByRole('button', { name: /本地设置/ })
   await expect(avatar).toBeVisible()
   await avatar.click()
 
-  const account = page.getByRole('dialog', { name: '账户与团队' })
+  const account = page.getByRole('dialog', { name: '本地设置' })
   await expect(account).toBeVisible()
-  await expect(account.getByText('标准版团队 VIP')).toBeVisible()
-  await expect(account.getByText('我的本月额度：4216/10000')).toBeVisible()
+  await expect(account.getByText('本地创作偏好 · 仅保存在当前浏览器')).toBeVisible()
+  await expect(account.getByText('未连接账户、会员、额度、支付或云端团队服务。')).toBeVisible()
+  await expect(account.getByText('标准版团队 VIP')).toHaveCount(0)
   const geometry = await account.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     return {
@@ -44,14 +45,14 @@ test('keeps the account and team controls usable on the compact canvas', async (
   await expect(page.getByRole('button', { name: '通知' })).toBeVisible()
 })
 
-test('keeps the account popover inside an extra-narrow split preview', async ({ page }) => {
+test('keeps local settings inside an extra-narrow split preview', async ({ page }) => {
   await page.setViewportSize({ width: 366, height: 778 })
   await page.goto('/projects/new?recipe=cinematic-story')
 
-  const avatar = page.getByRole('button', { name: /用户头像/ })
+  const avatar = page.getByRole('button', { name: /本地设置/ })
   await expect(avatar).toBeVisible()
   await avatar.click()
-  const account = page.getByRole('dialog', { name: '账户与团队' })
+  const account = page.getByRole('dialog', { name: '本地设置' })
   await expect(account).toBeVisible()
 
   const geometry = await account.evaluate((element) => {

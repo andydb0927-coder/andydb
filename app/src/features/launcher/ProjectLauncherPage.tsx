@@ -257,6 +257,74 @@ export function ProjectLauncherPage({
   }
 
   const isBusy = launcherState.status === 'creating'
+  const recentProjects = (
+    <section className="launcher-recent" aria-labelledby="recent-title">
+      <div className="launcher-recent__heading">
+        <h2 id="recent-title">最近项目</h2>
+        {recentProjectsState.status === 'loading' ? (
+          <span>正在读取</span>
+        ) : (
+          <Link className="launcher-header__link focus-visible" to="/projects">
+            查看全部项目
+          </Link>
+        )}
+      </div>
+      <div className="launcher-recent__list">
+        {recentProjectsState.status === 'failed' ? (
+          <div className="launcher-recent__error">
+            <p className="launcher-message" role="alert">
+              {recentProjectsState.message}
+            </p>
+            <Button
+              className="launcher-button--secondary"
+              onClick={() => void loadRecentProjects()}
+            >
+              重试加载最近项目
+            </Button>
+          </div>
+        ) : recentProjectsState.status === 'loaded' &&
+          recentProjectsState.projects.length ? (
+          recentProjectsState.projects.map((project) => (
+            <Link
+              key={project.id}
+              className="recent-project focus-visible"
+              to={`/project/${project.id}`}
+              onClick={(event) => {
+                event.preventDefault()
+                void openRecentProject(project.id)
+              }}
+            >
+              <span className="recent-project__title">{project.title}</span>
+              <span className="recent-project__intent">{project.intent}</span>
+              <span className="recent-project__meta">
+                {project.nodes.length} 个创作节点
+              </span>
+            </Link>
+          ))
+        ) : recentProjectsState.status === 'loaded' ? (
+          <Link
+            className="recent-project recent-project--example focus-visible"
+            to={`/project/${exampleProject.id}`}
+            onClick={(event) => {
+              event.preventDefault()
+              void openExampleProject()
+            }}
+          >
+            <span className="recent-project__badge">完整示例</span>
+            <span className="recent-project__title">
+              {exampleProject.title}
+            </span>
+            <span className="recent-project__intent">
+              {exampleProject.intent}
+            </span>
+            <span className="recent-project__meta">
+              {exampleProject.nodeCount} 个创作节点
+            </span>
+          </Link>
+        ) : null}
+      </div>
+    </section>
+  )
 
   return (
     <main className="launcher-page">
@@ -265,6 +333,7 @@ export function ProjectLauncherPage({
         communityRepository={communityRepository}
         disabled={isBusy}
         onStartPrompt={(request) => void openPromptCanvas(request)}
+        recentProjects={recentProjects}
       />
 
       {launcherState.status === 'failed' ? (
@@ -288,73 +357,6 @@ export function ProjectLauncherPage({
           正在打开画布…
         </p>
       ) : null}
-
-      <section className="launcher-recent" aria-labelledby="recent-title">
-        <div className="launcher-recent__heading">
-          <h2 id="recent-title">最近项目</h2>
-          {recentProjectsState.status === 'loading' ? (
-            <span>正在读取</span>
-          ) : (
-            <Link className="launcher-header__link focus-visible" to="/projects">
-              查看全部项目
-            </Link>
-          )}
-        </div>
-        <div className="launcher-recent__list">
-          {recentProjectsState.status === 'failed' ? (
-            <div className="launcher-recent__error">
-              <p className="launcher-message" role="alert">
-                {recentProjectsState.message}
-              </p>
-              <Button
-                className="launcher-button--secondary"
-                onClick={() => void loadRecentProjects()}
-              >
-                重试加载最近项目
-              </Button>
-            </div>
-          ) : recentProjectsState.status === 'loaded' &&
-            recentProjectsState.projects.length ? (
-            recentProjectsState.projects.map((project) => (
-              <Link
-                key={project.id}
-                className="recent-project focus-visible"
-                to={`/project/${project.id}`}
-                onClick={(event) => {
-                  event.preventDefault()
-                  void openRecentProject(project.id)
-                }}
-              >
-                <span className="recent-project__title">{project.title}</span>
-                <span className="recent-project__intent">{project.intent}</span>
-                <span className="recent-project__meta">
-                  {project.nodes.length} 个创作节点
-                </span>
-              </Link>
-            ))
-          ) : recentProjectsState.status === 'loaded' ? (
-            <Link
-              className="recent-project recent-project--example focus-visible"
-              to={`/project/${exampleProject.id}`}
-              onClick={(event) => {
-                event.preventDefault()
-                void openExampleProject()
-              }}
-            >
-              <span className="recent-project__badge">完整示例</span>
-              <span className="recent-project__title">
-                {exampleProject.title}
-              </span>
-              <span className="recent-project__intent">
-                {exampleProject.intent}
-              </span>
-              <span className="recent-project__meta">
-                {exampleProject.nodeCount} 个创作节点
-              </span>
-            </Link>
-          ) : null}
-        </div>
-      </section>
 
       <footer id="help" className="launcher-help" aria-labelledby="launcher-help-title">
         <div>

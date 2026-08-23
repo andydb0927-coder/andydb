@@ -3359,7 +3359,7 @@ describe('creative canvas', () => {
       '分组',
       '隐藏连线',
     ])
-    expect(within(toolbar).getByRole('group', { name: 'Liblib 画布工具坞' })).toBeVisible()
+    expect(within(toolbar).getByRole('group', { name: '无线画布工具坞' })).toBeVisible()
   })
 
   test('opens the blank-canvas context menu and returns focus after Escape', async () => {

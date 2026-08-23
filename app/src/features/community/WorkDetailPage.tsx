@@ -181,6 +181,7 @@ export function WorkDetailPage({ repository = defaultRepository }: WorkDetailPag
 
       <section className="work-immersive__meta" aria-label="作品信息">
         <ul className="community-tags" aria-label="作品标签">{work.tags.map((tag) => <li key={tag}>{tag}</li>)}</ul>
+        <p className="work-immersive__local-note">浏览、点赞与收藏仅保存在当前浏览器</p>
         <span aria-label={`${work.metrics.views} 次浏览`}><Eye aria-hidden="true" />{work.metrics.views} 次浏览</span>
         <button type="button" aria-pressed={work.viewer.liked} onClick={() => void interact('like')}>
           <Heart aria-hidden="true" />{work.viewer.liked ? '取消点赞' : '点赞'} {work.metrics.likes}

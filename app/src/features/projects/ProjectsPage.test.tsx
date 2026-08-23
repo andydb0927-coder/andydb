@@ -104,6 +104,32 @@ describe('projects page', () => {
     )
   })
 
+  test('gives each project card an accessible name and keeps its information hierarchy in DOM order', async () => {
+    renderPage()
+
+    const card = await screen.findByRole('article', { name: '月下茶席' })
+    const thumbnail = within(card).getByRole('img', { name: '月下茶席 缩略图' })
+    const title = within(card).getByRole('heading', { name: '月下茶席' })
+    const updatedAt = within(card).getByText('2026/08/13')
+    const assetSummary = within(card).getByText('2 节点 · 2 素材')
+    const intent = within(card).getByText('东方茶饮广告')
+    const category = within(card).getByRole('combobox', { name: '分类 月下茶席' })
+    const open = within(card).getByRole('link', { name: '打开 月下茶席' })
+
+    for (const [before, after] of [
+      [thumbnail, title],
+      [title, updatedAt],
+      [updatedAt, assetSummary],
+      [assetSummary, intent],
+      [intent, category],
+      [category, open],
+    ]) {
+      expect(before.compareDocumentPosition(after)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      )
+    }
+  })
+
   test('searches title and intent and sorts results by project name', async () => {
     const user = userEvent.setup()
     renderPage()
