@@ -373,13 +373,29 @@ function buildGenerationRequest(
     ? { ...defaultImageGenerationSettings, ...node.imageGeneration }
     : undefined
   const imageParameters =
-    targetKind === 'image' && normalizedImageSettings
-      ? {
-          aspectRatio: normalizedImageSettings.aspectRatio,
-          quality: normalizedImageSettings.quality,
-          resolution: normalizedImageSettings.resolution,
-          count: normalizedImageSettings.count,
-        }
+    targetKind === 'image' && normalizedImageSettings && registeredProvider
+      ? Object.fromEntries(
+          (
+            [
+              ['aspectRatio', normalizedImageSettings.aspectRatio],
+              ['quality', normalizedImageSettings.quality],
+              ['resolution', normalizedImageSettings.resolution],
+              ['count', normalizedImageSettings.count],
+              ['editStrength', normalizedImageSettings.editStrength],
+              ['autoLink', normalizedImageSettings.autoLink],
+            ] as const
+          ).flatMap(([name, value]) => {
+            const definition = registeredProvider.parameterSchema[name]
+            if (!definition) return []
+            if (
+              definition.type === 'enum' &&
+              !definition.options.includes(String(value))
+            ) {
+              return []
+            }
+            return [[name, value] as const]
+          }),
+        )
       : undefined
   const parameters: Record<string, string | number | boolean> = {
     ...(registeredProvider ? providerDefaultParameters(registeredProvider) : {}),

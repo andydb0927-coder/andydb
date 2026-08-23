@@ -118,6 +118,75 @@ describe('model provider registry', () => {
     expect(registry.require('kling-api')).toMatchObject({ kind: 'live' })
   })
 
+  test('publishes model-specific image capabilities and narrowed parameters', () => {
+    const registry = createDefaultProviderRegistry()
+
+    expect(liblibImageModelCatalog.map(({ modelName }) => modelName)).toEqual([
+      'Lib Image',
+      'General image Pro',
+      'General image V2',
+      'Seedream 5.0 Pro',
+      'Seedream 4.6',
+      'Seedream 5.0 Lite',
+      'Seedream 4.5',
+      'Seedream 4.0',
+      'Style Image V8.2',
+      'Style Image V8.1',
+      'Style Image V7',
+      'Style Image Niji 7',
+      'Qwen image 3.0',
+      'Qwen Image',
+      'Z-image Turbo',
+      'Qwen Edit',
+      'General image',
+    ])
+    expect(registry.require('mock-style-image-v82')).toMatchObject({
+      capabilities: ['text-to-image', 'image-to-image', 'image-edit'],
+      parameterSchema: {
+        aspectRatio: { type: 'enum', defaultValue: '16:9', options: ['16:9'] },
+        resolution: { type: 'enum', defaultValue: '自适应', options: ['自适应'] },
+        count: { type: 'enum', defaultValue: '4', options: ['4'] },
+        editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
+      },
+    })
+    expect(registry.require('mock-style-image-v82').parameterSchema.quality).toBeUndefined()
+    expect(registry.require('mock-qwen-edit')).toMatchObject({
+      kind: 'placeholder',
+      disabledReason: 'Qwen Edit 图片编辑适配器待接入',
+      capabilities: ['image-to-image', 'image-edit'],
+    })
+  })
+
+  test('publishes model-specific video modes, duration bounds, and notices', () => {
+    const registry = createDefaultProviderRegistry()
+
+    expect(registry.require('mock-seedance-25')).toMatchObject({
+      parameterSchema: {
+        duration: {
+          type: 'enum',
+          defaultValue: '5',
+          options: ['5', '10', '15', '20', '30'],
+        },
+      },
+      modelNotice: '最长 30 秒，支持音画同步与全能参考。',
+    })
+    expect(registry.require('mock-kling-video')).toMatchObject({
+      modelNotice: '支持多镜头生成与参考一致性。',
+      supportedVideoModes: ['文生视频', '全能参考', '图生视频', '首尾帧', '图片参考'],
+    })
+    expect(registry.require('mock-wan-27')).toMatchObject({
+      modelNotice: '全能参考模式支持多素材输入与视频编辑。',
+    })
+    expect(registry.require('mock-omnihuman-15')).toMatchObject({
+      modelNotice: '数字人模式：请添加人物图片和驱动音频。',
+      supportedVideoModes: ['图生视频', '图片参考'],
+    })
+    expect(registry.require('mock-kling-30-motion')).toMatchObject({
+      kind: 'placeholder',
+      disabledReason: '动作迁移需要专用图片与视频输入，适配器待接入',
+    })
+  })
+
   test('filters image and video selectors by declared capability', () => {
     const registry = createDefaultProviderRegistry()
     const image = registry.matching(['text-to-image', 'image-to-image'])

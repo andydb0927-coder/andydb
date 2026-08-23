@@ -82,8 +82,9 @@ export interface ImageGenerationSettings {
   weirdness: number
   diversity: number
   autoLink: boolean
+  editStrength: number
   quality: '低画质' | '标准画质' | '高画质'
-  resolution: '1K' | '2K' | '4K'
+  resolution: '1K' | '2K' | '4K' | '自适应'
   aspectRatio:
     | '1:1'
     | '1:2'
@@ -121,6 +122,7 @@ export const defaultImageGenerationSettings: ImageGenerationSettings = {
   weirdness: 50,
   diversity: 5,
   autoLink: true,
+  editStrength: 0.6,
   quality: '标准画质',
   resolution: '2K',
   aspectRatio: '16:9',

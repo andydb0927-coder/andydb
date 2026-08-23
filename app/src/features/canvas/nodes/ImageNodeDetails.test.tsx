@@ -273,10 +273,10 @@ test('exposes the verified MJ image settings with persistent accessible controls
 
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
   expect(model).toHaveValue('mock-mj-image')
-  expect(within(model).getByRole('option', { name: 'Lib Image' })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /Lib Image/ })).toBeEnabled()
   expect(within(model).getAllByRole('option')).toHaveLength(17)
   expect(within(model).getByRole('option', { name: /Style Image V8\.2/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Qwen Edit/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /Qwen Edit/ })).toBeDisabled()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
   await user.selectOptions(model, 'mock-mj-image')
   expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-mj-image')
@@ -311,6 +311,55 @@ test('exposes the verified MJ image settings with persistent accessible controls
   expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
     autoLink: false,
   })
+})
+
+test('groups image models and narrows Style Image V8.2 editing parameters', async () => {
+  const user = userEvent.setup()
+  const data = makeData()
+  const view = render(
+    <ImageGenerationPanel {...panelProps(data)} imageToImage />,
+  )
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const model = within(panel).getByRole('combobox', { name: '图片模型' })
+
+  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
+    '待接入',
+    '本地演示',
+  ])
+  expect(within(model).getAllByRole('option')).toHaveLength(17)
+  expect(within(model).getByRole('option', { name: /Qwen Edit.*待接入/ })).toBeDisabled()
+  await user.selectOptions(model, 'mock-style-image-v82')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-style-image-v82')
+
+  view.rerender(
+    <ImageGenerationPanel
+      {...panelProps({
+        ...data,
+        node: {
+          ...data.node,
+          modelProviderId: 'mock-style-image-v82',
+          generationConfig: {
+            targetKind: 'image',
+            providerId: 'mock-style-image-v82',
+            parameters: {},
+            referenceAssets: [],
+          },
+        },
+      })}
+      imageToImage
+    />,
+  )
+
+  expect(within(panel).getByText('文生图 / 图生图 / 图片编辑')).toBeVisible()
+  const trigger = within(panel).getByRole('button', { name: '图片生成参数' })
+  expect(trigger).toHaveTextContent('16:9 · 自适应 · 4张')
+  await user.click(trigger)
+  const dialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
+  expect(within(dialog).queryByRole('group', { name: '画质' })).not.toBeInTheDocument()
+  expect(within(within(dialog).getByRole('group', { name: '清晰度' })).getAllByRole('button')).toHaveLength(1)
+  expect(within(within(dialog).getByRole('group', { name: '比例' })).getAllByRole('button')).toHaveLength(1)
+  expect(within(within(dialog).getByRole('group', { name: '生成数量' })).getAllByRole('button')).toHaveLength(1)
+  expect(within(dialog).getByRole('slider', { name: '编辑强度' })).toHaveValue('0.6')
 })
 
 test('opens a searchable three-tab style gallery with ten categories and complete cards', async () => {

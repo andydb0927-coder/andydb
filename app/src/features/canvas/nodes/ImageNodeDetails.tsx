@@ -23,8 +23,15 @@ import {
 } from '../../project/model'
 import {
   defaultProviderRegistry,
+  groupProvidersForMenu,
   isProviderEnabled,
+  providerCapabilityLabel,
+  providerDefaultParameters,
   providerOptionLabel,
+} from '../../generation/model-provider-registry'
+import type {
+  ModelParameterName,
+  ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 
@@ -119,25 +126,6 @@ const styleCards = [
 
 type StyleTab = 'plaza' | 'favorites' | 'recent'
 
-const imageQualityOptions = ['低画质', '标准画质', '高画质'] as const
-const imageResolutionOptions = ['1K', '2K', '4K'] as const
-const imageAspectRatioOptions = [
-  '1:1',
-  '1:2',
-  '2:1',
-  '9:16',
-  '16:9',
-  '3:4',
-  '4:3',
-  '3:2',
-  '2:3',
-  '5:4',
-  '4:5',
-  '21:9',
-  '9:21',
-] as const
-const imageCountOptions = [1, 2, 4] as const
-
 type ImageTemplateCategory = 'story' | 'texture' | 'space' | 'setting'
 
 interface ImageCreationTemplate {
@@ -195,6 +183,69 @@ type ImageParameterKey =
   | 'resolution'
   | 'aspectRatio'
   | 'count'
+  | 'editStrength'
+
+function imageEnumOptions(
+  provider: ModelProvider,
+  name: ModelParameterName,
+) {
+  const definition = provider.parameterSchema[name]
+  return definition?.type === 'enum' ? definition.options : []
+}
+
+function normalizedImageSettings(
+  provider: ModelProvider,
+  imageGeneration: Partial<ImageGenerationSettings> | undefined,
+  generationParameters: Record<string, string | number | boolean> | undefined,
+): ImageGenerationSettings {
+  const defaults = providerDefaultParameters(provider)
+  const enumValue = (
+    name: 'quality' | 'resolution' | 'aspectRatio',
+    fallback: string,
+  ) => {
+    const options = imageEnumOptions(provider, name)
+    const candidate = generationParameters?.[name] ?? imageGeneration?.[name]
+    if (options.includes(String(candidate))) return String(candidate)
+    return String(defaults[name] ?? options[0] ?? fallback)
+  }
+  const countOptions = imageEnumOptions(provider, 'count')
+  const countCandidate = String(
+    generationParameters?.count ?? imageGeneration?.count ?? '',
+  )
+  const count = Number(
+    countOptions.includes(countCandidate)
+      ? countCandidate
+      : defaults.count ?? countOptions[0] ?? defaultImageGenerationSettings.count,
+  ) as ImageGenerationSettings['count']
+  const editStrengthDefinition = provider.parameterSchema.editStrength
+  const editStrengthCandidate = Number(
+    generationParameters?.editStrength ?? imageGeneration?.editStrength,
+  )
+
+  return {
+    ...defaultImageGenerationSettings,
+    ...imageGeneration,
+    quality: enumValue(
+      'quality',
+      defaultImageGenerationSettings.quality,
+    ) as ImageGenerationSettings['quality'],
+    resolution: enumValue(
+      'resolution',
+      defaultImageGenerationSettings.resolution,
+    ) as ImageGenerationSettings['resolution'],
+    aspectRatio: enumValue(
+      'aspectRatio',
+      defaultImageGenerationSettings.aspectRatio,
+    ) as ImageGenerationSettings['aspectRatio'],
+    count,
+    editStrength:
+      editStrengthDefinition?.type === 'number'
+        ? Number.isFinite(editStrengthCandidate)
+          ? editStrengthCandidate
+          : editStrengthDefinition.defaultValue
+        : defaultImageGenerationSettings.editStrength,
+  }
+}
 
 function ImageStyleGallery({ onClose }: { onClose(): void }) {
   const [tab, setTab] = useState<StyleTab>('plaza')
@@ -361,11 +412,15 @@ function ImageStyleGallery({ onClose }: { onClose(): void }) {
 
 function ImageParameterPicker({
   settings,
+  provider,
+  imageToImage,
   triggerRef,
   onChange,
   onClose,
 }: {
   settings: ImageGenerationSettings
+  provider: ModelProvider
+  imageToImage: boolean
   triggerRef: RefObject<HTMLButtonElement | null>
   onChange<Key extends ImageParameterKey>(
     key: Key,
@@ -417,6 +472,12 @@ function ImageParameterPicker({
     </button>
   )
 
+  const qualityOptions = imageEnumOptions(provider, 'quality')
+  const resolutionOptions = imageEnumOptions(provider, 'resolution')
+  const aspectRatioOptions = imageEnumOptions(provider, 'aspectRatio')
+  const countOptions = imageEnumOptions(provider, 'count').map(Number)
+  const editStrength = provider.parameterSchema.editStrength
+
   return (
     <div
       ref={pickerRef}
@@ -424,32 +485,40 @@ function ImageParameterPicker({
       role="dialog"
       aria-label="图片生成参数"
     >
-      <fieldset>
+      {qualityOptions.length ? <fieldset>
         <legend>画质</legend>
         <div className="image-parameter-picker__three-column">
-          {imageQualityOptions.map((option) =>
-            optionButton('quality', option, option),
+          {qualityOptions.map((option) =>
+            optionButton(
+              'quality',
+              option as ImageGenerationSettings['quality'],
+              option,
+            ),
           )}
         </div>
-      </fieldset>
-      <fieldset>
+      </fieldset> : null}
+      {resolutionOptions.length ? <fieldset>
         <legend>清晰度</legend>
         <div className="image-parameter-picker__three-column">
-          {imageResolutionOptions.map((option) =>
-            optionButton('resolution', option, option),
+          {resolutionOptions.map((option) =>
+            optionButton(
+              'resolution',
+              option as ImageGenerationSettings['resolution'],
+              option,
+            ),
           )}
         </div>
-      </fieldset>
-      <fieldset>
+      </fieldset> : null}
+      {aspectRatioOptions.length ? <fieldset>
         <legend>比例</legend>
         <div className="image-parameter-picker__ratio-grid">
-          {imageAspectRatioOptions.map((option) => {
+          {aspectRatioOptions.map((option) => {
             const [width, height] = option.split(':').map(Number)
             const orientation =
               width === height ? 'square' : width > height ? 'landscape' : 'portrait'
             return optionButton(
               'aspectRatio',
-              option,
+              option as ImageGenerationSettings['aspectRatio'],
               option,
               <>
                 <span
@@ -462,15 +531,38 @@ function ImageParameterPicker({
             )
           })}
         </div>
-      </fieldset>
-      <fieldset>
+      </fieldset> : null}
+      {countOptions.length ? <fieldset>
         <legend>生成数量</legend>
         <div className="image-parameter-picker__three-column">
-          {imageCountOptions.map((option) =>
-            optionButton('count', option, `${option}张`),
+          {countOptions.map((option) =>
+            optionButton(
+              'count',
+              option as ImageGenerationSettings['count'],
+              `${option}张`,
+            ),
           )}
         </div>
-      </fieldset>
+      </fieldset> : null}
+      {imageToImage && editStrength?.type === 'number' ? (
+        <fieldset>
+          <legend>图片编辑</legend>
+          <label>
+            编辑强度
+            <input
+              type="range"
+              aria-label="编辑强度"
+              min={editStrength.min}
+              max={editStrength.max}
+              step={editStrength.step}
+              value={settings.editStrength}
+              onChange={(event) =>
+                onChange('editStrength', Number(event.currentTarget.value))
+              }
+            />
+          </label>
+        </fieldset>
+      ) : null}
     </div>
   )
 }
@@ -596,10 +688,6 @@ export function ImageGenerationPanel({
   const [prompt, setPrompt] = useState(initialPrompt)
   const promptRef = useRef<HTMLDivElement>(null)
   const promptDraftRef = useRef(initialPrompt)
-  const [settings, setSettings] = useState({
-    ...defaultImageGenerationSettings,
-    ...imageGeneration,
-  })
   const styleTriggerRef = useRef<HTMLButtonElement>(null)
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
   const parameterTriggerRef = useRef<HTMLButtonElement>(null)
@@ -607,13 +695,31 @@ export function ImageGenerationPanel({
   const incomingReferenceCount =
     data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
   const hasMedia = Boolean(data.asset || incomingReferenceCount)
-  const providers = defaultProviderRegistry.matching([
+  const providerRegistry = data.providerRegistry ?? defaultProviderRegistry
+  const providers = providerRegistry.matching([
     'text-to-image',
     'image-to-image',
   ])
   const selectedProvider =
     providers.find(({ id }) => id === data.node.modelProviderId) ??
     providers.find(({ kind }) => kind === 'demo')!
+  const generationParameters =
+    data.node.generationConfig?.providerId === selectedProvider.id
+      ? data.node.generationConfig.parameters
+      : undefined
+  const [settings, setSettings] = useState(() =>
+    normalizedImageSettings(
+      selectedProvider,
+      imageGeneration,
+      generationParameters,
+    ),
+  )
+  const parameterSummary = [
+    selectedProvider.parameterSchema.aspectRatio ? settings.aspectRatio : undefined,
+    selectedProvider.parameterSchema.quality ? settings.quality : undefined,
+    selectedProvider.parameterSchema.resolution ? settings.resolution : undefined,
+    selectedProvider.parameterSchema.count ? `${settings.count}张` : undefined,
+  ].filter(Boolean).join(' · ')
   const cost = selectedProvider.pricing.amount * settings.count
   const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0
 
@@ -666,11 +772,14 @@ export function ImageGenerationPanel({
   }, [activeVersion?.prompt, data.node.id, imageGeneration?.prompt])
 
   useEffect(() => {
-    setSettings({
-      ...defaultImageGenerationSettings,
-      ...imageGeneration,
-    })
-  }, [data.node.id, imageGeneration])
+    setSettings(
+      normalizedImageSettings(
+        selectedProvider,
+        imageGeneration,
+        generationParameters,
+      ),
+    )
+  }, [data.node.id, generationParameters, imageGeneration, selectedProvider])
 
   const updateSetting = <Key extends keyof typeof settings>(
     key: Key,
@@ -836,20 +945,31 @@ export function ImageGenerationPanel({
             value={selectedProvider.id}
             onChange={(event) => data.onSelectModelProvider?.(event.target.value)}
           >
-            {providers.map((provider) => (
-              <option
-                key={provider.id}
-                value={provider.id}
-                disabled={!isProviderEnabled(provider)}
-              >
-                {provider.id === 'mock-mj-image'
-                  ? 'Lib Image'
-                  : providerOptionLabel(provider)}
-              </option>
+            {groupProvidersForMenu(providers).map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.providers.map((provider) => (
+                  <option
+                    key={provider.id}
+                    value={provider.id}
+                    disabled={!isProviderEnabled(provider)}
+                  >
+                    {providerOptionLabel(provider)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
-        <span className="model-provider-badge">演示</span>
+        <span className="model-provider-badge">
+          {selectedProvider.kind === 'live'
+            ? '开发直连'
+            : selectedProvider.kind === 'placeholder'
+              ? '待接入'
+              : '演示'}
+        </span>
+        <span className="model-provider-capability">
+          {providerCapabilityLabel(selectedProvider)}
+        </span>
         <button
           ref={parameterTriggerRef}
           type="button"
@@ -863,8 +983,7 @@ export function ImageGenerationPanel({
           }}
         >
           <span>
-            {settings.aspectRatio} · {settings.quality} · {settings.resolution} ·{' '}
-            {settings.count}张
+            {parameterSummary}
           </span>
           <ChevronDown aria-hidden="true" />
         </button>
@@ -920,6 +1039,8 @@ export function ImageGenerationPanel({
       {parametersOpen ? (
         <ImageParameterPicker
           settings={settings}
+          provider={selectedProvider}
+          imageToImage={imageToImage}
           triggerRef={parameterTriggerRef}
           onChange={updateSetting}
           onClose={closeParameters}

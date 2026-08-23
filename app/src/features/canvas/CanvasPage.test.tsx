@@ -990,6 +990,39 @@ describe('creative canvas', () => {
     )
   })
 
+  test('submits only the selected image model supported parameters', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
+      () => new Promise(() => undefined),
+    )
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: { start },
+    })
+
+    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    const panel = screen.getByRole('region', { name: '角色参考 生成参数' })
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: '图片模型' }),
+      'mock-style-image-v82',
+    )
+    await user.click(
+      within(panel).getByRole('button', { name: '生成图片，预计成本 60' }),
+    )
+
+    await waitFor(() => expect(start).toHaveBeenCalledOnce())
+    expect(start.mock.calls[0]?.[0]).toMatchObject({
+      providerId: 'mock-style-image-v82',
+      parameters: {
+        aspectRatio: '16:9',
+        resolution: '自适应',
+        count: '4',
+        editStrength: 0.6,
+      },
+    })
+    expect(start.mock.calls[0]?.[0].parameters).not.toHaveProperty('quality')
+  })
+
   test('shows a live result from memory without persisting jobs, assets, or versions', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
@@ -2849,6 +2882,7 @@ describe('creative canvas', () => {
         stylization: 150,
         weirdness: 50,
         diversity: 5,
+        editStrength: 0.6,
         autoLink: true,
         quality: '标准画质',
         resolution: '2K',

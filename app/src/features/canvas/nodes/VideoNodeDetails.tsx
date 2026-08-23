@@ -14,6 +14,7 @@ import type { VideoDerivedTool } from '../../project/model'
 import {
   defaultVideoGenerationMode,
   defaultProviderRegistry,
+  groupProvidersForMenu,
   isVideoGenerationMode,
   isProviderEnabled,
   providerSupportsVideoGenerationMode,
@@ -282,6 +283,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const quality = parameterString(parameters, 'quality', '720P')
   const count = parameterString(parameters, 'count', '1')
   const sound = parameterBoolean(parameters, 'sound', true)
+  const soundSupported = selectedProvider.parameterSchema.sound?.type === 'boolean'
   const cost = selectedProvider.pricing.amount
   const selectedProviderEnabled = isProviderEnabled(selectedProvider)
   const liveConfigurationReason = providers.find(
@@ -290,6 +292,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const advancedParameters = [
     ['onlineSearch', '联网搜索'],
     ['materialValidation', '自动校验素材'],
+    ['multiShot', '多镜头生成'],
     ['autoLink', '智能引用 AutoLink'],
   ] as const
   const supportedAdvancedParameters = advancedParameters.filter(
@@ -418,14 +421,18 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             data.onSelectModelProvider?.(event.target.value)
           }}
         >
-          {providers.map((provider) => (
-            <option
-              key={provider.id}
-              value={provider.id}
-              disabled={!isProviderEnabled(provider)}
-            >
-              {providerOptionLabel(provider)}
-            </option>
+          {groupProvidersForMenu(providers).map((group) => (
+            <optgroup key={group.id} label={group.label}>
+              {group.providers.map((provider) => (
+                <option
+                  key={provider.id}
+                  value={provider.id}
+                  disabled={!isProviderEnabled(provider)}
+                >
+                  {providerOptionLabel(provider)}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select></label>
         <span className="model-provider-badge">
@@ -454,7 +461,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           ))}
         </select></label>
         <span className="video-generation-panel__parameter-row">{aspectRatio} · {quality} · {duration}s · {count}个</span>
-        <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" value={sound ? '开启' : '关闭'} onChange={(event) => updateParameter('sound', event.target.value === '开启')}><option>关闭</option><option>开启</option></select></label>
+        {soundSupported ? <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" value={sound ? '开启' : '关闭'} onChange={(event) => updateParameter('sound', event.target.value === '开启')}><option>关闭</option><option>开启</option></select></label> : null}
         <button
           type="button"
           aria-label={advanced ? '收起高级设置' : '展开高级设置'}
@@ -485,6 +492,11 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
       {modeNotice ? (
         <p className="video-generation-panel__reasons" role="status" aria-live="polite">
           {modeNotice}
+        </p>
+      ) : null}
+      {selectedProvider.modelNotice ? (
+        <p className="video-generation-panel__reasons" role="note" aria-label="当前模型说明">
+          {selectedProvider.modelNotice}
         </p>
       ) : null}
       {liveConfigurationReason ? (
@@ -531,7 +543,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             <label>比例<select aria-label="比例" value={aspectRatio} onChange={(event) => updateParameter('aspectRatio', event.target.value)}>{enumOptions(selectedProvider, 'aspectRatio', ['16:9']).map((option) => <option key={option}>{option}</option>)}</select></label>
             <label>时长<select aria-label="时长" value={duration} onChange={(event) => updateParameter('duration', event.target.value)}>{enumOptions(selectedProvider, 'duration', ['5']).map((seconds) => <option key={seconds} value={seconds}>{seconds} 秒</option>)}</select></label>
             <label>生成数量<select aria-label="生成数量" value={count} onChange={(event) => updateParameter('count', event.target.value)}>{enumOptions(selectedProvider, 'count', ['1']).map((option) => <option key={option} value={option}>{option} 个</option>)}</select></label>
-            <label>画质<select aria-label="画质" value={quality} onChange={(event) => updateParameter('quality', event.target.value)}>{enumOptions(selectedProvider, 'quality', ['720P']).map((option) => <option key={option}>{option}</option>)}</select></label>
+            <label>清晰度<select aria-label="清晰度" value={quality} onChange={(event) => updateParameter('quality', event.target.value)}>{enumOptions(selectedProvider, 'quality', ['720P']).map((option) => <option key={option}>{option}</option>)}</select></label>
             <label className="video-generation-panel__toggle"><input type="checkbox" aria-label="智能分镜" />智能分镜</label>
           </div>
           <div id="video-mode-reasons" className="video-generation-panel__reasons" role="note" aria-label="生成模式禁用原因">

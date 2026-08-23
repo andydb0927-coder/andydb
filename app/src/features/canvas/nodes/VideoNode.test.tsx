@@ -170,7 +170,7 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
   expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
-  expect(within(panel).getByLabelText('画质')).toHaveValue('720P')
+  expect(within(panel).getByLabelText('清晰度')).toHaveValue('720P')
   expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
   expect(within(panel).getByLabelText('智能分镜')).not.toBeChecked()
   expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
@@ -221,6 +221,46 @@ test('recomputes video defaults, price, and advanced switches from the selected 
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
   expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
   expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
+})
+
+test('groups video providers and exposes Seedance 2.5 thirty-second parameters', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  const view = render(renderVideo(data))
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+  const model = within(panel).getByRole('combobox', { name: '模型' })
+
+  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
+    '官方 API 已接（开发直连）',
+    '待接入',
+    '本地演示',
+  ])
+  expect(within(model).getAllByRole('option')).toHaveLength(33)
+  expect(within(model).getByRole('option', { name: /动作迁移.*待接入/ })).toBeDisabled()
+  await user.selectOptions(model, 'mock-seedance-25')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-25')
+
+  view.rerender(renderVideo({
+    ...data,
+    node: {
+      ...data.node,
+      modelProviderId: 'mock-seedance-25',
+      generationConfig: {
+        targetKind: 'video',
+        providerId: 'mock-seedance-25',
+        parameters: {},
+        referenceAssets: [],
+      },
+    },
+  }))
+  expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
+    '最长 30 秒',
+  )
+  await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
+  expect(
+    within(panel).getByRole('combobox', { name: '时长' }).querySelectorAll('option'),
+  ).toHaveLength(5)
+  expect(within(panel).getByRole('option', { name: '30 秒' })).toBeVisible()
 })
 
 test('switches an unsupported mode to the first mode supported by the selected model', async () => {

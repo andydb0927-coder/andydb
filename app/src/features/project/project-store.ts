@@ -759,6 +759,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             changes.diversity === undefined
               ? current.diversity
               : Math.min(100, Math.max(0, changes.diversity)),
+          editStrength:
+            changes.editStrength === undefined
+              ? current.editStrength
+              : Math.min(1, Math.max(0, changes.editStrength)),
           autoLink:
             changes.autoLink === undefined
               ? current.autoLink
@@ -781,6 +785,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           current.stylization === next.stylization &&
           current.weirdness === next.weirdness &&
           current.diversity === next.diversity &&
+          current.editStrength === next.editStrength &&
           current.autoLink === next.autoLink &&
           current.quality === next.quality &&
           current.resolution === next.resolution &&

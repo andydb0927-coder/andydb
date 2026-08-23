@@ -1373,3 +1373,25 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await expect(persistedText.getByRole('combobox', { name: '字体样式' })).toHaveValue('引用')
   expect(browserErrors).toEqual([])
 })
+
+test('narrows image and video parameters when switching Liblib catalog models', async ({ page }) => {
+  await createCinematicProject(page)
+
+  await openAddNodeAtBlank(page, '图片')
+  const imagePanel = page.getByRole('region', { name: '图片 01 生成参数' })
+  await imagePanel.getByRole('combobox', { name: '图片模型' }).selectOption(
+    'mock-style-image-v82',
+  )
+  await expect(imagePanel.getByRole('button', { name: '图片生成参数' })).toContainText(
+    '16:9 · 自适应 · 4张',
+  )
+
+  await openAddNodeAtBlank(page, '视频')
+  const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
+  await videoPanel.getByRole('combobox', { name: '模型' }).selectOption('mock-seedance-25')
+  await expect(videoPanel.getByRole('note', { name: '当前模型说明' })).toContainText(
+    '最长 30 秒',
+  )
+  await videoPanel.getByRole('button', { name: '展开完整视频工具' }).click()
+  await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('30 秒')
+})

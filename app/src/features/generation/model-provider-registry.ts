@@ -15,6 +15,7 @@ export type ModelCapability =
   | 'text'
   | 'text-to-image'
   | 'image-to-image'
+  | 'image-edit'
   | 'text-to-video'
   | 'image-to-video'
   | 'audio'
@@ -29,6 +30,8 @@ export type ModelParameterName =
   | 'count'
   | 'onlineSearch'
   | 'materialValidation'
+  | 'editStrength'
+  | 'multiShot'
   | 'autoLink'
 
 export type ModelParameterDefinition =
@@ -40,6 +43,13 @@ export type ModelParameterDefinition =
   | {
       type: 'boolean'
       defaultValue: boolean
+    }
+  | {
+      type: 'number'
+      defaultValue: number
+      min: number
+      max: number
+      step: number
     }
 
 export type ModelParameterSchema = Partial<
@@ -77,6 +87,8 @@ export interface ModelProvider {
   badge?: '演示'
   selectorVisible?: boolean
   disabledReason?: string
+  modelNotice?: string
+  supportedVideoModes?: readonly VideoGenerationMode[]
   capabilities: readonly ModelCapability[]
   parameterSchema: ModelParameterSchema
   pricing: ModelProviderPricing
@@ -118,6 +130,9 @@ export function providerSupportsVideoGenerationMode(
   provider: ModelProvider,
   mode: VideoGenerationMode,
 ) {
+  if (provider.supportedVideoModes) {
+    return provider.supportedVideoModes.includes(mode)
+  }
   const definition = videoGenerationModeDefinitions.find(
     (candidate) => candidate.mode === mode,
   )
@@ -143,6 +158,7 @@ const capabilityCopy: Record<ModelCapability, string> = {
   text: '文本',
   'text-to-image': '文生图',
   'image-to-image': '图生图',
+  'image-edit': '图片编辑',
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
   audio: '音频',
@@ -239,7 +255,31 @@ export function providerDefaultParameters(provider: ModelProvider) {
     Object.entries(provider.parameterSchema).flatMap(([name, definition]) =>
       definition ? [[name, definition.defaultValue]] : [],
     ),
-  ) as Record<string, string | boolean>
+  ) as Record<string, string | number | boolean>
+}
+
+export const providerMenuGroupDefinitions = [
+  { id: 'live', label: '官方 API 已接（开发直连）' },
+  { id: 'pending', label: '待接入' },
+  { id: 'demo', label: '本地演示' },
+] as const
+
+export type ProviderMenuGroupId =
+  (typeof providerMenuGroupDefinitions)[number]['id']
+
+export function providerMenuGroup(provider: ModelProvider): ProviderMenuGroupId {
+  if (provider.kind === 'live') return 'live'
+  if (provider.kind === 'placeholder') return 'pending'
+  return 'demo'
+}
+
+export function groupProvidersForMenu(providers: readonly ModelProvider[]) {
+  return providerMenuGroupDefinitions.flatMap((definition) => {
+    const items = providers.filter(
+      (provider) => providerMenuGroup(provider) === definition.id,
+    )
+    return items.length ? [{ ...definition, providers: items }] : []
+  })
 }
 
 export class ProviderRegistry {
@@ -394,7 +434,29 @@ const styleImageSchema: ModelParameterSchema = {
     options: ['自适应'],
   },
   count: { type: 'enum', defaultValue: '4', options: ['4'] },
+  editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
   autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const styleImageV82Schema: ModelParameterSchema = {
+  aspectRatio: {
+    type: 'enum',
+    defaultValue: '16:9',
+    options: ['16:9'],
+  },
+  resolution: {
+    type: 'enum',
+    defaultValue: '自适应',
+    options: ['自适应'],
+  },
+  count: { type: 'enum', defaultValue: '4', options: ['4'] },
+  editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
+  autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const imageEditSchema: ModelParameterSchema = {
+  ...imageSchema,
+  editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
 }
 
 const klingImageSchema: ModelParameterSchema = {
@@ -464,6 +526,15 @@ const seedanceVideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
+const seedance25VideoSchema: ModelParameterSchema = {
+  ...seedanceVideoSchema,
+  duration: {
+    type: 'enum',
+    defaultValue: '5',
+    options: ['5', '10', '15', '20', '30'],
+  },
+}
+
 export interface LiblibModelCatalogEntry {
   providerId: string
   modelName: string
@@ -474,22 +545,22 @@ export interface LiblibModelCatalogEntry {
 
 export const liblibImageModelCatalog: readonly LiblibModelCatalogEntry[] = [
   { providerId: 'mock-mj-image', modelName: 'Lib Image', description: '最新图片模型、长文本能力突出', latency: '60s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-general-image-pro', modelName: 'General image Pro', description: '最强图片编辑模型，一致性好', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-general-image-v2', modelName: 'General image V2', description: '支持联网搜索、文字准确、速度更快', latency: '25s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-seedream-5-pro', modelName: 'Seedream 5.0 Pro', description: '精准交互式编辑，支持原生多语言排版', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-general-image-pro', modelName: 'General image Pro', description: '最强图片编辑模型，一致性好', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-general-image-v2', modelName: 'General image V2', description: '支持联网搜索、文字准确、速度更快', latency: '25s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-seedream-5-pro', modelName: 'Seedream 5.0 Pro', description: '精准交互式编辑，支持原生多语言排版', latency: '20s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-seedream-46', modelName: 'Seedream 4.6', description: '人像一致性与平面设计', latency: '20s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-seedream-5-lite', modelName: 'Seedream 5.0 Lite', description: '联网搜索与中式风格', latency: '20s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-seedream-45', modelName: 'Seedream 4.5', description: '多角色一致性与中式风格', latency: '15s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-seedream-40', modelName: 'Seedream 4.0', description: '中文文字与海报设计', latency: '15s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-style-image-v82', modelName: 'Style Image V8.2', description: '电影感、光影、人物与真实材质', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-style-image-v81', modelName: 'Style Image V8.1', description: '连贯性、细节与美学提升', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-style-image-v7', modelName: 'Style Image V7', description: '电影质感与创意能力', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
+  { providerId: 'mock-style-image-niji7', modelName: 'Style Image Niji 7', description: '动漫高审美与多样风格', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
   { providerId: 'mock-qwen-image-3', modelName: 'Qwen image 3.0', description: '复杂版面与精准文字的高质量生图', latency: '60s', capabilities: ['text-to-image'] },
-  { providerId: 'mock-style-image-v82', modelName: 'Style Image V8.2', description: '电影感、光影、人物与真实材质', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-style-image-v81', modelName: 'Style Image V8.1', description: '连贯性、细节与美学提升', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-style-image-v7', modelName: 'Style Image V7', description: '电影质感与创意能力', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-style-image-niji7', modelName: 'Style Image Niji 7', description: '动漫高审美与多样风格', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-seedream-46', modelName: 'Seedream 4.6', description: '人像一致性与平面设计', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-seedream-5-lite', modelName: 'Seedream 5.0 Lite', description: '联网搜索与中式风格', latency: '20s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-seedream-45', modelName: 'Seedream 4.5', description: '多角色一致性与中式风格', latency: '15s', capabilities: ['text-to-image', 'image-to-image'] },
-  { providerId: 'mock-z-image-turbo', modelName: 'Z-image Turbo', description: '极速真实感图片', latency: '10s', capabilities: ['text-to-image'] },
-  { providerId: 'mock-general-image', modelName: 'General image', description: '图像编辑与语义理解', latency: '50s', capabilities: ['text-to-image', 'image-to-image'] },
   { providerId: 'mock-qwen-image', modelName: 'Qwen Image', description: '文字排版能力', latency: '60s', capabilities: ['text-to-image'] },
-  { providerId: 'mock-qwen-edit', modelName: 'Qwen Edit', description: '精细可控编辑', latency: '60s', capabilities: ['image-to-image'] },
-  { providerId: 'mock-seedream-40', modelName: 'Seedream 4.0', description: '中文文字与海报设计', latency: '15s', capabilities: ['text-to-image', 'image-to-image'] },
+  { providerId: 'mock-z-image-turbo', modelName: 'Z-image Turbo', description: '极速真实感图片', latency: '10s', capabilities: ['text-to-image'] },
+  { providerId: 'mock-qwen-edit', modelName: 'Qwen Edit', description: '精细可控编辑', latency: '60s', capabilities: ['image-to-image', 'image-edit'] },
+  { providerId: 'mock-general-image', modelName: 'General image', description: '图像编辑与语义理解', latency: '50s', capabilities: ['text-to-image', 'image-to-image', 'image-edit'] },
 ] as const
 
 export const liblibVideoModelCatalog: readonly LiblibModelCatalogEntry[] = [
@@ -624,37 +695,83 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
 
 function imageCatalogProvider(entry: LiblibModelCatalogEntry) {
   const styleModel = entry.providerId.startsWith('mock-style-image-')
-  return demoProvider({
+  const config = {
     id: entry.providerId,
     name: 'Mock Studio',
     modelName: entry.modelName,
     capabilities: entry.capabilities,
-    parameterSchema: styleModel ? styleImageSchema : imageSchema,
+    parameterSchema:
+      entry.providerId === 'mock-style-image-v82'
+        ? styleImageV82Schema
+        : styleModel
+          ? styleImageSchema
+          : entry.capabilities.includes('image-edit')
+            ? imageEditSchema
+            : imageSchema,
     pricing: {
       amount: entry.providerId === 'mock-style-image-v82' ? 15 : 18,
-      currency: 'credits',
-      unit: 'generation',
+      currency: 'credits' as const,
+      unit: 'generation' as const,
     },
     officialApiEndpoint: `mock://local/liblib-image/${entry.providerId}`,
-  })
+  }
+  return entry.providerId === 'mock-qwen-edit'
+    ? placeholderProvider({
+        ...config,
+        disabledReason: 'Qwen Edit 图片编辑适配器待接入',
+      })
+    : demoProvider(config)
 }
 
 function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
   const klingO3 = entry.providerId === 'mock-kling-video'
   const seedance20 = entry.providerId === 'mock-seedance-video'
-  return demoProvider({
+  const seedance25 = entry.providerId === 'mock-seedance-25'
+  const omniHuman = entry.providerId === 'mock-omnihuman-15'
+  const imageOnly =
+    entry.capabilities.includes('image-to-video') &&
+    !entry.capabilities.includes('text-to-video')
+  const supportedVideoModes: readonly VideoGenerationMode[] = omniHuman
+    ? ['图生视频', '图片参考']
+    : imageOnly
+      ? ['图生视频', '首尾帧', '图片参考']
+      : ['文生视频', '全能参考', '图生视频', '首尾帧', '图片参考']
+  const modelNotice =
+    seedance25
+      ? '最长 30 秒，支持音画同步与全能参考。'
+      : klingO3
+        ? '支持多镜头生成与参考一致性。'
+        : entry.providerId === 'mock-wan-27'
+          ? '全能参考模式支持多素材输入与视频编辑。'
+          : omniHuman
+            ? '数字人模式：请添加人物图片和驱动音频。'
+            : undefined
+  const parameterSchema = seedance25
+    ? seedance25VideoSchema
+    : klingO3
+      ? { ...videoSchema, multiShot: { type: 'boolean' as const, defaultValue: true } }
+      : seedanceVideoSchema
+  const config = {
     id: entry.providerId,
     name: 'Mock Studio',
     modelName: entry.modelName,
     capabilities: entry.capabilities,
-    parameterSchema: klingO3 ? videoSchema : seedanceVideoSchema,
+    parameterSchema,
     pricing: {
       amount: seedance20 ? 135 : 24,
-      currency: 'credits',
-      unit: 'generation',
+      currency: 'credits' as const,
+      unit: 'generation' as const,
     },
+    modelNotice,
+    supportedVideoModes,
     officialApiEndpoint: `mock://local/liblib-video/${entry.providerId}`,
-  })
+  }
+  return entry.providerId === 'mock-kling-30-motion'
+    ? placeholderProvider({
+        ...config,
+        disabledReason: '动作迁移需要专用图片与视频输入，适配器待接入',
+      })
+    : demoProvider(config)
 }
 
 function placeholderProvider(
