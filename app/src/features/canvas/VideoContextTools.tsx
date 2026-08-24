@@ -1,5 +1,6 @@
 import {
   Captions,
+  ChevronDown,
   Download,
   Film,
   Maximize2,
@@ -191,11 +192,11 @@ export function VideoMediaContextBar({
         <button type="button" onClick={() => setPendingTool('视频高清')}><ScanLine aria-hidden="true" />高清</button>
         <button type="button" onClick={() => setPendingTool('逐帧拉片')}><Film aria-hidden="true" />逐帧拉片</button>
         <button type="button" disabled aria-describedby="video-extend-reason">智能续写</button>
-        <button type="button" onClick={() => setSurface('subtitle-menu')}><Captions aria-hidden="true" />智能去字幕</button>
-        <button type="button" onClick={() => setSurface('audio-menu')}>音频分离</button>
-        <button type="button" onClick={() => setSurface('picture-menu')}><Sparkles aria-hidden="true" />画面编辑</button>
-        <button type="button" onClick={downloadCurrent}><Download aria-hidden="true" />下载</button>
-        <button type="button" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" />预览</button>
+        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'subtitle-menu'} onClick={() => setSurface('subtitle-menu')}><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
+        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'audio-menu'} onClick={() => setSurface('audio-menu')}>音频分离<ChevronDown aria-hidden="true" /></button>
+        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'picture-menu'} onClick={() => setSurface('picture-menu')}><Sparkles aria-hidden="true" />画面编辑<ChevronDown aria-hidden="true" /></button>
+        <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
+        <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
       <div className="video-disabled-reasons" role="note" aria-label="视频工具禁用原因">
         <span id="video-reshoot-reason">片段重拍：当前仅支持时长不少于 4 秒的视频。</span>

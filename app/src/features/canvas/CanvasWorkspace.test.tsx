@@ -303,6 +303,25 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分', '标注', '旋转', '下载', '预览']) {
     expect(screen.getByRole('button', { name: label })).toBeVisible()
   }
+  const imageToolbar = screen.getByRole('toolbar', { name: '图片创作工具' })
+  const portrait = within(imageToolbar).getByRole('button', { name: '人像质感调节' })
+  expect(portrait).toHaveAttribute('aria-haspopup', 'menu')
+  expect(within(portrait).getByText('NEW')).toBeVisible()
+  expect(portrait.querySelector('.lucide-chevron-down')).toBeInTheDocument()
+  const panorama = within(imageToolbar).getByRole('button', { name: '全景' })
+  expect(panorama).toHaveAttribute('title', '基于当前场景创建720°全景图')
+  expect(panorama.querySelector('.image-context-action__panorama-icon')).toHaveTextContent('720')
+  for (const label of ['九宫格', '宫格切分']) {
+    const menuTrigger = within(imageToolbar).getByRole('button', { name: label })
+    expect(menuTrigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(menuTrigger.querySelector('.lucide-chevron-down')).toBeInTheDocument()
+  }
+  for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分']) {
+    expect(within(imageToolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'false')
+  }
+  for (const label of ['标注', '旋转', '下载', '预览']) {
+    expect(within(imageToolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'true')
+  }
 
   await user.click(screen.getByRole('button', { name: '人像质感调节' }))
   expect(screen.getByRole('menuitem', { name: '人像调节' })).toBeVisible()
@@ -412,6 +431,14 @@ test('offers the exact eleven video media actions with visible disabled reasons'
     '预览',
   ]) {
     expect(within(toolbar).getByRole('button', { name: label })).toBeVisible()
+  }
+  for (const label of ['智能去字幕', '音频分离', '画面编辑']) {
+    const menuTrigger = within(toolbar).getByRole('button', { name: label })
+    expect(menuTrigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(menuTrigger.querySelector('.lucide-chevron-down')).toBeInTheDocument()
+  }
+  for (const label of ['下载', '预览']) {
+    expect(within(toolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'true')
   }
   expect(within(toolbar).getByRole('button', { name: '片段重拍' })).toBeDisabled()
   expect(within(toolbar).getByRole('button', { name: '智能续写' })).toBeDisabled()

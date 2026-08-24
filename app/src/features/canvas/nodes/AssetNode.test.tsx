@@ -173,12 +173,12 @@ test('keeps image nodes folded until they become the current selection', async (
     within(generation)
       .getAllByRole('toolbar', { name: '图片主操作' })[0]
       ?.querySelectorAll('button'),
-  ).toHaveLength(5)
+  ).toHaveLength(3)
   expect(
     within(within(generation).getByRole('toolbar', { name: '图片主操作' }))
       .getAllByRole('button')
       .map((button) => button.textContent),
-  ).toEqual(['图生图', '图片高清', '参考', '标记', '风格'])
+  ).toEqual(['参考', '标记', '风格'])
   expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
   const prompt = within(generation).getByRole('textbox', { name: '提示词' })
   expect(prompt).toHaveAttribute('contenteditable', 'true')
@@ -191,6 +191,7 @@ test('keeps image nodes folded until they become the current selection', async (
     'mock-mj-image',
   )
   expect(within(generation).getByText('预计成本 18')).toBeVisible()
+  expect(screen.getByRole('button', { name: '查看 4 张结果' })).toHaveTextContent('4张')
 
   await user.click(screen.getByRole('button', { name: '查看 4 张结果' }))
   const results = screen.getByRole('region', { name: 'L1 的 4 张结果' })

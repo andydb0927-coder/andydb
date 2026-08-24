@@ -4,8 +4,10 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BookOpenText,
+  Camera,
   Clapperboard,
   Contact,
   Film,
@@ -13,7 +15,9 @@ import {
   Image,
   Maximize2,
   MonitorPlay,
+  Pause,
   Pencil,
+  Play,
   RefreshCw,
   Type,
   Upload,
@@ -23,6 +27,7 @@ import {
 import type { ReactNode } from 'react'
 
 import { StatusText } from '../../../ui/StatusText'
+import type { VideoDerivedTool } from '../../project/model'
 import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { ImageGenerationPanel, ImageResults } from './ImageNodeDetails'
@@ -62,6 +67,12 @@ const kindIcons = {
   video: Film,
   preview: MonitorPlay,
   worldview: Globe2,
+}
+
+function formatPlaybackTime(seconds: number) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0
+  const minutes = Math.floor(safeSeconds / 60)
+  return `${minutes}:${String(safeSeconds % 60).padStart(2, '0')}`
 }
 
 function NodeActions({ data }: { data: CreativeNodeData }) {
@@ -190,11 +201,19 @@ export function CreativeNodeShell({
     onFocusComplete,
   } = data
   const selectRef = useRef<HTMLButtonElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
   const renameCancelledRef = useRef(false)
   const [imageToImage, setImageToImage] = useState(false)
   const [upscalePending, setUpscalePending] = useState(false)
   const [titleDraft, setTitleDraft] = useState(node.title)
+  const [videoPlaying, setVideoPlaying] = useState(false)
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(
+    asset?.kind === 'video' ? asset.durationSeconds ?? 0 : 0,
+  )
+  const [pendingVideoFrame, setPendingVideoFrame] =
+    useState<VideoDerivedTool>()
   const KindIcon = kindIcons[node.kind]
   const specializedDetails = node.details
   const activeVersion = node.versions.find(
@@ -217,7 +236,20 @@ export function CreativeNodeShell({
   useEffect(() => {
     setImageToImage(false)
     setUpscalePending(false)
+    setVideoPlaying(false)
+    setVideoCurrentTime(0)
+    setVideoDuration(asset?.kind === 'video' ? asset.durationSeconds ?? 0 : 0)
+    setPendingVideoFrame(undefined)
   }, [node.id])
+
+  useEffect(() => {
+    if (!pendingVideoFrame) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPendingVideoFrame(undefined)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [pendingVideoFrame])
 
   useEffect(() => {
     setTitleDraft(node.title)
@@ -333,6 +365,7 @@ export function CreativeNodeShell({
           {specializedDetails ? null : preview ??
             (asset?.kind === 'video' ? (
               <video
+                ref={videoRef}
                 src={asset.url}
                 className="creative-node__media"
                 poster="/demo/shot-river.png"
@@ -340,6 +373,17 @@ export function CreativeNodeShell({
                 loop
                 playsInline
                 preload="metadata"
+                onDurationChange={(event) => {
+                  if (Number.isFinite(event.currentTarget.duration)) {
+                    setVideoDuration(event.currentTarget.duration)
+                  }
+                }}
+                onTimeUpdate={(event) =>
+                  setVideoCurrentTime(event.currentTarget.currentTime)
+                }
+                onPlay={() => setVideoPlaying(true)}
+                onPause={() => setVideoPlaying(false)}
+                onEnded={() => setVideoPlaying(false)}
               />
             ) : asset ? (
               <img
@@ -382,6 +426,76 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
+        {videoMedia ? (
+          <>
+            <div
+              className="creative-node__inline-player nodrag nowheel"
+              role="group"
+              aria-label={`${node.title} 播放器`}
+            >
+              <button
+                type="button"
+                aria-label={`${videoPlaying ? '暂停' : '播放'}${node.title}`}
+                onClick={() => {
+                  data.onSelect()
+                  const video = videoRef.current
+                  if (!video) return
+                  if (video.paused) {
+                    void video.play().catch(() => setVideoPlaying(false))
+                  } else {
+                    video.pause()
+                  }
+                }}
+              >
+                {videoPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+              </button>
+              <input
+                type="range"
+                aria-label="视频进度"
+                min="0"
+                max={Math.max(videoDuration, 1)}
+                step="0.01"
+                value={Math.min(videoCurrentTime, Math.max(videoDuration, 1))}
+                onChange={(event) => {
+                  const nextTime = Number(event.target.value)
+                  setVideoCurrentTime(nextTime)
+                  if (videoRef.current) videoRef.current.currentTime = nextTime
+                }}
+              />
+              <span>{formatPlaybackTime(videoCurrentTime)} / {formatPlaybackTime(videoDuration)}</span>
+              <button
+                type="button"
+                aria-label={`截取${node.title}当前帧`}
+                onClick={() => {
+                  data.onSelect()
+                  setPendingVideoFrame('截取当前帧')
+                }}
+              >
+                <Camera aria-hidden="true" />
+              </button>
+            </div>
+            {contextual ? (
+              <div
+                className="creative-node__video-frame-tools nodrag nowheel"
+                role="toolbar"
+                aria-label="帧操作"
+              >
+                {(['截取首帧', '截取尾帧', '截取当前帧'] as const).map((tool) => (
+                  <button key={tool} type="button" onClick={() => setPendingVideoFrame(tool)}>
+                    {tool}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-label="相机截取当前帧"
+                  onClick={() => setPendingVideoFrame('截取当前帧')}
+                >
+                  <Camera aria-hidden="true" />
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
         {imageGenerationNode && !asset ? (
           <div
             className="creative-node__quick-attempts nodrag nowheel"
@@ -474,6 +588,32 @@ export function CreativeNodeShell({
         </div>
       ) : null}
       {contextual ? <NodeActions data={data} /> : null}
+      {pendingVideoFrame ? createPortal(
+        <div
+          className="video-frame-confirm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label={`添加${pendingVideoFrame}工具节点`}
+        >
+          <div>
+            <h2>将添加工具节点</h2>
+            <p>“{pendingVideoFrame}”会从“{node.title}”创建本地截图节点，不会触发真实生成。</p>
+            <div>
+              <button type="button" onClick={() => setPendingVideoFrame(undefined)}>取消</button>
+              <button
+                type="button"
+                onClick={() => {
+                  data.onCreateVideoToolNode?.(pendingVideoFrame)
+                  setPendingVideoFrame(undefined)
+                }}
+              >
+                确认添加
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
     </div>
   )
 }

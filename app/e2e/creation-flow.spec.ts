@@ -452,7 +452,7 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   await expect(
     generation.getByRole('option', { name: /Mock Studio.*Seedance 2.0.*135 积分\/次.*演示/ }),
   ).toBeEnabled()
-  await expect(generation.getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+  await expect(generation.getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
   await expect(generation.getByLabel('声音')).toHaveValue('开启')
   await expect(generation.getByText('预计成本 135')).toBeVisible()
   await generation.getByRole('button', { name: '展开高级设置' }).click()
@@ -817,7 +817,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
   ).toBeVisible()
   const primaryAction = page
     .getByRole('toolbar', { name: '图片主操作' })
-    .getByRole('button', { name: '图生图' })
+    .getByRole('button', { name: '参考' })
   await expect(primaryAction).toBeVisible()
   const actionBox = await primaryAction.boundingBox()
   const modeBarBox = await page
@@ -868,7 +868,7 @@ test('keeps the selected node primary action inside a 200% zoom layout viewport'
   expect(
     actionHitTarget.action,
     `primary action hit target=${JSON.stringify(actionHitTarget)}`,
-  ).toBe('图生图')
+  ).toBe('参考')
   await primaryAction.click()
   await expect(primaryAction).toHaveAttribute('aria-pressed', 'true')
 })
@@ -1394,4 +1394,48 @@ test('narrows image and video parameters when switching Liblib catalog models', 
   )
   await videoPanel.getByRole('button', { name: '展开完整视频工具' }).click()
   await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('30 秒')
+})
+
+test('matches Liblib result action policies and exposes the inline video player', async ({ page }) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const scene = page.getByRole('button', { name: '场景设定', exact: true })
+  await scene.click()
+  const imagePanel = page.getByRole('region', { name: '场景设定 生成参数' })
+  const imageActions = imagePanel.getByRole('toolbar', { name: '图片主操作' })
+  await expect(imageActions.getByRole('button')).toHaveCount(3)
+  expect(await imageActions.getByRole('button').allTextContents()).toEqual([
+    '参考',
+    '标记',
+    '风格',
+  ])
+  await expect(imageActions.getByRole('button', { name: '图片高清' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '查看 4 张结果' })).toHaveText('4张')
+
+  await imagePanel
+    .getByRole('combobox', { name: '图片模型' })
+    .selectOption('mock-style-image-v7')
+  await expect(imageActions.getByRole('button')).toHaveCount(2)
+  expect(await imageActions.getByRole('button').allTextContents()).toEqual([
+    '参考',
+    '风格',
+  ])
+
+  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
+  await runSelectedNodeManagementAction(page, '生成视频')
+  const video = page.getByRole('button', { name: '视频 01', exact: true })
+  await expect(video).toBeVisible()
+  await video.click()
+  const videoNode = page.locator('.react-flow__node').filter({ has: video })
+  const player = videoNode.getByRole('group', { name: '视频 01 播放器' })
+  await expect(player.getByRole('button', { name: '播放视频 01' })).toBeVisible()
+  await expect(player.getByRole('slider', { name: '视频进度' })).toBeVisible()
+  await expect(player.getByText('0:00 / 0:05')).toBeVisible()
+  await expect(player.getByRole('button', { name: '截取视频 01当前帧' })).toBeVisible()
+  await expect(videoNode.getByRole('toolbar', { name: '帧操作' })).toBeVisible()
+
+  const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
+  const videoActions = videoPanel.getByRole('toolbar', { name: '视频主操作' })
+  await expect(videoActions.getByRole('button', { name: '主体' })).toBeVisible()
 })

@@ -1,7 +1,6 @@
 import {
   ArrowUp,
   AtSign,
-  Camera,
   SlidersHorizontal,
   Sparkles,
   X,
@@ -10,7 +9,6 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import type { VideoDerivedTool } from '../../project/model'
 import {
   defaultVideoGenerationMode,
   defaultProviderRegistry,
@@ -110,41 +108,6 @@ function parameterBoolean(
 ) {
   const value = parameters[name]
   return typeof value === 'boolean' ? value : fallback
-}
-
-function ToolConfirmation({
-  tool,
-  sourceTitle,
-  onCancel,
-  onConfirm,
-}: {
-  tool: VideoDerivedTool
-  sourceTitle: string
-  onCancel(): void
-  onConfirm(): void
-}) {
-  return createPortal(
-    <div
-      className="video-tool-confirm nodrag"
-      role="alertdialog"
-      aria-modal="true"
-      aria-label={`添加${tool}工具节点`}
-    >
-      <div>
-        <button type="button" aria-label="关闭添加工具节点提示" onClick={onCancel}>
-          <X aria-hidden="true" />
-        </button>
-        <h2>将添加工具节点</h2>
-        <p>“{tool}”会作为“{sourceTitle}”的派生节点插入画布并建立连线。</p>
-        <p>本地演示不会提交真实生成或消耗积分。</p>
-        <div>
-          <button type="button" onClick={onCancel}>取消</button>
-          <button type="button" onClick={onConfirm}>确认添加</button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  )
 }
 
 function ReferenceSurface({
@@ -247,7 +210,6 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const [advanced, setAdvanced] = useState(false)
   const [workflowOpen, setWorkflowOpen] = useState(false)
   const [surface, setSurface] = useState<VideoSurface>()
-  const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
   const [modeNotice, setModeNotice] = useState<string>()
   const activeVersion = data.node.versions.find(({ id }) => id === data.node.activeVersionId)
   const [prompt, setPrompt] = useState(activeVersion?.prompt ?? '')
@@ -282,6 +244,12 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const duration = parameterString(parameters, 'duration', '5')
   const quality = parameterString(parameters, 'quality', '720P')
   const count = parameterString(parameters, 'count', '1')
+  const parameterSummary = [
+    aspectRatio,
+    duration ? `${duration}s` : undefined,
+    count ? `${count}个` : undefined,
+    quality || undefined,
+  ].filter(Boolean).join(' · ')
   const sound = parameterBoolean(parameters, 'sound', true)
   const soundSupported = selectedProvider.parameterSchema.sound?.type === 'boolean'
   const cost = selectedProvider.pricing.amount
@@ -313,7 +281,6 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
     setAdvanced(false)
     setWorkflowOpen(false)
     setSurface(undefined)
-    setPendingTool(undefined)
     setModeNotice(undefined)
   }, [data.node.id])
 
@@ -330,20 +297,14 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   }, [configuredMode, data, generationMode])
 
   useEffect(() => {
-    if (!surface && !pendingTool) return
+    if (!surface) return
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setSurface(undefined)
-      setPendingTool(undefined)
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [pendingTool, surface])
-
-  const requestFrame = (tool: VideoDerivedTool) => {
-    setSurface(undefined)
-    setPendingTool(tool)
-  }
+  }, [surface])
 
   return (
     <section className="video-generation-panel nodrag" role="region" aria-label={`${data.node.title} 生成参数`}>
@@ -351,10 +312,11 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <button type="button" onClick={() => setSurface('reference')}>参考</button>
         <button type="button" onClick={() => setSurface('mark')}>标记</button>
         <button type="button" onClick={() => setSurface('effects')}>特效</button>
+        <button type="button" onClick={() => setSurface('subjects')}>主体</button>
         <button type="button" onClick={() => setSurface('characters')}>角色库</button>
         <button type="button" onClick={() => setSurface('camera-motion')}>运镜</button>
         {referenceCount ? (
-          <button type="button" className="video-generation-panel__reference-count" aria-label={`${referenceCount} 个引用`} onClick={() => setSurface('references')}>
+          <button type="button" className="video-generation-panel__reference-count" aria-label={`${referenceCount} @ 引用`} onClick={() => setSurface('references')}>
             <AtSign aria-hidden="true" />{referenceCount}
           </button>
         ) : null}
@@ -380,6 +342,16 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         : null}
       <label className="video-generation-panel__prompt">
         <span className="visually-hidden">提示词</span>
+        {data.videoReferences?.length ? (
+          <ul className="video-generation-panel__references" aria-label="已引用素材">
+            {data.videoReferences.map((reference) => (
+              <li key={reference.id}>
+                <img src={reference.asset.url} alt={reference.title} />
+                <span>{reference.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <textarea
           aria-label="提示词"
           maxLength={2000}
@@ -460,7 +432,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             </option>
           ))}
         </select></label>
-        <span className="video-generation-panel__parameter-row">{aspectRatio} · {quality} · {duration}s · {count}个</span>
+        <span className="video-generation-panel__parameter-row">{parameterSummary}</span>
         {soundSupported ? <label className="video-generation-panel__sound"><span className="visually-hidden">声音</span><select aria-label="声音" value={sound ? '开启' : '关闭'} onChange={(event) => updateParameter('sound', event.target.value === '开启')}><option>关闭</option><option>开启</option></select></label> : null}
         <button
           type="button"
@@ -522,13 +494,6 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
 
       {workflowOpen ? (
         <section className="video-generation-panel__workflow" aria-label="完整视频工具">
-          <div className="video-layer-heading"><span>帧操作</span></div>
-          <div className="video-frame-tools" role="toolbar" aria-label="帧操作">
-            <button type="button" onClick={() => requestFrame('截取首帧')}>截取首帧</button>
-            <button type="button" onClick={() => requestFrame('截取尾帧')}>截取尾帧</button>
-            <button type="button" onClick={() => requestFrame('截取当前帧')}>截取当前帧</button>
-            <button type="button" aria-label="相机截取当前帧" onClick={() => requestFrame('截取当前帧')}><Camera aria-hidden="true" /></button>
-          </div>
           <div className="video-layer-heading"><span>引用与控制</span></div>
           <div className="video-reference-tools" role="toolbar" aria-label="引用与控制">
             <button type="button" onClick={() => setSurface('reference')}>参考</button>
@@ -561,17 +526,6 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         </span>
       )}
 
-      {pendingTool ? (
-        <ToolConfirmation
-          tool={pendingTool}
-          sourceTitle={data.node.title}
-          onCancel={() => setPendingTool(undefined)}
-          onConfirm={() => {
-            data.onCreateVideoToolNode?.(pendingTool)
-            setPendingTool(undefined)
-          }}
-        />
-      ) : null}
     </section>
   )
 }

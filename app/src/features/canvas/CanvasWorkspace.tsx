@@ -2,6 +2,7 @@ import {
   Brush,
   Bot,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Crosshair,
@@ -772,17 +773,53 @@ export function SelectionContextBar({
   return (
     <>
       <div className="selection-context-bar floating-panel" role="toolbar" aria-label="图片创作工具">
-        <button type="button" onClick={() => setSurface('portrait')}><Sparkles aria-hidden="true" />人像质感调节</button>
-        <button type="button" onClick={() => requestToolNode('全景')}><Rotate3D aria-hidden="true" />全景</button>
-        <button type="button" onClick={() => setSurface('multi-angle')}><Rotate3D aria-hidden="true" />多角度</button>
-        <button type="button" onClick={() => setSurface('lighting')}><Lightbulb aria-hidden="true" />打光</button>
-        <button type="button" onClick={() => setSurface('nine-grid')}><Grid3X3 aria-hidden="true" />九宫格</button>
-        <button type="button" onClick={() => requestToolNode('高清')}><ScanLine aria-hidden="true" />高清</button>
-        <button type="button" onClick={() => setSurface('split')}><Grid3X3 aria-hidden="true" />宫格切分</button>
-        <button type="button" onClick={() => setSurface('annotation')}><Pencil aria-hidden="true" />标注</button>
-        <button type="button" title="旋转" onClick={() => onRotateImage(node.id)}><RotateCw aria-hidden="true" />旋转</button>
-        <button type="button" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" />下载</button>
-        <button type="button" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" />预览</button>
+        <button
+          type="button"
+          aria-label="人像质感调节"
+          aria-haspopup="menu"
+          aria-expanded={surface === 'portrait'}
+          data-compact="false"
+          onClick={() => setSurface('portrait')}
+        >
+          <Sparkles aria-hidden="true" />
+          <span>人像质感调节</span>
+          <span className="image-context-action__new-badge">NEW</span>
+          <ChevronDown aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          title="基于当前场景创建720°全景图"
+          data-compact="false"
+          onClick={() => requestToolNode('全景')}
+        >
+          <span className="image-context-action__panorama-icon" aria-hidden="true">720</span>
+          全景
+        </button>
+        <button type="button" data-compact="false" onClick={() => setSurface('multi-angle')}><Rotate3D aria-hidden="true" />多角度</button>
+        <button type="button" data-compact="false" onClick={() => setSurface('lighting')}><Lightbulb aria-hidden="true" />打光</button>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={surface === 'nine-grid'}
+          data-compact="false"
+          onClick={() => setSurface('nine-grid')}
+        >
+          <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" />
+        </button>
+        <button type="button" data-compact="false" onClick={() => requestToolNode('高清')}><ScanLine aria-hidden="true" />高清</button>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={surface === 'split'}
+          data-compact="false"
+          onClick={() => setSurface('split')}
+        >
+          <Grid3X3 aria-hidden="true" />宫格切分<ChevronDown aria-hidden="true" />
+        </button>
+        <button type="button" data-compact="true" aria-label="标注" title="标注" onClick={() => setSurface('annotation')}><Pencil aria-hidden="true" /><span className="visually-hidden">标注</span></button>
+        <button type="button" data-compact="true" aria-label="旋转" title="旋转" onClick={() => onRotateImage(node.id)}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转</span></button>
+        <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
+        <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
 
       {surface === 'portrait' ? (

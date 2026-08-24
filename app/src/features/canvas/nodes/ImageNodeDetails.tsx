@@ -34,6 +34,7 @@ import type {
   ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { imagePrimaryActionsFor } from './image-result-action-policy'
 
 function downloadUrl(url: string, filename: string) {
   const anchor = document.createElement('a')
@@ -661,7 +662,6 @@ function ImageTemplatePicker({
 export function ImageGenerationPanel({
   data,
   imageToImage,
-  onImageToImageChange,
   upscalePending,
   onUpscalePendingChange,
   upscaleTriggerRef,
@@ -703,6 +703,10 @@ export function ImageGenerationPanel({
   const selectedProvider =
     providers.find(({ id }) => id === data.node.modelProviderId) ??
     providers.find(({ kind }) => kind === 'demo')!
+  const primaryActions = imagePrimaryActionsFor(
+    selectedProvider.id,
+    Boolean(data.asset || data.imageResults?.length),
+  )
   const generationParameters =
     data.node.generationConfig?.providerId === selectedProvider.id
       ? data.node.generationConfig.parameters
@@ -732,6 +736,10 @@ export function ImageGenerationPanel({
     setTemplatesOpen(false)
     setPendingTemplate(undefined)
   }, [data.node.id])
+
+  useEffect(() => {
+    if (!primaryActions.includes('mark')) setMarking(false)
+  }, [primaryActions])
 
   useEffect(() => {
     if (!marking) return
@@ -831,58 +839,46 @@ export function ImageGenerationPanel({
         role="toolbar"
         aria-label="图片主操作"
       >
-        {hasMedia ? (
-          <>
-            <button
-              type="button"
-              aria-pressed={imageToImage}
-              onClick={() => onImageToImageChange(!imageToImage)}
-            >
-              <Images aria-hidden="true" />图生图
-            </button>
-            <button
-              ref={upscaleTriggerRef}
-              type="button"
-              onClick={() => onUpscalePendingChange(true)}
-            >
-              <Maximize2 aria-hidden="true" />图片高清
-            </button>
-          </>
+        {primaryActions.includes('reference') ? (
+          <button
+            type="button"
+            aria-pressed={data.imageReferenceSelecting}
+            onClick={(event) => {
+              setMarking(false)
+              data.onStartImageReferenceSelection?.(event.currentTarget)
+            }}
+          >
+            <ScanSearch aria-hidden="true" />参考
+          </button>
         ) : null}
-        <button
-          type="button"
-          aria-pressed={data.imageReferenceSelecting}
-          onClick={(event) => {
-            setMarking(false)
-            data.onStartImageReferenceSelection?.(event.currentTarget)
-          }}
-        >
-          <ScanSearch aria-hidden="true" />参考
-        </button>
-        <button
-          ref={markingTriggerRef}
-          type="button"
-          aria-pressed={marking}
-          onClick={() => {
-            if (data.imageReferenceSelecting) {
-              data.onEndImageReferenceSelection?.(false)
-            }
-            setMarking((enabled) => !enabled)
-          }}
-        >
-          <ScanSearch aria-hidden="true" />标记
-        </button>
-        <button
-          ref={styleTriggerRef}
-          type="button"
-          aria-expanded={styleOpen}
-          onClick={() => {
-            setMarking(false)
-            setStyleOpen(true)
-          }}
-        >
-          <Sparkles aria-hidden="true" />风格
-        </button>
+        {primaryActions.includes('mark') ? (
+          <button
+            ref={markingTriggerRef}
+            type="button"
+            aria-pressed={marking}
+            onClick={() => {
+              if (data.imageReferenceSelecting) {
+                data.onEndImageReferenceSelection?.(false)
+              }
+              setMarking((enabled) => !enabled)
+            }}
+          >
+            <ScanSearch aria-hidden="true" />标记
+          </button>
+        ) : null}
+        {primaryActions.includes('style') ? (
+          <button
+            ref={styleTriggerRef}
+            type="button"
+            aria-expanded={styleOpen}
+            onClick={() => {
+              setMarking(false)
+              setStyleOpen(true)
+            }}
+          >
+            <Sparkles aria-hidden="true" />风格
+          </button>
+        ) : null}
       </div>
       <button
         type="button"
@@ -1254,7 +1250,7 @@ export function ImageResults({ data }: { data: CreativeNodeData }) {
           setOpen((expanded) => !expanded)
         }}
       >
-        {results.length} 张
+        {results.length}张
       </button>
       {open ? (
         <section

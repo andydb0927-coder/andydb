@@ -96,6 +96,11 @@ test('keeps a video as a folded media card until it becomes the current node', (
   )
   expect(screen.getByText('1280 × 720')).toBeVisible()
   expect(screen.getByText('1 个结果')).toBeVisible()
+  const player = screen.getByRole('group', { name: '视频节点 16 播放器' })
+  expect(within(player).getByRole('button', { name: '播放视频节点 16' })).toBeVisible()
+  expect(within(player).getByRole('slider', { name: '视频进度' })).toBeVisible()
+  expect(within(player).getByText('0:00 / 0:03')).toBeVisible()
+  expect(within(player).getByRole('button', { name: '截取视频节点 16当前帧' })).toBeVisible()
   expect(
     screen.queryByRole('region', { name: '视频节点 16 生成参数' }),
   ).not.toBeInTheDocument()
@@ -141,7 +146,7 @@ test('renders an empty selected video as a Liblib media card with a separate com
   expect(composer.parentElement).toHaveClass('creative-node-composer')
   expect(within(composer).getByRole('toolbar', { name: '视频主操作' })).toBeVisible()
   expect(within(composer).getByLabelText('生成模式')).toHaveValue('全能参考')
-  expect(within(composer).getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+  expect(within(composer).getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
 })
 
 test('renders the verified video generation controls, disabled modes, and cost', async () => {
@@ -149,6 +154,16 @@ test('renders the verified video generation controls, disabled modes, and cost',
   const data = makeData(true)
   render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+
+  expect(
+    within(within(panel).getByRole('toolbar', { name: '视频主操作' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+      .filter(Boolean),
+  ).toEqual(['参考', '标记', '特效', '主体', '角色库', '运镜', '1'])
+  const references = within(panel).getByRole('list', { name: '已引用素材' })
+  expect(within(references).getByRole('img', { name: '图片节点 1' })).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '1 @ 引用' })).toBeVisible()
 
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
@@ -205,7 +220,7 @@ test('recomputes video defaults, price, and advanced switches from the selected 
   const view = render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
 
-  expect(within(panel).getByText('16:9 · 720P · 5s · 1个')).toBeVisible()
+  expect(within(panel).getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
   expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
   expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
 
@@ -214,13 +229,37 @@ test('recomputes video defaults, price, and advanced switches from the selected 
     node: { ...data.node, modelProviderId: 'mock-kling-video' },
   }))
 
-  expect(within(panel).getByText('16:9 · 标准 · 3s · 1个')).toBeVisible()
+  expect(within(panel).getByText('16:9 · 3s · 1个 · 标准')).toBeVisible()
   expect(within(panel).getByLabelText('声音')).toHaveValue('关闭')
   expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
   expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
   expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
+})
+
+test('omits an empty quality value from the reordered video summary', () => {
+  const data = makeData(true)
+  data.node = {
+    ...data.node,
+    modelProviderId: 'mock-kling-video',
+    generationConfig: {
+      targetKind: 'video',
+      providerId: 'mock-kling-video',
+      parameters: {
+        aspectRatio: '16:9',
+        duration: '3',
+        count: '1',
+        quality: '',
+      },
+      referenceAssets: [],
+    },
+  }
+
+  render(renderVideo(data))
+
+  expect(screen.getByText('16:9 · 3s · 1个')).toBeVisible()
+  expect(screen.queryByText(/1个 ·\s*$/)).not.toBeInTheDocument()
 })
 
 test('groups video providers and exposes Seedance 2.5 thirty-second parameters', async () => {
@@ -341,12 +380,10 @@ test('repairs an unsupported saved mode when a text-only video node is first ren
   )
 })
 
-test('exposes frame confirmations and all seven reference controls without mutating on escape', async () => {
+test('exposes frame confirmations beside the result player and all seven reference controls', async () => {
   const user = userEvent.setup()
   const data = makeData(true)
   render(renderVideo(data))
-
-  await user.click(screen.getByRole('button', { name: '展开完整视频工具' }))
 
   const frameTools = screen.getByRole('toolbar', { name: '帧操作' })
   for (const label of ['截取首帧', '截取尾帧', '截取当前帧', '相机截取当前帧']) {
@@ -359,8 +396,8 @@ test('exposes frame confirmations and all seven reference controls without mutat
   await user.keyboard('{Escape}')
   expect(data.onCreateVideoToolNode).not.toHaveBeenCalled()
 
-  const referenceTools = screen.getByRole('toolbar', { name: '引用与控制' })
-  for (const label of ['参考', '标记', '特效', '主体', '角色库', '运镜', '1 @']) {
+  const referenceTools = screen.getByRole('toolbar', { name: '视频主操作' })
+  for (const label of ['参考', '标记', '特效', '主体', '角色库', '运镜', '1 @ 引用']) {
     expect(within(referenceTools).getByRole('button', { name: label })).toBeVisible()
   }
   await user.click(within(referenceTools).getByRole('button', { name: '参考' }))
@@ -370,7 +407,7 @@ test('exposes frame confirmations and all seven reference controls without mutat
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('region', { name: '从画布选择参考' })).not.toBeInTheDocument()
 
-  await user.click(within(referenceTools).getByRole('button', { name: '1 @' }))
+  await user.click(within(referenceTools).getByRole('button', { name: '1 @ 引用' }))
   expect(screen.getByRole('region', { name: '1 个引用' })).toHaveTextContent('图片节点 1')
 })
 

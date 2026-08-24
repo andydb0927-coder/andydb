@@ -75,12 +75,11 @@ test('matches the Liblib image action bar and generation copy without legacy nod
   const actions = within(panel).getByRole('toolbar', { name: '图片主操作' })
 
   expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
-    '图生图',
-    '图片高清',
     '参考',
     '标记',
     '风格',
   ])
+  expect(within(actions).queryByRole('button', { name: '图片高清' })).not.toBeInTheDocument()
   for (const removed of ['重生成', '扩展镜头', '生成视频', '删除', '角色']) {
     expect(within(panel).queryByRole('button', { name: removed })).not.toBeInTheDocument()
   }
@@ -223,7 +222,7 @@ test('opens the grouped Liblib image template catalog and confirms a local deriv
   expect(data.onCreateImageToolNode).toHaveBeenCalledWith('调度故事板')
 })
 
-test('confirms image upscaling before inserting a connected tool node', async () => {
+test('keeps an already requested upscale confirmation without duplicating the composer action', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()
   const upscaleTriggerRef = createRef<HTMLButtonElement>()
@@ -239,14 +238,36 @@ test('confirms image upscaling before inserting a connected tool node', async ()
     />,
   )
 
-  const trigger = screen.getByRole('button', { name: '图片高清' })
+  expect(screen.queryByRole('button', { name: '图片高清' })).not.toBeInTheDocument()
   const dialog = screen.getByRole('alertdialog', { name: '将添加工具节点' })
   expect(dialog).toHaveTextContent('图片高清')
   expect(onCreateImageToolNode).not.toHaveBeenCalled()
   await user.click(within(dialog).getByRole('button', { name: '确认添加图片高清工具节点' }))
   expect(onCreateImageToolNode).toHaveBeenCalledWith('图片高清')
   expect(onUpscalePendingChange).toHaveBeenCalledWith(false)
-  expect(trigger).toHaveFocus()
+})
+
+test('narrows Style Image V7 result actions to reference and style', () => {
+  const data = makeData({
+    node: {
+      ...makeData().node,
+      modelProviderId: 'mock-style-image-v7',
+      generationConfig: {
+        targetKind: 'image',
+        providerId: 'mock-style-image-v7',
+        parameters: {},
+        referenceAssets: [],
+      },
+    },
+  })
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+
+  const actions = screen.getByRole('toolbar', { name: '图片主操作' })
+  expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
+    '参考',
+    '风格',
+  ])
+  expect(within(actions).queryByRole('button', { name: '标记' })).not.toBeInTheDocument()
 })
 
 test('opens and safely exits the local element marking mode', async () => {

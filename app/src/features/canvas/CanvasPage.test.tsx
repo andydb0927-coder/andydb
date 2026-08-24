@@ -728,7 +728,7 @@ describe('creative canvas', () => {
     ).toHaveTextContent('加入时间线')
   })
 
-  test('renders text details and the five Liblib image actions without legacy node-card actions', async () => {
+  test('renders text details and the model-driven Liblib image result actions without legacy node-card actions', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     const textNode: Project['nodes'][number] = {
@@ -773,9 +773,11 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '图片 01' }))
     const imageActions = screen.getByRole('toolbar', { name: '图片主操作' })
-    for (const action of ['图生图', '图片高清', '参考', '标记', '风格']) {
+    for (const action of ['参考', '标记', '风格']) {
       expect(within(imageActions).getByRole('button', { name: action })).toBeVisible()
     }
+    expect(within(imageActions).queryByRole('button', { name: '图生图' })).not.toBeInTheDocument()
+    expect(within(imageActions).queryByRole('button', { name: '图片高清' })).not.toBeInTheDocument()
     expect(screen.queryByRole('toolbar', { name: '图片快捷尝试' })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '生成分镜' }),
@@ -869,20 +871,20 @@ describe('creative canvas', () => {
     renderCanvas()
 
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    await user.click(screen.getByRole('button', { name: '图片高清' }))
-    expect(screen.getByRole('alertdialog', { name: '将添加工具节点' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '高清' }))
+    expect(screen.getByRole('alertdialog', { name: '添加高清工具节点' })).toBeVisible()
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
 
-    await user.click(screen.getByRole('button', { name: '确认添加图片高清工具节点' }))
+    await user.click(screen.getByRole('button', { name: '确认添加' }))
     const project = useProjectStore.getState().activeProject!
-    const tool = project.nodes.find(({ title }) => title === '图片高清')
+    const tool = project.nodes.find(({ title }) => title === '高清')
     expect(tool).toBeDefined()
     expect(project.edges).toContainEqual(expect.objectContaining({
       sourceNodeId: 'character',
       targetNodeId: tool?.id,
     }))
     expect(screen.getByRole('status')).toHaveTextContent(
-      '已创建“图片高清”工具节点并建立连接',
+      '已创建“高清”工具节点并建立连接',
     )
   })
 
@@ -2115,14 +2117,14 @@ describe('creative canvas', () => {
     renderCanvas()
 
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    const imageToImage = screen.getByRole('button', { name: '图生图' })
+    const advancedSettings = screen.getByRole('button', { name: '展开高级设置' })
     await user.click(screen.getByRole('button', { name: '连线' }))
     expect(screen.getByText('请选择来源节点')).toBeVisible()
 
-    await user.click(imageToImage)
+    await user.click(advancedSettings)
     act(() => {
       latestFlowProps?.onNodeClick?.(
-        { target: imageToImage },
+        { target: advancedSettings },
         latestFlowProps.nodes.find(({ id }) => id === 'character')!,
       )
     })
