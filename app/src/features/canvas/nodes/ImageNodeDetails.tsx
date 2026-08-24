@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
+import { withAppBase } from '../../../app/public-url'
 import {
   defaultImageGenerationSettings,
   type ImageGenerationSettings,
@@ -65,7 +66,7 @@ const styleCards = [
     commercial: true,
     model: 'Style Image V8.2',
     category: '动漫游戏',
-    cover: '/demo/character-lin-yuan.png',
+    cover: withAppBase('/demo/character-lin-yuan.png'),
     recent: true,
   },
   {
@@ -76,7 +77,7 @@ const styleCards = [
     commercial: true,
     model: 'Z Image',
     category: '摄影写真',
-    cover: '/demo/shot-rooftop.png',
+    cover: withAppBase('/demo/shot-rooftop.png'),
     recent: false,
   },
   {
@@ -87,7 +88,7 @@ const styleCards = [
     commercial: true,
     model: 'Qwen Image',
     category: '电商营销',
-    cover: '/demo/scene-rain-street.png',
+    cover: withAppBase('/demo/scene-rain-street.png'),
     recent: false,
   },
   {
@@ -98,7 +99,7 @@ const styleCards = [
     commercial: false,
     model: 'Z Image',
     category: '摄影写真',
-    cover: '/demo/shot-river.png',
+    cover: withAppBase('/demo/shot-river.png'),
     recent: true,
   },
   {
@@ -109,7 +110,7 @@ const styleCards = [
     commercial: true,
     model: 'Lib Image',
     category: '平面设计',
-    cover: '/demo/scene-rain-street.png',
+    cover: withAppBase('/demo/scene-rain-street.png'),
     recent: false,
   },
   {
@@ -120,7 +121,7 @@ const styleCards = [
     commercial: true,
     model: 'Lib Image',
     category: '小说推文',
-    cover: '/demo/shot-rooftop.png',
+    cover: withAppBase('/demo/shot-rooftop.png'),
     recent: false,
   },
 ] as const

@@ -1,3 +1,5 @@
+import { withAppBase } from '../../app/public-url'
+
 import type {
   ExportResult,
   ExportSettings,
@@ -652,7 +654,7 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
             ? {
                 id: assetId,
                 kind: 'audio' as const,
-                url: '/demo/audio-preview.mp3',
+                url: withAppBase('/demo/audio-preview.mp3'),
                 mimeType: 'audio/mpeg',
                 durationSeconds: 5,
               }
@@ -660,7 +662,7 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
               ? {
                   id: assetId,
                   kind: 'video' as const,
-                  url: '/demo/video-preview.mp4',
+                  url: withAppBase('/demo/video-preview.mp4'),
                   mimeType: 'video/mp4',
                   width: 1280,
                   height: 720,
@@ -669,7 +671,9 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
               : {
                   id: assetId,
                   kind: 'image' as const,
-                  url: request.referenceAssets[0]?.url ?? '/demo/shot-river.png',
+                  url:
+                    request.referenceAssets[0]?.url ??
+                    withAppBase('/demo/shot-river.png'),
                   mimeType: 'image/png',
                   width: 1920,
                   height: 1080,
@@ -686,7 +690,7 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
     export(request, context) {
       return scheduledProgress(context, 300, [17, 33, 50, 67, 83, 100], () => ({
         exportJobId: `demo-export-${request.projectId}`,
-        downloadUrl: `/demo/exports/${request.projectId}.mp4`,
+        downloadUrl: withAppBase(`/demo/exports/${request.projectId}.mp4`),
         completedAt: new Date().toISOString(),
       }))
     },

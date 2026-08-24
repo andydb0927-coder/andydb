@@ -1,7 +1,9 @@
 /// <reference types="node" />
 
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 import { expect, test } from 'vitest'
 
@@ -40,4 +42,55 @@ test('documents static deployment and unavailable server bridges', () => {
   expect(readme).toContain('workspace CLI')
   expect(readme).toContain('静态托管不可用')
   expect(readme).toContain('中文错误')
+})
+
+test('configures the GitHub Pages repository base and BrowserRouter basename', () => {
+  const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8')
+  const router = readFileSync(resolve(process.cwd(), 'src/app/router.tsx'), 'utf8')
+
+  expect(viteConfig).toMatch(
+    /base:\s*command\s*===\s*['"]build['"]\s*\?\s*['"]\/andydb\/['"]\s*:\s*['"]\/['"]/,
+  )
+  expect(router).toContain('basename: import.meta.env.BASE_URL')
+})
+
+test('copies the built index document to 404.html for GitHub Pages SPA fallback', () => {
+  const outputDirectory = mkdtempSync(resolve(tmpdir(), 'wireless-canvas-pages-'))
+  try {
+    writeFileSync(resolve(outputDirectory, 'index.html'), '<main>wireless canvas</main>')
+    execFileSync(process.execPath, [
+      resolve(process.cwd(), 'scripts/github-pages-fallback.mjs'),
+      outputDirectory,
+    ])
+
+    expect(readFileSync(resolve(outputDirectory, '404.html'), 'utf8')).toBe(
+      '<main>wireless canvas</main>',
+    )
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true })
+  }
+})
+
+test('deploys app/dist to gh-pages after pushes to the platform branch', () => {
+  const workflow = readFileSync(
+    resolve(repositoryRoot, '.github/workflows/deploy.yml'),
+    'utf8',
+  )
+
+  expect(workflow).toMatch(/branches:\s*\[?['"]?codex\/platform-shell-phase['"]?\]?/)
+  expect(workflow).toContain('npm --prefix app ci')
+  expect(workflow).toContain('npm --prefix app run build')
+  expect(workflow).toContain('peaceiris/actions-gh-pages@v4.0.0')
+  expect(workflow).toMatch(/publish_dir:\s*\.\/app\/dist/)
+  expect(workflow).toMatch(/publish_branch:\s*gh-pages/)
+})
+
+test('documents the GitHub Pages URL, branch source, and local serve check', () => {
+  const deploymentGuide = readFileSync(resolve(repositoryRoot, 'DEPLOY.md'), 'utf8')
+
+  expect(deploymentGuide).toContain('## GitHub Pages')
+  expect(deploymentGuide).toContain('https://andydb0927-coder.github.io/andydb/')
+  expect(deploymentGuide).toContain('codex/platform-shell-phase')
+  expect(deploymentGuide).toContain('gh-pages')
+  expect(deploymentGuide).toContain('npx serve dist')
 })

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { withAppBase } from '../../../app/public-url'
 import { StatusText } from '../../../ui/StatusText'
 import type { VideoDerivedTool } from '../../project/model'
 import { primaryActionsForNode } from '../node-action-policy'
@@ -368,7 +369,7 @@ export function CreativeNodeShell({
                 ref={videoRef}
                 src={asset.url}
                 className="creative-node__media"
-                poster="/demo/shot-river.png"
+                poster={withAppBase('/demo/shot-river.png')}
                 muted
                 loop
                 playsInline

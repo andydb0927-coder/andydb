@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { withAppBase } from '../../app/public-url'
 import type { Asset, CanvasNode, VideoDerivedTool } from '../project/model'
 
 type VideoMediaSurface =
@@ -75,9 +76,9 @@ function ClipEditor({
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="剪辑内联编辑器">
       <header><div><span>节点内草稿</span><h2>剪辑</h2></div><button type="button" aria-label="关闭剪辑内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
-      <div className="video-clip-stage"><video src={asset.url} poster="/demo/shot-river.png" muted loop={loop} preload="metadata" /></div>
+      <div className="video-clip-stage"><video src={asset.url} poster={withAppBase('/demo/shot-river.png')} muted loop={loop} preload="metadata" /></div>
       <div className="video-clip-frames" aria-label="12 张缩略帧">
-        {Array.from({ length: 12 }, (_, index) => <img key={index} src="/demo/shot-river.png" alt={`剪辑帧 ${index + 1}`} />)}
+        {Array.from({ length: 12 }, (_, index) => <img key={index} src={withAppBase('/demo/shot-river.png')} alt={`剪辑帧 ${index + 1}`} />)}
       </div>
       <label>选区<input type="range" min="0.25" max="3" step="0.01" value={selection} onChange={(event) => setSelection(Number(event.target.value))} /></label>
       <div className="video-inline-editor__readout"><span>0:00–0:03</span><strong>{selection.toFixed(2)} s</strong></div>
@@ -95,7 +96,7 @@ function CropEditor({ asset, onClose, onSubmit }: { asset: Asset; onClose(): voi
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="裁剪内联编辑器">
       <header><div><span>节点内草稿</span><h2>裁剪</h2></div><button type="button" aria-label="关闭裁剪内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
       <div className="video-crop-stage">
-        <video src={asset.url} poster="/demo/shot-river.png" muted preload="metadata" />
+        <video src={asset.url} poster={withAppBase('/demo/shot-river.png')} muted preload="metadata" />
         <div className="video-crop-box">
           {cropHandles.map((handle) => <button key={handle} type="button" aria-label={`裁剪控制点 ${handle}`} data-position={handle} />)}
         </div>
@@ -244,7 +245,7 @@ export function VideoMediaContextBar({
         <div className="video-preview-dialog" role="dialog" aria-modal="true" aria-label="视频预览">
           <button type="button" aria-label="关闭视频预览" onClick={() => setSurface(undefined)}><X aria-hidden="true" /></button>
           <h2>{node.title}</h2>
-          <video src={asset.url} poster="/demo/shot-river.png" controls autoPlay={false} preload="metadata" />
+          <video src={asset.url} poster={withAppBase('/demo/shot-river.png')} controls autoPlay={false} preload="metadata" />
           <span>0:00 / 0:03 · 1x</span>
         </div>
       ) : null}

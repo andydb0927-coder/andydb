@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
+import { withAppBase } from '../../app/public-url'
 import type { Asset, Project } from '../project/model'
 
 export interface EffectTemplate {
@@ -145,7 +146,7 @@ const characterProfiles: CharacterProfile[] = [
     role: '主角',
     position: '独立记者',
     tags: ['冷静', '雨夜', '电影感'],
-    images: ['/demo/character-lin-yuan.png', '/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png'],
+    images: ['/demo/character-lin-yuan.png', '/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png'].map((url) => withAppBase(url)),
   },
   {
     id: 'cheng-ye',
@@ -156,7 +157,7 @@ const characterProfiles: CharacterProfile[] = [
     role: '配角',
     position: '侦查使',
     tags: ['侦查使', '宋制', '果断'],
-    images: ['/demo/character-lin-yuan.png', '/demo/shot-river.png', '/demo/shot-rooftop.png', '/demo/scene-rain-street.png'],
+    images: ['/demo/character-lin-yuan.png', '/demo/shot-river.png', '/demo/shot-rooftop.png', '/demo/scene-rain-street.png'].map((url) => withAppBase(url)),
   },
   {
     id: 'qiao-feng',
@@ -167,7 +168,7 @@ const characterProfiles: CharacterProfile[] = [
     role: '导师',
     position: '镖局教习',
     tags: ['沉稳', '武侠', '领路人'],
-    images: ['/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png', '/demo/scene-rain-street.png'],
+    images: ['/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png', '/demo/scene-rain-street.png'].map((url) => withAppBase(url)),
   },
   {
     id: 'a-ning',
@@ -178,7 +179,7 @@ const characterProfiles: CharacterProfile[] = [
     role: '主角',
     position: '边城导航员',
     tags: ['未来', '敏捷', '星际'],
-    images: ['/demo/scene-rain-street.png', '/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png'],
+    images: ['/demo/scene-rain-street.png', '/demo/shot-rooftop.png', '/demo/character-lin-yuan.png', '/demo/shot-river.png'].map((url) => withAppBase(url)),
   },
 ]
 
@@ -240,7 +241,7 @@ function assetsFromProject(project: Project): WorkspaceAsset[] {
       id: 'demo-inspiration-rooftop',
       name: '屋顶夜色',
       kind: 'image',
-      url: '/demo/shot-rooftop.png',
+      url: withAppBase('/demo/shot-rooftop.png'),
       mimeType: 'image/png',
       width: 1600,
       height: 900,
@@ -252,7 +253,7 @@ function assetsFromProject(project: Project): WorkspaceAsset[] {
       id: 'demo-inspiration-character',
       name: '林渊角色参考',
       kind: 'image',
-      url: '/demo/character-lin-yuan.png',
+      url: withAppBase('/demo/character-lin-yuan.png'),
       mimeType: 'image/png',
       width: 960,
       height: 1200,

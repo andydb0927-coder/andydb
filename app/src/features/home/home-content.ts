@@ -1,3 +1,5 @@
+import { withAppBase } from '../../app/public-url'
+
 export type HomeSkillCategory = '专业影视' | '商业广告' | '音乐MV'
 export type HomeContentKind = 'activity' | 'mode' | 'skill' | 'capability'
 
@@ -113,7 +115,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '专业影视',
     title: '电影叙事分镜师',
     description: '把故事梗概拆成角色动机、场景调度与镜头组。',
-    imageUrl: '/demo/shot-river.png',
+    imageUrl: withAppBase('/demo/shot-river.png'),
     author: '无线画布实验室',
     usageCount: 2840,
     prompt: '使用“电影叙事分镜师”Skill：从人物动机开始，输出场景节拍和可拍摄的镜头组。',
@@ -125,7 +127,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '专业影视',
     title: '连续性导演',
     description: '检查服装、光线、轴线与动作衔接的一致性。',
-    imageUrl: '/demo/scene-rain-street.png',
+    imageUrl: withAppBase('/demo/scene-rain-street.png'),
     author: '林野',
     usageCount: 1926,
     prompt: '使用“连续性导演”Skill：建立人物、服装、场景、光线和动作连续性清单。',
@@ -137,7 +139,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '商业广告',
     title: '品牌氛围片',
     description: '从品牌关键词生成统一视觉母题与产品镜头。',
-    imageUrl: '/demo/shot-rooftop.png',
+    imageUrl: withAppBase('/demo/shot-rooftop.png'),
     author: '栖光创意',
     usageCount: 3612,
     prompt: '使用“品牌氛围片”Skill：提炼品牌关键词，规划视觉母题、产品英雄镜头与收束文案。',
@@ -149,7 +151,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '商业广告',
     title: '产品功能导演',
     description: '用问题、功能和结果三段式组织产品演示。',
-    imageUrl: '/demo/shot-river.png',
+    imageUrl: withAppBase('/demo/shot-river.png'),
     author: '一帧商业',
     usageCount: 2155,
     prompt: '使用“产品功能导演”Skill：按用户问题、功能演示、结果证明三段式规划商业短片。',
@@ -161,7 +163,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '音乐MV',
     title: '节拍镜头编舞',
     description: '围绕段落和重拍设计镜头运动与转场。',
-    imageUrl: '/demo/scene-rain-street.png',
+    imageUrl: withAppBase('/demo/scene-rain-street.png'),
     author: '拍点工作室',
     usageCount: 1748,
     prompt: '使用“节拍镜头编舞”Skill：按前奏、主歌、副歌和间奏标注节拍镜头与转场。',
@@ -173,7 +175,7 @@ const homeContentSeed: HomeContentRecord[] = [
     category: '音乐MV',
     title: '音乐视觉概念师',
     description: '把歌词意象转译成色彩、场景和表演概念。',
-    imageUrl: '/demo/shot-rooftop.png',
+    imageUrl: withAppBase('/demo/shot-rooftop.png'),
     author: '回声制造',
     usageCount: 1329,
     prompt: '使用“音乐视觉概念师”Skill：提取歌词意象，建立色彩、场景、造型与表演概念。',

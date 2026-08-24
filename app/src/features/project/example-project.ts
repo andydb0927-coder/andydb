@@ -1,3 +1,5 @@
+import { withAppBase } from '../../app/public-url'
+
 import { createProject } from './model'
 import type { Project } from './model'
 import { recipeDefinitions, type RecipeDefinition } from './recipe-catalog'
@@ -28,7 +30,7 @@ export function buildRecipeProject(
       {
         id: 'asset-character-reference',
         kind: 'image',
-        url: '/demo/character-lin-yuan.png',
+        url: withAppBase('/demo/character-lin-yuan.png'),
         mimeType: 'image/png',
         width: 960,
         height: 1200,
@@ -36,7 +38,7 @@ export function buildRecipeProject(
       {
         id: 'asset-scene-reference',
         kind: 'image',
-        url: '/demo/scene-rain-street.png',
+        url: withAppBase('/demo/scene-rain-street.png'),
         mimeType: 'image/png',
         width: 1600,
         height: 900,
@@ -44,7 +46,7 @@ export function buildRecipeProject(
       {
         id: 'asset-storyboard-01',
         kind: 'image',
-        url: '/demo/shot-river.png',
+        url: withAppBase('/demo/shot-river.png'),
         mimeType: 'image/png',
         width: 1600,
         height: 900,
@@ -52,7 +54,7 @@ export function buildRecipeProject(
       {
         id: 'asset-scene-result-02',
         kind: 'image',
-        url: '/demo/shot-river.png',
+        url: withAppBase('/demo/shot-river.png'),
         mimeType: 'image/png',
         width: 1600,
         height: 900,
@@ -60,7 +62,7 @@ export function buildRecipeProject(
       {
         id: 'asset-scene-result-03',
         kind: 'image',
-        url: '/demo/shot-rooftop.png',
+        url: withAppBase('/demo/shot-rooftop.png'),
         mimeType: 'image/png',
         width: 1600,
         height: 900,
@@ -68,7 +70,7 @@ export function buildRecipeProject(
       {
         id: 'asset-scene-result-04',
         kind: 'image',
-        url: '/demo/character-lin-yuan.png',
+        url: withAppBase('/demo/character-lin-yuan.png'),
         mimeType: 'image/png',
         width: 1600,
         height: 900,

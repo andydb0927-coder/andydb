@@ -44,7 +44,7 @@ npm --prefix app run build
 
 ```bash
 cd app
-npm exec vite preview -- --host 127.0.0.1 --port 4173
+npx serve dist -l 4173
 ```
 
 ## 3. SPA 路由回退
@@ -57,6 +57,32 @@ npm exec vite preview -- --host 127.0.0.1 --port 4173
 - `netlify.toml`：发布目录为 `app/dist`，并使用状态码 200 将所有路径回退到 `/index.html`。
 
 其他静态托管服务必须配置等价规则：真实文件优先，其余请求返回 `/index.html`，HTTP 状态码为 200。
+
+GitHub Pages 不支持任意重写规则，因此生产构建还会把最终 `index.html` 复制为 `app/dist/404.html`。直接访问 `/andydb/projects`、`/andydb/project/:projectId` 等深层路径时，Pages 会返回同一份应用入口，React Router 再根据当前 URL 渲染对应页面。
+
+## GitHub Pages
+
+预期站点地址：<https://andydb0927-coder.github.io/andydb/>。
+
+仓库已包含 `.github/workflows/deploy.yml`，工作流行为如下：
+
+1. push 到 `codex/platform-shell-phase` 时触发，也可在 Actions 页面手动运行；
+2. 使用 Node.js 22 和 `app/package-lock.json` 安装锁定依赖；
+3. 强制以 `VITE_GENERATION_MODE=mock` 构建，不读取或调用真实模型 API；
+4. 生成 `app/dist/index.html`、同内容的 `app/dist/404.html`，静态资源路径以 `/andydb/` 开头；
+5. 将 `app/dist` 发布到孤立的 `gh-pages` 分支。
+
+首次启用需要在 GitHub 仓库中打开 **Settings → Pages**，将 Source 设为 **Deploy from a branch**，分支选择 `gh-pages`、目录选择 `/(root)`。后续每次 push 到 `codex/platform-shell-phase` 都会自动更新该分支。
+
+本地模拟 Pages 根路径：
+
+```bash
+cd app
+npm run build
+npx serve dist -l 4173
+```
+
+打开 <http://localhost:4173/> 可检查入口和静态资源；深层路由回退由构建产物中的 `404.html` 提供。线上访问时使用 `/andydb/` 前缀。
 
 ## 4. Vercel 部署步骤
 

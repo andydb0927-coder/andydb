@@ -70,5 +70,7 @@ export const routes: RouteObject[] = [
 ]
 
 export function createAppRouter(): ReturnType<typeof createBrowserRouter> {
-  return createBrowserRouter(routes)
+  return createBrowserRouter(routes, {
+    basename: import.meta.env.BASE_URL,
+  })
 }

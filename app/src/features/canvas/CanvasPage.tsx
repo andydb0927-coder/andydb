@@ -26,6 +26,7 @@ import {
 } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
+import { withAppBase } from '../../app/public-url'
 import { DirectorComposer } from '../director/DirectorComposer'
 import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
@@ -1434,7 +1435,7 @@ export function CanvasPage({
           title: '截图',
           content: `${sourceNode.title} · ${frame}`,
           image: {
-            dataUrl: '/demo/shot-river.png',
+            dataUrl: withAppBase('/demo/shot-river.png'),
             mimeType: 'image/png',
           },
           position: {
