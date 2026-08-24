@@ -183,6 +183,20 @@ export function createWorkflowSnapshot(
   }
 }
 
+export function createCanvasSnapshotDataUrl(
+  project: Project,
+  measurements: Record<string, { width: number; height: number }> = {},
+) {
+  const estimate = estimateCanvasExport(
+    project,
+    'all',
+    { x: 0, y: 0, zoom: 1, width: 1280, height: 720 },
+    measurements,
+  )
+  const svg = renderCanvasSvg(project, estimate, measurements)
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
 function timestampForFilename(now: Date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai',

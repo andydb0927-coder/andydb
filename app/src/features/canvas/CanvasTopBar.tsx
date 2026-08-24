@@ -7,6 +7,8 @@ import {
   ListTree,
   PencilLine,
   Redo2,
+  Send,
+  Share2,
   Undo2,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
@@ -40,6 +42,8 @@ interface CanvasTopBarProps {
   onOpenNodeList(trigger: HTMLButtonElement): void
   onModeChange(mode: WorkspaceMode): void
   onToggleAgent(): void
+  onOpenPublish?(): void
+  onCopyShareLink?(): void
   onOpenCanvasExport?(): void
   onExportWorkflow?(): void
   onImportWorkflow?(): void
@@ -59,6 +63,8 @@ export function CanvasTopBar({
   onOpenNodeList,
   onModeChange,
   onToggleAgent,
+  onOpenPublish,
+  onCopyShareLink,
   onOpenCanvasExport,
   onExportWorkflow,
   onImportWorkflow,
@@ -187,6 +193,18 @@ export function CanvasTopBar({
           </button>
           {shareMenuOpen ? (
             <div className="canvas-top-bar__menu canvas-top-bar__menu--right" role="menu" aria-label="发布与分享菜单">
+              <button type="button" role="menuitem" disabled={!onOpenPublish} onClick={() => {
+                closeShareMenu()
+                onOpenPublish?.()
+              }}>
+                <Send aria-hidden="true" />在LibTV上发布
+              </button>
+              <button type="button" role="menuitem" disabled={!onCopyShareLink} onClick={() => {
+                closeShareMenu()
+                onCopyShareLink?.()
+              }}>
+                <Share2 aria-hidden="true" />复制分享链接
+              </button>
               {projectId ? (
                 <Link role="menuitem" to={`/project/${projectId}/preview`} onClick={() => closeShareMenu()}>预览</Link>
               ) : (
@@ -210,7 +228,7 @@ export function CanvasTopBar({
               }}>
                 <FileUp aria-hidden="true" />导入工作流 JSON
               </button>
-              <p>所有操作仅作用于当前本地项目</p>
+              <p>发布与分享均为当前浏览器本地演示</p>
             </div>
           ) : null}
         </div>

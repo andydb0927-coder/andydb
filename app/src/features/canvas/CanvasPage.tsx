@@ -30,6 +30,9 @@ import { withAppBase } from '../../app/public-url'
 import { DirectorComposer } from '../director/DirectorComposer'
 import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
+import { CommunityRepository, type CommunityWorkRepository } from '../community/community-repository'
+import { PublishWorkDialog, type PublishWorkFormValue } from '../community/PublishWorkDialog'
+import { collectPublishCoverOptions, copyPublishedWorkShareLink } from '../community/publication'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { deriveLibraryRecord } from '../assets/library-model'
 import type { DirectorCommand } from '../director/director-command'
@@ -85,6 +88,8 @@ import {
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { downloadBlob } from '../timeline/timeline-export'
+import { createTimelineProject } from '../timeline/timeline-project'
+import { TimelineRepository, type TimelineProjectRepository } from '../timeline/timeline-repository'
 import {
   CanvasToolbar,
   type CanvasTool,
@@ -101,6 +106,7 @@ import {
 import {
   buildCanvasExportFilename,
   buildWorkflowFilename,
+  createCanvasSnapshotDataUrl,
   createWorkflowSnapshot,
   estimateCanvasExport,
   parseWorkflowImport,
@@ -171,6 +177,10 @@ import {
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
+type CanvasPublicationRepository = Pick<
+  CommunityWorkRepository,
+  'publish' | 'findByProjectId'
+>
 type CanvasLoadState = 'loading' | 'ready' | 'not-found' | 'error'
 type CanvasNodePosition = Project['nodes'][number]['position']
 
@@ -277,6 +287,8 @@ const defaultDatabase = new WirelessCanvasDatabase()
 const defaultRepository = new ProjectRepository(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
+const defaultCommunityRepository = new CommunityRepository(defaultDatabase)
+const defaultTimelineRepository = new TimelineRepository(defaultDatabase)
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
@@ -507,6 +519,8 @@ export interface CanvasPageProps {
   ephemeralGenerationResultStore?: EphemeralGenerationResultStore
   generationPreferenceStore?: GenerationProviderPreferenceStore
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
+  communityRepository?: CanvasPublicationRepository
+  timelineRepository?: Pick<TimelineProjectRepository, 'load'>
 }
 
 export function CanvasPage({
@@ -517,6 +531,8 @@ export function CanvasPage({
   ephemeralGenerationResultStore = defaultEphemeralGenerationResultStore,
   generationPreferenceStore = browserGenerationPreferenceStore,
   collaborationRepository = defaultCollaborationRepository,
+  communityRepository = defaultCommunityRepository,
+  timelineRepository = defaultTimelineRepository,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -532,6 +548,10 @@ export function CanvasPage({
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
+  const publishCoverOptions = useMemo(
+    () => project ? collectPublishCoverOptions(project) : [],
+    [project],
+  )
   const saveStatus = useProjectStore((state) => state.saveStatus)
   const canUndo = useProjectStore((state) => state.past.length > 0)
   const canRedo = useProjectStore((state) => state.future.length > 0)
@@ -615,6 +635,10 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
+  const [publishBusy, setPublishBusy] = useState(false)
+  const [publishError, setPublishError] = useState<string>()
+  const [publishedWorkId, setPublishedWorkId] = useState<string>()
   const ephemeralGenerationResults = useSyncExternalStore(
     ephemeralGenerationResultStore.subscribe,
     ephemeralGenerationResultStore.getSnapshot,
@@ -728,6 +752,10 @@ export function CanvasPage({
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
+    setPublishDialogOpen(false)
+    setPublishBusy(false)
+    setPublishError(undefined)
+    setPublishedWorkId(undefined)
     setCanvasExportSession(undefined)
     setWorkflowImportSession(undefined)
     setPendingRemoteGeneration(undefined)
@@ -756,6 +784,15 @@ export function CanvasPage({
       paneClickRef.current = undefined
     }
   }, [projectId])
+
+  useEffect(() => {
+    if (!project?.id) return
+    let active = true
+    void communityRepository.findByProjectId(project.id).then((work) => {
+      if (active) setPublishedWorkId(work?.status === 'published' ? work.id : undefined)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [communityRepository, project?.id])
 
   useEffect(() => {
     localStorage.setItem(
@@ -4078,6 +4115,63 @@ export function CanvasPage({
     })
   }
 
+  const openPublishDialog = () => {
+    if (!project) return
+    setPublishError(undefined)
+    setPublishDialogOpen(true)
+  }
+
+  const closePublishDialog = () => {
+    if (publishBusy) return
+    setPublishDialogOpen(false)
+    setPublishError(undefined)
+    restorePublishFocus()
+  }
+
+  const publishWork = async (value: PublishWorkFormValue) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    setPublishBusy(true)
+    setPublishError(undefined)
+    try {
+      const timeline =
+        (await timelineRepository.load(currentProject.id)) ??
+        createTimelineProject(currentProject)
+      const measurements =
+        nodeMeasurements.projectId === currentProject.id
+          ? nodeMeasurements.measurements
+          : {}
+      const work = await communityRepository.publish(currentProject, timeline, {
+        ...value,
+        author: '本地创作者',
+        workflowSnapshot: createWorkflowSnapshot(currentProject),
+        canvasSnapshotUrl: createCanvasSnapshotDataUrl(currentProject, measurements),
+      })
+      setPublishedWorkId(work.id)
+      setPublishDialogOpen(false)
+      setGenerationFeedback(`“${work.title}”已发布到本地作品页。`)
+      restorePublishFocus()
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : '本地发布失败，请重试。')
+    } finally {
+      setPublishBusy(false)
+    }
+  }
+
+  const copyShareLink = async () => {
+    if (!publishedWorkId) {
+      setGenerationFeedback('请先完成本地发布，再复制分享链接。')
+      openPublishDialog()
+      return
+    }
+    try {
+      await copyPublishedWorkShareLink(publishedWorkId)
+      setGenerationFeedback('分享链接已复制。本地演示，未发布到云端。')
+    } catch {
+      setGenerationFeedback('复制失败，请检查浏览器剪贴板权限。')
+    }
+  }
+
   const closeCanvasExport = () => {
     setCanvasExportSession(undefined)
     restorePublishFocus()
@@ -4256,6 +4350,8 @@ export function CanvasPage({
         onOpenNodeList={openNodeList}
         onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
+        onOpenPublish={openPublishDialog}
+        onCopyShareLink={() => void copyShareLink()}
         onOpenCanvasExport={openCanvasExport}
         onExportWorkflow={exportWorkflow}
         onImportWorkflow={openWorkflowImport}
@@ -4283,6 +4379,16 @@ export function CanvasPage({
           result={workflowImportSession.result}
           onClose={closeWorkflowImport}
           onConfirm={confirmWorkflowImport}
+        />
+      ) : null}
+      {publishDialogOpen && project ? (
+        <PublishWorkDialog
+          projectTitle={project.title}
+          coverOptions={publishCoverOptions}
+          busy={publishBusy}
+          error={publishError}
+          onClose={closePublishDialog}
+          onSubmit={(value) => void publishWork(value)}
         />
       ) : null}
       <div

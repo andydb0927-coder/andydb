@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { makeProjectFixture } from '../../test/fixtures'
 import {
   buildWorkflowFilename,
+  createCanvasSnapshotDataUrl,
   createWorkflowSnapshot,
   estimateCanvasExport,
   parseWorkflowImport,
@@ -47,6 +48,14 @@ describe('canvas export', () => {
     expect(svg).toContain('viewBox="0 0 800 600"')
     expect(svg).toContain('霜河渡')
     expect(svg).toContain('data-edge-id=')
+  })
+
+  test('builds a durable SVG data URL for a published canvas snapshot', () => {
+    const snapshotUrl = createCanvasSnapshotDataUrl(makeProjectFixture())
+
+    expect(snapshotUrl).toMatch(/^data:image\/svg\+xml;charset=utf-8,/)
+    expect(decodeURIComponent(snapshotUrl)).toContain('<svg')
+    expect(decodeURIComponent(snapshotUrl)).toContain('霜河渡')
   })
 })
 

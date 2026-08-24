@@ -39,6 +39,8 @@ import { CanvasPage } from './CanvasPage'
 import type { CreativeNodeAction } from './node-types'
 import { sortNodesForList } from './NodeListView'
 import { PreviewPage } from '../timeline/PreviewPage'
+import { createPublishedWork } from '../community/community-model'
+import { createTimelineProject } from '../timeline/timeline-project'
 
 interface FlowNodeFixture {
   id: string
@@ -455,6 +457,47 @@ describe('creative canvas', () => {
     expect(
       screen.queryByRole('complementary', { name: '工作流运行面板' }),
     ).not.toBeInTheDocument()
+  })
+
+  test('publishes the current canvas with the selected cover and reusable workflow snapshot', async () => {
+    const user = userEvent.setup()
+    const currentProject = makeCanvasProject()
+    const publish = vi.fn().mockImplementation(async (
+      project: Project,
+      timeline: ReturnType<typeof createTimelineProject>,
+      input: Parameters<typeof createPublishedWork>[2],
+    ) => createPublishedWork(project, timeline, input))
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      communityRepository: {
+        findByProjectId: vi.fn().mockResolvedValue(undefined),
+        publish,
+      },
+      timelineRepository: { load: vi.fn().mockResolvedValue(undefined) },
+    })
+
+    await user.click(screen.getByRole('button', { name: '发布与分享' }))
+    await user.click(screen.getByRole('menuitem', { name: '在LibTV上发布' }))
+    const dialog = screen.getByRole('dialog', { name: '发布作品' })
+    await user.clear(within(dialog).getByRole('textbox', { name: '作品标题' }))
+    await user.type(within(dialog).getByRole('textbox', { name: '作品标题' }), '雨夜追寻 · 发布版')
+    await user.type(within(dialog).getByRole('textbox', { name: '作品简介' }), '画布发布闭环验收。')
+    await user.click(within(dialog).getByRole('button', { name: '发布到本地作品' }))
+
+    await waitFor(() => expect(publish).toHaveBeenCalledOnce())
+    expect(publish.mock.calls[0][2]).toMatchObject({
+      title: '雨夜追寻 · 发布版',
+      description: '画布发布闭环验收。',
+      coverUrl: '/demo/character-lin-yuan.png',
+      coverNodeId: 'character',
+      workflowSnapshot: {
+        format: 'wireless-canvas-workflow',
+        version: 1,
+        project: currentProject,
+      },
+    })
+    expect(publish.mock.calls[0][2].canvasSnapshotUrl).toMatch(/^data:image\/svg\+xml/)
+    expect(await screen.findByText('“雨夜追寻 · 发布版”已发布到本地作品页。')).toBeVisible()
   })
 
   test('announces a persisted asset attach success from route state', () => {

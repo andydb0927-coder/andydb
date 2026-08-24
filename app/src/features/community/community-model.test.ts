@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import { makeProjectFixture } from '../../test/fixtures'
 import { createTimelineProject } from '../timeline/timeline-project'
+import { createWorkflowSnapshot } from '../canvas/canvas-workflow-export'
 import {
   CommunityPublicationError,
   createPublishedWork,
@@ -68,6 +69,41 @@ describe('community work model', () => {
     timeline.title = '后来修改'
     expect(work.projectSnapshot.title).toBe('霜河渡')
     expect(work.timelineSnapshot.title).toBe('霜河渡剪辑')
+  })
+
+  test('stores local publication metadata and the shared workflow snapshot contract', () => {
+    const project = makeProjectFixture()
+    const timeline = createTimelineProject(project)
+    const workflowSnapshot = createWorkflowSnapshot(
+      project,
+      new Date('2026-08-21T06:00:00.000Z'),
+    )
+
+    const work = createPublishedWork(
+      project,
+      timeline,
+      {
+        title: '雨夜成片',
+        description: '一段关于重逢的本地演示作品。',
+        author: '安迪',
+        tags: ['雨夜'],
+        coverUrl: '/covers/selected-result.png',
+        coverNodeId: 'shot-1',
+        workflowSnapshot,
+        canvasSnapshotUrl: 'data:image/svg+xml;charset=utf-8,%3Csvg%3E',
+      },
+      undefined,
+      environment,
+    )
+
+    expect(work).toMatchObject({
+      description: '一段关于重逢的本地演示作品。',
+      coverUrl: '/covers/selected-result.png',
+      coverNodeId: 'shot-1',
+      workflowSnapshot,
+      canvasSnapshotUrl: 'data:image/svg+xml;charset=utf-8,%3Csvg%3E',
+      localOnly: true,
+    })
   })
 
   test('rejects a timeline without a visual preview source', () => {

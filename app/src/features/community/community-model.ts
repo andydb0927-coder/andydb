@@ -1,4 +1,5 @@
 import type { Project } from '../project/model'
+import type { WorkflowSnapshot } from '../canvas/canvas-workflow-export'
 import {
   getTimelineDuration,
   type TimelineClip,
@@ -23,10 +24,15 @@ export interface PublishedWork {
   id: string
   projectId: string
   title: string
+  description: string
   author: string
   authorVerified?: boolean
   tags: string[]
   coverUrl: string
+  coverNodeId?: string
+  canvasSnapshotUrl?: string
+  workflowSnapshot?: WorkflowSnapshot
+  localOnly: true
   durationSeconds: number
   status: WorkStatus
   publishedAt: string
@@ -39,8 +45,13 @@ export interface PublishedWork {
 
 export interface PublishWorkInput {
   title?: string
+  description?: string
   author: string
   tags: string[]
+  coverUrl?: string
+  coverNodeId?: string
+  canvasSnapshotUrl?: string
+  workflowSnapshot?: WorkflowSnapshot
 }
 
 export interface WorkFilter {
@@ -123,7 +134,7 @@ export function createPublishedWork(
   existing?: PublishedWork,
   environment: CommunityEnvironment = defaultEnvironment,
 ): PublishedWork {
-  const coverUrl = deriveWorkCover(project, timeline)
+  const coverUrl = input.coverUrl?.trim() || deriveWorkCover(project, timeline)
   if (!coverUrl) throw new CommunityPublicationError('missing-visual')
 
   const timestamp = environment.now()
@@ -131,10 +142,15 @@ export function createPublishedWork(
     id: existing?.id ?? environment.randomId(),
     projectId: project.id,
     title: normalizedText(input.title, project.title),
+    description: input.description?.trim() ?? '',
     author: normalizedText(input.author, '本地创作者'),
     authorVerified: existing?.authorVerified ?? false,
     tags: normalizeWorkTags(input.tags),
     coverUrl,
+    coverNodeId: input.coverNodeId,
+    canvasSnapshotUrl: input.canvasSnapshotUrl,
+    workflowSnapshot: input.workflowSnapshot ? clone(input.workflowSnapshot) : undefined,
+    localOnly: true,
     durationSeconds: getTimelineDuration(timeline),
     status: 'published',
     publishedAt: existing?.publishedAt ?? timestamp,

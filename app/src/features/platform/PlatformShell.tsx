@@ -4,6 +4,7 @@ import {
   ClipboardList,
   FolderKanban,
   Home,
+  Images,
   Plus,
   Sparkles,
   Trophy,
@@ -19,6 +20,7 @@ export type PlatformShellMode = 'standard' | 'workspace'
 export const platformNavigation = [
   { to: '/', label: '首页', icon: Home, end: true },
   { to: '/projects', label: '项目', icon: FolderKanban, end: true },
+  { to: '/works', label: '作品', icon: Images, end: true },
   { to: '/agents', label: 'Skills', icon: Sparkles, end: false },
   {
     to: '/challenges',

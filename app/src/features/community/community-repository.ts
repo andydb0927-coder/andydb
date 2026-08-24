@@ -26,6 +26,7 @@ export interface CommunityWorkRepository {
   listPublished(filter: WorkFilter): Promise<PublishedWork[]>
   listMine(): Promise<PublishedWork[]>
   get(workId: string): Promise<PublishedWork | undefined>
+  findByProjectId(projectId: string): Promise<PublishedWork | undefined>
   publish(
     project: Project,
     timeline: TimelineProject,
@@ -93,6 +94,10 @@ export class CommunityRepository implements CommunityWorkRepository {
 
   async get(workId: string): Promise<PublishedWork | undefined> {
     return this.database.publishedWorks.get(workId)
+  }
+
+  async findByProjectId(projectId: string): Promise<PublishedWork | undefined> {
+    return this.database.publishedWorks.where('projectId').equals(projectId).first()
   }
 
   async publish(

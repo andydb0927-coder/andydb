@@ -30,6 +30,12 @@ const ChallengeDetailPage = lazy(() =>
 const WorkDetailPage = lazy(() =>
   import('../features/community/WorkDetailPage').then((m) => ({ default: m.WorkDetailPage })),
 )
+const PublishedWorksPage = lazy(() =>
+  import('../features/community/PublishedWorksPage').then((m) => ({ default: m.PublishedWorksPage })),
+)
+const PublishedWorkViewPage = lazy(() =>
+  import('../features/community/PublishedWorkViewPage').then((m) => ({ default: m.PublishedWorkViewPage })),
+)
 const CreationProcessPage = lazy(() =>
   import('../features/community/CreationProcessPage').then((m) => ({ default: m.CreationProcessPage })),
 )
@@ -53,6 +59,7 @@ export const routes: RouteObject[] = [
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
       { path: '/projects/new', loader: quickCreateProjectLoader },
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
+      { path: '/works', element: withSuspense(<PublishedWorksPage />) },
       { path: '/agents', element: withSuspense(<AgentsPage />) },
       { path: '/challenges', element: withSuspense(<ChallengesPage />) },
       { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
@@ -67,6 +74,7 @@ export const routes: RouteObject[] = [
   },
   { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />) },
   { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />) },
+  { path: '/view/:workId', element: withSuspense(<PublishedWorkViewPage />) },
 ]
 
 export function createAppRouter(): ReturnType<typeof createBrowserRouter> {

@@ -30,6 +30,7 @@ describe('platform shell', () => {
     expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual([
       '首页',
       '项目',
+      '作品',
       'Skills',
       '创作者挑战赛',
     ])
@@ -58,9 +59,10 @@ describe('platform shell', () => {
 
     const homeNavigation = screen.getByRole('navigation', { name: '首页导航' })
     expect(homeNavigation).toBeVisible()
-    expect(within(homeNavigation).getAllByRole('link')).toHaveLength(4)
+    expect(within(homeNavigation).getAllByRole('link')).toHaveLength(5)
     expect(within(homeNavigation).getByRole('link', { name: '首页' })).toHaveAttribute('href', '/')
     expect(within(homeNavigation).getByRole('link', { name: '项目' })).toHaveAttribute('href', '/projects')
+    expect(within(homeNavigation).getByRole('link', { name: '作品' })).toHaveAttribute('href', '/works')
     expect(within(homeNavigation).getByRole('link', { name: 'Skills' })).toHaveAttribute('href', '/agents')
     expect(within(homeNavigation).getByRole('link', { name: '创作者挑战赛' })).toHaveAttribute(
       'href',
@@ -84,6 +86,7 @@ describe('platform shell', () => {
     expect(within(platformNavigation).getAllByRole('link').map((link) => link.textContent)).toEqual([
       '首页',
       '项目',
+      '作品',
       'Skills',
       '创作者挑战赛',
     ])

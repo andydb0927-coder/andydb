@@ -105,6 +105,7 @@ describe('community repository', () => {
     expect(second.title).toBe('重剪版')
     expect(second.metrics).toMatchObject({ views: 1, likes: 1 })
     expect(await community.listMine()).toHaveLength(1)
+    expect((await community.findByProjectId(project.id))?.id).toBe(first.id)
   })
 
   test('persists views, likes, favorites and status changes transactionally', async () => {
