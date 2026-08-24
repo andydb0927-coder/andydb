@@ -44,6 +44,7 @@ import {
 } from './CanvasResourcePanels'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { VideoMediaContextBar } from './VideoContextTools'
+import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -513,11 +514,7 @@ export function WorkspaceSidePanel({
       ) : null}
 
       {panel === 'help' ? (
-        <div className="workspace-side-panel__help">
-          <p>双击空白画布自由生成，或右键选择“添加节点”创建指定内容。</p>
-          <p>选择节点后可使用节点动作或右侧 Agent 继续创作。</p>
-          <p>当前为本地演示工作台，不会调用 Liblib、发布内容或消耗积分。</p>
-        </div>
+        <TutorialQuickGuide />
       ) : null}
     </aside>
   )

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
@@ -253,6 +254,23 @@ test('shows local assets, generation history and the complete four-group shortcu
   expect(panel).toHaveTextContent('键盘：按住 Space 临时平移')
   expect(panel).toHaveTextContent('触控板：双指移动与缩放')
   expect(panel).toHaveTextContent('鼠标：滚轮缩放，抓手模式拖动平移')
+})
+
+test('shows the compact four-category tutorial drawer and links to the full tutorial center', () => {
+  render(
+    <MemoryRouter>
+      <WorkspaceSidePanel panel="help" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />
+    </MemoryRouter>,
+  )
+
+  const drawer = screen.getByRole('complementary', { name: '教程' })
+  for (const category of ['入门', '图片创作', '视频创作', '高级']) {
+    expect(within(drawer).getByRole('heading', { name: category })).toBeVisible()
+  }
+  expect(within(drawer).getByRole('link', { name: '查看完整教程' })).toHaveAttribute(
+    'href',
+    '/tutorials',
+  )
 })
 
 test('exposes independent workspace view controls', async () => {

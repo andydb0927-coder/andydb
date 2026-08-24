@@ -3441,6 +3441,20 @@ describe('creative canvas', () => {
     expect(within(toolbar).getByRole('group', { name: '无线画布工具坞' })).toBeVisible()
   })
 
+  test('opens the tutorial drawer from the canvas dock', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '教程' }))
+
+    const drawer = screen.getByRole('complementary', { name: '教程' })
+    expect(within(drawer).getByRole('heading', { name: '入门' })).toBeVisible()
+    expect(within(drawer).getByRole('link', { name: '查看完整教程' })).toHaveAttribute(
+      'href',
+      '/tutorials',
+    )
+  })
+
   test('opens the blank-canvas context menu and returns focus after Escape', async () => {
     const user = userEvent.setup()
     renderCanvas()

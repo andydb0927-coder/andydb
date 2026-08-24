@@ -95,7 +95,7 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
             </NavLink>
           ))}
         </nav>
-        <Link className="platform-shell__help focus-visible" to="/#help">
+        <Link className="platform-shell__help focus-visible" to="/tutorials">
           <CircleHelp aria-hidden="true" />
           <span>帮助</span>
         </Link>

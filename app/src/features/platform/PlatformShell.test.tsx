@@ -35,7 +35,7 @@ describe('platform shell', () => {
       '创作者挑战赛',
     ])
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
-    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
+    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/tutorials')
 
     await user.click(screen.getByRole('button', { name: '收起平台导航' }))
 
@@ -68,7 +68,7 @@ describe('platform shell', () => {
       'href',
       '/challenges',
     )
-    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/#help')
+    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/tutorials')
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
     expect(screen.queryByRole('link', { name: '故事设定' })).not.toBeInTheDocument()
 
