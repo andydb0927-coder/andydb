@@ -584,7 +584,7 @@ const klingO3VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const kling30TurboVideoSchema: ModelParameterSchema = {
+const kling30VideoSchema: ModelParameterSchema = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -638,11 +638,11 @@ const minimaxH3VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const wan27VideoSchema: ModelParameterSchema = {
+const seedance20VipVideoSchema: ModelParameterSchema = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
-    options: ['Auto', '16:9', '9:16', '1:1'],
+    options: ['Auto', '16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
   },
   duration: {
     type: 'enum',
@@ -654,14 +654,30 @@ const wan27VideoSchema: ModelParameterSchema = {
     defaultValue: '1080P',
     options: ['720P', '1080P'],
   },
+  sound: { type: 'boolean', defaultValue: true },
   resolution: {
     type: 'enum',
     defaultValue: '1920×1080',
     options: ['1280×720', '1920×1080'],
   },
   count: { type: 'enum', defaultValue: '1', options: ['1'] },
+  onlineSearch: { type: 'boolean', defaultValue: true },
   materialValidation: { type: 'boolean', defaultValue: true },
   autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const seedance20MiniVideoSchema: ModelParameterSchema = {
+  ...seedance20VipVideoSchema,
+  quality: {
+    type: 'enum',
+    defaultValue: '720P',
+    options: ['720P', '1080P'],
+  },
+  resolution: {
+    type: 'enum',
+    defaultValue: '1280×720',
+    options: ['1280×720', '1920×1080'],
+  },
 }
 
 export interface LiblibModelCatalogEntry {
@@ -694,28 +710,11 @@ export const liblibImageModelCatalog: readonly LiblibModelCatalogEntry[] = [
 
 export const liblibVideoModelCatalog: readonly LiblibModelCatalogEntry[] = [
   { providerId: 'mock-seedance-25', modelName: 'Seedance 2.5', description: '全能参考、最长30s音画同步', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-20-vip', modelName: 'Seedance 2.0 VIP', description: '全能参考、最长15s音画同步、会员通道', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
+  { providerId: 'mock-seedance-20-mini', modelName: 'Seedance 2.0 Mini', description: '高性价比、最长15s音画同步', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
   { providerId: 'mock-kling-o3', modelName: 'Kling O3', description: '视频编辑、参考一致性、音画同出与多镜头', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-kling-30-turbo', modelName: 'Kling 3.0 Turbo', description: '高质感、多镜头视频生成', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-kling-video', modelName: '可灵O1', description: '4K、全能参考、视频编辑与首尾帧', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'kling-api', modelName: '可灵V2.6', description: '官方 API 文生视频与音画同步', latency: '2min', capabilities: ['text-to-video'] },
+  { providerId: 'mock-kling-30', modelName: 'Kling 3.0', description: '高质感、多镜头视频生成', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
   { providerId: 'mock-minimax-h3', modelName: 'Minimax H3', description: '全模态输入、多参数控制、商用级', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-wan-27', modelName: 'Wan 2.7', description: '全能参考，可改画面、剧情与环境', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-wan-26', modelName: 'Wan 2.6', description: '音画同步、视频参考与首帧驱动', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-motion-31-rapid', modelName: '全能视频模型3.1快速版', description: '快速生成、多图参考与首尾帧', latency: '1min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-motion-31', modelName: '全能视频模型3.1', description: '高质量生成、多图参考与首尾帧', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-seedance-video', modelName: '即梦1.5 Pro', description: '音画同步、首帧驱动与1080P', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-seedance-pro', modelName: '即梦 Pro', description: '高精度提示词与1080P', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-seedance-lite', modelName: '即梦 Lite', description: '轻量快速视频生成', latency: '1min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-wan-motion-control', modelName: '动作迁移', description: '图片主体与参考视频动作迁移', latency: '3min', capabilities: ['image-to-video'] },
-  { providerId: 'mock-mj-video', modelName: 'MJ Video', description: '文生视频、首尾帧与循环控制', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-hailuo-23-fast', modelName: 'Hailuo-2.3 Fast', description: '动作、表情与镜头快速版', latency: '1min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-hailuo-o2', modelName: 'Hailuo-O2', description: '1080P、首尾帧与稳定运动', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-hailuo-23', modelName: 'Hailuo-2.3', description: '动作、表情与镜头高质感版', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-vidu-q3-pro', modelName: 'Vidu Q3 Pro', description: '文生视频与单图参考精确控制', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-pixverse-55', modelName: 'Pixverse V5.5', description: '丰富特效玩法与图生视频', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-scene-2', modelName: '多镜头视频模型', description: '多镜头叙事与镜头连续性', latency: '2min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-scene-2-ultra', modelName: '多镜头视频模型Pro', description: '高质量多镜头叙事与连续性', latency: '3min', capabilities: ['text-to-video', 'image-to-video'] },
-  { providerId: 'mock-omnihuman-15', modelName: 'OmniHuman 1.5', description: '人物图片与音频驱动数字人视频', latency: '3min', capabilities: ['image-to-video'] },
 ] as const
 
 function abortError(message: string) {
@@ -846,55 +845,43 @@ function imageCatalogProvider(entry: LiblibModelCatalogEntry) {
 
 function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
   const seedance25 = entry.providerId === 'mock-seedance-25'
+  const seedance20Vip = entry.providerId === 'mock-seedance-20-vip'
+  const seedance20Mini = entry.providerId === 'mock-seedance-20-mini'
   const klingO3 = entry.providerId === 'mock-kling-o3'
-  const kling30Turbo = entry.providerId === 'mock-kling-30-turbo'
+  const kling30 = entry.providerId === 'mock-kling-30'
   const minimaxH3 = entry.providerId === 'mock-minimax-h3'
-  const wan27 = entry.providerId === 'mock-wan-27'
-  const klingO1 = entry.providerId === 'mock-kling-video'
-  const seedanceDefault = entry.providerId === 'mock-seedance-video'
-  const motion31 = entry.providerId.startsWith('mock-motion-31')
-  const omniHuman = entry.providerId === 'mock-omnihuman-15'
-  const imageOnly =
-    entry.capabilities.includes('image-to-video') &&
-    !entry.capabilities.includes('text-to-video')
-  const supportedVideoModes: readonly VideoGenerationMode[] = omniHuman
-    ? ['图生视频', '图片参考']
-    : imageOnly
-      ? ['图生视频', '首尾帧', '图片参考']
-      : ['文生视频', '全能参考', '图生视频', '首尾帧', '图片参考']
+  const supportedVideoModes: readonly VideoGenerationMode[] = [
+    '文生视频',
+    '全能参考',
+    '图生视频',
+    '首尾帧',
+    '图片参考',
+  ]
   const modelNotice =
     seedance25
       ? '全能参考、最长 30 秒音画同步，预计 2 分钟。'
-      : klingO3
-        ? '支持视频编辑、参考一致性、音画同出与多镜头，预计 3 分钟。'
-        : kling30Turbo
-          ? '高质感、多镜头生成，预计 3 分钟。'
-          : minimaxH3
-            ? '全模态输入、多参数控制、商用级，预计 2 分钟。'
-            : wan27
-              ? '全能参考，可改画面、剧情与环境，预计 3 分钟。'
-              : klingO1
-      ? '支持 4K、全能参考、视频编辑与首尾帧。'
-      : entry.providerId === 'mock-wan-26'
-        ? '支持音画同步、视频参考与首帧驱动。'
-        : motion31
-          ? '支持文生视频、单图、多图参考与首尾帧。'
-          : omniHuman
-            ? '数字人模式：请添加人物图片和驱动音频。'
-            : undefined
+      : seedance20Vip
+        ? '全能参考、最长 15 秒音画同步、会员通道，预计 2 分钟。'
+        : seedance20Mini
+          ? '高性价比、最长 15 秒音画同步，预计 2 分钟。'
+          : klingO3
+            ? '支持视频编辑、参考一致性、音画同出与多镜头，预计 3 分钟。'
+            : kling30
+              ? '高质感、多镜头生成，预计 3 分钟。'
+              : minimaxH3
+                ? '全模态输入、多参数控制、商用级，预计 2 分钟。'
+                : undefined
   const parameterSchema = seedance25
     ? seedance25VideoSchema
-    : klingO3
-      ? klingO3VideoSchema
-      : kling30Turbo
-        ? kling30TurboVideoSchema
-        : minimaxH3
-          ? minimaxH3VideoSchema
-          : wan27
-            ? wan27VideoSchema
-            : klingO1
-              ? { ...videoSchema, multiShot: { type: 'boolean' as const, defaultValue: true } }
-              : seedanceVideoSchema
+    : seedance20Vip
+      ? seedance20VipVideoSchema
+      : seedance20Mini
+        ? seedance20MiniVideoSchema
+        : klingO3
+          ? klingO3VideoSchema
+          : kling30
+            ? kling30VideoSchema
+            : minimaxH3VideoSchema
   const config = {
     id: entry.providerId,
     name: 'Mock Studio',
@@ -902,7 +889,7 @@ function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
     capabilities: entry.capabilities,
     parameterSchema,
     pricing: {
-      amount: seedanceDefault ? 135 : 24,
+      amount: 24,
       currency: 'credits' as const,
       unit: 'generation' as const,
     },
@@ -1002,11 +989,8 @@ export function createDefaultProviderRegistry(
       ],
       officialApiEndpoint: 'mock://local/text-llm',
     }),
-    ...liblibVideoModelCatalog.map((entry) =>
-      entry.providerId === 'kling-api'
-        ? createKlingLiveProvider(options.kling)
-        : videoCatalogProvider(entry),
-    ),
+    ...liblibVideoModelCatalog.map(videoCatalogProvider),
+    createKlingLiveProvider(options.kling),
     demoProvider({
       id: 'mock-audio',
       name: 'Mock Studio',

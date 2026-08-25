@@ -42,8 +42,12 @@ describe('model provider registry', () => {
         'mock-mj-image',
         'mock-tongyi-image',
         'mock-text-llm',
-        'mock-kling-video',
-        'mock-seedance-video',
+        'mock-seedance-25',
+        'mock-seedance-20-vip',
+        'mock-seedance-20-mini',
+        'mock-kling-o3',
+        'mock-kling-30',
+        'mock-minimax-h3',
         'mock-audio',
         'kling-api',
         'seedance-api',
@@ -72,19 +76,19 @@ describe('model provider registry', () => {
       capabilities: ['text-to-video'],
       officialApiEndpoint: 'https://api.klingai.com/text-to-video/kling-2.6',
     })
-    expect(registry.require('mock-seedance-video')).toMatchObject({
-      modelName: '即梦1.5 Pro',
+    expect(registry.require('mock-seedance-25')).toMatchObject({
+      modelName: 'Seedance 2.5',
       parameterSchema: {
         aspectRatio: { type: 'enum', defaultValue: '16:9' },
         duration: { type: 'enum', defaultValue: '5' },
-        quality: { type: 'enum', defaultValue: '720P' },
+        quality: { type: 'enum', defaultValue: '1080P' },
         sound: { type: 'boolean', defaultValue: true },
         count: { type: 'enum', defaultValue: '1' },
         onlineSearch: { type: 'boolean', defaultValue: true },
         materialValidation: { type: 'boolean', defaultValue: true },
         autoLink: { type: 'boolean', defaultValue: true },
       },
-      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
+      pricing: { amount: 24, currency: 'credits', unit: 'generation' },
     })
     expect(registry.require('mock-text-llm')).toMatchObject({
       modelName: '文本 LLM',
@@ -105,7 +109,7 @@ describe('model provider registry', () => {
     })
   })
 
-  test('mirrors the audited LibLib image and video model catalogs in selector order', () => {
+  test('publishes only the approved six video mocks in flagship order and retains integrations', () => {
     const registry = createDefaultProviderRegistry()
     const image = registry.matching(['text-to-image', 'image-to-image'])
     const video = registry.matching(['text-to-video', 'image-to-video'])
@@ -114,50 +118,54 @@ describe('model provider registry', () => {
     expect(image.map(({ modelName }) => modelName)).toEqual(
       liblibImageModelCatalog.map(({ modelName }) => modelName),
     )
-    expect(liblibVideoModelCatalog).toHaveLength(23)
+    expect(liblibVideoModelCatalog).toHaveLength(6)
     expect(liblibVideoModelCatalog.map(({ modelName }) => modelName)).toEqual([
       'Seedance 2.5',
+      'Seedance 2.0 VIP',
+      'Seedance 2.0 Mini',
       'Kling O3',
-      'Kling 3.0 Turbo',
-      '可灵O1',
-      '可灵V2.6',
+      'Kling 3.0',
       'Minimax H3',
-      'Wan 2.7',
-      'Wan 2.6',
-      '全能视频模型3.1快速版',
-      '全能视频模型3.1',
-      '即梦1.5 Pro',
-      '即梦 Pro',
-      '即梦 Lite',
-      '动作迁移',
-      'MJ Video',
-      'Hailuo-2.3 Fast',
-      'Hailuo-O2',
-      'Hailuo-2.3',
-      'Vidu Q3 Pro',
-      'Pixverse V5.5',
-      '多镜头视频模型',
-      '多镜头视频模型Pro',
-      'OmniHuman 1.5',
     ])
-    expect(video.map(({ modelName }) => modelName)).toEqual(
-      liblibVideoModelCatalog.map(({ modelName }) => modelName),
-    )
-    expect(video.map(({ id }) => id)).not.toEqual(
-      expect.arrayContaining([
-        'mock-kling-21',
-        'mock-kling-25',
-        'mock-wan-22',
-        'mock-wan-25',
-        'mock-vidu-q2',
-        'mock-vidu-q2-pro',
-        'mock-vidu-q2-turbo',
-        'mock-pixverse-5',
-        'mock-motion-3',
-        'mock-motion-3-rapid',
-      ]),
+    expect(video.map(({ id }) => id)).toEqual([
+      'mock-seedance-25',
+      'mock-seedance-20-vip',
+      'mock-seedance-20-mini',
+      'mock-kling-o3',
+      'mock-kling-30',
+      'mock-minimax-h3',
+      'kling-api',
+    ])
+    const retiredIds = [
+      'mock-kling-30-turbo',
+      'mock-wan-27',
+      'mock-wan-26',
+      'mock-hailuo-23',
+      'mock-hailuo-23-fast',
+      'mock-hailuo-o2',
+      'mock-vidu-q3-pro',
+      'mock-pixverse-55',
+      'mock-omnihuman-15',
+      'mock-mj-video',
+    ]
+    expect(registry.list().map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining(retiredIds),
     )
     expect(registry.require('kling-api')).toMatchObject({ kind: 'live' })
+    expect(registry.require('seedance-api')).toMatchObject({ kind: 'placeholder' })
+    expect(registry.require('tongyi-api')).toMatchObject({ kind: 'placeholder' })
+    expect(
+      registry
+        .list()
+        .filter(
+          ({ kind, capabilities }) =>
+            kind === 'demo' &&
+            capabilities.some((capability) =>
+              capability === 'text-to-video' || capability === 'image-to-video',
+            ),
+        )
+        .map(({ id }) => id),
+    ).toEqual(liblibVideoModelCatalog.map(({ providerId }) => providerId))
   })
 
   test('publishes model-specific image capabilities and narrowed parameters', () => {
@@ -214,6 +222,24 @@ describe('model provider registry', () => {
         sound: { type: 'boolean', defaultValue: true },
       },
     })
+    expect(registry.require('mock-seedance-20-vip')).toMatchObject({
+      modelName: 'Seedance 2.0 VIP',
+      modelNotice: '全能参考、最长 15 秒音画同步、会员通道，预计 2 分钟。',
+      parameterSchema: {
+        duration: { type: 'enum', defaultValue: '5', options: ['5', '10', '15'] },
+        quality: { type: 'enum', defaultValue: '1080P', options: ['720P', '1080P'] },
+        sound: { type: 'boolean', defaultValue: true },
+      },
+    })
+    expect(registry.require('mock-seedance-20-mini')).toMatchObject({
+      modelName: 'Seedance 2.0 Mini',
+      modelNotice: '高性价比、最长 15 秒音画同步，预计 2 分钟。',
+      parameterSchema: {
+        duration: { type: 'enum', defaultValue: '5', options: ['5', '10', '15'] },
+        quality: { type: 'enum', defaultValue: '720P', options: ['720P', '1080P'] },
+        sound: { type: 'boolean', defaultValue: true },
+      },
+    })
     expect(registry.require('mock-kling-o3')).toMatchObject({
       modelName: 'Kling O3',
       modelNotice: '支持视频编辑、参考一致性、音画同出与多镜头，预计 3 分钟。',
@@ -224,8 +250,8 @@ describe('model provider registry', () => {
         multiShot: { type: 'boolean', defaultValue: true },
       },
     })
-    expect(registry.require('mock-kling-30-turbo')).toMatchObject({
-      modelName: 'Kling 3.0 Turbo',
+    expect(registry.require('mock-kling-30')).toMatchObject({
+      modelName: 'Kling 3.0',
       modelNotice: '高质感、多镜头生成，预计 3 分钟。',
       capabilities: ['text-to-video', 'image-to-video'],
       parameterSchema: {
@@ -233,7 +259,7 @@ describe('model provider registry', () => {
         multiShot: { type: 'boolean', defaultValue: true },
       },
     })
-    expect(registry.require('mock-kling-30-turbo').parameterSchema.sound).toBeUndefined()
+    expect(registry.require('mock-kling-30').parameterSchema.sound).toBeUndefined()
     expect(registry.require('mock-minimax-h3')).toMatchObject({
       modelName: 'Minimax H3',
       modelNotice: '全模态输入、多参数控制、商用级，预计 2 分钟。',
@@ -242,36 +268,6 @@ describe('model provider registry', () => {
         duration: { type: 'enum', defaultValue: '5', options: ['5', '10'] },
         sound: { type: 'boolean', defaultValue: true },
       },
-    })
-    expect(registry.require('mock-wan-27')).toMatchObject({
-      modelName: 'Wan 2.7',
-      modelNotice: '全能参考，可改画面、剧情与环境，预计 3 分钟。',
-      capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: {
-        duration: { type: 'enum', defaultValue: '5', options: ['5', '10', '15'] },
-      },
-    })
-    expect(registry.require('mock-wan-27').parameterSchema.sound).toBeUndefined()
-
-    expect(registry.require('mock-kling-video')).toMatchObject({
-      modelName: '可灵O1',
-      modelNotice: '支持 4K、全能参考、视频编辑与首尾帧。',
-      supportedVideoModes: ['文生视频', '全能参考', '图生视频', '首尾帧', '图片参考'],
-    })
-    expect(registry.require('mock-wan-26')).toMatchObject({
-      modelNotice: '支持音画同步、视频参考与首帧驱动。',
-    })
-    expect(registry.require('mock-motion-31')).toMatchObject({
-      modelNotice: '支持文生视频、单图、多图参考与首尾帧。',
-    })
-    expect(registry.require('mock-omnihuman-15')).toMatchObject({
-      modelNotice: '数字人模式：请添加人物图片和驱动音频。',
-      supportedVideoModes: ['图生视频', '图片参考'],
-    })
-    expect(registry.require('mock-wan-motion-control')).toMatchObject({
-      modelName: '动作迁移',
-      kind: 'demo',
-      supportedVideoModes: ['图生视频', '首尾帧', '图片参考'],
     })
   })
 
@@ -283,9 +279,10 @@ describe('model provider registry', () => {
     expect(image.map(({ id }) => id)).toEqual(
       liblibImageModelCatalog.map(({ providerId }) => providerId),
     )
-    expect(video.map(({ id }) => id)).toEqual(
-      liblibVideoModelCatalog.map(({ providerId }) => providerId),
-    )
+    expect(video.map(({ id }) => id)).toEqual([
+      ...liblibVideoModelCatalog.map(({ providerId }) => providerId),
+      'kling-api',
+    ])
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
   })
 
@@ -424,7 +421,7 @@ describe('model provider registry', () => {
         nodeId: 'video-1',
         operation: 'regenerate',
         targetKind: 'video',
-        providerId: 'mock-seedance-video',
+        providerId: 'mock-seedance-20-vip',
         prompt: '雨夜横移镜头',
         referenceAssets: [],
       },
@@ -435,9 +432,9 @@ describe('model provider registry', () => {
     await expect(pending).resolves.toMatchObject({
       asset: { kind: 'video', durationSeconds: 5 },
       usage: {
-        providerId: 'mock-seedance-video',
-        modelName: '即梦1.5 Pro',
-        cost: 135,
+        providerId: 'mock-seedance-20-vip',
+        modelName: 'Seedance 2.0 VIP',
+        cost: 24,
       },
     })
   })
@@ -447,7 +444,7 @@ describe('model provider registry', () => {
     const registry = createDefaultProviderRegistry()
     const progress: number[] = []
     const pending = registry.export(
-      'mock-kling-video',
+      'mock-kling-o3',
       { projectId: 'project-preview', settings: exportSettings },
       {
         signal: new AbortController().signal,
@@ -459,7 +456,7 @@ describe('model provider registry', () => {
     await expect(pending).resolves.toMatchObject({
       exportJobId: 'demo-export-project-preview',
       downloadUrl: '/demo/exports/project-preview.mp4',
-      providerId: 'mock-kling-video',
+      providerId: 'mock-kling-o3',
       providerName: 'Mock Studio',
       cost: 24,
     })

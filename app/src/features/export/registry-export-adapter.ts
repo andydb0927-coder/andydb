@@ -14,7 +14,7 @@ export class RegistryExportAdapter implements ExportAdapter {
 
   constructor(
     projectId: string,
-    providerId = 'mock-kling-video',
+    providerId = 'mock-kling-o3',
     registry: ProviderRegistry = defaultProviderRegistry,
   ) {
     this.projectId = projectId

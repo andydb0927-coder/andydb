@@ -168,14 +168,14 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
   expect(model).toHaveValue('mock-seedance-25')
-  expect(within(model).getAllByRole('option')).toHaveLength(23)
+  expect(within(model).getAllByRole('option')).toHaveLength(7)
   expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.5.*演示/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Mock Studio.*可灵O1.*24 积分\/次.*演示/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /Mock Studio.*Kling O3.*24 积分\/次.*演示/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Kling.*可灵开发验证配置未完成/ })).toBeDisabled()
   expect(within(panel).getByText('可灵开发验证配置未完成')).toBeVisible()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
-  await user.selectOptions(model, 'mock-kling-video')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-video')
+  await user.selectOptions(model, 'mock-kling-o3')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-o3')
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeEnabled()
@@ -226,16 +226,16 @@ test('recomputes video defaults, price, and advanced switches from the selected 
 
   view.rerender(renderVideo({
     ...data,
-    node: { ...data.node, modelProviderId: 'mock-kling-video' },
+    node: { ...data.node, modelProviderId: 'mock-kling-30' },
   }))
 
-  expect(within(panel).getByText('16:9 · 3s · 1个 · 标准')).toBeVisible()
-  expect(within(panel).getByLabelText('声音')).toHaveValue('关闭')
+  expect(within(panel).getByText('16:9 · 5s · 1个 · 高清')).toBeVisible()
+  expect(within(panel).queryByLabelText('声音')).not.toBeInTheDocument()
   expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
   expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
-  expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
+  expect(within(panel).getByLabelText('自动校验素材')).toBeChecked()
 })
 
 test('resolves the selected provider from the persisted generation config before the legacy node field', () => {
@@ -273,10 +273,10 @@ test('omits an empty quality value from the reordered video summary', () => {
   const data = makeData(true)
   data.node = {
     ...data.node,
-    modelProviderId: 'mock-kling-video',
+    modelProviderId: 'mock-kling-30',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'mock-kling-video',
+      providerId: 'mock-kling-30',
       parameters: {
         aspectRatio: '16:9',
         duration: '3',
@@ -304,52 +304,56 @@ test('groups current LibTV video providers and removes superseded model versions
     '官方 API 已接（开发直连）',
     '本地演示',
   ])
-  expect(within(model).getAllByRole('option')).toHaveLength(23)
+  expect(within(model).getAllByRole('option')).toHaveLength(7)
   const localOptions = Array.from(
     model.querySelector('optgroup[label="本地演示"]')?.querySelectorAll('option') ?? [],
     ({ text }) => text,
   )
-  expect(localOptions.slice(0, 6)).toEqual([
+  expect(localOptions).toEqual([
     expect.stringContaining('Seedance 2.5'),
+    expect.stringContaining('Seedance 2.0 VIP'),
+    expect.stringContaining('Seedance 2.0 Mini'),
     expect.stringContaining('Kling O3'),
-    expect.stringContaining('Kling 3.0 Turbo'),
-    expect.stringContaining('可灵O1'),
+    expect.stringContaining('Kling 3.0'),
     expect.stringContaining('Minimax H3'),
-    expect.stringContaining('Wan 2.7'),
   ])
   for (const retiredId of [
-    'mock-kling-21',
-    'mock-kling-25',
-    'mock-wan-22',
-    'mock-wan-25',
-    'mock-vidu-q2',
-    'mock-pixverse-5',
+    'mock-kling-30-turbo',
+    'mock-wan-27',
+    'mock-wan-26',
+    'mock-hailuo-23',
+    'mock-hailuo-23-fast',
+    'mock-hailuo-o2',
+    'mock-vidu-q3-pro',
+    'mock-pixverse-55',
+    'mock-omnihuman-15',
+    'mock-mj-video',
   ]) {
     expect(model.querySelector(`option[value="${retiredId}"]`)).not.toBeInTheDocument()
   }
-  await user.selectOptions(model, 'mock-wan-26')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-wan-26')
+  await user.selectOptions(model, 'mock-seedance-20-vip')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-20-vip')
 
   view.rerender(renderVideo({
     ...data,
     node: {
       ...data.node,
-      modelProviderId: 'mock-wan-26',
+      modelProviderId: 'mock-seedance-20-vip',
       generationConfig: {
         targetKind: 'video',
-        providerId: 'mock-wan-26',
+        providerId: 'mock-seedance-20-vip',
         parameters: {},
         referenceAssets: [],
       },
     },
   }))
   expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
-    '音画同步、视频参考与首帧驱动',
+    '会员通道',
   )
   await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
   expect(
     within(panel).getByRole('combobox', { name: '时长' }).querySelectorAll('option'),
-  ).toHaveLength(12)
+  ).toHaveLength(3)
   expect(within(panel).getByRole('option', { name: '15 秒' })).toBeVisible()
 })
 
@@ -379,10 +383,10 @@ test('switches an unsupported mode to the first mode supported by the selected m
   data.providerRegistry = registry
   data.node = {
     ...data.node,
-    modelProviderId: 'mock-seedance-video',
+    modelProviderId: 'mock-seedance-25',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'mock-seedance-video',
+      providerId: 'mock-seedance-25',
       parameters: { generationMode: '全能参考' },
       referenceAssets: [],
     },

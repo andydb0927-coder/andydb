@@ -3026,7 +3026,7 @@ describe('creative canvas', () => {
     const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
     await user.selectOptions(
       within(panel).getByRole('combobox', { name: '模型' }),
-      'mock-kling-video',
+      'mock-kling-o3',
     )
 
     expect(
@@ -3034,16 +3034,18 @@ describe('creative canvas', () => {
         .getState()
         .activeProject?.nodes.find(({ id }) => id === 'video'),
     ).toMatchObject({
-      modelProviderId: 'mock-kling-video',
+      modelProviderId: 'mock-kling-o3',
       generationConfig: {
         targetKind: 'video',
-        providerId: 'mock-kling-video',
+        providerId: 'mock-kling-o3',
         parameters: {
           aspectRatio: '16:9',
-          duration: '3',
-          quality: '标准',
-          sound: false,
+          duration: '5',
+          quality: '高清',
+          sound: true,
           count: '1',
+          multiShot: true,
+          materialValidation: true,
           autoLink: true,
         },
       },
@@ -3056,13 +3058,15 @@ describe('creative canvas', () => {
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       nodeId: 'video',
       targetKind: 'video',
-      providerId: 'mock-kling-video',
+      providerId: 'mock-kling-o3',
       parameters: {
         aspectRatio: '16:9',
-        duration: '3',
-        quality: '标准',
-        sound: false,
+        duration: '5',
+        quality: '高清',
+        sound: true,
         count: '1',
+        multiShot: true,
+        materialValidation: true,
         autoLink: true,
       },
     })
@@ -3228,7 +3232,7 @@ describe('creative canvas', () => {
             })),
             generationConfig: {
               targetKind: 'video',
-              providerId: 'mock-seedance-video',
+              providerId: 'mock-seedance-25',
               parameters: { generationMode: '文生视频' },
               referenceAssets: [],
             },
@@ -3246,7 +3250,7 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     await user.click(
-      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
+      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
     )
 
     expect(start).not.toHaveBeenCalled()
