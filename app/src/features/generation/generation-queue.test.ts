@@ -195,7 +195,7 @@ describe('generation queue lifecycle', () => {
         mimeType: 'video/mp4',
         width: 1280,
         height: 720,
-        durationSeconds: 3,
+        durationSeconds: 5,
       },
     })
   })

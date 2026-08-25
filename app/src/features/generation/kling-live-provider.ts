@@ -185,7 +185,7 @@ export function createKlingLiveProvider(
   const provider: ModelProvider = {
     id: 'kling-api',
     name: 'Kling',
-    modelName: modelId || 'Kling 2.6 官方 API',
+    modelName: '可灵V2.6',
     kind: 'live',
     ...(enabled ? {} : { disabledReason: configurationError }),
     capabilities: ['text-to-video'],

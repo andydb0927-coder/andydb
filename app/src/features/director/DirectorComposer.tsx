@@ -80,7 +80,7 @@ function defaultPreferences(registry: ProviderRegistry): AgentPreferences {
       imageProviders.find(({ kind }) => kind === 'demo')?.id ??
       '',
     videoProviderId:
-      videoProviders.find(({ id }) => id === 'mock-kling-video')?.id ??
+      videoProviders.find(({ id }) => id === 'mock-seedance-25')?.id ??
       videoProviders.find(({ kind }) => kind === 'demo')?.id ??
       '',
     generationMode: 'manual',

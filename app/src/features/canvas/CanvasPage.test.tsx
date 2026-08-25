@@ -976,11 +976,11 @@ describe('creative canvas', () => {
     expect(video.kind).toBe('video')
     expect(video.generationConfig).toMatchObject({
       targetKind: 'video',
-      providerId: 'mock-seedance-video',
+      providerId: 'mock-seedance-25',
       parameters: {
         aspectRatio: '16:9',
         duration: '5',
-        quality: '720P',
+        quality: '1080P',
         sound: true,
         count: '1',
         onlineSearch: true,
@@ -2905,6 +2905,54 @@ describe('creative canvas', () => {
     })
   })
 
+  test('upgrades a retired video provider to the current default before editing parameters', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = project.nodes.map((node) =>
+      node.id === 'video'
+        ? {
+            ...node,
+            modelProviderId: 'mock-kling-21',
+            generationConfig: {
+              targetKind: 'video',
+              providerId: 'mock-kling-21',
+              parameters: { duration: '5', generationMode: '图生视频' },
+              referenceAssets: [],
+            },
+          }
+        : node,
+    )
+    act(() => activate(project))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: '视频片段' }))
+    const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
+    expect(within(panel).getByRole('combobox', { name: '模型' })).toHaveValue(
+      'mock-seedance-25',
+    )
+    expect(
+      within(panel).queryByRole('option', { name: /Kling 2\.1/ }),
+    ).not.toBeInTheDocument()
+
+    const updateParameters = latestFlowProps?.nodes.find(({ id }) => id === 'video')
+      ?.data.onUpdateVideoGenerationParameters as
+      | ((parameters: { duration: string }) => void)
+      | undefined
+    act(() => updateParameters?.({ duration: '10' }))
+
+    expect(
+      useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'video'),
+    ).toMatchObject({
+      modelProviderId: 'mock-seedance-25',
+      generationConfig: {
+        providerId: 'mock-seedance-25',
+        parameters: { duration: '10' },
+      },
+    })
+  })
+
   test('does not run Enter generation when the selected node has neither prompt nor media', async () => {
     const project = makeCanvasProject()
     const blankImage: Project['nodes'][number] = {
@@ -3035,7 +3083,7 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     await user.click(
-      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
+      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
     )
 
     expect(start).not.toHaveBeenCalled()
@@ -4233,7 +4281,7 @@ describe('canvas top bar', () => {
     const agent = screen.getByRole('complementary', { name: 'Agent 工作区' })
     expect(within(agent).getByRole('toolbar', { name: 'Agent 对话工具' })).toBeVisible()
     expect(within(agent).getByRole('combobox', { name: '图片模型' })).toHaveValue('mock-mj-image')
-    expect(within(agent).getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-kling-video')
+    expect(within(agent).getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-seedance-25')
 
     await user.click(within(agent).getByRole('button', { name: '添加 @ 引用' }))
     const references = within(agent).getByRole('menu', { name: '可引用的画布上下文' })

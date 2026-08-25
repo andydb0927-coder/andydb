@@ -223,7 +223,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   ])
   const selectedProvider =
     providers.find(({ id }) => id === data.node.modelProviderId) ??
-    providers.find(({ id }) => id === 'mock-seedance-video') ??
+    providers.find(({ id }) => id === 'mock-seedance-25') ??
     providers.find(({ kind }) => kind === 'demo')!
   const providerDefaults = providerDefaultParameters(selectedProvider)
   const savedParameters =

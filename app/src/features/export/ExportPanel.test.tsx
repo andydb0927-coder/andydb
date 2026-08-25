@@ -152,7 +152,7 @@ describe('export panel', () => {
     await act(() => vi.advanceTimersByTimeAsync(1800))
 
     const job = screen.getByRole('listitem', { name: '导出任务 1' })
-    expect(job).toHaveTextContent('Mock Studio · Kling O3')
+    expect(job).toHaveTextContent('Mock Studio · 可灵O1')
     expect(job).toHaveTextContent('消耗 24 积分')
   })
 })

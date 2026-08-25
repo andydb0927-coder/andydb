@@ -146,7 +146,7 @@ test('renders an empty selected video as a Liblib media card with a separate com
   expect(composer.parentElement).toHaveClass('creative-node-composer')
   expect(within(composer).getByRole('toolbar', { name: '视频主操作' })).toBeVisible()
   expect(within(composer).getByLabelText('生成模式')).toHaveValue('全能参考')
-  expect(within(composer).getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
+  expect(within(composer).getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
 })
 
 test('renders the verified video generation controls, disabled modes, and cost', async () => {
@@ -167,10 +167,10 @@ test('renders the verified video generation controls, disabled modes, and cost',
 
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
-  expect(model).toHaveValue('mock-seedance-video')
-  expect(within(model).getAllByRole('option')).toHaveLength(33)
-  expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.0 VIP.*135 积分\/次.*演示/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Mock Studio.*Kling O3.*24 积分\/次.*演示/ })).toBeEnabled()
+  expect(model).toHaveValue('mock-seedance-25')
+  expect(within(model).getAllByRole('option')).toHaveLength(23)
+  expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.5.*演示/ })).toBeEnabled()
+  expect(within(model).getByRole('option', { name: /Mock Studio.*可灵O1.*24 积分\/次.*演示/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Kling.*可灵开发验证配置未完成/ })).toBeDisabled()
   expect(within(panel).getByText('可灵开发验证配置未完成')).toBeVisible()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
@@ -185,10 +185,10 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
   expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
-  expect(within(panel).getByLabelText('清晰度')).toHaveValue('720P')
+  expect(within(panel).getByLabelText('清晰度')).toHaveValue('1080P')
   expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
   expect(within(panel).getByLabelText('智能分镜')).not.toBeChecked()
-  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
 
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
   expect(within(panel).getByLabelText('联网搜索')).toBeChecked()
@@ -206,7 +206,7 @@ test('submits the current prompt draft through the video generate button', async
   await user.clear(prompt)
   await user.type(prompt, '雨夜霓虹街道，摄影机缓慢向前推进')
   await user.click(
-    within(panel).getByRole('button', { name: '生成视频，预计成本 135' }),
+    within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
   )
 
   expect(data.onLocalVideoGenerate).toHaveBeenCalledWith(
@@ -220,9 +220,9 @@ test('recomputes video defaults, price, and advanced switches from the selected 
   const view = render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
 
-  expect(within(panel).getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
+  expect(within(panel).getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
   expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
-  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
 
   view.rerender(renderVideo({
     ...data,
@@ -262,7 +262,7 @@ test('omits an empty quality value from the reordered video summary', () => {
   expect(screen.queryByText(/1个 ·\s*$/)).not.toBeInTheDocument()
 })
 
-test('groups video providers and exposes Seedance 2.5 thirty-second parameters', async () => {
+test('groups current LibTV video providers and removes superseded model versions', async () => {
   const user = userEvent.setup()
   const data = makeData(true)
   const view = render(renderVideo(data))
@@ -271,35 +271,72 @@ test('groups video providers and exposes Seedance 2.5 thirty-second parameters',
 
   expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
     '官方 API 已接（开发直连）',
-    '待接入',
     '本地演示',
   ])
-  expect(within(model).getAllByRole('option')).toHaveLength(33)
-  expect(within(model).getByRole('option', { name: /动作迁移.*待接入/ })).toBeDisabled()
-  await user.selectOptions(model, 'mock-seedance-25')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-25')
+  expect(within(model).getAllByRole('option')).toHaveLength(23)
+  const localOptions = Array.from(
+    model.querySelector('optgroup[label="本地演示"]')?.querySelectorAll('option') ?? [],
+    ({ text }) => text,
+  )
+  expect(localOptions.slice(0, 6)).toEqual([
+    expect.stringContaining('Seedance 2.5'),
+    expect.stringContaining('Kling O3'),
+    expect.stringContaining('Kling 3.0 Turbo'),
+    expect.stringContaining('可灵O1'),
+    expect.stringContaining('Minimax H3'),
+    expect.stringContaining('Wan 2.7'),
+  ])
+  for (const retiredId of [
+    'mock-kling-21',
+    'mock-kling-25',
+    'mock-wan-22',
+    'mock-wan-25',
+    'mock-vidu-q2',
+    'mock-pixverse-5',
+  ]) {
+    expect(model.querySelector(`option[value="${retiredId}"]`)).not.toBeInTheDocument()
+  }
+  await user.selectOptions(model, 'mock-wan-26')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-wan-26')
 
   view.rerender(renderVideo({
     ...data,
     node: {
       ...data.node,
-      modelProviderId: 'mock-seedance-25',
+      modelProviderId: 'mock-wan-26',
       generationConfig: {
         targetKind: 'video',
-        providerId: 'mock-seedance-25',
+        providerId: 'mock-wan-26',
         parameters: {},
         referenceAssets: [],
       },
     },
   }))
   expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
-    '最长 30 秒',
+    '音画同步、视频参考与首帧驱动',
   )
   await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
   expect(
     within(panel).getByRole('combobox', { name: '时长' }).querySelectorAll('option'),
-  ).toHaveLength(5)
-  expect(within(panel).getByRole('option', { name: '30 秒' })).toBeVisible()
+  ).toHaveLength(12)
+  expect(within(panel).getByRole('option', { name: '15 秒' })).toBeVisible()
+})
+
+test('narrows Seedance 2.5 parameters and exposes its 30 second flagship limit', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  data.node = { ...data.node, modelProviderId: 'mock-seedance-25' }
+  render(renderVideo(data))
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+
+  expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
+    '最长 30 秒音画同步',
+  )
+  await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
+  const duration = within(panel).getByRole('combobox', { name: '时长' })
+  expect(within(duration).getByRole('option', { name: '30 秒' })).toBeVisible()
+  expect(within(panel).getByRole('combobox', { name: '清晰度' })).toHaveValue('1080P')
+  expect(within(panel).getByRole('combobox', { name: '声音' })).toHaveValue('开启')
 })
 
 test('switches an unsupported mode to the first mode supported by the selected model', async () => {

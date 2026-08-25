@@ -360,7 +360,7 @@ function buildGenerationRequest(
       ? 'video'
       : savedConfig?.targetKind ?? (node.kind === 'video' ? 'video' : 'image')
   const defaultProviderId =
-    targetKind === 'video' ? 'mock-seedance-video' : undefined
+    targetKind === 'video' ? 'mock-seedance-25' : undefined
   const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
   const configuredProvider = configuredProviderId
     ? providerRegistry.list().find(({ id }) => id === configuredProviderId)
@@ -1689,9 +1689,11 @@ export function CanvasPage({
             })
           },
           onUpdateVideoGenerationParameters: (parameters) => {
-            const provider = providerRegistry.require(
-              node.modelProviderId ?? 'mock-seedance-video',
-            )
+            const provider =
+              providerRegistry
+                .list()
+                .find(({ id }) => id === node.modelProviderId) ??
+              providerRegistry.require('mock-seedance-25')
             if (!isProviderEnabled(provider)) return
             const previousParameters =
               node.generationConfig?.providerId === provider.id
@@ -2646,7 +2648,7 @@ export function CanvasPage({
       if (creation.node.kind === 'video') {
         const provider =
           providerRegistry.list().find(
-            ({ id }) => id === 'mock-seedance-video',
+            ({ id }) => id === 'mock-seedance-25',
           ) ??
           providerRegistry.matching(['text-to-video', 'image-to-video']).find(
             isProviderEnabled,

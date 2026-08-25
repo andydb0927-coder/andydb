@@ -54,45 +54,37 @@ CLI 缓存中的 `nebula-ultra/core`、`qwen/qwen-edit`、`seedream-4/4.5`、`mj
 
 ## 3. 视频节点
 
-当前节点：`视频节点 16`，模型 `Kling O3`，模式“全能参考”，参数 `16:9 · 3s · 1个`，成本提示 `24`。
+2026-08-25 使用登录态 `libtv model search --type video` 重新核对线上 supportModels。为避免下拉菜单继续堆积同一家族旧版本，本项目采用“同一家族保留最高代，特殊用途模型单独保留”的精简策略；可灵官方开发直连 `kling-api` 继续保留。
 
 页面通用参数能力：提示词上限 2000 字；模式会按模型变化（文生视频/全能参考/图生视频/首尾帧/图片参考）；比例、时长、数量、清晰度、声音也按模型 Schema 动态收窄。
 
-| # | 模型名（实测） | 菜单能力说明 | 延迟/活动 | 成本 |
-|---:|---|---|---|---|
-| 1 | Seedance 2.5 | 全能参考、最长30s音画同步 | 2min，720P限时58折 | 随参数变化 |
-| 2 | Seedance 2.0 VIP | 全能参考、最长15s音画同步、会员通道 | 2min | 当前另一项目配置显示 135 |
-| 3 | Minimax H3 | 全模态输入、多参数控制、商用级生成 | 2min，限时6折 | 随参数变化 |
-| 4 | Seedance 2.0 Fast VIP | 快速版、最长15s音画同步、会员通道 | 2min，限时75折 | 随参数变化 |
-| 5 | Seedance 2.0 Mini | 高性价比、最长15s音画同步 | 2min，限时4折 | 随参数变化 |
-| 6 | Happy Horse 1.1 | 多参生成、一致性与视听质量可控 | 3min，限时4折 | 随参数变化 |
-| 7 | Happy Horse 1.0 | 多参生成 | 3min | 随参数变化 |
-| 8 | Kling O3 | 视频编辑、参考一致性、音画同出、多镜头 | 3min | 当前节点 24 |
-| 9 | Kling 3.0 Turbo | 高质感、多镜头 | 3min | 随参数变化 |
-| 10 | Kling 3.0 | 高质感、多镜头 | 3min | 随参数变化 |
-| 11 | Wan 2.7 | 全能参考，可改画面/剧情/环境 | 3min | 随参数变化 |
-| 12 | Kling O1 | 编辑模型、多模态输入 | 3min | 随参数变化 |
-| 13 | Wan 2.6 | 音画同步、多机位、最长15s | 3min | 随参数变化 |
-| 14 | Hailuo 2.3 Fast | 动作/表情/镜头，快速版 | 1min | 随参数变化 |
-| 15 | Hailuo 2.3 | 动作/表情/镜头，高质感 | 2min | 随参数变化 |
-| 16 | Seedance1.5 Pro | 音画同步、多机位、最长12s | 2min | 随参数变化 |
-| 17 | Seedance 1.0 Pro | 高精度提示词、1080P | 2min | 随参数变化 |
-| 18 | Seedance 1.0 Lite | 轻量快速 | 1min | 随参数变化 |
-| 19 | Kling 2.6 | 视频生成、音画同步 | 2min | 随参数变化；本项目另保留 live 接口 |
-| 20 | Style Video | 稳定图生视频、画面表现力 | 2min | 随参数变化 |
-| 21 | Hailuo 02 | 画质稳定、运动特效 | 2min | 随参数变化 |
-| 22 | Vidu Q2 | 多图主体参考、精确控制 | 3min | 随参数变化 |
-| 23 | Vidu Q2 Pro | 菜单未给额外说明 | 未显示 | 随参数变化 |
-| 24 | Vidu Q2 Turbo | 菜单未给额外说明 | 未显示 | 随参数变化 |
-| 25 | Vidu Q3 Pro | 主体参考、精确控制 | 2min | 随参数变化 |
-| 26 | OmniHuman 1.5 | 多模态数字人视频 | 3min | 随参数变化 |
-| 27 | Kling 2.5 | 快速、稳定、高性价比 | 2min | 随参数变化 |
-| 28 | Kling 2.1 | 首尾帧、图生视频 | 3min | 随参数变化 |
-| 29 | Wan 2.2 | 特效玩法 | 3min | 随参数变化 |
-| 30 | Wan 2.5 | 特效、音画同步 | 3min | 随参数变化 |
-| 31 | Pixverse V5.5 | 特效玩法 | 3min | 随参数变化 |
-| 32 | Pixverse V5 | 特效玩法 | 3min | 随参数变化 |
-| 33 | Kling3.0 动作迁移 | 1图+1视频的动作控制 | 8min | 随参数变化 |
+| # | 模型名（CLI 实测） | modelKey | 本项目状态 |
+|---:|---|---|---|
+| 1 | Seedance 2.5 | `mock-seedance-25` | 旗舰默认；全能参考、最长30s音画同步；本地演示 |
+| 2 | Kling O3 | `mock-kling-o3` | 视频编辑、参考一致性、音画同出、多镜头；本地演示 |
+| 3 | Kling 3.0 Turbo | `mock-kling-30-turbo` | 高质感、多镜头；本地演示 |
+| 4 | 可灵O1 | `kling-video-o1` | 本地演示，保留 |
+| 5 | 可灵V2.6 | `kling-v2-6` | 官方开发直连，保留 |
+| 6 | Minimax H3 | `mock-minimax-h3` | 全模态输入、多参数控制、商用级；本地演示 |
+| 7 | Wan 2.7 | `mock-wan-27` | 全能参考，可改画面/剧情/环境；本地演示 |
+| 8 | Wan 2.6 | `wanxiang-v2-6` | 本地演示，保留 |
+| 9 | 全能视频模型3.1快速版 | `motion-3.1-rapid` | 本地演示，保留 |
+| 10 | 全能视频模型3.1 | `motion-3.1` | 本地演示，保留 |
+| 11 | 即梦1.5 Pro | `seedance-1.5-pro` | 本地演示，保留 |
+| 12 | 即梦 Pro | `doubao-seedance-pro` | 本地演示，保留 |
+| 13 | 即梦 Lite | `doubao-seedance-lite` | 本地演示，保留 |
+| 14 | 动作迁移 | `wanx-motion-control` | 本地演示，保留 |
+| 15 | MJ Video | `midjourney-video` | 本地演示，保留 |
+| 16 | Hailuo-2.3 Fast | `MiniMax-Hailuo-2.3-Fast` | 本地演示，保留 |
+| 17 | Hailuo-O2 | `MiniMax-Hailuo-o2` | 本地演示，保留 |
+| 18 | Hailuo-2.3 | `MiniMax-Hailuo-2.3` | 本地演示，保留 |
+| 19 | Vidu Q3 Pro | `viduq3-pro` | 本地演示，保留 |
+| 20 | Pixverse V5.5 | `pixverse-v5.5` | 本地演示，保留 |
+| 21 | 多镜头视频模型 | `scene-2` | 本地演示，保留 |
+| 22 | 多镜头视频模型Pro | `scene-2-ultra` | 本地演示，保留 |
+| 23 | OmniHuman 1.5 | `omnihuman-1.5` | 本地演示，保留 |
+
+已从画布模型选择器删除的旧版包括：Kling 2.1/2.5、Wan 2.2/2.5、Vidu Q2/Q2 Pro/Q2 Turbo、Pixverse V5、全能视频模型 3/3 快速版，以及不在本次实时 CLI 目录中的旧本地占位模型。历史节点若仍保存这些旧 Provider ID，会在首次修改参数时安全迁移到默认的“Seedance 2.5”。
 
 ## 4. 文本、脚本与音频
 
@@ -140,7 +132,7 @@ CLI 的 script 缓存还列出 `nebula-ultra/core`、`seedream-4/4.5` 作为 `sc
 ## 6. 对本项目注册表的调整规则
 
 1. 图片选择器补齐上表 17 个名称；默认 `Lib Image`，图片编辑模型声明 `image-to-image`。
-2. 视频选择器补齐上表 33 个名称；保留 `kling-api` live Provider，不用 Mock 覆盖真实开发验证入口。
+2. 视频选择器只展示上表 23 个当前模型；保留 `kling-api` live Provider，不用 Mock 覆盖真实开发验证入口；同一家族旧版不再进入选择器。
 3. 文本三档保留产品需要的“基础文案/深度脚本/灵感扩展”语义，同时映射到当前 LibTV 文本/脚本模型名。
 4. 音频三档保留“氛围音/人声旁白/音效”语义，同时映射到 Mureka / ElevenLabs 名称。
 5. 浏览器只观察到少数当前配置成本；其他 Provider 的本地数字属于演示计费，不声明为 LibTV 官方固定单价。

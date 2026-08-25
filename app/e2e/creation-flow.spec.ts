@@ -448,13 +448,15 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   const generation = page.getByRole('region', { name: '视频 01 生成参数' })
   await expect(generation).toBeVisible()
   await expect(generation.getByLabel('提示词')).toHaveAttribute('maxlength', '2000')
-  await expect(generation.getByLabel('模型')).toHaveValue('mock-seedance-video')
+  await expect(generation.getByLabel('模型', { exact: true })).toHaveValue(
+    'mock-seedance-25',
+  )
   await expect(
-    generation.getByRole('option', { name: /Mock Studio.*Seedance 2.0.*135 积分\/次.*演示/ }),
+    generation.getByRole('option', { name: /Mock Studio.*Seedance 2.5.*24 积分\/次.*演示/ }),
   ).toBeEnabled()
-  await expect(generation.getByText('16:9 · 5s · 1个 · 720P')).toBeVisible()
+  await expect(generation.getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
   await expect(generation.getByLabel('声音')).toHaveValue('开启')
-  await expect(generation.getByText('预计成本 135')).toBeVisible()
+  await expect(generation.getByText('预计成本 24')).toBeVisible()
   await generation.getByRole('button', { name: '展开高级设置' }).click()
   await expect(generation.getByLabel('联网搜索')).toBeChecked()
   await expect(generation.getByLabel('自动校验素材')).toBeChecked()
@@ -662,7 +664,7 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   const agentPanel = page.getByRole('complementary', { name: 'Agent 工作区' })
   await expect(agentPanel.getByRole('toolbar', { name: 'Agent 对话工具' })).toBeVisible()
   await expect(agentPanel.getByRole('combobox', { name: '图片模型' })).toHaveValue('mock-mj-image')
-  await expect(agentPanel.getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-kling-video')
+  await expect(agentPanel.getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-seedance-25')
   await agentPanel.getByRole('button', { name: '设置' }).click()
   await expect(agentPanel.getByRole('checkbox', { name: '自动生成' })).toBeVisible()
   await expect(agentPanel.getByRole('checkbox', { name: '浏览器通知' })).toBeVisible()
@@ -1389,9 +1391,11 @@ test('narrows image and video parameters when switching Liblib catalog models', 
 
   await openAddNodeAtBlank(page, '视频')
   const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
-  await videoPanel.getByRole('combobox', { name: '模型' }).selectOption('mock-seedance-25')
+  await expect(videoPanel.getByRole('combobox', { name: '模型' })).toHaveValue(
+    'mock-seedance-25',
+  )
   await expect(videoPanel.getByRole('note', { name: '当前模型说明' })).toContainText(
-    '最长 30 秒',
+    '最长 30 秒音画同步',
   )
   await videoPanel.getByRole('button', { name: '展开完整视频工具' }).click()
   await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('30 秒')
