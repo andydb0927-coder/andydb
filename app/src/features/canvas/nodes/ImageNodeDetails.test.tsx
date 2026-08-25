@@ -296,6 +296,7 @@ test('exposes the verified MJ image settings with persistent accessible controls
   expect(model).toHaveValue('mock-mj-image')
   expect(within(model).getByRole('option', { name: /Lib Image/ })).toBeEnabled()
   expect(within(model).getAllByRole('option')).toHaveLength(17)
+  expect(within(model).queryByRole('option', { name: /可灵图片/ })).not.toBeInTheDocument()
   expect(within(model).getByRole('option', { name: /Style Image V8\.2/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Qwen Edit/ })).toBeDisabled()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()

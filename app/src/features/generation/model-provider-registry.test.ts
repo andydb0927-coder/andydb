@@ -40,7 +40,6 @@ describe('model provider registry', () => {
     expect(registry.list().map(({ id }) => id)).toEqual(
       expect.arrayContaining([
         'mock-mj-image',
-        'mock-kling-image',
         'mock-tongyi-image',
         'mock-text-llm',
         'mock-kling-video',
@@ -50,6 +49,9 @@ describe('model provider registry', () => {
         'seedance-api',
         'tongyi-api',
       ]),
+    )
+    expect(() => registry.require('mock-kling-image')).toThrow(
+      'Unknown model provider: mock-kling-image',
     )
     expect(registry.require('mock-mj-image')).toMatchObject({
       name: 'Mock Studio',
@@ -201,20 +203,11 @@ describe('model provider registry', () => {
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
   })
 
-  test('publishes Liblib-aligned mock image parameters and variant-aware costs', () => {
+  test('keeps supplemental image mocks Liblib-aligned without a Kling image provider', () => {
     const registry = createDefaultProviderRegistry()
 
-    expect(registry.require('mock-kling-image')).toMatchObject({
-      modelName: '可灵图片',
-      capabilities: ['text-to-image'],
-      parameterSchema: {
-        aspectRatio: {
-          defaultValue: '16:9',
-          options: ['1:1', '16:9', '9:16', '2:3', '3:2'],
-        },
-      },
-      pricing: { amount: 8 },
-    })
+    expect(registry.list().map(({ id }) => id)).not.toContain('mock-kling-image')
+    expect(registry.list().map(({ modelName }) => modelName)).not.toContain('可灵图片')
     expect(registry.require('mock-tongyi-image')).toMatchObject({
       modelName: '通义万相图片',
       capabilities: ['text-to-image', 'image-to-image'],

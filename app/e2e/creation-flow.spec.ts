@@ -1379,6 +1379,7 @@ test('narrows image and video parameters when switching Liblib catalog models', 
 
   await openAddNodeAtBlank(page, '图片')
   const imagePanel = page.getByRole('region', { name: '图片 01 生成参数' })
+  await expect(imagePanel.getByRole('option', { name: /可灵图片/ })).toHaveCount(0)
   await imagePanel.getByRole('combobox', { name: '图片模型' }).selectOption(
     'mock-style-image-v82',
   )

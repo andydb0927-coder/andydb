@@ -187,9 +187,9 @@ test('keeps image nodes folded until they become the current selection', async (
     '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
   )
   expect(prompt).toHaveTextContent('雾中茶山')
-  expect(within(generation).getByRole('combobox', { name: '图片模型' })).toHaveValue(
-    'mock-mj-image',
-  )
+  const imageModel = within(generation).getByRole('combobox', { name: '图片模型' })
+  expect(imageModel).toHaveValue('mock-mj-image')
+  expect(within(imageModel).queryByRole('option', { name: /可灵图片/ })).not.toBeInTheDocument()
   expect(within(generation).getByText('预计成本 18')).toBeVisible()
   expect(screen.getByRole('button', { name: '查看 4 张结果' })).toHaveTextContent('4张')
 

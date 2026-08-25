@@ -461,7 +461,7 @@ const imageEditSchema: ModelParameterSchema = {
   editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
 }
 
-const klingImageSchema: ModelParameterSchema = {
+const tongyiImageSchema: ModelParameterSchema = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -803,22 +803,12 @@ export function createDefaultProviderRegistry(
   return new ProviderRegistry([
     ...liblibImageModelCatalog.map(imageCatalogProvider),
     demoProvider({
-      id: 'mock-kling-image',
-      name: '可灵',
-      modelName: '可灵图片',
-      selectorVisible: false,
-      capabilities: ['text-to-image'],
-      parameterSchema: klingImageSchema,
-      pricing: { amount: 8, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'mock://local/kling-image',
-    }),
-    demoProvider({
       id: 'mock-tongyi-image',
       name: '通义万相',
       modelName: '通义万相图片',
       selectorVisible: false,
       capabilities: ['text-to-image', 'image-to-image'],
-      parameterSchema: klingImageSchema,
+      parameterSchema: tongyiImageSchema,
       pricing: { amount: 6, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/tongyi-image',
     }),
