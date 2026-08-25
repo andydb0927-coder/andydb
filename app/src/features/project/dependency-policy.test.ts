@@ -180,4 +180,32 @@ describe('dependency connection policy', () => {
       validateImageReferenceConnection(referenceProject, 'source', 'target'),
     ).toEqual({ ok: false, reason: 'incompatible-types' })
   })
+
+  test('lets a referenced empty image node feed a derived image tool', () => {
+    const referenceProject = project('image', 'image')
+    const upstream = node('upstream', 'scene')
+    upstream.versions = [{
+      id: 'upstream-version',
+      createdAt: '2026-08-25T00:00:00.000Z',
+      prompt: '人物参考',
+      assetId: 'upstream-asset',
+    }]
+    upstream.activeVersionId = 'upstream-version'
+    referenceProject.nodes.unshift(upstream)
+    referenceProject.assets.push({
+      id: 'upstream-asset',
+      kind: 'image',
+      url: '/upstream.png',
+      mimeType: 'image/png',
+    })
+    referenceProject.edges.push({
+      id: 'upstream-reference',
+      sourceNodeId: 'upstream',
+      targetNodeId: 'source',
+    })
+
+    expect(
+      validateImageReferenceConnection(referenceProject, 'source', 'target'),
+    ).toEqual({ ok: true })
+  })
 })

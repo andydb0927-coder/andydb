@@ -120,9 +120,23 @@ export function validateImageReferenceConnection(
   const sourceVersion = source.versions.find(
     ({ id }) => id === source.activeVersionId,
   )
-  const sourceAsset = project.assets.find(
+  const directSourceAsset = project.assets.find(
     ({ id }) => id === sourceVersion?.assetId,
   )
+  const inheritedSourceAsset = project.edges
+    .filter(({ targetNodeId }) => targetNodeId === source.id)
+    .flatMap(({ sourceNodeId: referenceNodeId }) => {
+      const referenceNode = project.nodes.find(({ id }) => id === referenceNodeId)
+      const referenceVersion = referenceNode?.versions.find(
+        ({ id }) => id === referenceNode.activeVersionId,
+      )
+      const referenceAsset = project.assets.find(
+        ({ id }) => id === referenceVersion?.assetId,
+      )
+      return referenceAsset ? [referenceAsset] : []
+    })
+    .find(({ kind }) => kind === 'image' || kind === 'video')
+  const sourceAsset = directSourceAsset ?? inheritedSourceAsset
   if (
     (sourceAsset?.kind !== 'image' && sourceAsset?.kind !== 'video') ||
     !['image', 'character', 'scene'].includes(target.kind) ||

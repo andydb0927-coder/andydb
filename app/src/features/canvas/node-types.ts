@@ -7,6 +7,7 @@ import type {
   EffectToolConfig,
   GenerationJob,
   ImageGenerationSettings,
+  ImageToolConfig,
   NodeKind,
   VideoDerivedTool,
 } from '../project/model'
@@ -64,10 +65,13 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onUpdateVideoPrompt?(prompt: string): void
   onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
   onEndImageReferenceSelection?(returnToNode: boolean): void
+  onImportImageReference?(file: File): void
   onLocalImageGenerate?(): void
   onCreateImageToolNode?(tool: string): void
+  onUpdateImageTool?(changes: Partial<ImageToolConfig>): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onLocalVideoGenerate?(prompt: string): void
+  onCreateTextToVideoPreset?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
   onUpdateNodeDetails?(details: CanvasNodeDetails): void
 }

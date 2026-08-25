@@ -4,6 +4,8 @@ import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { PlatformShell } from '../features/platform/PlatformShell'
 import { quickCreateProjectLoader } from '../features/launcher/quick-create-project'
 import '../styles/global.css'
+import '../styles/deployed-ui-polish.css'
+import '../styles/liblib-web-design.css'
 
 // 路由级代码分割：每个页面独立 chunk，控制首屏主包体积
 const ProjectLauncherPage = lazy(() =>

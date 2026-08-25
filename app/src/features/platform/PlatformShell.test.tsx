@@ -59,6 +59,8 @@ describe('platform shell', () => {
 
     const homeNavigation = screen.getByRole('navigation', { name: '首页导航' })
     expect(homeNavigation).toBeVisible()
+    expect(homeNavigation).toHaveAttribute('data-collapsed', 'true')
+    expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
     expect(within(homeNavigation).getAllByRole('link')).toHaveLength(5)
     expect(within(homeNavigation).getByRole('link', { name: '首页' })).toHaveAttribute('href', '/')
     expect(within(homeNavigation).getByRole('link', { name: '项目' })).toHaveAttribute('href', '/projects')

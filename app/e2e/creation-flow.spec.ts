@@ -260,6 +260,69 @@ test('keeps one image node expanded and persists a confirmed main result', async
   ).toHaveAttribute('src', '/demo/shot-river.png')
 })
 
+test('uploads an image-to-image reference, links a canvas reference, and configures a derived upscale node', async ({
+  page,
+}) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+  await openAddNodeAtBlank(page, '图片', true)
+  await page.getByRole('button', { name: '适配画布' }).click()
+
+  const blankImage = page.getByRole('button', { name: '图片 01', exact: true })
+  await expect(blankImage).toBeVisible()
+  const attempts = page.getByRole('toolbar', { name: '图片快捷尝试' })
+  const chooserPromise = page.waitForEvent('filechooser')
+  await attempts.getByRole('button', { name: '图生图', exact: true }).click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({
+    name: '图生图参考.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('reference-image'),
+  })
+  await expect(page.getByRole('img', { name: '上传参考 1' })).toBeVisible()
+  await expect(
+    page.getByText('已添加图生图参考图片“图生图参考.png”。'),
+  ).toBeVisible()
+
+  await page
+    .getByRole('toolbar', { name: '图片主操作' })
+    .getByRole('button', { name: '参考', exact: true })
+    .click()
+  await expect(page.getByRole('region', { name: '从画布选择参考' })).toContainText(
+    '点画布其他节点建立引用连线',
+  )
+
+  await page.getByRole('button', { name: '角色参考', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText(
+    '已将“角色参考”设为“图片 01”的参考',
+  )
+  await expect(page.getByRole('region', { name: '从画布选择参考' })).toHaveCount(0)
+
+  await page
+    .getByRole('toolbar', { name: '图片快捷尝试' })
+    .getByRole('button', { name: '图片高清' })
+    .click()
+  const confirmation = page.getByRole('alertdialog', { name: '将添加工具节点' })
+  await expect(confirmation).toContainText('不会立即消耗积分')
+  await confirmation
+    .getByRole('button', { name: '确认添加图片高清工具节点' })
+    .click()
+
+  const upscale = page.getByRole('region', { name: '图片高清参数' })
+  await expect(upscale).toBeVisible()
+  await upscale.getByRole('combobox', { name: '放大倍数' }).selectOption('4x')
+  await upscale.getByRole('combobox', { name: '输出清晰度' }).selectOption('2K')
+  await upscale.getByRole('checkbox', { name: '保护人物与文字细节' }).uncheck()
+  await expect(upscale.getByRole('combobox', { name: '放大倍数' })).toHaveValue('4x')
+  await expect(upscale.getByRole('combobox', { name: '输出清晰度' })).toHaveValue('2K')
+  await expect(upscale.getByRole('checkbox', { name: '保护人物与文字细节' })).not.toBeChecked()
+
+  await upscale
+    .getByRole('button', { name: '生成高清图片，预计成本 18' })
+    .click()
+  await expect(page.getByRole('status')).toContainText('生成任务已提交')
+})
+
 test('renames a media node and accepts prompt input from the composer', async ({
   page,
 }) => {
@@ -1314,23 +1377,23 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   const textPanel = page.getByRole('region', { name: '文本 01 文本参数' })
   await expect(textPanel).toBeVisible()
   await textPanel.getByRole('combobox', { name: '文本模型' }).selectOption('deep-script')
-  await expect(textPanel.getByText('预计成本 12')).toBeVisible()
+  await expect(textPanel.getByLabel('预计成本 12', { exact: true })).toBeVisible()
   await textPanel.getByRole('textbox', { name: '文本生成提示词' }).fill('雨巷中的河灯旁白')
   await textPanel.getByRole('button', { name: '生成文本，预计成本 12' }).click()
   await expect(textPanel.getByRole('textbox', { name: '文本内容' })).toHaveValue(/\u96e8\u5df7\u4e2d\u7684\u6cb3\u706f\u65c1\u767d/)
-  await expect(textPanel.getByText('来源模型：GVLM 3.1 · 深度脚本')).toBeVisible()
+  await expect(textPanel.getByText('来源模型：GVLM 3.1')).toBeVisible()
   await expect(textPanel.getByRole('status')).toContainText('本地演示生成完成')
 
   await openAddNodeAtBlank(page, '脚本')
   await expect(textPanel).toBeHidden()
-  await expect(textNode).toContainText('文本节点')
+  await expect(page.getByRole('toolbar', { name: '文本快捷尝试' })).toBeVisible()
   const scriptPanel = page.getByRole('region', { name: '脚本 01 脚本参数' })
   await expect(scriptPanel.getByRole('list', { name: '章节列表' })).toBeVisible()
   await scriptPanel.getByRole('textbox', { name: '剧情大纲' }).fill('雨夜重逢后追查失踪真相')
   await scriptPanel.getByRole('spinbutton', { name: '场次数量' }).fill('2')
   await scriptPanel.getByRole('button', { name: '生成脚本，预计成本 12' }).click()
   await expect(scriptPanel.getByRole('list', { name: '章节列表' }).getByRole('listitem')).toHaveCount(2)
-  await expect(scriptPanel.getByText('来源模型：GVLM 3.1 · 深度脚本')).toBeVisible()
+  await expect(scriptPanel.getByText('来源模型：GVLM 3.1')).toBeVisible()
   await expect(scriptPanel.getByText(/共 \d+ 字/)).toBeVisible()
 
   await openAddNodeAtBlank(page, '音频')
@@ -1374,6 +1437,54 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await expect(persistedText.getByRole('textbox', { name: '文本内容' })).toHaveValue(/\u96e8\u5df7\u4e2d\u7684\u6cb3\u706f\u65c1\u767d/)
   await expect(persistedText.getByRole('combobox', { name: '字体样式' })).toHaveValue('引用')
   expect(browserErrors).toEqual([])
+})
+
+test('writes and persists content directly inside a Liblib manual text node', async ({ page }) => {
+  await createCinematicProject(page)
+  await openAddNodeAtBlank(page, '文本')
+
+  await page
+    .getByRole('toolbar', { name: '文本快捷尝试' })
+    .getByRole('button', { name: '自己编写内容' })
+    .click()
+
+  const editor = page.getByRole('textbox', { name: '自己编写内容' })
+  const toolbar = page.getByRole('toolbar', { name: '文本格式工具' })
+  await expect(editor).toBeVisible()
+  await expect(toolbar).toBeVisible()
+  await editor.fill('一个来自未来的机器人，在城市屋顶看星星。')
+  await toolbar.getByRole('button', { name: '一级标题' }).click()
+  await toolbar.getByRole('button', { name: '加粗' }).click()
+  await toolbar.getByRole('button', { name: '展开文本节点' }).click()
+  await expect(toolbar.getByRole('button', { name: '收起文本节点' })).toHaveAttribute('aria-pressed', 'true')
+
+  await page.reload()
+  await page.getByRole('textbox', { name: '自己编写内容' }).click()
+  const persistedToolbar = page.getByRole('toolbar', { name: '文本格式工具' })
+  await expect(page.getByRole('textbox', { name: '自己编写内容' })).toHaveValue('一个来自未来的机器人，在城市屋顶看星星。')
+  await expect(persistedToolbar.getByRole('button', { name: '一级标题' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(persistedToolbar.getByRole('button', { name: '加粗' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('creates a connected Liblib text-to-video preset from the text node shortcut', async ({ page }) => {
+  await createCinematicProject(page)
+  await openAddNodeAtBlank(page, '文本')
+  const initialEdgeCount = await page.locator('.react-flow__edge').count()
+
+  await page
+    .getByRole('toolbar', { name: '文本快捷尝试' })
+    .getByRole('button', { name: '文生视频' })
+    .click()
+
+  await expect(page.getByRole('group', { name: '节点分组：预设 - 文生视频' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: '自己编写内容' })).toBeVisible()
+  const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
+  await expect(videoPanel).toBeVisible()
+  await expect(videoPanel.getByRole('combobox', { name: '生成模式' })).toHaveValue('文生视频')
+  await expect(videoPanel.getByRole('textbox', { name: '提示词' })).toHaveValue(
+    '根据文字描述生成视频。',
+  )
+  await expect(page.locator('.react-flow__edge')).toHaveCount(initialEdgeCount + 1)
 })
 
 test('narrows image and video parameters when switching Liblib catalog models', async ({ page }) => {

@@ -90,9 +90,10 @@ describe('model provider registry', () => {
       modelName: '文本 LLM',
       capabilities: ['text'],
       variants: [
-        expect.objectContaining({ id: 'basic-copy', name: 'GVLM 3.1 Flash · 基础文案', pricing: expect.objectContaining({ amount: 8 }) }),
-        expect.objectContaining({ id: 'deep-script', name: 'GVLM 3.1 · 深度脚本', pricing: expect.objectContaining({ amount: 12 }) }),
-        expect.objectContaining({ id: 'idea-expansion', name: 'CVLM 5.5 · 灵感扩展', pricing: expect.objectContaining({ amount: 15 }) }),
+        expect.objectContaining({ id: 'deep-script', name: 'GVLM 3.1', pricing: expect.objectContaining({ amount: 12 }) }),
+        expect.objectContaining({ id: 'idea-expansion', name: 'CVLM 5.5', pricing: expect.objectContaining({ amount: 15 }) }),
+        expect.objectContaining({ id: 'basic-copy', name: 'GVLM 3.1 Flash', pricing: expect.objectContaining({ amount: 8 }) }),
+        expect.objectContaining({ id: 'qwen-3-vl-flash', name: 'Qwen 3 VL Flash', pricing: expect.objectContaining({ amount: 1 }) }),
       ],
     })
     expect(registry.require('mock-audio')).toMatchObject({

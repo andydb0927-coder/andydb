@@ -1,4 +1,13 @@
-import { ArrowDown, ArrowUp, FileVideo2, Plus, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  Expand,
+  FileVideo2,
+  Languages,
+  Plus,
+  Trash2,
+  Zap,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import type {
@@ -31,6 +40,13 @@ const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
 
 function countCharacters(value: string) {
   return Array.from(value).length
+}
+
+const textComposerPlaceholder =
+  '写下你想讲的故事、场景或角色设定。例如：一个来自未来的机器人，在城市屋顶看星星。'
+
+function isTextCreationPlaceholder(value: string) {
+  return value === '双击画布创建的自由文本节点' || value === '右键画布创建的文本节点'
 }
 
 function formatDuration(seconds: number) {
@@ -138,6 +154,8 @@ function TextDetails({
   const [prompt, setPrompt] = useState(details.prompt ?? '')
   const [generatedModel, setGeneratedModel] = useState(details.generatedByModel ?? '')
   const [status, setStatus] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const selectedVariant = modelProviderVariant(provider, variantId)
   const cost = modelProviderVariantCost(provider, variantId)
 
   const selectVariant = (nextVariantId: string) => {
@@ -169,7 +187,9 @@ function TextDetails({
         ? '深度脚本文案'
         : variantId === 'idea-expansion'
           ? '灵感扩展方案'
-          : '基础文案'
+          : variantId === 'qwen-3-vl-flash'
+            ? '快速多模态文案'
+            : '基础文案'
     onUpdate({
       ...details,
       modelProviderId: provider.id,
@@ -183,58 +203,110 @@ function TextDetails({
   }
 
   return (
-    <>
-      <ModelVariantField
-        label="文本模型"
-        provider={provider}
-        value={variantId}
-        onChange={selectVariant}
-      />
-      <label className="specialized-node-details__field">
-        <span>生成提示词</span>
+    <div className={`text-node-composer${expanded ? ' text-node-composer--expanded' : ''}`}>
+      <button
+        type="button"
+        className="text-node-composer__expand"
+        aria-label={expanded ? '收起文本编辑器' : '展开文本编辑器'}
+        aria-pressed={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <Expand aria-hidden="true" />
+      </button>
+      <label className="text-node-composer__prompt">
+        <span className="visually-hidden">文本生成提示词</span>
         <textarea
           aria-label="文本生成提示词"
-          rows={3}
+          placeholder={textComposerPlaceholder}
+          rows={expanded ? 9 : 5}
           maxLength={2000}
           value={prompt}
-          onChange={(event) => setPrompt(event.currentTarget.value)}
+          onChange={(event) => {
+            const nextPrompt = event.currentTarget.value
+            setPrompt(nextPrompt)
+            onUpdate({
+              ...details,
+              prompt: nextPrompt,
+              modelProviderId: provider.id,
+              modelVariant: variantId,
+            })
+          }}
           onBlur={() => onUpdate({ ...details, prompt, modelProviderId: provider.id, modelVariant: variantId })}
         />
       </label>
-      <DemoModelMeta provider={provider} variantId={variantId} />
-      <button
-        type="button"
-        className="specialized-node-details__primary"
-        aria-label={`生成文本，预计成本 ${cost}`}
-        disabled={!prompt.trim()}
-        title={prompt.trim() ? '本地演示' : '请输入提示词后生成'}
-        onClick={generate}
-      >
-        生成文本
-      </button>
-      {!prompt.trim() ? <small>请输入提示词后生成</small> : null}
-      {generatedModel ? <p>来源模型：{generatedModel}</p> : null}
-      {status ? <p role="status">{status}</p> : null}
-      <label className="specialized-node-details__field">
-        <span>文本内容</span>
-        <textarea
-          aria-label="文本内容"
-          rows={6}
-          maxLength={5000}
-          value={details.content}
-          onChange={(event) => onUpdate({ ...details, content: event.currentTarget.value })}
-        />
-      </label>
-      <div className="specialized-node-details__meta">
-        <span>{countCharacters(details.content)} / 5000</span>
-        <label>
-          <span>字体样式</span>
-          <select aria-label="字体样式" value={details.fontStyle} onChange={(event) => onUpdate({ ...details, fontStyle: event.currentTarget.value as typeof details.fontStyle })}>
-            {['正文', '标题', '引用', '等宽'].map((style) => <option key={style}>{style}</option>)}
+      <footer className="text-node-composer__controls">
+        <label className="text-node-composer__model">
+          <span className="visually-hidden">文本模型</span>
+          <select
+            aria-label="文本模型"
+            value={variantId}
+            onChange={(event) => selectVariant(event.currentTarget.value)}
+          >
+            {modelProviderVariants(provider).map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.name} · {variant.pricing.amount} 积分
+              </option>
+            ))}
           </select>
         </label>
-      </div>
-    </>
+        <span className="text-node-composer__latency">
+          {String(selectedVariant?.defaultParameters?.latency ?? '')}{' '}
+          {String(selectedVariant?.defaultParameters?.steps ?? '')}
+        </span>
+        <span className="text-node-composer__demo" title="演示 Provider 不会连接真实 API">
+          本地演示
+        </span>
+        <span className="text-node-composer__spacer" />
+        <button
+          type="button"
+          className="text-node-composer__icon-button"
+          aria-label="翻译文本"
+          title="翻译服务未接入，当前为本地演示"
+          onClick={() => setStatus('翻译服务未接入，当前为本地演示。')}
+        >
+          <Languages aria-hidden="true" />
+        </button>
+        <span className="text-node-composer__cost" aria-label={`预计成本 ${cost}`}>
+          <Zap aria-hidden="true" /> {cost}
+        </span>
+        <button
+          type="button"
+          className="text-node-composer__generate"
+          aria-label={`生成文本，预计成本 ${cost}`}
+          disabled={!prompt.trim()}
+          title={prompt.trim() ? '本地演示' : '请输入提示词后生成'}
+          onClick={generate}
+        >
+          <ArrowUp aria-hidden="true" />
+        </button>
+      </footer>
+      {!prompt.trim() ? <small className="text-node-composer__reason">请输入提示词后生成</small> : null}
+      {generatedModel ? <p className="text-node-composer__source">来源模型：{generatedModel}</p> : null}
+      {status ? <p className="text-node-composer__status" role="status">{status}</p> : null}
+      {details.content.trim() && !isTextCreationPlaceholder(details.content) ? (
+        <div className="text-node-composer__result">
+          <label className="specialized-node-details__field">
+            <span>文本内容</span>
+            <textarea
+              aria-label="文本内容"
+              rows={6}
+              maxLength={5000}
+              value={details.content}
+              onChange={(event) => onUpdate({ ...details, content: event.currentTarget.value })}
+            />
+          </label>
+          <div className="specialized-node-details__meta">
+            <span>{countCharacters(details.content)} / 5000</span>
+            <label>
+              <span>字体样式</span>
+              <select aria-label="字体样式" value={details.fontStyle} onChange={(event) => onUpdate({ ...details, fontStyle: event.currentTarget.value as typeof details.fontStyle })}>
+                {['正文', '标题', '引用', '等宽'].map((style) => <option key={style}>{style}</option>)}
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -586,11 +658,11 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
 
   return (
     <section
-      className="specialized-node-details nodrag nowheel"
+      className={`specialized-node-details nodrag nowheel${details.type === 'text' ? ' specialized-node-details--text' : ''}`}
       role="region"
       aria-label={`${data.node.title} ${panelTypeCopy[details.type]}参数`}
     >
-      <DetailsHeading type={details.type} />
+      {details.type === 'text' ? null : <DetailsHeading type={details.type} />}
 
       {details.type === 'text' ? (
         <TextDetails data={data} details={details} onUpdate={update} />

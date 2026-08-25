@@ -1,4 +1,4 @@
-import { FolderPlus, Plus, Search } from 'lucide-react'
+import { ArrowUpRight, FolderPlus, Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -200,6 +200,7 @@ export function ProjectsPage({
           </p>
         </div>
         <Link className="projects-page__create focus-visible" to="/projects/new">
+          <Plus aria-hidden="true" />
           开始创作
         </Link>
       </header>
@@ -355,6 +356,7 @@ export function ProjectsPage({
                         to={`/project/${project.id}`}
                       >
                         打开项目
+                        <ArrowUpRight aria-hidden="true" />
                       </Link>
                     </div>
                   </article>

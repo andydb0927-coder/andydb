@@ -236,70 +236,6 @@ export function PlatformHomeSections({
         </div>
       </section>
 
-      {capabilities.length > 0 ? (
-        <section
-          className="home-features"
-          aria-label="产品特性轮播"
-          role="region"
-        >
-          <div className="home-features__heading">
-            <div>
-              <p className="home-kicker"><Layers3 aria-hidden="true" />WHAT'S NEW</p>
-              <h2>产品特性</h2>
-            </div>
-            <div className="home-features__controls">
-              <button
-                className="focus-visible"
-                type="button"
-                aria-label="上一张特性"
-                onClick={() => cycleFeature(-1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </button>
-              <p aria-live="polite" aria-atomic="true">
-                {activeFeatureIndex + 1} / {capabilities.length} · {capabilities[activeFeatureIndex]?.title}
-              </p>
-              <button
-                className="focus-visible"
-                type="button"
-                aria-label="下一张特性"
-                onClick={() => cycleFeature(1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-          <div className="home-features__viewport">
-            <div className="home-features__track">
-              {orderedCapabilities.map((capability) => {
-                const index = capabilities.findIndex(
-                  ({ id }) => id === capability.id,
-                )
-                return (
-                  <Link
-                    key={capability.id}
-                    className="home-feature-card focus-visible"
-                    data-active={activeFeatureIndex === index}
-                    data-testid="home-feature-card"
-                    to={capability.targetPath}
-                  >
-                    <span className="home-feature-card__number">0{index + 1}</span>
-                    <Film aria-hidden="true" />
-                    <span className="home-feature-card__copy">
-                      <strong>{capability.title}</strong>
-                      <small>{capability.description}</small>
-                    </span>
-                    <em>{capability.ctaLabel}<ArrowRight aria-hidden="true" /></em>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {recentProjects}
-
       <section className="home-agent" aria-labelledby="home-agent-title">
         <div className="home-section-heading">
           <p className="home-kicker"><WandSparkles aria-hidden="true" />CREATIVE AGENT · LOCAL</p>
@@ -405,6 +341,70 @@ export function PlatformHomeSections({
           </div>
         </div>
       </section>
+
+      {capabilities.length > 0 ? (
+        <section
+          className="home-features"
+          aria-label="产品特性轮播"
+          role="region"
+        >
+          <div className="home-features__heading">
+            <div>
+              <p className="home-kicker"><Layers3 aria-hidden="true" />WHAT'S NEW</p>
+              <h2>产品特性</h2>
+            </div>
+            <div className="home-features__controls">
+              <button
+                className="focus-visible"
+                type="button"
+                aria-label="上一张特性"
+                onClick={() => cycleFeature(-1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <p aria-live="polite" aria-atomic="true">
+                {activeFeatureIndex + 1} / {capabilities.length} · {capabilities[activeFeatureIndex]?.title}
+              </p>
+              <button
+                className="focus-visible"
+                type="button"
+                aria-label="下一张特性"
+                onClick={() => cycleFeature(1)}
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div className="home-features__viewport">
+            <div className="home-features__track">
+              {orderedCapabilities.map((capability) => {
+                const index = capabilities.findIndex(
+                  ({ id }) => id === capability.id,
+                )
+                return (
+                  <Link
+                    key={capability.id}
+                    className="home-feature-card focus-visible"
+                    data-active={activeFeatureIndex === index}
+                    data-testid="home-feature-card"
+                    to={capability.targetPath}
+                  >
+                    <span className="home-feature-card__number">0{index + 1}</span>
+                    <Film aria-hidden="true" />
+                    <span className="home-feature-card__copy">
+                      <strong>{capability.title}</strong>
+                      <small>{capability.description}</small>
+                    </span>
+                    <em>{capability.ctaLabel}<ArrowRight aria-hidden="true" /></em>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {recentProjects}
 
       <section
         className="home-show"

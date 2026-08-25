@@ -238,6 +238,37 @@ test('recomputes video defaults, price, and advanced switches from the selected 
   expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
 })
 
+test('resolves the selected provider from the persisted generation config before the legacy node field', () => {
+  const data = makeData(true)
+  data.node = {
+    ...data.node,
+    modelProviderId: 'mock-seedance-25',
+    generationConfig: {
+      targetKind: 'video',
+      providerId: 'mock-kling-o3',
+      parameters: {
+        aspectRatio: '9:16',
+        duration: '3',
+        quality: '4K',
+        count: '1',
+        sound: true,
+      },
+      referenceAssets: [],
+    },
+  }
+
+  render(renderVideo(data))
+
+  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
+  expect(within(panel).getByRole('combobox', { name: '模型' })).toHaveValue(
+    'mock-kling-o3',
+  )
+  expect(within(panel).getByText('9:16 · 3s · 1个 · 4K')).toBeVisible()
+  expect(within(panel).getByRole('combobox', { name: '声音' })).toHaveValue(
+    '开启',
+  )
+})
+
 test('omits an empty quality value from the reordered video summary', () => {
   const data = makeData(true)
   data.node = {

@@ -107,6 +107,7 @@ export function CanvasGroupOverlay({
     <section
       aria-label={`${temporary ? '节点组合' : '节点分组'}：${group.title}`}
       className="canvas-group-overlay"
+      data-kind={group.kind}
       data-selected={selected}
       data-temporary={temporary}
       role="group"

@@ -425,6 +425,24 @@ function buildGenerationRequest(
   const generationMode = isVideoGenerationMode(parameters.generationMode)
     ? parameters.generationMode
     : undefined
+  const incomingReferenceAssets = project.edges
+    .filter(({ targetNodeId }) => targetNodeId === node.id)
+    .flatMap(({ sourceNodeId }) => {
+      const source = project.nodes.find(({ id }) => id === sourceNodeId)
+      const sourceVersion = source?.versions.find(
+        ({ id }) => id === source.activeVersionId,
+      )
+      const sourceAsset = project.assets.find(
+        ({ id }) => id === sourceVersion?.assetId,
+      )
+      return sourceAsset
+        ? [{
+            url: sourceAsset.url,
+            kind: sourceAsset.kind,
+            mimeType: sourceAsset.mimeType,
+          }]
+        : []
+    })
 
   return {
     projectId: project.id,
@@ -438,15 +456,20 @@ function buildGenerationRequest(
       ? []
       : savedConfig?.referenceAssets.length
         ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
-        : asset
-          ? [
-              {
-                url: asset.url,
-                kind: asset.kind,
-                mimeType: asset.mimeType,
-              },
-            ]
-          : [],
+        : (node.kind === 'image' ||
+              node.kind === 'character' ||
+              node.kind === 'scene') &&
+            incomingReferenceAssets.length
+          ? incomingReferenceAssets
+          : asset
+            ? [
+                {
+                  url: asset.url,
+                  kind: asset.kind,
+                  mimeType: asset.mimeType,
+                },
+              ]
+            : [],
   }
 }
 
@@ -1546,20 +1569,105 @@ export function CanvasPage({
       const currentProject = useProjectStore.getState().activeProject
       const sourceNode = currentProject?.nodes.find(({ id }) => id === sourceNodeId)
       if (!currentProject || currentProject.id !== projectId || !sourceNode) return
-      const creation = buildCanvasCreation(currentProject, {
-        kind: 'storyboard',
-        title: tool,
-        content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
+      const sourceVersion = sourceNode.versions.find(
+        ({ id }) => id === sourceNode.activeVersionId,
+      )
+      const directSourceAsset = currentProject.assets.find(
+        ({ id }) => id === sourceVersion?.assetId,
+      )
+      const inheritedSourceAsset = currentProject.edges
+        .filter(({ targetNodeId }) => targetNodeId === sourceNode.id)
+        .flatMap(({ sourceNodeId: referenceNodeId }) => {
+          const referenceNode = currentProject.nodes.find(
+            ({ id }) => id === referenceNodeId,
+          )
+          const referenceVersion = referenceNode?.versions.find(
+            ({ id }) => id === referenceNode.activeVersionId,
+          )
+          const referenceAsset = currentProject.assets.find(
+            ({ id }) => id === referenceVersion?.assetId,
+          )
+          return referenceAsset ? [referenceAsset] : []
+        })
+        .find(({ kind }) => kind === 'image')
+      const sourceAsset = directSourceAsset ?? inheritedSourceAsset
+      const isUpscale = tool === '图片高清' || tool === '高清'
+      const prompt = isUpscale
+        ? `基于“${sourceNode.title}”执行高清修复，保留原始构图、人物身份与文字细节`
+        : `基于“${sourceNode.title}”创建的${tool}本地配置预览`
+      let creation = buildCanvasCreation(currentProject, {
+        kind: isUpscale ? 'image' : 'storyboard',
+        title: isUpscale ? '高清' : tool,
+        content: prompt,
+        ...(isUpscale &&
+        sourceAsset?.kind === 'image' &&
+        (sourceAsset.mimeType === 'image/png' ||
+          sourceAsset.mimeType === 'image/jpeg' ||
+          sourceAsset.mimeType === 'image/webp')
+          ? {
+              image: {
+                dataUrl: sourceAsset.url,
+                mimeType: sourceAsset.mimeType,
+              },
+            }
+          : {}),
         position: {
           x: sourceNode.position.x + 360,
           y: sourceNode.position.y + 40,
         },
       })
+      if (isUpscale) {
+        creation = {
+          ...creation,
+          node: {
+            ...creation.node,
+            modelProviderId: 'mock-general-image-pro',
+            imageTool: {
+              kind: 'upscale',
+              model: '高清修复',
+              scale: '2x',
+              resolution: '4K',
+              detailProtection: true,
+              cost: 18,
+            },
+            imageGeneration: {
+              ...defaultImageGenerationSettings,
+              prompt,
+              quality: '高画质',
+              resolution: '4K',
+              count: 1,
+            },
+            generationConfig: {
+              targetKind: 'image',
+              providerId: 'mock-general-image-pro',
+              parameters: {
+                aspectRatio: '16:9',
+                quality: '高画质',
+                resolution: '4K',
+                count: 1,
+                editStrength: 0.2,
+                autoLink: true,
+                upscaleScale: '2x',
+                detailProtection: true,
+              },
+              referenceAssets:
+                sourceAsset?.kind === 'image'
+                  ? [{
+                      url: sourceAsset.url,
+                      kind: sourceAsset.kind,
+                      mimeType: sourceAsset.mimeType,
+                    }]
+                  : [],
+            },
+          },
+        }
+      }
       if (
         !createConnectedCanvasContent(
           sourceNode.id,
           creation,
           crypto.randomUUID(),
+          isUpscale ? 'image-reference' : 'dependency',
         )
       ) {
         setGenerationFeedback('无法创建工具节点，请重新选择来源节点。')
@@ -1567,7 +1675,7 @@ export function CanvasPage({
       }
       selectOnlyNode(creation.node.id)
       setGenerationFeedback(
-        `已创建“${tool}”工具节点并建立连接；尚未触发外部生成。`,
+        `已创建“${creation.node.title}”工具节点并建立连接；尚未触发外部生成。`,
       )
     },
     [createConnectedCanvasContent, projectId, selectOnlyNode],
@@ -1610,6 +1718,25 @@ export function CanvasPage({
             ? [{ id: source.id, title: source.title, asset: sourceAsset }]
             : []
         })
+      const configuredImageReferences =
+        node.generationConfig?.referenceAssets.flatMap((reference, index) =>
+          reference.kind === 'image'
+            ? [{
+                id: `configured-image-reference-${node.id}-${index}`,
+                title: `上传参考 ${index + 1}`,
+                asset: {
+                  id: `configured-image-reference-asset-${node.id}-${index}`,
+                  kind: 'image' as const,
+                  url: reference.url,
+                  mimeType: reference.mimeType,
+                },
+              }]
+            : [],
+        ) ?? []
+      const imageReferences = [
+        ...incomingMediaReferences,
+        ...configuredImageReferences,
+      ]
       const videoReferences = incomingMediaReferences.filter(
         ({ asset: referenceAsset }) => referenceAsset.kind === 'image',
       )
@@ -1624,11 +1751,9 @@ export function CanvasPage({
           providerRegistry,
           asset,
           imageResults,
-          imageReferences: incomingMediaReferences,
+          imageReferences,
           videoReferences,
-          incomingReferenceCount: project.edges.filter(
-            ({ targetNodeId }) => targetNodeId === node.id,
-          ).length,
+          incomingReferenceCount: imageReferences.length,
           imageReferenceSelecting: imageReferenceTargetId === node.id,
           job,
           selected,
@@ -1721,14 +1846,157 @@ export function CanvasPage({
           onStartImageReferenceSelection: (trigger) =>
             startImageReferenceSelection(node.id, trigger),
           onEndImageReferenceSelection: endImageReferenceSelection,
+          onImportImageReference: async (file) => {
+            const currentProject = useProjectStore.getState().activeProject
+            const currentNode = currentProject?.nodes.find(({ id }) => id === node.id)
+            if (!currentProject || currentProject.id !== projectId || !currentNode) return
+            try {
+              const image = await prepareImageFile(file)
+              const existingReferences =
+                currentNode.generationConfig?.referenceAssets ?? []
+              if (existingReferences.length >= 4) {
+                setGenerationFeedback('图生图最多添加 4 张参考图片。')
+                return
+              }
+              const providerId =
+                currentNode.generationConfig?.providerId ??
+                currentNode.modelProviderId ??
+                'mock-mj-image'
+              const provider = providerRegistry.require(providerId)
+              updateNode(currentNode.id, {
+                modelProviderId: provider.id,
+                generationConfig: {
+                  targetKind: 'image',
+                  providerId: provider.id,
+                  parameters: {
+                    ...providerDefaultParameters(provider),
+                    ...currentNode.generationConfig?.parameters,
+                  },
+                  referenceAssets: [
+                    ...existingReferences.map((reference) => ({ ...reference })),
+                    {
+                      url: image.dataUrl,
+                      kind: 'image',
+                      mimeType: image.mimeType,
+                    },
+                  ],
+                },
+              })
+              setGenerationFeedback(`已添加图生图参考图片“${file.name}”。`)
+            } catch (error) {
+              setGenerationFeedback(
+                error instanceof ImagePreparationError
+                  ? error.message
+                  : '无法读取图片，请重新选择。',
+              )
+            }
+          },
           onLocalImageGenerate: () => handleAction(node.id, 'generate'),
           onCreateImageToolNode: (tool) =>
             createImageToolNode(node.id, tool),
+          onUpdateImageTool: (changes) => {
+            if (!node.imageTool || !node.generationConfig) return
+            const imageTool = { ...node.imageTool, ...changes }
+            updateNode(node.id, {
+              imageTool,
+              imageGeneration: {
+                ...defaultImageGenerationSettings,
+                ...node.imageGeneration,
+                resolution: imageTool.resolution,
+              },
+              generationConfig: {
+                ...node.generationConfig,
+                parameters: {
+                  ...node.generationConfig.parameters,
+                  resolution: imageTool.resolution,
+                  upscaleScale: imageTool.scale,
+                  detailProtection: imageTool.detailProtection,
+                },
+              },
+            })
+          },
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
           onLocalVideoGenerate: (prompt) => {
             updateActiveNodePrompt(node.id, prompt)
             handleAction(node.id, 'generate', undefined, prompt)
+          },
+          onCreateTextToVideoPreset: () => {
+            const currentProject = useProjectStore.getState().activeProject
+            const sourceNode = currentProject?.nodes.find(({ id }) => id === node.id)
+            if (
+              !currentProject ||
+              currentProject.id !== projectId ||
+              sourceNode?.details?.type !== 'text'
+            ) return
+
+            const sourceContent = sourceNode.details.content.trim()
+            const sourceUsesCreationPlaceholder =
+              sourceContent === '双击画布创建的自由文本节点' ||
+              sourceContent === '右键画布创建的文本节点'
+            const prompt = sourceUsesCreationPlaceholder || !sourceContent
+              ? '根据文字描述生成视频。'
+              : sourceContent
+            let creation = buildCanvasCreation(currentProject, {
+              kind: 'video',
+              title: nextNodeTitle(currentProject, 'video'),
+              content: prompt,
+              position: {
+                x: sourceNode.position.x + 400,
+                y: sourceNode.position.y,
+              },
+            })
+            const provider =
+              providerRegistry.list().find(({ id }) => id === 'mock-seedance-25') ??
+              providerRegistry.matching(['text-to-video']).find(isProviderEnabled)
+            const generationMode = provider
+              ? resolveVideoGenerationMode(provider, '文生视频')
+              : undefined
+            if (provider && generationMode) {
+              creation = {
+                ...creation,
+                node: {
+                  ...creation.node,
+                  modelProviderId: provider.id,
+                  generationConfig: {
+                    targetKind: 'video',
+                    providerId: provider.id,
+                    parameters: {
+                      ...providerDefaultParameters(provider),
+                      generationMode,
+                    },
+                    referenceAssets: [],
+                  },
+                },
+              }
+            }
+            if (
+              !createConnectedCanvasContent(
+                sourceNode.id,
+                creation,
+                crypto.randomUUID(),
+              )
+            ) return
+
+            updateNode(sourceNode.id, {
+              details: {
+                ...sourceNode.details,
+                editorMode: 'manual',
+                content: sourceUsesCreationPlaceholder ? '' : sourceNode.details.content,
+                editorBlockStyle: sourceNode.details.editorBlockStyle ?? 'paragraph',
+                editorBold: sourceNode.details.editorBold ?? false,
+                editorItalic: sourceNode.details.editorItalic ?? false,
+                editorListStyle: sourceNode.details.editorListStyle ?? 'none',
+              },
+            })
+            groupNodes([sourceNode.id, creation.node.id], 'preset')
+            createdNodeFocusRef.current = creation.node.id
+            setFocusRequestVersion((version) => version + 1)
+            selectOnlyNode(creation.node.id)
+            setActiveTool('select')
+            setGenerationFeedback(
+              '已创建“预设 - 文生视频”：输入文本后可在右侧视频节点继续设置模型与参数。',
+            )
           },
           onUpdateEffectTool: (changes) => {
             if (!node.effectTool) return
@@ -1745,6 +2013,7 @@ export function CanvasPage({
     })
   }, [
     handleAction,
+    createConnectedCanvasContent,
     connectionTool,
     endImageReferenceSelection,
     focusRequestVersion,
@@ -1756,8 +2025,10 @@ export function CanvasPage({
     providerRegistry,
     ephemeralGenerationResults,
     requestDelete,
+    groupNodes,
     selectedNodeIds,
     setActiveImageResult,
+    selectOnlyNode,
     startImageReferenceSelection,
     updateImageGenerationSettings,
     updateActiveNodePrompt,
@@ -2571,7 +2842,7 @@ export function CanvasPage({
                 content: config.content,
                 fontStyle: '正文',
                 modelProviderId: 'mock-text-llm',
-                modelVariant: 'basic-copy',
+                modelVariant: 'qwen-3-vl-flash',
                 prompt: '',
               },
             },

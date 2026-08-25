@@ -922,13 +922,108 @@ describe('creative canvas', () => {
     const project = useProjectStore.getState().activeProject!
     const tool = project.nodes.find(({ title }) => title === '高清')
     expect(tool).toBeDefined()
+    expect(tool).toMatchObject({
+      kind: 'image',
+      modelProviderId: 'mock-general-image-pro',
+      imageTool: {
+        kind: 'upscale',
+        model: '高清修复',
+        scale: '2x',
+        resolution: '4K',
+        detailProtection: true,
+        cost: 18,
+      },
+    })
     expect(project.edges).toContainEqual(expect.objectContaining({
       sourceNodeId: 'character',
       targetNodeId: tool?.id,
     }))
+    expect(screen.getByRole('region', { name: '图片高清参数' })).toBeVisible()
+    expect(screen.getByRole('combobox', { name: '放大倍数' })).toHaveValue('2x')
+    expect(screen.getByRole('combobox', { name: '输出清晰度' })).toHaveValue('4K')
+    expect(screen.getByRole('checkbox', { name: '保护人物与文字细节' })).toBeChecked()
+    expect(screen.getByRole('button', { name: '生成高清图片，预计成本 18' })).toBeEnabled()
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '放大倍数' }),
+      '4x',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '输出清晰度' }),
+      '2K',
+    )
+    await user.click(screen.getByRole('checkbox', { name: '保护人物与文字细节' }))
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(
+        ({ id }) => id === tool?.id,
+      ),
+    ).toMatchObject({
+      imageTool: {
+        scale: '4x',
+        resolution: '2K',
+        detailProtection: false,
+      },
+      imageGeneration: { resolution: '2K' },
+      generationConfig: {
+        parameters: {
+          resolution: '2K',
+          upscaleScale: '4x',
+          detailProtection: false,
+        },
+      },
+    })
     expect(screen.getByRole('status')).toHaveTextContent(
       '已创建“高清”工具节点并建立连接',
     )
+  })
+
+  test('uploads and persists a local image-to-image reference without creating an edge', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes.push({
+      id: 'blank-image',
+      kind: 'image',
+      title: '图片 01',
+      position: { x: 1680, y: 720 },
+      versions: [{
+        id: 'blank-image-version',
+        createdAt: '2026-08-25T00:00:00.000Z',
+        prompt: '',
+      }],
+      activeVersionId: 'blank-image-version',
+      sourceChanged: false,
+    })
+    act(() => activate(project))
+    renderCanvas()
+
+    await user.click(screen.getByRole('button', { name: /^图片 01$/ }))
+    await user.click(screen.getByRole('button', { name: /^图生图$/ }))
+    await user.upload(
+      screen.getByLabelText('为图片 01上传图生图参考'),
+      new File(['reference-image'], '雨夜参考.png', { type: 'image/png' }),
+    )
+
+    await waitFor(() => {
+      const updated = useProjectStore
+        .getState()
+        .activeProject?.nodes.find(({ id }) => id === 'blank-image')
+      expect(updated?.generationConfig).toMatchObject({
+        targetKind: 'image',
+        providerId: 'mock-mj-image',
+        referenceAssets: [{
+          kind: 'image',
+          mimeType: 'image/png',
+          url: expect.stringMatching(/^data:image\/png;base64,/),
+        }],
+      })
+    })
+    expect(useProjectStore.getState().activeProject?.edges).toHaveLength(
+      project.edges.length,
+    )
+    expect(screen.getByRole('img', { name: '上传参考 1' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '生成图片，预计成本 18' })).toBeEnabled()
+    expect(
+      screen.getByText('已添加图生图参考图片“雨夜参考.png”。'),
+    ).toBeVisible()
   })
 
   test('runs a selected-node regeneration through the queue and preserves its old version', async () => {
@@ -2632,6 +2727,74 @@ describe('creative canvas', () => {
     ])
   })
 
+  test('creates the Liblib text-to-video preset as a connected grouped pair', async () => {
+    const user = userEvent.setup()
+    const project = {
+      ...makeCanvasProject(),
+      assets: [],
+      nodes: [{
+        id: 'text-preset-source',
+        kind: 'text' as const,
+        title: '文本节点 08',
+        position: { x: 120, y: 180 },
+        versions: [{
+          id: 'text-preset-version',
+          createdAt: '2026-08-25T00:00:00.000Z',
+          prompt: '',
+        }],
+        activeVersionId: 'text-preset-version',
+        sourceChanged: false,
+        details: {
+          type: 'text' as const,
+          content: '高原广告镜头，雪山下的金色麦浪',
+          fontStyle: '正文' as const,
+          modelProviderId: 'mock-text-llm',
+          modelVariant: 'qwen-3-vl-flash',
+        },
+      }],
+      edges: [],
+      timeline: [],
+      jobs: [],
+      exportJobs: [],
+      groups: [],
+    }
+    act(() => activate(project))
+    renderCanvas()
+    initializeFlow({ x: 640, y: 360 })
+
+    await user.click(screen.getByRole('button', { name: '文生视频' }))
+
+    const activeProject = useProjectStore.getState().activeProject!
+    const video = activeProject.nodes.find(({ kind }) => kind === 'video')
+    expect(activeProject.nodes).toHaveLength(2)
+    expect(activeProject.nodes[0].details).toEqual(expect.objectContaining({
+      type: 'text',
+      editorMode: 'manual',
+    }))
+    expect(video).toEqual(expect.objectContaining({
+      title: '视频 01',
+      position: { x: 520, y: 180 },
+      generationConfig: expect.objectContaining({
+        targetKind: 'video',
+        parameters: expect.objectContaining({ generationMode: '文生视频' }),
+      }),
+    }))
+    expect(activeProject.edges).toEqual([
+      expect.objectContaining({
+        sourceNodeId: 'text-preset-source',
+        targetNodeId: video?.id,
+      }),
+    ])
+    expect(activeProject.groups).toEqual([
+      expect.objectContaining({
+        title: '预设 - 文生视频',
+        kind: 'preset',
+        nodeIds: ['text-preset-source', video?.id],
+      }),
+    ])
+    expect(screen.getByRole('region', { name: '视频 01 生成参数' })).toBeVisible()
+  })
+
   test('switches between the real hand and move tools with H and V without hiding connections', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -3083,7 +3246,7 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     await user.click(
-      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
+      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
     )
 
     expect(start).not.toHaveBeenCalled()

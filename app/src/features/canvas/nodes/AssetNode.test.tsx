@@ -1,5 +1,5 @@
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -207,6 +207,8 @@ test('keeps image nodes folded until they become the current selection', async (
 test('matches the empty Liblib image card attempts and three composer actions', async () => {
   const user = userEvent.setup()
   const onSelect = vi.fn()
+  const onStartImageReferenceSelection = vi.fn()
+  const onImportImageReference = vi.fn()
   const onCreateImageToolNode = vi.fn()
   const data = {
     node: {
@@ -230,6 +232,8 @@ test('matches the empty Liblib image card attempts and three composer actions', 
     onHandleActivate: vi.fn(),
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
+    onStartImageReferenceSelection,
+    onImportImageReference,
     onCreateImageToolNode,
   }
 
@@ -267,9 +271,20 @@ test('matches the empty Liblib image card attempts and three composer actions', 
       .map((button) => button.textContent),
   ).toEqual(['参考', '标记', '风格'])
 
-  await user.click(within(attempts).getByRole('button', { name: '图生图' }))
+  const imageToImage = within(attempts).getByRole('button', { name: '图生图' })
+  await user.click(imageToImage)
   expect(onSelect).toHaveBeenCalledOnce()
-  expect(screen.getByRole('status')).toHaveTextContent('已切换图生图模式')
+  expect(onStartImageReferenceSelection).not.toHaveBeenCalled()
+  expect(screen.getByRole('status')).toHaveTextContent(
+    '已切换图生图模式，请上传参考图片或使用“参考”从画布选择',
+  )
+  const referenceFile = new File(['image'], 'reference.png', {
+    type: 'image/png',
+  })
+  fireEvent.change(screen.getByLabelText('为图片节点 1上传图生图参考'), {
+    target: { files: [referenceFile] },
+  })
+  expect(onImportImageReference).toHaveBeenCalledWith(referenceFile)
 
   await user.click(within(attempts).getByRole('button', { name: '图片高清' }))
   expect(screen.getByRole('alertdialog', { name: '将添加工具节点' })).toBeVisible()
@@ -285,6 +300,7 @@ function renderSpecializedNode(
   contextual = true,
 ) {
   const onUpdateNodeDetails = vi.fn()
+  const onCreateTextToVideoPreset = vi.fn()
   const node = {
     id: `${details.type}-node`,
     kind,
@@ -314,6 +330,7 @@ function renderSpecializedNode(
     onFocusComplete: vi.fn(),
     onDelete: vi.fn(),
     onUpdateNodeDetails,
+    onCreateTextToVideoPreset,
   } as unknown as CreativeNodeData
   const flowNode: CreativeFlowNode = {
     id: node.id,
@@ -341,7 +358,13 @@ function renderSpecializedNode(
     </div>,
   )
 
-  return { ...view, data, flowNode, onUpdateNodeDetails }
+  return {
+    ...view,
+    data,
+    flowNode,
+    onUpdateNodeDetails,
+    onCreateTextToVideoPreset,
+  }
 }
 
 test('keeps specialized nodes folded until selected and edits text details', async () => {
@@ -353,19 +376,128 @@ test('keeps specialized nodes folded until selected and edits text details', asy
   }
   const folded = renderSpecializedNode('文本 01', 'text', details, false)
 
-  expect(screen.getByText('文本节点')).toBeVisible()
+  expect(screen.getByRole('textbox', { name: '节点名称' })).toHaveValue('文本 01')
+  expect(screen.getByRole('toolbar', { name: '文本快捷尝试' })).toBeVisible()
+  expect(
+    within(screen.getByRole('toolbar', { name: '文本快捷尝试' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['自己编写内容', '文生视频', '图片反推提示词', '文字生音乐'])
   expect(screen.queryByRole('region', { name: '文本 01 文本参数' })).not.toBeInTheDocument()
   expect(screen.queryByText('本地演示内容')).not.toBeInTheDocument()
   expect(screen.queryByText('就绪')).not.toBeInTheDocument()
+  await user.click(
+    within(screen.getByRole('toolbar', { name: '文本快捷尝试' })).getByRole('button', {
+      name: '自己编写内容',
+    }),
+  )
+  expect(folded.onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({ editorMode: 'manual', content: '雨巷旁白' }),
+  )
   folded.unmount()
 
-  const { onUpdateNodeDetails } = renderSpecializedNode('文本 01', 'text', details)
+  const { container, onUpdateNodeDetails } = renderSpecializedNode('文本 01', 'text', details)
   const panel = screen.getByRole('region', { name: '文本 01 文本参数' })
+  expect(container.querySelector('.creative-node-composer--text')).toContainElement(panel)
+  expect(container.querySelector('.creative-node--liblib-text')).toBeVisible()
+  expect(within(panel).getByRole('textbox', { name: '文本生成提示词' })).toHaveAttribute(
+    'placeholder',
+    '写下你想讲的故事、场景或角色设定。例如：一个来自未来的机器人，在城市屋顶看星星。',
+  )
   const editor = within(panel).getByRole('textbox', { name: '文本内容' })
   expect(editor).toHaveValue('雨巷旁白')
   expect(within(panel).getByText('4 / 5000')).toBeVisible()
   await user.selectOptions(within(panel).getByRole('combobox', { name: '字体样式' }), '引用')
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({ ...details, fontStyle: '引用' })
+})
+
+test('starts the connected text-to-video preset from the text quick action', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'text',
+    content: '高原广告镜头，雪山下的金色麦浪',
+    fontStyle: '正文',
+    prompt: '',
+  }
+  const { onCreateTextToVideoPreset, onUpdateNodeDetails } = renderSpecializedNode(
+    '文本节点 08',
+    'text',
+    details,
+    false,
+  )
+
+  await user.click(
+    within(screen.getByRole('toolbar', { name: '文本快捷尝试' })).getByRole('button', {
+      name: '文生视频',
+    }),
+  )
+
+  expect(onCreateTextToVideoPreset).toHaveBeenCalledOnce()
+  expect(onUpdateNodeDetails).not.toHaveBeenCalled()
+})
+
+test('edits manual text inside the compact node with a Liblib formatting toolbar', async () => {
+  const user = userEvent.setup()
+  const details = {
+    type: 'text',
+    content: '城市屋顶的星光',
+    fontStyle: '正文',
+    editorMode: 'manual',
+    editorBlockStyle: 'paragraph',
+    editorBold: false,
+    editorItalic: false,
+    editorListStyle: 'none',
+  }
+  const { container, onUpdateNodeDetails } = renderSpecializedNode(
+    '文本 05',
+    'text',
+    details,
+  )
+
+  expect(screen.queryByRole('region', { name: '文本 05 文本参数' })).not.toBeInTheDocument()
+  expect(container.querySelector('.creative-node--manual-text')).toBeVisible()
+  const toolbar = screen.getByRole('toolbar', { name: '文本格式工具' })
+  for (const name of [
+    '清除文本格式',
+    '一级标题',
+    '二级标题',
+    '三级标题',
+    '正文',
+    '加粗',
+    '斜体',
+    '无序列表',
+    '有序列表',
+    '插入分隔线',
+    '复制文本',
+    '展开文本节点',
+  ]) {
+    expect(within(toolbar).getByRole('button', { name })).toBeVisible()
+  }
+
+  const editor = screen.getByRole('textbox', { name: '自己编写内容' })
+  expect(editor).toHaveValue('城市屋顶的星光')
+  await user.clear(editor)
+  await user.type(editor, '雨夜重逢')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({ editorMode: 'manual', content: '雨夜重逢' }),
+  )
+
+  await user.click(within(toolbar).getByRole('button', { name: '一级标题' }))
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({ editorBlockStyle: 'h1' }),
+  )
+  await user.click(within(toolbar).getByRole('button', { name: '加粗' }))
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
+    expect.objectContaining({ editorBold: true }),
+  )
+  await user.click(within(toolbar).getByRole('button', { name: '复制文本' }))
+  expect(screen.getByRole('status')).toHaveTextContent('已复制文本')
+  await user.click(within(toolbar).getByRole('button', { name: '展开文本节点' }))
+  expect(container.querySelector('.creative-node--manual-text-expanded')).toBeVisible()
+  expect(within(toolbar).getByRole('button', { name: '收起文本节点' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
 })
 
 test('selects a text LLM tier and fills locally generated text with model provenance', async () => {
@@ -383,11 +515,12 @@ test('selects a text LLM tier and fills locally generated text with model proven
   const model = within(panel).getByRole('combobox', { name: '文本模型' })
 
   expect(within(model).getAllByRole('option').map((option) => option.textContent)).toEqual([
-    'GVLM 3.1 Flash · 基础文案 · 8 积分',
-    'GVLM 3.1 · 深度脚本 · 12 积分',
-    'CVLM 5.5 · 灵感扩展 · 15 积分',
+    'GVLM 3.1 · 12 积分',
+    'CVLM 5.5 · 15 积分',
+    'GVLM 3.1 Flash · 8 积分',
+    'Qwen 3 VL Flash · 1 积分',
   ])
-  expect(within(panel).getByText('预计成本 8')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 8')).toBeVisible()
   expect(within(panel).getByText('本地演示')).toBeVisible()
 
   await user.selectOptions(model, 'deep-script')
@@ -400,7 +533,7 @@ test('selects a text LLM tier and fills locally generated text with model proven
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
     expect.objectContaining({
       content: expect.stringContaining('雨夜重逢宣传文案'),
-      generatedByModel: 'GVLM 3.1 · 深度脚本',
+      generatedByModel: 'GVLM 3.1',
     }),
   )
   expect(within(panel).getByRole('status')).toHaveTextContent('本地演示生成完成')
@@ -441,7 +574,7 @@ test('generates a local script draft from outline and scene count', async () => 
 
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
     expect.objectContaining({
-      generatedByModel: 'GVLM 3.1 · 深度脚本',
+      generatedByModel: 'GVLM 3.1',
       chapters: [
         expect.objectContaining({ title: '场次 01', summary: expect.stringContaining('河灯') }),
         expect.objectContaining({ title: '场次 02', summary: expect.stringContaining('河灯') }),

@@ -9,6 +9,7 @@ import {
   type DependencyEdge,
   type GenerationJob,
   type ImageGenerationSettings,
+  type ImageToolConfig,
   type NodeVersion,
   type Project,
   type TimelineItem,
@@ -36,7 +37,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'effectTool' | 'details' | 'generationConfig'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -553,6 +554,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.modelProviderId === undefined
                     ? {}
                     : { modelProviderId: changes.modelProviderId }),
+                  ...(changes.imageGeneration === undefined
+                    ? {}
+                    : { imageGeneration: { ...changes.imageGeneration } }),
+                  ...(changes.imageTool === undefined
+                    ? {}
+                    : { imageTool: { ...changes.imageTool } as ImageToolConfig }),
                   ...(changes.effectTool === undefined
                     ? {}
                     : { effectTool: { ...changes.effectTool } }),
@@ -865,6 +872,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           kind,
         )
         const prefix = kind === 'storyboard' ? '分镜组' : '分组'
+        const title = kind === 'preset'
+          ? '预设 - 文生视频'
+          : `${prefix} ${String(number).padStart(2, '0')}`
 
         return withUpdatedTimestamp({
           ...project,
@@ -872,7 +882,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             ...remainingGroups,
             {
               id: createdGroupId,
-              title: `${prefix} ${String(number).padStart(2, '0')}`,
+              title,
               kind,
               nodeIds: orderedNodeIds,
               createdAt: timestamp,

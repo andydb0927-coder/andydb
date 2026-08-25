@@ -41,18 +41,24 @@ function renderHome(recentProjects?: ReactNode) {
 }
 
 describe('platform home sections', () => {
-  test('places an optional recent-projects slot after features and before the Agent', async () => {
+  test('places the Agent directly after the hero and keeps discovery sections secondary', async () => {
     renderHome(<section aria-label="插入的最近项目" />)
 
+    const hero = screen.getByRole('region', {
+      name: '只需一张画布 连接你的多种创意想法',
+    })
+    const agent = await screen.findByRole('region', { name: '说出你的创意' })
     const features = await screen.findByRole('region', { name: '产品特性轮播' })
     const recentProjects = screen.getByRole('region', { name: '插入的最近项目' })
-    const agentHeading = screen.getByRole('heading', { name: '说出你的创意' })
 
     expect(
-      features.compareDocumentPosition(recentProjects),
+      hero.compareDocumentPosition(agent),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(
-      recentProjects.compareDocumentPosition(agentHeading),
+      agent.compareDocumentPosition(features),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(
+      features.compareDocumentPosition(recentProjects),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 

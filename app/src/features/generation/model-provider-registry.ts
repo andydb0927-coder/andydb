@@ -956,22 +956,48 @@ export function createDefaultProviderRegistry(
       pricing: { amount: 8, currency: 'credits', unit: 'generation' },
       variants: [
         {
-          id: 'basic-copy',
-          name: 'GVLM 3.1 Flash · 基础文案',
-          pricing: { amount: 8, currency: 'credits', unit: 'generation' },
-          defaultParameters: { fontStyle: '正文', sceneCount: 3 },
-        },
-        {
           id: 'deep-script',
-          name: 'GVLM 3.1 · 深度脚本',
+          name: 'GVLM 3.1',
           pricing: { amount: 12, currency: 'credits', unit: 'generation' },
-          defaultParameters: { fontStyle: '引用', sceneCount: 5 },
+          defaultParameters: {
+            fontStyle: '引用',
+            sceneCount: 5,
+            latency: '20s',
+            steps: '20多步',
+          },
         },
         {
           id: 'idea-expansion',
-          name: 'CVLM 5.5 · 灵感扩展',
+          name: 'CVLM 5.5',
           pricing: { amount: 15, currency: 'credits', unit: 'generation' },
-          defaultParameters: { fontStyle: '标题', sceneCount: 4 },
+          defaultParameters: {
+            fontStyle: '标题',
+            sceneCount: 4,
+            latency: '10s',
+            steps: '10秒',
+          },
+        },
+        {
+          id: 'basic-copy',
+          name: 'GVLM 3.1 Flash',
+          pricing: { amount: 8, currency: 'credits', unit: 'generation' },
+          defaultParameters: {
+            fontStyle: '正文',
+            sceneCount: 3,
+            latency: '15s',
+            steps: '15秒',
+          },
+        },
+        {
+          id: 'qwen-3-vl-flash',
+          name: 'Qwen 3 VL Flash',
+          pricing: { amount: 1, currency: 'credits', unit: 'generation' },
+          defaultParameters: {
+            fontStyle: '正文',
+            sceneCount: 3,
+            latency: '10s',
+            steps: '10秒',
+          },
         },
       ],
       officialApiEndpoint: 'mock://local/text-llm',

@@ -898,9 +898,26 @@ export function ImageGenerationPanel({
           <ScanSearch aria-hidden="true" />{incomingReferenceCount}
         </span>
       ) : null}
+      {data.imageReferences?.some(({ asset }) => asset.kind === 'image') ? (
+        <ul
+          className="image-generation-panel__references"
+          aria-label="图生图参考图片"
+        >
+          {data.imageReferences
+            .filter(({ asset }) => asset.kind === 'image')
+            .map((reference) => (
+              <li key={reference.id}>
+                <img src={reference.asset.url} alt={reference.title} />
+                <span>{reference.title}</span>
+              </li>
+            ))}
+        </ul>
+      ) : null}
       {imageToImage ? (
         <p className="image-generation-panel__mode" role="status">
-          已切换图生图模式
+          {incomingReferenceCount
+            ? `图生图模式 · 已添加 ${incomingReferenceCount} 个参考`
+            : '已切换图生图模式，请上传参考图片或使用“参考”从画布选择'}
         </p>
       ) : null}
       {marking ? (
@@ -1316,5 +1333,81 @@ export function ImageResults({ data }: { data: CreativeNodeData }) {
         document.body,
       ) : null}
     </>
+  )
+}
+
+export function ImageToolDetails({ data }: { data: CreativeNodeData }) {
+  const config = data.node.imageTool
+  if (!config) return null
+
+  return (
+    <section
+      className="image-tool-node-panel nodrag"
+      role="region"
+      aria-label="图片高清参数"
+    >
+      <header>
+        <div>
+          <span>IMAGE UPSCALE</span>
+          <strong>{config.model}</strong>
+        </div>
+        <span className="model-provider-badge">本地演示</span>
+      </header>
+      <p>基于上游图片增强清晰度，并尽量保持原始构图、人物身份与文字细节。</p>
+      <div className="image-tool-node-panel__settings">
+        <label>
+          放大倍数
+          <select
+            aria-label="放大倍数"
+            value={config.scale}
+            onChange={(event) =>
+              data.onUpdateImageTool?.({
+                scale: event.target.value as typeof config.scale,
+              })
+            }
+          >
+            <option value="2x">2x</option>
+            <option value="4x">4x</option>
+          </select>
+        </label>
+        <label>
+          输出清晰度
+          <select
+            aria-label="输出清晰度"
+            value={config.resolution}
+            onChange={(event) =>
+              data.onUpdateImageTool?.({
+                resolution: event.target.value as typeof config.resolution,
+              })
+            }
+          >
+            <option value="2K">2K</option>
+            <option value="4K">4K</option>
+          </select>
+        </label>
+        <label className="image-tool-node-panel__toggle">
+          <input
+            type="checkbox"
+            checked={config.detailProtection}
+            onChange={(event) =>
+              data.onUpdateImageTool?.({ detailProtection: event.target.checked })
+            }
+          />
+          保护人物与文字细节
+        </label>
+      </div>
+      <footer>
+        <span><Zap aria-hidden="true" />预计成本 {config.cost}</span>
+        <button
+          type="button"
+          aria-label={`生成高清图片，预计成本 ${config.cost}`}
+          title="本地演示，不连接真实生成"
+          onClick={() => data.onLocalImageGenerate?.()}
+        >
+          <ArrowUp aria-hidden="true" />
+          <span className="visually-hidden">生成高清图片</span>
+        </button>
+      </footer>
+    </section>
   )
 }

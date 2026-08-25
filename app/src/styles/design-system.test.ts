@@ -47,7 +47,7 @@ describe('global design system', () => {
     expect(rule('.canvas-context-menu')).toContain('var(--shadow-overlay)')
   })
 
-  test('uses the cinnabar and warm-gold palette instead of the legacy purple accent', () => {
+  test('does not reintroduce the legacy purple accent', () => {
     expect(css).not.toContain('#7268f0')
     expect(css).not.toContain('rgb(114 104 240')
     expect(css).not.toContain('rgb(169 162 255')

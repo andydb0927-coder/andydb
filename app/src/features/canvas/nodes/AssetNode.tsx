@@ -6,17 +6,31 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  AlignLeft,
+  Ban,
+  Bold,
   BookOpenText,
   Camera,
   Clapperboard,
   Contact,
+  Copy,
+  FileImage,
+  FileText,
+  FileVideo2,
   Film,
   Globe2,
   Image,
+  Italic,
+  List,
+  ListOrdered,
   Maximize2,
+  Minimize2,
+  Minus,
   MonitorPlay,
+  Music2,
   Pause,
   Pencil,
+  Pilcrow,
   Play,
   RefreshCw,
   Type,
@@ -28,10 +42,19 @@ import type { ReactNode } from 'react'
 
 import { withAppBase } from '../../../app/public-url'
 import { StatusText } from '../../../ui/StatusText'
-import type { VideoDerivedTool } from '../../project/model'
+import type {
+  TextEditorBlockStyle,
+  TextEditorListStyle,
+  TextNodeDetails,
+  VideoDerivedTool,
+} from '../../project/model'
 import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
-import { ImageGenerationPanel, ImageResults } from './ImageNodeDetails'
+import {
+  ImageGenerationPanel,
+  ImageResults,
+  ImageToolDetails,
+} from './ImageNodeDetails'
 import { VideoGenerationPanel, VideoToolDetails } from './VideoNodeDetails'
 import { SpecializedNodeDetailsPanel } from './SpecializedNodeDetails'
 import { specializedNodeTypeCopy } from './specialized-node-copy'
@@ -84,7 +107,7 @@ function NodeActions({ data }: { data: CreativeNodeData }) {
     'retry-generation': RefreshCw,
   } as const
 
-  const actions = data.node.effectTool
+  const actions = data.node.effectTool || data.node.imageTool
     ? []
     : primaryActionsForNode(data.node.kind, data.asset !== undefined).filter(
         ({ action }) => !(data.node.details && action === 'edit-card'),
@@ -183,6 +206,205 @@ function EffectToolDetails({ data }: { data: CreativeNodeData }) {
   )
 }
 
+function stripListPrefix(line: string) {
+  return line.replace(/^\s*(?:[\u2022*-]|\d+[.)])\s+/, '')
+}
+
+function applyListStyle(content: string, style: TextEditorListStyle) {
+  if (style === 'none') {
+    return content.split('\n').map(stripListPrefix).join('\n')
+  }
+  return content
+    .split('\n')
+    .map((line, index) => {
+      const cleanLine = stripListPrefix(line)
+      if (!cleanLine) return ''
+      return style === 'bullet' ? `• ${cleanLine}` : `${index + 1}. ${cleanLine}`
+    })
+    .join('\n')
+}
+
+function ManualTextEditor({
+  data,
+  details,
+  expanded,
+  onExpandedChange,
+}: {
+  data: CreativeNodeData
+  details: TextNodeDetails
+  expanded: boolean
+  onExpandedChange(expanded: boolean): void
+}) {
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+  const [contentDraft, setContentDraft] = useState(details.content)
+  const [copyStatus, setCopyStatus] = useState('')
+  const blockStyle = details.editorBlockStyle ?? 'paragraph'
+  const listStyle = details.editorListStyle ?? 'none'
+
+  useEffect(() => {
+    setContentDraft(details.content)
+  }, [details.content])
+
+  const update = (changes: Partial<TextNodeDetails>) => {
+    data.onUpdateNodeDetails?.({
+      ...details,
+      editorMode: 'manual',
+      editorBlockStyle: blockStyle,
+      editorBold: details.editorBold ?? false,
+      editorItalic: details.editorItalic ?? false,
+      editorListStyle: listStyle,
+      ...changes,
+    })
+  }
+
+  const setBlockStyle = (nextStyle: TextEditorBlockStyle) => {
+    update({ editorBlockStyle: nextStyle })
+  }
+
+  const toggleListStyle = (nextStyle: Exclude<TextEditorListStyle, 'none'>) => {
+    const resolvedStyle = listStyle === nextStyle ? 'none' : nextStyle
+    const nextContent = applyListStyle(contentDraft, resolvedStyle)
+    setContentDraft(nextContent)
+    update({
+      editorListStyle: resolvedStyle,
+      content: nextContent,
+    })
+  }
+
+  const insertDivider = () => {
+    const editor = editorRef.current
+    const start = editor?.selectionStart ?? contentDraft.length
+    const end = editor?.selectionEnd ?? start
+    const prefix = start > 0 && contentDraft[start - 1] !== '\n' ? '\n' : ''
+    const suffix = end < contentDraft.length && contentDraft[end] !== '\n' ? '\n' : ''
+    const insertion = `${prefix}---${suffix}`
+    const nextContent = `${contentDraft.slice(0, start)}${insertion}${contentDraft.slice(end)}`
+    setContentDraft(nextContent)
+    update({ content: nextContent })
+  }
+
+  const copyText = async () => {
+    if (!contentDraft.trim()) {
+      setCopyStatus('暂无可复制内容')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(contentDraft)
+      setCopyStatus('已复制文本')
+    } catch {
+      setCopyStatus('复制失败，请允许剪贴板权限')
+    }
+  }
+
+  return (
+    <div className="creative-node__manual-editor nodrag nowheel">
+      {data.contextual ? <div className="creative-node__manual-toolbar" role="toolbar" aria-label="文本格式工具">
+        <button
+          type="button"
+          aria-label="清除文本格式"
+          title="清除格式"
+          onClick={() => {
+            const nextContent = applyListStyle(contentDraft, 'none')
+            setContentDraft(nextContent)
+            update({
+              editorBlockStyle: 'paragraph',
+              editorBold: false,
+              editorItalic: false,
+              editorListStyle: 'none',
+              content: nextContent,
+            })
+          }}
+        >
+          <Ban aria-hidden="true" />
+        </button>
+        {(['h1', 'h2', 'h3'] as const).map((style, index) => (
+          <button
+            key={style}
+            type="button"
+            aria-label={`${['一', '二', '三'][index]}级标题`}
+            aria-pressed={blockStyle === style}
+            onClick={() => setBlockStyle(style)}
+          >
+            H{index + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="正文"
+          aria-pressed={blockStyle === 'paragraph'}
+          onClick={() => setBlockStyle('paragraph')}
+        >
+          <Pilcrow aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="加粗"
+          aria-pressed={Boolean(details.editorBold)}
+          onClick={() => update({ editorBold: !details.editorBold })}
+        >
+          <Bold aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="斜体"
+          aria-pressed={Boolean(details.editorItalic)}
+          onClick={() => update({ editorItalic: !details.editorItalic })}
+        >
+          <Italic aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="无序列表"
+          aria-pressed={listStyle === 'bullet'}
+          onClick={() => toggleListStyle('bullet')}
+        >
+          <List aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="有序列表"
+          aria-pressed={listStyle === 'ordered'}
+          onClick={() => toggleListStyle('ordered')}
+        >
+          <ListOrdered aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="插入分隔线" onClick={insertDivider}>
+          <Minus aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="复制文本" onClick={() => void copyText()}>
+          <Copy aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label={expanded ? '收起文本节点' : '展开文本节点'}
+          aria-pressed={expanded}
+          onClick={() => onExpandedChange(!expanded)}
+        >
+          {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+        </button>
+      </div> : null}
+      <textarea
+        ref={editorRef}
+        aria-label="自己编写内容"
+        placeholder="输入内容..."
+        maxLength={5000}
+        value={contentDraft}
+        data-block-style={blockStyle}
+        data-bold={Boolean(details.editorBold)}
+        data-italic={Boolean(details.editorItalic)}
+        onFocus={data.onSelect}
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => {
+          const nextContent = event.currentTarget.value
+          setContentDraft(nextContent)
+          update({ content: nextContent })
+        }}
+      />
+      {data.contextual && copyStatus ? <span className="creative-node__manual-copy-status" role="status">{copyStatus}</span> : null}
+    </div>
+  )
+}
+
 export function CreativeNodeShell({
   data,
   preview,
@@ -204,6 +426,7 @@ export function CreativeNodeShell({
   const selectRef = useRef<HTMLButtonElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const upscaleTriggerRef = useRef<HTMLButtonElement>(null)
+  const imageToImageInputRef = useRef<HTMLInputElement>(null)
   const renameCancelledRef = useRef(false)
   const [imageToImage, setImageToImage] = useState(false)
   const [upscalePending, setUpscalePending] = useState(false)
@@ -213,6 +436,7 @@ export function CreativeNodeShell({
   const [videoDuration, setVideoDuration] = useState(
     asset?.kind === 'video' ? asset.durationSeconds ?? 0 : 0,
   )
+  const [manualTextExpanded, setManualTextExpanded] = useState(false)
   const [pendingVideoFrame, setPendingVideoFrame] =
     useState<VideoDerivedTool>()
   const KindIcon = kindIcons[node.kind]
@@ -225,14 +449,55 @@ export function CreativeNodeShell({
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene')
   const imageGenerationNode =
     (node.kind === 'image' || node.kind === 'character' || node.kind === 'scene') &&
-    node.videoTool === undefined
+    node.videoTool === undefined &&
+    node.imageTool === undefined
+  const imageToolNode = node.kind === 'image' && node.imageTool !== undefined
   const videoGenerationNode =
     node.kind === 'video' &&
     node.videoTool === undefined &&
     specializedDetails === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
-  const liblibMediaNode = imageGenerationNode || videoGenerationNode
+  const liblibMediaNode = imageGenerationNode || videoGenerationNode || imageToolNode
+  const textGenerationNode = specializedDetails?.type === 'text'
+  const manualTextNode = textGenerationNode && specializedDetails.editorMode === 'manual'
+  const textComposerNode = textGenerationNode && !manualTextNode
+  const liblibCompactNode = liblibMediaNode || textGenerationNode
   const expandableMedia = liblibMediaNode || node.videoTool !== undefined || node.effectTool !== undefined || specializedDetails !== undefined
+
+  const selectTextQuickTry = (
+    label: '自己编写内容' | '文生视频' | '图片反推提示词' | '文字生音乐',
+  ) => {
+    data.onSelect()
+    if (!textGenerationNode) return
+    if (label === '自己编写内容') {
+      const placeholderContent =
+        specializedDetails.content === '双击画布创建的自由文本节点' ||
+        specializedDetails.content === '右键画布创建的文本节点'
+      data.onUpdateNodeDetails?.({
+        ...specializedDetails,
+        editorMode: 'manual',
+        editorBlockStyle: specializedDetails.editorBlockStyle ?? 'paragraph',
+        editorBold: specializedDetails.editorBold ?? false,
+        editorItalic: specializedDetails.editorItalic ?? false,
+        editorListStyle: specializedDetails.editorListStyle ?? 'none',
+        content: placeholderContent ? '' : specializedDetails.content,
+      })
+      return
+    }
+    if (label === '文生视频') {
+      data.onCreateTextToVideoPreset?.()
+      return
+    }
+    const promptTemplates = {
+      '图片反推提示词': '请根据参考图片反推构图、人物、光线与风格提示词：',
+      '文字生音乐': '请将以下文字整理为音乐氛围、乐器和节奏提示词：',
+    } as const
+    if (specializedDetails.prompt?.trim()) return
+    data.onUpdateNodeDetails?.({
+      ...specializedDetails,
+      prompt: promptTemplates[label],
+    })
+  }
 
   useEffect(() => {
     setImageToImage(false)
@@ -241,6 +506,7 @@ export function CreativeNodeShell({
     setVideoCurrentTime(0)
     setVideoDuration(asset?.kind === 'video' ? asset.durationSeconds ?? 0 : 0)
     setPendingVideoFrame(undefined)
+    setManualTextExpanded(false)
   }, [node.id])
 
   useEffect(() => {
@@ -304,9 +570,9 @@ export function CreativeNodeShell({
 
   return (
     <div className="creative-node-layout">
-      {liblibMediaNode ? (
+      {liblibCompactNode ? (
         <div className="creative-node__floating-title nodrag nowheel">
-          <KindIcon aria-hidden="true" />
+          {textGenerationNode ? <FileText aria-hidden="true" /> : <KindIcon aria-hidden="true" />}
           <input
             type="text"
             aria-label="节点名称"
@@ -341,7 +607,11 @@ export function CreativeNodeShell({
         }${videoMedia ? ' creative-node--video-media' : ''}${
           specializedDetails ? ' creative-node--specialized' : ''
         }${liblibMediaNode ? ' creative-node--liblib-media' : ''}${
-          expandableMedia && contextual ? ' creative-node--expanded' : ''
+          textGenerationNode ? ' creative-node--liblib-text' : ''
+        }${manualTextNode ? ' creative-node--manual-text' : ''}${
+          manualTextNode && manualTextExpanded ? ' creative-node--manual-text-expanded' : ''
+        }${
+          expandableMedia && contextual && !manualTextNode ? ' creative-node--expanded' : ''
         }`}
       >
         <button
@@ -352,7 +622,7 @@ export function CreativeNodeShell({
           data-canvas-node-id={node.id}
           onClick={data.onSelect}
         >
-          {!liblibMediaNode ? (
+          {!liblibCompactNode ? (
             <span className="creative-node__heading">
               <span className="creative-node__kind">
                 <KindIcon aria-hidden="true" />
@@ -363,7 +633,11 @@ export function CreativeNodeShell({
               <strong>{node.title}</strong>
             </span>
           ) : null}
-          {specializedDetails ? null : preview ??
+          {textComposerNode ? (
+            <span className="creative-node__text-preview" aria-hidden="true">
+              <AlignLeft />
+            </span>
+          ) : specializedDetails ? null : preview ??
             (asset?.kind === 'video' ? (
               <video
                 ref={videoRef}
@@ -506,9 +780,11 @@ export function CreativeNodeShell({
             <span>尝试：</span>
             <button
               type="button"
+              aria-controls={`image-to-image-input-${node.id}`}
               onClick={() => {
                 data.onSelect()
                 setImageToImage(true)
+                imageToImageInputRef.current?.click()
               }}
             >
               <Upload aria-hidden="true" />
@@ -525,18 +801,64 @@ export function CreativeNodeShell({
               <Maximize2 aria-hidden="true" />
               图片高清
             </button>
+            <input
+              ref={imageToImageInputRef}
+              id={`image-to-image-input-${node.id}`}
+              className="visually-hidden"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label={`为${node.title}上传图生图参考`}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0]
+                if (file) data.onImportImageReference?.(file)
+                event.currentTarget.value = ''
+              }}
+            />
           </div>
+        ) : null}
+        {textComposerNode ? (
+          <div
+            className="creative-node__text-attempts nodrag nowheel"
+            role="toolbar"
+            aria-label="文本快捷尝试"
+          >
+            <span>尝试：</span>
+            <button type="button" onClick={() => selectTextQuickTry('自己编写内容')}>
+              <FileText aria-hidden="true" />
+              自己编写内容
+            </button>
+            <button type="button" onClick={() => selectTextQuickTry('文生视频')}>
+              <FileVideo2 aria-hidden="true" />
+              文生视频
+            </button>
+            <button type="button" onClick={() => selectTextQuickTry('图片反推提示词')}>
+              <FileImage aria-hidden="true" />
+              图片反推提示词
+            </button>
+            <button type="button" onClick={() => selectTextQuickTry('文字生音乐')}>
+              <Music2 aria-hidden="true" />
+              文字生音乐
+            </button>
+          </div>
+        ) : null}
+        {manualTextNode ? (
+          <ManualTextEditor
+            data={data}
+            details={specializedDetails}
+            expanded={manualTextExpanded}
+            onExpandedChange={setManualTextExpanded}
+          />
         ) : null}
         {imageGenerationNode ? <ImageResults data={data} /> : null}
         {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
-        {specializedDetails && contextual ? <SpecializedNodeDetailsPanel data={data} /> : null}
+        {specializedDetails && contextual && !textGenerationNode ? <SpecializedNodeDetailsPanel data={data} /> : null}
         <Handle
           id="dependency-target"
           type="target"
           position={Position.Left}
           style={
-            !liblibMediaNode && expandableMedia && contextual
+            !liblibCompactNode && expandableMedia && contextual
               ? { top: 112 }
               : undefined
           }
@@ -556,7 +878,7 @@ export function CreativeNodeShell({
           type="source"
           position={Position.Right}
           style={
-            !liblibMediaNode && expandableMedia && contextual
+            !liblibCompactNode && expandableMedia && contextual
               ? { top: 112 }
               : undefined
           }
@@ -583,9 +905,19 @@ export function CreativeNodeShell({
           />
         </div>
       ) : null}
+      {imageToolNode && contextual ? (
+        <div className="creative-node-composer creative-node-composer--image-tool">
+          <ImageToolDetails data={data} />
+        </div>
+      ) : null}
       {videoGenerationNode && contextual ? (
         <div className="creative-node-composer creative-node-composer--video">
           <VideoGenerationPanel data={data} />
+        </div>
+      ) : null}
+      {textComposerNode && contextual ? (
+        <div className="creative-node-composer creative-node-composer--text">
+          <SpecializedNodeDetailsPanel data={data} />
         </div>
       ) : null}
       {contextual ? <NodeActions data={data} /> : null}

@@ -155,6 +155,15 @@ export type VideoToolConfig =
       frame: '首帧' | '尾帧' | '当前帧'
     }
 
+export interface ImageToolConfig {
+  kind: 'upscale'
+  model: '高清修复'
+  scale: '2x' | '4x'
+  resolution: '2K' | '4K'
+  detailProtection: boolean
+  cost: 18
+}
+
 export interface EffectToolConfig {
   templateId: string
   effect: string
@@ -165,6 +174,8 @@ export interface EffectToolConfig {
 }
 
 export type TextFontStyle = '正文' | '标题' | '引用' | '等宽'
+export type TextEditorBlockStyle = 'paragraph' | 'h1' | 'h2' | 'h3'
+export type TextEditorListStyle = 'none' | 'bullet' | 'ordered'
 
 export interface TextNodeDetails {
   type: 'text'
@@ -174,6 +185,11 @@ export interface TextNodeDetails {
   modelVariant?: string
   prompt?: string
   generatedByModel?: string
+  editorMode?: 'generate' | 'manual'
+  editorBlockStyle?: TextEditorBlockStyle
+  editorBold?: boolean
+  editorItalic?: boolean
+  editorListStyle?: TextEditorListStyle
 }
 
 export interface ScriptChapter {
@@ -265,6 +281,7 @@ export interface CanvasNode {
   activeResultId?: string
   imageGeneration?: ImageGenerationSettings
   rotationQuarterTurns?: number
+  imageTool?: ImageToolConfig
   videoTool?: VideoToolConfig
   effectTool?: EffectToolConfig
   details?: CanvasNodeDetails
@@ -274,7 +291,7 @@ export interface CanvasNode {
 export interface CanvasGroup {
   id: string
   title: string
-  kind?: 'standard' | 'storyboard'
+  kind?: 'standard' | 'storyboard' | 'preset'
   nodeIds: string[]
   createdAt: string
   updatedAt: string

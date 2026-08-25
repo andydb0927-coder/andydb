@@ -32,7 +32,7 @@ export const platformNavigation = [
 
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {
   const location = useLocation()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => mode === 'standard')
   const [tasksOpen, setTasksOpen] = useState(false)
   const taskTriggerRef = useRef<HTMLButtonElement>(null)
   const isHomepage = mode === 'standard' && location.pathname === '/'
