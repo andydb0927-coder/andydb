@@ -850,19 +850,25 @@ export function CanvasPage({
           if (job.projectId !== projectId) return
           const jobProviderId =
             job.providerId ?? job.generationConfig?.providerId
-          if (jobProviderId === 'kling-api') {
+          const liveProvider = jobProviderId
+            ? providerRegistry.list().find(({ id }) => id === jobProviderId)
+            : undefined
+          if (liveProvider?.kind === 'live') {
+            const providerLabel = jobProviderId === 'kling-api'
+              ? '可灵'
+              : liveProvider.modelName
             if (job.status === 'queued') {
-              setGenerationFeedback('可灵生成任务已提交。')
+              setGenerationFeedback(`${providerLabel}生成任务已提交。`)
             } else if (job.status === 'running') {
               setGenerationFeedback(
                 job.progress
-                  ? `可灵生成中 ${job.progress}%`
-                  : '可灵生成中…',
+                  ? `${providerLabel}生成中 ${job.progress}%`
+                  : `${providerLabel}生成中…`,
               )
             } else if (job.status === 'failed') {
-              setGenerationFeedback(job.error ?? '可灵生成失败。')
+              setGenerationFeedback(job.error ?? `${providerLabel}生成失败。`)
             } else if (job.status === 'cancelled') {
-              setGenerationFeedback('可灵生成已取消。')
+              setGenerationFeedback(`${providerLabel}生成已取消。`)
             }
             return
           }
@@ -882,7 +888,12 @@ export function CanvasPage({
               job.nodeId,
               result,
             )
-            setGenerationFeedback('可灵临时结果已显示，刷新页面后失效。')
+            const providerLabel = job.providerId === 'kling-api'
+              ? '可灵'
+              : job.modelName ?? '真实模型'
+            setGenerationFeedback(
+              `${providerLabel}临时结果已显示，刷新页面后失效。`,
+            )
             return
           }
           useProjectStore

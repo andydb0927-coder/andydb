@@ -4,6 +4,7 @@ import { createRef } from 'react'
 import { expect, test, vi } from 'vitest'
 
 import type { CreativeNodeData } from '../node-types'
+import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
 import { ImageGenerationPanel } from './ImageNodeDetails'
 
 function panelProps(data: CreativeNodeData) {
@@ -295,7 +296,7 @@ test('exposes the verified MJ image settings with persistent accessible controls
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
   expect(model).toHaveValue('mock-mj-image')
   expect(within(model).getByRole('option', { name: /Lib Image/ })).toBeEnabled()
-  expect(within(model).getAllByRole('option')).toHaveLength(17)
+  expect(within(model).getAllByRole('option')).toHaveLength(18)
   expect(within(model).queryByRole('option', { name: /可灵图片/ })).not.toBeInTheDocument()
   expect(within(model).getByRole('option', { name: /Style Image V8\.2/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Qwen Edit/ })).toBeDisabled()
@@ -345,10 +346,11 @@ test('groups image models and narrows Style Image V8.2 editing parameters', asyn
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
 
   expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
+    '官方 API 已接（开发直连）',
     '待接入',
     '本地演示',
   ])
-  expect(within(model).getAllByRole('option')).toHaveLength(17)
+  expect(within(model).getAllByRole('option')).toHaveLength(18)
   expect(within(model).getByRole('option', { name: /Qwen Edit.*待接入/ })).toBeDisabled()
   await user.selectOptions(model, 'mock-style-image-v82')
   expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-style-image-v82')
@@ -382,6 +384,47 @@ test('groups image models and narrows Style Image V8.2 editing parameters', asyn
   expect(within(within(dialog).getByRole('group', { name: '比例' })).getAllByRole('button')).toHaveLength(1)
   expect(within(within(dialog).getByRole('group', { name: '生成数量' })).getAllByRole('button')).toHaveLength(1)
   expect(within(dialog).getByRole('slider', { name: '编辑强度' })).toHaveValue('0.6')
+})
+
+test('exposes an enabled Seedream 5.0 Pro live provider with narrowed parameters and truthful submit state', () => {
+  const providerRegistry = createDefaultProviderRegistry({
+    seedream: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-api-key',
+    },
+  })
+  const data = makeData({
+    providerRegistry,
+    node: {
+      ...makeData().node,
+      modelProviderId: 'seedream-5-pro-api',
+      generationConfig: {
+        targetKind: 'image',
+        providerId: 'seedream-5-pro-api',
+        parameters: {
+          aspectRatio: '16:9',
+          resolution: '2K',
+          count: 1,
+        },
+        referenceAssets: [],
+      },
+    },
+  })
+
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const model = within(panel).getByRole('combobox', { name: '图片模型' })
+  const liveOption = within(model).getByRole('option', {
+    name: /Seedream 5\.0 Pro.*开发直连/,
+  })
+
+  expect(model).toHaveValue('seedream-5-pro-api')
+  expect(liveOption).toBeEnabled()
+  expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
+  expect(within(panel).getByText('16:9 · 2K · 1张')).toBeVisible()
+  expect(
+    within(panel).getByRole('button', { name: '生成图片，预计成本 18' }),
+  ).toHaveAttribute('title', '调用真实 Seedream API；临时结果刷新后失效')
 })
 
 test('opens a searchable three-tab style gallery with ten categories and complete cards', async () => {

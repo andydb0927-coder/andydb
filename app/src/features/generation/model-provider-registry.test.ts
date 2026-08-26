@@ -40,6 +40,7 @@ describe('model provider registry', () => {
     expect(registry.list().map(({ id }) => id)).toEqual(
       expect.arrayContaining([
         'mock-mj-image',
+        'seedream-5-pro-api',
         'mock-tongyi-image',
         'mock-text-llm',
         'mock-seedance-25',
@@ -75,6 +76,12 @@ describe('model provider registry', () => {
       disabledReason: '可灵开发验证配置未完成',
       capabilities: ['text-to-video'],
       officialApiEndpoint: 'https://api.klingai.com/text-to-video/kling-2.6',
+    })
+    expect(registry.require('seedream-5-pro-api')).toMatchObject({
+      kind: 'live',
+      disabledReason: 'Seedream 开发验证配置未完成',
+      capabilities: ['text-to-image', 'image-to-image', 'image-edit'],
+      officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
     })
     expect(registry.require('mock-seedance-25')).toMatchObject({
       modelName: 'Seedance 2.5',
@@ -115,9 +122,10 @@ describe('model provider registry', () => {
     const video = registry.matching(['text-to-video', 'image-to-video'])
 
     expect(liblibImageModelCatalog).toHaveLength(17)
-    expect(image.map(({ modelName }) => modelName)).toEqual(
-      liblibImageModelCatalog.map(({ modelName }) => modelName),
-    )
+    expect(image.map(({ modelName }) => modelName)).toEqual([
+      'Seedream 5.0 Pro',
+      ...liblibImageModelCatalog.map(({ modelName }) => modelName),
+    ])
     expect(liblibVideoModelCatalog).toHaveLength(6)
     expect(liblibVideoModelCatalog.map(({ modelName }) => modelName)).toEqual([
       'Seedance 2.5',
@@ -276,9 +284,10 @@ describe('model provider registry', () => {
     const image = registry.matching(['text-to-image', 'image-to-image'])
     const video = registry.matching(['text-to-video', 'image-to-video'])
 
-    expect(image.map(({ id }) => id)).toEqual(
-      liblibImageModelCatalog.map(({ providerId }) => providerId),
-    )
+    expect(image.map(({ id }) => id)).toEqual([
+      'seedream-5-pro-api',
+      ...liblibImageModelCatalog.map(({ providerId }) => providerId),
+    ])
     expect(video.map(({ id }) => id)).toEqual([
       ...liblibVideoModelCatalog.map(({ providerId }) => providerId),
       'kling-api',

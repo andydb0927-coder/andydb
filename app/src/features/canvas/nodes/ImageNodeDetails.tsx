@@ -726,7 +726,18 @@ export function ImageGenerationPanel({
     selectedProvider.parameterSchema.count ? `${settings.count}张` : undefined,
   ].filter(Boolean).join(' · ')
   const cost = selectedProvider.pricing.amount * settings.count
-  const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0
+  const providerEnabled = isProviderEnabled(selectedProvider)
+  const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0 && providerEnabled
+  const generationUnavailableReason = !providerEnabled
+    ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
+    : !prompt.trim() && !hasMedia
+      ? '请输入提示词或添加参考媒体后再生成。'
+      : undefined
+  const submitTitle = selectedProvider.kind === 'live'
+    ? '调用真实 Seedream API；临时结果刷新后失效'
+    : selectedProvider.kind === 'placeholder'
+      ? selectedProvider.disabledReason ?? '模型待接入'
+      : '本地演示，不连接真实生成'
 
   useEffect(() => {
     setAdvanced(false)
@@ -1040,8 +1051,8 @@ export function ImageGenerationPanel({
           <button
             type="button"
             aria-label={`生成图片，预计成本 ${cost}`}
-            aria-describedby={!eligible ? 'image-generation-reason' : undefined}
-            title="本地演示，不连接真实生成"
+            aria-describedby={generationUnavailableReason ? 'image-generation-reason' : undefined}
+            title={submitTitle}
             disabled={!eligible}
             onClick={() => data.onLocalImageGenerate?.()}
           >
@@ -1170,9 +1181,9 @@ export function ImageGenerationPanel({
           </label>
         </div>
       ) : null}
-      {!eligible ? (
+      {generationUnavailableReason ? (
         <p id="image-generation-reason" className="image-generation-panel__reason">
-          请输入提示词或添加参考媒体后再生成。
+          {generationUnavailableReason}
         </p>
       ) : null}
       {styleOpen ? <ImageStyleGallery onClose={closeStyles} /> : null}

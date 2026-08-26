@@ -25,6 +25,10 @@ import {
   klingMinLoopCreateSuccessFixture,
   klingMinLoopSuccessFixture,
 } from '../generation/fixtures/kling-min-loop.fixture'
+import {
+  seedreamMinLoopConfigFixture,
+  seedreamMinLoopSuccessFixture,
+} from '../generation/fixtures/seedream-min-loop.fixture'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import { createDefaultProviderRegistry } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
@@ -1229,6 +1233,76 @@ describe('creative canvas', () => {
     expect(save).not.toHaveBeenCalled()
     expect(
       ephemeralGenerationResultStore.get('project-canvas', 'video'),
+    ).toMatchObject({ persistence: 'ephemeral' })
+  })
+
+  test('shows a real Seedream image from memory without persisting the temporary URL', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const liveImage: Project['nodes'][number] = {
+      id: 'seedream-image',
+      kind: 'image',
+      title: 'Seedream 生图',
+      position: { x: 1560, y: 120 },
+      versions: [{
+        id: 'version-seedream-live',
+        createdAt: project.createdAt,
+        prompt: '雨夜街道上的电影感人像，霓虹灯倒映在湿润路面',
+      }],
+      activeVersionId: 'version-seedream-live',
+      sourceChanged: false,
+      modelProviderId: 'seedream-5-pro-api',
+      imageGeneration: {
+        ...defaultImageGenerationSettings,
+        prompt: '雨夜街道上的电影感人像，霓虹灯倒映在湿润路面',
+        aspectRatio: '16:9',
+        resolution: '2K',
+        count: 1,
+      },
+      generationConfig: {
+        targetKind: 'image',
+        providerId: 'seedream-5-pro-api',
+        parameters: {
+          aspectRatio: '16:9',
+          resolution: '2K',
+          count: 1,
+        },
+        referenceAssets: [],
+      },
+    }
+    project.nodes = [...project.nodes, liveImage]
+    const before = structuredClone(project)
+    act(() => activate(project))
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(seedreamMinLoopSuccessFixture)))
+    const providerRegistry = createDefaultProviderRegistry({
+      seedream: { ...seedreamMinLoopConfigFixture, fetchFn },
+    })
+    const ephemeralGenerationResultStore = new EphemeralGenerationResultStore()
+    const save = vi.fn().mockResolvedValue(undefined)
+
+    renderCanvas({
+      repository: { load: async () => undefined, save },
+      generationAdapter: new RegistryGenerationAdapter(providerRegistry),
+      providerRegistry,
+      ephemeralGenerationResultStore,
+    })
+    await user.click(screen.getByRole('button', { name: 'Seedream 生图' }))
+    await user.click(
+      screen.getByRole('button', { name: '生成图片，预计成本 18' }),
+    )
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('img[src="https://media.fixture.invalid/seedream-result.png"]'),
+      ).toBeInTheDocument()
+    })
+    expect(screen.getByText('Seedream 5.0 Pro临时结果已显示，刷新页面后失效。')).toBeVisible()
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+    expect(save).not.toHaveBeenCalled()
+    expect(
+      ephemeralGenerationResultStore.get('project-canvas', 'seedream-image'),
     ).toMatchObject({ persistence: 'ephemeral' })
   })
 

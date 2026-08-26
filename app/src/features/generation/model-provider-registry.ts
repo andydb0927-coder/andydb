@@ -12,6 +12,10 @@ import {
   createKlingLiveProvider,
   type KlingLiveProviderOptions,
 } from './kling-live-provider'
+import {
+  createSeedreamLiveProvider,
+  type SeedreamLiveProviderOptions,
+} from './seedream-live-provider'
 
 export type ModelCapability =
   | 'text'
@@ -917,12 +921,14 @@ function placeholderProvider(
 
 export interface DefaultProviderRegistryOptions {
   kling?: KlingLiveProviderOptions
+  seedream?: SeedreamLiveProviderOptions
 }
 
 export function createDefaultProviderRegistry(
   options: DefaultProviderRegistryOptions = {},
 ) {
   return new ProviderRegistry([
+    createSeedreamLiveProvider(options.seedream),
     ...liblibImageModelCatalog.map(imageCatalogProvider),
     demoProvider({
       id: 'mock-tongyi-image',

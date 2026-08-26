@@ -4,10 +4,10 @@
 
 当前版本是可直接静态托管的 Vite 单页应用。部署产物为 `app/dist`，可发布到 Vercel、Netlify 或任何支持 SPA 路由回退的静态托管服务。
 
-本阶段只做上线准备，不执行实际部署，也不改变现有运行模式：
+公开静态部署仍保持 Mock 默认模式；本地开发环境可显式开启可灵或 Seedream 的短期真实 API 验证：
 
-- 生成能力继续使用本地演示数据和现有 ProviderRegistry；
-- 不接入可灵或其他第三方真实生成 API；
+- 未配置开发验证模式时，生成能力继续使用本地演示数据；
+- `kling-direct-dev` 与 `seedream-direct-dev` 仅供本机短期验证，不能用于公开静态部署；
 - 不新增后端、数据库、对象存储或远端任务队列；
 - 项目数据保存在当前浏览器的本地存储中，不提供跨浏览器、跨设备同步；
 - 本地开发专用的 LibTV bridge 依赖 Vite 开发服务器，静态部署不提供该 bridge，线上预览应保持演示供应商模式。
@@ -140,6 +140,17 @@ VITE_KLING_API_BASE=official-endpoint-confirmed-before-implementation
 VITE_KLING_MODEL_ID=kling-2.6
 ```
 
+Seedream 5.0 Pro 文生图开发验证：
+
+```dotenv
+VITE_GENERATION_MODE=seedream-direct-dev
+VITE_SEEDREAM_API_KEY=temporary-development-api-key
+VITE_SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128
+```
+
+启用后，图片模型菜单的“官方 API 已接（开发直连）”分组会开放 `Seedream 5.0 Pro`。生成请求调用 `/images/generations`，真实结果 URL 只保存在当前内存会话，刷新页面后失效。未配置密钥时模型保持禁用并显示“Seedream 开发验证配置未完成”，不会回退为 Mock 伪装成功。
+
 这些变量只允许使用低额度、可随时撤销的开发凭证；不得提交到 Git，不得配置到公开 Preview/Production 静态站点。验证完成后应立即撤销或轮换。
 
 ### 生产服务端代理预留
@@ -150,6 +161,9 @@ VITE_KLING_MODEL_ID=kling-2.6
 KLING_API_KEY=production-secret
 KLING_API_BASE=official-endpoint-confirmed-before-implementation
 KLING_MODEL_ID=kling-2.6
+SEEDREAM_API_KEY=production-secret
+SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128
 ALLOWED_ORIGINS=https://canvas.example.com
 ```
 
