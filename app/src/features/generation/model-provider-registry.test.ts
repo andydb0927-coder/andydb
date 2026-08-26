@@ -442,6 +442,19 @@ describe('model provider registry', () => {
     ).toMatchObject({ estimatedCost: 36 })
   })
 
+  test('registers a disabled 720 panorama generation placeholder without polluting image menus', () => {
+    const registry = createDefaultProviderRegistry()
+    expect(registry.require('panorama-720-api')).toMatchObject({
+      kind: 'placeholder',
+      capabilities: ['panorama-720'],
+      selectorVisible: false,
+      disabledReason: '待接入720全景生成',
+    })
+    expect(registry.matching(['text-to-image']).map(({ id }) => id)).not.toContain(
+      'panorama-720-api',
+    )
+  })
+
   test('propagates registry identity, progress and charged cost through persisted queue history', async () => {
     vi.useFakeTimers()
     const jobs: Array<{ status: string; progress?: number; creditsSpent?: number }> = []

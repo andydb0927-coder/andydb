@@ -80,6 +80,43 @@ afterEach(async () => {
 })
 
 describe('project domain', () => {
+  test('persists storyboard grid metadata and caption edits on a canvas group', () => {
+    const nodeIds = useProjectStore.getState().activeProject!.nodes.slice(0, 2).map(({ id }) => id)
+    const groupId = useProjectStore.getState().groupNodes(nodeIds, 'storyboard')!
+    expect(useProjectStore.getState().updateCanvasGroup(groupId, {
+      storyboardLayout: { preset: 'custom', columns: 3, rows: 2 },
+      storyboardCaptions: { [nodeIds[0]]: '远景', [nodeIds[1]]: '近景' },
+    })).toBe(true)
+
+    expect(
+      useProjectStore.getState().activeProject!.groups?.find(({ id }) => id === groupId),
+    ).toMatchObject({
+      kind: 'storyboard',
+      storyboardLayout: { preset: 'custom', columns: 3, rows: 2 },
+      storyboardCaptions: { [nodeIds[0]]: '远景', [nodeIds[1]]: '近景' },
+    })
+  })
+
+  test('collapses a completed generation batch to one undo baseline', () => {
+    const project = useProjectStore.getState().activeProject!
+    const nodeIds = project.nodes.slice(0, 2).map(({ id }) => id)
+    const titles = nodeIds.map((id) => project.nodes.find((node) => node.id === id)!.title)
+    const batchId = useProjectStore.getState().beginGenerationBatch(project.id)!
+
+    useProjectStore.getState().updateNode(nodeIds[0], { title: '批次结果 A' })
+    useProjectStore.getState().updateNode(nodeIds[1], { title: '批次结果 B' })
+    expect(useProjectStore.getState().past).toHaveLength(2)
+    expect(useProjectStore.getState().completeGenerationBatch(batchId)).toBe(true)
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    useProjectStore.getState().undo()
+    expect(
+      nodeIds.map((id) =>
+        useProjectStore.getState().activeProject!.nodes.find((node) => node.id === id)!.title,
+      ),
+    ).toEqual(titles)
+  })
+
   test('creates an empty project ready for canvas editing', () => {
     const project = createProject('霜河渡', '雨夜寻找失踪的弟弟')
 

@@ -157,6 +157,8 @@ import {
   type WorkspacePanel,
 } from './CanvasWorkspace'
 import { CanvasGroupOverlay } from './CanvasGroupOverlay'
+import { StoryboardGroupDialog } from './StoryboardGroupDialog'
+import { createWorkflowBatchPlan } from './workflow-batch'
 import type {
   CharacterProfile,
   EffectTemplate,
@@ -356,6 +358,30 @@ interface EditingCard {
   anchor: { x: number; y: number }
   bounds: { width: number; height: number }
   returnFocusTo?: HTMLElement
+}
+
+interface WorkflowBatchRuntime {
+  id: string
+  storeBatchId: string
+  label: string
+  nodeIds: string[]
+  cursor: number
+  activeJobId?: string
+}
+
+interface WorkflowBatchView {
+  id: string
+  label: string
+  status: 'running' | 'paused' | 'completed'
+  completed: number
+  total: number
+  currentNodeTitle?: string
+  error?: string
+}
+
+interface StoryboardSetupState {
+  group: CanvasGroup
+  temporary: boolean
 }
 
 type PendingRemoteGeneration =
@@ -598,6 +624,31 @@ function generationEligibilityFailure(
   return undefined
 }
 
+function isWorkflowGeneratableNode(node: Project['nodes'][number]) {
+  if (node.imageTool || node.videoTool || node.effectTool) return false
+  return [
+    'image',
+    'character',
+    'scene',
+    'video',
+    'storyboard',
+    'text',
+    'script',
+  ].includes(node.kind) || node.details?.type === 'audio'
+}
+
+function forceDemoProvider(request: GenerationRequest): GenerationRequest {
+  const providerId =
+    request.targetKind === 'video'
+      ? 'mock-seedance-25'
+      : request.targetKind === 'text'
+        ? 'mock-text-llm'
+        : request.targetKind === 'audio'
+          ? 'mock-audio'
+          : 'mock-mj-image'
+  return { ...request, providerId }
+}
+
 function downstreamConsumers(project: Project, nodeId: string) {
   const outgoing = new Map<string, string[]>()
   for (const edge of project.edges) {
@@ -759,9 +810,12 @@ export function CanvasPage({
   )
   const reorderNodes = useProjectStore((state) => state.reorderNodes)
   const groupNodes = useProjectStore((state) => state.groupNodes)
+  const updateCanvasGroup = useProjectStore((state) => state.updateCanvasGroup)
   const ungroupNodes = useProjectStore((state) => state.ungroupNodes)
   const duplicateNodes = useProjectStore((state) => state.duplicateNodes)
   const deleteNode = useProjectStore((state) => state.deleteNode)
+  const beginGenerationBatch = useProjectStore((state) => state.beginGenerationBatch)
+  const completeGenerationBatch = useProjectStore((state) => state.completeGenerationBatch)
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
     () => new Set(),
   )
@@ -796,6 +850,8 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const [workflowBatch, setWorkflowBatch] = useState<WorkflowBatchView>()
+  const [storyboardSetup, setStoryboardSetup] = useState<StoryboardSetupState>()
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const [publishBusy, setPublishBusy] = useState(false)
   const [publishError, setPublishError] = useState<string>()
@@ -852,6 +908,8 @@ export function CanvasPage({
     clientY: number
   } | undefined>(undefined)
   const renderedCanvasIdRef = useRef<string | undefined>(undefined)
+  const workflowBatchRef = useRef<WorkflowBatchRuntime | undefined>(undefined)
+  const advanceWorkflowBatchRef = useRef<() => void>(() => undefined)
 
   const activeCanvas = project?.canvases?.find(
     ({ id }) => id === project.activeCanvasId,
@@ -934,6 +992,9 @@ export function CanvasPage({
     setVisibilityFeedback(undefined)
     setGroupFeedback(undefined)
     setGenerationFeedback(undefined)
+    setWorkflowBatch(undefined)
+    workflowBatchRef.current = undefined
+    setStoryboardSetup(undefined)
     setPublishDialogOpen(false)
     setPublishBusy(false)
     setPublishError(undefined)
@@ -1011,6 +1072,27 @@ export function CanvasPage({
             useProjectStore
               .getState()
               .updateGenerationJob(job.projectId!, job)
+          }
+          const batch = workflowBatchRef.current
+          if (batch?.activeJobId === job.id) {
+            if (job.status === 'failed' || job.status === 'cancelled') {
+              setWorkflowBatch({
+                id: batch.id,
+                label: batch.label,
+                status: 'paused',
+                completed: batch.cursor,
+                total: batch.nodeIds.length,
+                currentNodeTitle: useProjectStore
+                  .getState()
+                  .projectsById[job.projectId!]?.nodes.find(({ id }) => id === job.nodeId)
+                  ?.title,
+                error: job.error ?? '执行已暂停，可重试当前节点。',
+              })
+            } else if (job.status === 'succeeded') {
+              batch.cursor += 1
+              batch.activeJobId = undefined
+              queueMicrotask(() => advanceWorkflowBatchRef.current())
+            }
           }
           const jobProviderId =
             job.providerId ?? job.generationConfig?.providerId
@@ -1099,6 +1181,131 @@ export function CanvasPage({
       }
     }
   }, [generationQueue, projectId, repository])
+
+  const advanceWorkflowBatch = useCallback(() => {
+    const batch = workflowBatchRef.current
+    const currentProject = useProjectStore.getState().activeProject
+    if (!batch || !currentProject || currentProject.id !== projectId) return
+    if (batch.cursor >= batch.nodeIds.length) {
+      completeGenerationBatch(batch.storeBatchId)
+      setWorkflowBatch({
+        id: batch.id,
+        label: batch.label,
+        status: 'completed',
+        completed: batch.nodeIds.length,
+        total: batch.nodeIds.length,
+      })
+      setGenerationFeedback(`${batch.label}已按依赖顺序执行完成，可一次撤销全部结果。`)
+      workflowBatchRef.current = undefined
+      return
+    }
+    const nodeId = batch.nodeIds[batch.cursor]
+    const node = currentProject.nodes.find(({ id }) => id === nodeId)
+    if (!node) {
+      setWorkflowBatch({
+        id: batch.id,
+        label: batch.label,
+        status: 'paused',
+        completed: batch.cursor,
+        total: batch.nodeIds.length,
+        error: '执行节点已不存在。',
+      })
+      return
+    }
+    const activeVersion = node.versions.find(({ id }) => id === node.activeVersionId)
+    const request = forceDemoProvider(buildGenerationRequest(
+      currentProject,
+      node,
+      'regenerate',
+      activeVersion?.prompt?.trim() || currentProject.intent.trim() || node.title,
+      providerRegistry,
+    ))
+    const failure = generationEligibilityFailure(request, providerRegistry)
+    if (failure) {
+      setWorkflowBatch({
+        id: batch.id,
+        label: batch.label,
+        status: 'paused',
+        completed: batch.cursor,
+        total: batch.nodeIds.length,
+        currentNodeTitle: node.title,
+        error: failure,
+      })
+      return
+    }
+    const job = generationQueue.enqueue(request)
+    batch.activeJobId = job.id
+    setWorkflowBatch({
+      id: batch.id,
+      label: batch.label,
+      status: 'running',
+      completed: batch.cursor,
+      total: batch.nodeIds.length,
+      currentNodeTitle: node.title,
+    })
+  }, [completeGenerationBatch, generationQueue, projectId, providerRegistry])
+
+  useEffect(() => {
+    advanceWorkflowBatchRef.current = advanceWorkflowBatch
+    return () => {
+      advanceWorkflowBatchRef.current = () => undefined
+    }
+  }, [advanceWorkflowBatch])
+
+  const startWorkflowBatch = useCallback((group?: CanvasGroup) => {
+    const currentProject = useProjectStore.getState().activeProject
+    setContextMenu(undefined)
+    if (!currentProject || currentProject.id !== projectId) return
+    if (workflowBatchRef.current) {
+      setGenerationFeedback('已有整组执行任务正在进行，请先等待或重试。')
+      return
+    }
+    const plan = createWorkflowBatchPlan(currentProject, group?.nodeIds)
+    if (!plan.ok) {
+      setGenerationFeedback(plan.reason)
+      return
+    }
+    const nodeIds = plan.nodeIds.filter((nodeId) => {
+      const node = currentProject.nodes.find(({ id }) => id === nodeId)
+      return Boolean(node && isWorkflowGeneratableNode(node))
+    })
+    if (!nodeIds.length) {
+      setGenerationFeedback('当前范围没有可执行的生成节点。')
+      return
+    }
+    const storeBatchId = beginGenerationBatch(currentProject.id)
+    if (!storeBatchId) return
+    const id = crypto.randomUUID()
+    const label = group ? `分组“${group.title}”` : '全画布工作流'
+    workflowBatchRef.current = {
+      id,
+      storeBatchId,
+      label,
+      nodeIds,
+      cursor: 0,
+    }
+    setWorkflowBatch({
+      id,
+      label,
+      status: 'running',
+      completed: 0,
+      total: nodeIds.length,
+    })
+    setGenerationFeedback(`${label}已通过拓扑校验，开始按依赖顺序执行。`)
+    queueMicrotask(() => advanceWorkflowBatchRef.current())
+  }, [beginGenerationBatch, projectId])
+
+  const retryWorkflowBatch = useCallback(() => {
+    const batch = workflowBatchRef.current
+    if (!batch) return
+    if (batch.activeJobId) {
+      const retried = generationQueue.retry(batch.activeJobId)
+      if (!retried) return
+      setWorkflowBatch((current) => current ? { ...current, status: 'running', error: undefined } : current)
+      return
+    }
+    advanceWorkflowBatchRef.current()
+  }, [generationQueue])
 
   useEffect(() => {
     if (!project || saveStatus !== 'dirty') return
@@ -1944,7 +2151,7 @@ export function CanvasPage({
     }
     setGroupFeedback(`正在以 4096px 宽度排版 ${sources.length} 个分镜…`)
     try {
-      const blob = await renderStoryboardGroup4K(sources)
+      const blob = await renderStoryboardGroup4K(sources, group.storyboardLayout)
       downloadBlob(blob, `${currentProject.title}-${group.title}-4K.png`)
       setGroupFeedback(`已导出 ${sources.length} 个分镜的 4096px 宽 4K 排版图。`)
     } catch (error) {
@@ -3840,7 +4047,11 @@ export function CanvasPage({
   }, [flowInstance, projectId, updateNodePositions])
 
   const arrangeCanvasGroup = useCallback(
-    (group: CanvasGroup, mode: 'grid' | 'horizontal' | 'vertical') => {
+    (
+      group: CanvasGroup,
+      mode: 'grid' | 'horizontal' | 'vertical',
+      layoutOverride?: CanvasGroup['storyboardLayout'],
+    ) => {
       const currentProject = useProjectStore.getState().activeProject
       if (!currentProject || currentProject.id !== projectId) return
       const members = group.nodeIds.flatMap((nodeId) => {
@@ -3860,7 +4071,11 @@ export function CanvasPage({
       const maxHeight = Math.max(
         ...members.map(({ id }) => measured[id]?.height ?? 180),
       )
-      const columns = Math.ceil(Math.sqrt(members.length))
+      const storyboardLayout = layoutOverride ?? group.storyboardLayout
+      const columns =
+        mode === 'grid' && storyboardLayout
+          ? Math.max(1, storyboardLayout.columns)
+          : Math.ceil(Math.sqrt(members.length))
       updateNodePositions(
         members.map(({ id }, index) => ({
           nodeId: id,
@@ -3896,6 +4111,81 @@ export function CanvasPage({
       setGroupFeedback(`已创建 ${duplicatedIds.length} 个节点副本`)
     },
     [duplicateNodes],
+  )
+
+  const openStoryboardSetup = useCallback(
+    (group: CanvasGroup, temporary = false) => {
+      setStoryboardSetup({ group, temporary })
+    },
+    [],
+  )
+
+  const applyStoryboardSetup = useCallback(
+    (layout: NonNullable<CanvasGroup['storyboardLayout']>) => {
+      const setup = storyboardSetup
+      if (!setup) return
+      const currentProject = useProjectStore.getState().activeProject
+      if (!currentProject || currentProject.id !== projectId) return
+      let groupId = setup.group.id
+      if (setup.temporary) {
+        groupId = groupNodes(setup.group.nodeIds, 'storyboard') ?? ''
+        if (!groupId) {
+          setGroupFeedback('至少选择两个节点才能创建分镜组。')
+          return
+        }
+      }
+      const captions = Object.fromEntries(
+        setup.group.nodeIds.map((nodeId) => {
+          const node = currentProject.nodes.find(({ id }) => id === nodeId)
+          return [
+            nodeId,
+            setup.group.storyboardCaptions?.[nodeId] ?? node?.storyboardDialogue ?? '',
+          ]
+        }),
+      )
+      if (!updateCanvasGroup(groupId, {
+        kind: 'storyboard',
+        storyboardLayout: layout,
+        storyboardCaptions: captions,
+      })) return
+      const updatedGroup = useProjectStore
+        .getState()
+        .activeProject?.groups?.find(({ id }) => id === groupId)
+      if (updatedGroup) arrangeCanvasGroup(updatedGroup, 'grid', layout)
+      setSelectedNodeIds(new Set(setup.group.nodeIds))
+      setPrimaryNodeId(setup.group.nodeIds.at(-1))
+      setStoryboardSetup(undefined)
+      setGroupFeedback(`已转换为 ${layout.preset} 分镜组并自动排版。`)
+    },
+    [arrangeCanvasGroup, groupNodes, projectId, storyboardSetup, updateCanvasGroup],
+  )
+
+  const updateStoryboardCaption = useCallback(
+    (group: CanvasGroup, nodeId: string, caption: string) => {
+      updateCanvasGroup(group.id, {
+        storyboardCaptions: {
+          ...group.storyboardCaptions,
+          [nodeId]: caption,
+        },
+      })
+    },
+    [updateCanvasGroup],
+  )
+
+  const storyboardItemsFor = useCallback(
+    (group: CanvasGroup) => group.nodeIds.flatMap((nodeId) => {
+      const node = flowNodes.find(({ id }) => id === nodeId)
+      if (!node) return []
+      return [{
+        nodeId,
+        title: String(node.data.title ?? nodeId),
+        x: node.position.x,
+        y: node.position.y,
+        width: node.measured?.width ?? 280,
+        height: node.measured?.height ?? 180,
+      }]
+    }),
+    [flowNodes],
   )
 
   const runSelectedGeneration = useCallback(() => {
@@ -5378,6 +5668,10 @@ export function CanvasPage({
                 onDuplicate={() =>
                   duplicateCanvasGroup(selectionGroupOverlay.group)
                 }
+                onExecute={() => startWorkflowBatch(selectionGroupOverlay.group)}
+                onConfigureStoryboard={() =>
+                  openStoryboardSetup(selectionGroupOverlay.group, true)
+                }
                 onFeedback={setGroupFeedback}
                 onExportStoryboard={() =>
                   exportStoryboardGroup4K(selectionGroupOverlay.group)
@@ -5402,6 +5696,12 @@ export function CanvasPage({
                 onUngroup={() => removeCanvasGroup(group.id, true)}
                 onArrange={(mode) => arrangeCanvasGroup(group, mode)}
                 onDuplicate={() => duplicateCanvasGroup(group)}
+                onExecute={() => startWorkflowBatch(group)}
+                onConfigureStoryboard={() => openStoryboardSetup(group)}
+                onUpdateStoryboardCaption={(nodeId, caption) =>
+                  updateStoryboardCaption(group, nodeId, caption)
+                }
+                storyboardItems={storyboardItemsFor(group)}
                 onFeedback={setGroupFeedback}
                 onExportStoryboard={() => exportStoryboardGroup4K(group)}
                 onContinue={(trigger) => {
@@ -5460,6 +5760,7 @@ export function CanvasPage({
             canSaveToAssets={Boolean(
               contextNode && contextNodeAsset,
             )}
+            canExecuteGroup={Boolean(project.nodes.some(isWorkflowGeneratableNode))}
             onUpload={beginContextUpload}
             onAddNode={createContextNode}
             onUndo={() => {
@@ -5472,6 +5773,9 @@ export function CanvasPage({
             }}
             onPaste={pasteContextNodes}
             onSaveToAssets={saveContextAssetToLibrary}
+            onExecuteGroup={() =>
+              startWorkflowBatch(selectedCanvasGroup ?? selectionGroupOverlay?.group)
+            }
             onComplianceCheck={() => {
               setContextMenu(undefined)
               if (contextNode) {
@@ -5492,6 +5796,37 @@ export function CanvasPage({
               }
             } : undefined}
             onClose={closeContextMenu}
+          />
+        ) : null}
+        {workflowBatch ? (
+          <aside
+            className="workflow-batch-status floating-panel"
+            role="status"
+            aria-label="工作流整组执行状态"
+            data-status={workflowBatch.status}
+          >
+            <div>
+              <strong>{workflowBatch.label}</strong>
+              <span>{workflowBatch.completed}/{workflowBatch.total}</span>
+            </div>
+            {workflowBatch.currentNodeTitle ? <p>当前：{workflowBatch.currentNodeTitle}</p> : null}
+            {workflowBatch.error ? <p>{workflowBatch.error}</p> : null}
+            <progress value={workflowBatch.completed} max={workflowBatch.total} />
+            {workflowBatch.status === 'paused' ? (
+              <button type="button" onClick={retryWorkflowBatch}>重试当前节点</button>
+            ) : null}
+            {workflowBatch.status === 'completed' ? (
+              <button type="button" onClick={() => setWorkflowBatch(undefined)}>完成</button>
+            ) : null}
+          </aside>
+        ) : null}
+        {storyboardSetup ? (
+          <StoryboardGroupDialog
+            title={storyboardSetup.group.title}
+            nodeCount={storyboardSetup.group.nodeIds.length}
+            initialLayout={storyboardSetup.group.storyboardLayout}
+            onApply={applyStoryboardSetup}
+            onClose={() => setStoryboardSetup(undefined)}
           />
         ) : null}
         <input

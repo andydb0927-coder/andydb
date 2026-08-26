@@ -11,6 +11,7 @@ import {
   FileText,
   Image,
   Library,
+  Play,
   Plus,
   Redo2,
   Save,
@@ -73,12 +74,14 @@ export interface CanvasContextMenuProps {
   canRedo: boolean
   canPaste: boolean
   canSaveToAssets: boolean
+  canExecuteGroup: boolean
   onUpload(): void
   onAddNode(type: ContextQuickNodeType): void
   onUndo(): void
   onRedo(): void
   onPaste(): void
   onSaveToAssets(): void
+  onExecuteGroup(): void
   onComplianceCheck?(): void
   onCreateSubject?(): void
   onCopyNode?(): void
@@ -116,12 +119,14 @@ export function CanvasContextMenu({
   canRedo,
   canPaste,
   canSaveToAssets,
+  canExecuteGroup,
   onUpload,
   onAddNode,
   onUndo,
   onRedo,
   onPaste,
   onSaveToAssets,
+  onExecuteGroup,
   onComplianceCheck,
   onCreateSubject,
   onCopyNode,
@@ -286,6 +291,14 @@ export function CanvasContextMenu({
           </div>
         ) : null}
           </div>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canExecuteGroup}
+            onClick={onExecuteGroup}
+          >
+            <Play aria-hidden="true" />整组执行
+          </button>
           <div className="canvas-context-menu__separator" role="separator" />
           <button type="button" role="menuitem" aria-label="撤销" disabled={!canUndo} onClick={onUndo}>
             <Undo2 aria-hidden="true" />撤销 <kbd>⌘Z</kbd>

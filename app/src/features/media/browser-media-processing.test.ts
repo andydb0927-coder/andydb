@@ -52,6 +52,17 @@ describe('browser media processing contracts', () => {
     expect(layout.items.every(({ width }) => width > 0)).toBe(true)
   })
 
+  test('honors custom storyboard columns for 2x3 and 3x3 exports', () => {
+    const sources = Array.from({ length: 6 }, () => ({ width: 1920, height: 1080 }))
+    const twoByThree = calculateStoryboardLayout(sources, 4096, { columns: 2, rows: 3 })
+    expect(twoByThree.items[2].x).toBe(twoByThree.items[0].x)
+    expect(twoByThree.items[2].y).toBeGreaterThan(twoByThree.items[0].y)
+
+    const threeByThree = calculateStoryboardLayout(sources, 4096, { columns: 3, rows: 3 })
+    expect(new Set(threeByThree.items.slice(0, 3).map(({ y }) => y)).size).toBe(1)
+    expect(new Set(threeByThree.items.slice(0, 3).map(({ x }) => x)).size).toBe(3)
+  })
+
   test('trims and resamples decoded PCM before encoding a playable WAV', () => {
     const source = [Float32Array.from([0, 0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25])]
     const processed = sliceAndResampleChannels(source, 8, {

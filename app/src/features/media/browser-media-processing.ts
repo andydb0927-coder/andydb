@@ -34,6 +34,11 @@ export interface StoryboardLayout {
   items: StoryboardLayoutItem[]
 }
 
+export interface StoryboardLayoutOptions {
+  columns?: number
+  rows?: number
+}
+
 export interface AudioSliceOptions {
   startSeconds: number
   endSeconds: number
@@ -93,12 +98,18 @@ export function imageMirrorTransform(
 export function calculateStoryboardLayout(
   sources: readonly StoryboardLayoutInput[],
   width = 4096,
+  options: StoryboardLayoutOptions = {},
 ): StoryboardLayout {
   const safeWidth = Math.max(1024, Math.round(width))
   const margin = Math.round(safeWidth * 0.024)
   const gap = Math.round(safeWidth * 0.016)
   const captionHeight = Math.round(safeWidth * 0.048)
-  const columns = sources.length <= 1 ? 1 : 2
+  const requestedColumns = Math.max(1, Math.floor(options.columns ?? 2))
+  const columns = sources.length <= 1 ? 1 : Math.min(requestedColumns, sources.length)
+  const requestedRows = Math.max(1, Math.floor(options.rows ?? Math.ceil(sources.length / columns)))
+  if (columns * requestedRows < sources.length) {
+    throw new Error('分镜组格数不足，无法容纳全部镜头。')
+  }
   const itemWidth = Math.floor(
     (safeWidth - margin * 2 - gap * (columns - 1)) / columns,
   )
@@ -194,6 +205,7 @@ export interface StoryboardExportItem {
 
 export async function renderStoryboardGroup4K(
   sources: readonly StoryboardExportItem[],
+  options: StoryboardLayoutOptions = {},
 ): Promise<Blob> {
   if (sources.length === 0) throw new Error('分镜组中没有可导出的图片。')
   const images = await Promise.all(sources.map(({ url }) => loadImageElement(url)))
@@ -203,6 +215,7 @@ export async function renderStoryboardGroup4K(
       height: image.naturalHeight,
     })),
     4096,
+    options,
   )
   const canvas = createCanvas(layout.width, layout.height)
   const context = canvasContext(canvas)

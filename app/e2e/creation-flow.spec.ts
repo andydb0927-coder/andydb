@@ -282,7 +282,10 @@ test('keeps one image node expanded and persists a confirmed main result', async
   await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toBeVisible()
   const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
   await expect(imageTools).toBeVisible()
-  await expect(imageTools.getByRole('button')).toHaveCount(11)
+  await expect(imageTools.getByRole('button')).toHaveCount(12)
+  await expect(
+    imageTools.getByRole('button', { name: '全景预览' }),
+  ).toBeVisible()
   const nodeCount = await page.locator('.react-flow__node').count()
   await imageTools.getByRole('button', { name: '高清' }).click()
   const toolConfirmation = page.getByRole('alertdialog', {
@@ -1087,12 +1090,15 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   const menuPoint = await findBlankCanvasPoint(page, true)
   await page.mouse.click(menuPoint.x, menuPoint.y, { button: 'right' })
   const contextMenu = page.getByRole('menu', { name: '画布快捷菜单' })
-  await expect(contextMenu.getByRole('menuitem')).toHaveCount(6)
+  await expect(contextMenu.getByRole('menuitem')).toHaveCount(7)
   await expect(contextMenu.getByRole('menuitem').nth(0)).toContainText('上传')
   await expect(
     contextMenu.getByRole('menuitem', { name: '保存到我的资产' }),
   ).toBeDisabled()
   await expect(contextMenu.getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+  await expect(
+    contextMenu.getByRole('menuitem', { name: '整组执行' }),
+  ).toBeEnabled()
   await expect(contextMenu.getByRole('menuitem', { name: '添加节点' })).toHaveAttribute(
     'aria-haspopup',
     'menu',

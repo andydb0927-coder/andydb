@@ -19,6 +19,8 @@ function renderMenu(overrides: Partial<Parameters<typeof CanvasContextMenu>[0]> 
     onRedo: vi.fn(),
     onPaste: vi.fn(),
     onSaveToAssets: vi.fn(),
+    onExecuteGroup: vi.fn(),
+    canExecuteGroup: true,
     onComplianceCheck: vi.fn(),
     onCreateSubject: vi.fn(),
     onCopyNode: vi.fn(),
@@ -41,7 +43,7 @@ test('matches the recorded blank-canvas command order and disabled semantics', (
     within(menu)
       .getAllByRole('menuitem', { hidden: true })
       .map((item) => item.textContent?.trim()),
-  ).toEqual(['上传', '保存到我的资产', '添加节点', '撤销 ⌘Z', '重做 ⇧⌘Z', '粘贴 ⌘V'])
+  ).toEqual(['上传', '保存到我的资产', '添加节点', '整组执行', '撤销 ⌘Z', '重做 ⇧⌘Z', '粘贴 ⌘V'])
   expect(within(menu).getByRole('menuitem', { name: '上传' })).toBeEnabled()
   expect(within(menu).getByRole('menuitem', { name: '保存到我的资产' })).toBeDisabled()
   expect(screen.getByRole('menuitem', { name: '添加节点' })).toHaveAttribute(
@@ -51,6 +53,14 @@ test('matches the recorded blank-canvas command order and disabled semantics', (
   expect(within(menu).getByRole('menuitem', { name: '撤销' })).toBeEnabled()
   expect(within(menu).getByRole('menuitem', { name: '重做' })).toBeDisabled()
   expect(within(menu).getByRole('menuitem', { name: '粘贴' })).toBeDisabled()
+  expect(within(menu).getByRole('menuitem', { name: '整组执行' })).toBeEnabled()
+})
+
+test('dispatches the whole-canvas or selected-group execution command', async () => {
+  const user = userEvent.setup()
+  const props = renderMenu()
+  await user.click(screen.getByRole('menuitem', { name: '整组执行' }))
+  expect(props.onExecuteGroup).toHaveBeenCalledOnce()
 })
 
 test('opens all nine node types by hover or click and dispatches the shared type', async () => {

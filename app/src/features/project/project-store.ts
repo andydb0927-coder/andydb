@@ -101,6 +101,12 @@ interface ProjectStore {
     nodeIds: Iterable<string>,
     kind?: NonNullable<CanvasGroup['kind']>,
   ) => string | undefined
+  updateCanvasGroup: (
+    groupId: string,
+    changes: Partial<
+      Pick<CanvasGroup, 'title' | 'kind' | 'storyboardLayout' | 'storyboardCaptions'>
+    >,
+  ) => boolean
   ungroupNodes: (groupId: string) => boolean
   duplicateNodes: (
     nodeIds: Iterable<string>,
@@ -122,6 +128,8 @@ interface ProjectStore {
     job: GenerationJob,
     result: GenerationResult,
   ) => void
+  beginGenerationBatch: (projectId: string) => string | undefined
+  completeGenerationBatch: (batchId: string) => boolean
   addToTimeline: (item: TimelineItem) => void
   reorderTimeline: (orderedItemIds: string[]) => void
   undo: () => void
@@ -440,6 +448,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
   let hydrationRequestId = 0
   let persistenceChain: Promise<void> = Promise.resolve()
   const generationBaselines = new Map<string, Project>()
+  const generationBatchBaselines = new Map<
+    string,
+    { projectId: string; baseline: Project; pastLength: number }
+  >()
 
   const commit = (mutate: (project: Project) => Project) => {
     const current = get().activeProject
@@ -1273,6 +1285,50 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       return createdGroupId
     },
 
+    updateCanvasGroup: (groupId, changes) => {
+      let updated = false
+      commit((project) => {
+        const groups = project.groups ?? []
+        const source = groups.find(({ id }) => id === groupId)
+        if (!source) return project
+        const normalizedTitle = changes.title?.trim()
+        if (changes.title !== undefined && !normalizedTitle) return project
+        const nextLayout = changes.storyboardLayout
+          ? {
+              ...changes.storyboardLayout,
+              columns: Math.max(1, Math.floor(changes.storyboardLayout.columns)),
+              rows: Math.max(1, Math.floor(changes.storyboardLayout.rows)),
+            }
+          : undefined
+        if (
+          nextLayout &&
+          nextLayout.columns * nextLayout.rows < source.nodeIds.length
+        ) {
+          return project
+        }
+        updated = true
+        const timestamp = new Date().toISOString()
+        return withUpdatedTimestamp({
+          ...project,
+          groups: groups.map((group) =>
+            group.id === groupId
+              ? {
+                  ...group,
+                  ...(normalizedTitle ? { title: normalizedTitle } : {}),
+                  ...(changes.kind ? { kind: changes.kind } : {}),
+                  ...(nextLayout ? { storyboardLayout: nextLayout } : {}),
+                  ...(changes.storyboardCaptions
+                    ? { storyboardCaptions: { ...changes.storyboardCaptions } }
+                    : {}),
+                  updatedAt: timestamp,
+                }
+              : group,
+          ),
+        })
+      })
+      return updated
+    },
+
     ungroupNodes: (groupId) => {
       let removed = false
       commit((project) => {
@@ -1784,6 +1840,35 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           : {}),
       }))
+    },
+
+    beginGenerationBatch: (projectId) => {
+      const state = get()
+      const project = state.projectsById[projectId]
+      if (!project) return undefined
+      const batchId = crypto.randomUUID()
+      generationBatchBaselines.set(batchId, {
+        projectId,
+        baseline: project,
+        pastLength: state.past.length,
+      })
+      return batchId
+    },
+
+    completeGenerationBatch: (batchId) => {
+      const batch = generationBatchBaselines.get(batchId)
+      if (!batch) return false
+      generationBatchBaselines.delete(batchId)
+      const state = get()
+      if (state.activeProjectId !== batch.projectId) return false
+      set({
+        past: [
+          ...state.past.slice(0, batch.pastLength),
+          batch.baseline,
+        ],
+        future: [],
+      })
+      return true
     },
 
     addToTimeline: (item) => {

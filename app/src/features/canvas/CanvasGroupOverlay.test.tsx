@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
@@ -102,4 +102,42 @@ test('offers a real 4K export action only for persisted storyboard groups', asyn
   )
   await user.click(screen.getByRole('button', { name: '导出分镜组 4K' }))
   expect(onExportStoryboard).toHaveBeenCalledOnce()
+})
+
+test('runs a selected group and exposes storyboard conversion and shot captions', async () => {
+  const user = userEvent.setup()
+  const onExecute = vi.fn()
+  const onConfigureStoryboard = vi.fn()
+  const onUpdateStoryboardCaption = vi.fn()
+  render(
+    <CanvasGroupOverlay
+      group={{
+        ...group,
+        kind: 'storyboard',
+        storyboardLayout: { preset: '2x2', columns: 2, rows: 2 },
+        storyboardCaptions: { a: '远景建立空间' },
+      }}
+      bounds={{ x: 20, y: 40, width: 600, height: 360 }}
+      selected
+      onSelect={vi.fn()}
+      onUngroup={vi.fn()}
+      onExecute={onExecute}
+      onConfigureStoryboard={onConfigureStoryboard}
+      onUpdateStoryboardCaption={onUpdateStoryboardCaption}
+      storyboardItems={[
+        { nodeId: 'a', title: '镜头 A', x: 40, y: 80, width: 220, height: 140 },
+        { nodeId: 'b', title: '镜头 B', x: 300, y: 80, width: 220, height: 140 },
+      ]}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '整组执行' }))
+  expect(onExecute).toHaveBeenCalledOnce()
+  await user.click(screen.getByRole('button', { name: '分镜组设置' }))
+  expect(onConfigureStoryboard).toHaveBeenCalledOnce()
+  expect(screen.getByText('镜头 1')).toBeVisible()
+  const caption = screen.getByRole('textbox', { name: '镜头 1 字幕' })
+  expect(caption).toHaveValue('远景建立空间')
+  fireEvent.change(caption, { target: { value: '雨夜入城' } })
+  expect(onUpdateStoryboardCaption).toHaveBeenLastCalledWith('a', '雨夜入城')
 })

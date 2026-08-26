@@ -3914,6 +3914,93 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.groups).toEqual([])
   })
 
+  test('executes a selected group in dependency order and collapses results to one undo', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.groups = [{
+      id: 'group-batch',
+      title: '分组 01',
+      kind: 'standard',
+      nodeIds: ['character', 'scene'],
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    }]
+    activate(project)
+    const order: string[] = []
+    let resultNumber = 0
+    const start = vi.fn<GenerationAdapter['start']>(async (request) => {
+      order.push(request.nodeId)
+      resultNumber += 1
+      const assetId = `batch-asset-${resultNumber}`
+      return {
+        asset: { id: assetId, kind: 'image', url: `/batch/${resultNumber}.png`, mimeType: 'image/png' },
+        version: {
+          id: `batch-version-${resultNumber}`,
+          createdAt: new Date().toISOString(),
+          prompt: request.prompt,
+          assetId,
+        },
+      }
+    })
+    renderCanvas({ repository: noOpCanvasRepository, generationAdapter: { start } })
+
+    await user.click(screen.getByRole('button', { name: '选择分组：分组 01' }))
+    await user.click(screen.getByRole('button', { name: '整组执行' }))
+    const status = screen.getByLabelText('工作流整组执行状态')
+    await waitFor(() => expect(status).toHaveAttribute('data-status', 'completed'))
+    expect(order).toEqual(['character', 'scene'])
+    expect(useProjectStore.getState().past).toHaveLength(1)
+
+    act(() => useProjectStore.getState().undo())
+    expect(
+      useProjectStore.getState().activeProject?.nodes
+        .filter(({ id }) => id === 'character' || id === 'scene')
+        .every(({ versions }) => versions.length === 1),
+    ).toBe(true)
+  })
+
+  test('pauses a failed group execution and retries the current queued job', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.groups = [{
+      id: 'group-retry',
+      title: '分组 02',
+      kind: 'standard',
+      nodeIds: ['character', 'scene'],
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    }]
+    activate(project)
+    let sceneAttempts = 0
+    let resultNumber = 0
+    const start = vi.fn<GenerationAdapter['start']>(async (request) => {
+      if (request.nodeId === 'scene' && sceneAttempts++ === 0) {
+        throw new Error('演示供应商暂时失败')
+      }
+      resultNumber += 1
+      const assetId = `retry-asset-${resultNumber}`
+      return {
+        asset: { id: assetId, kind: 'image', url: `/retry/${resultNumber}.png`, mimeType: 'image/png' },
+        version: {
+          id: `retry-version-${resultNumber}`,
+          createdAt: new Date().toISOString(),
+          prompt: request.prompt,
+          assetId,
+        },
+      }
+    })
+    renderCanvas({ repository: noOpCanvasRepository, generationAdapter: { start } })
+
+    await user.click(screen.getByRole('button', { name: '选择分组：分组 02' }))
+    await user.click(screen.getByRole('button', { name: '整组执行' }))
+    const status = screen.getByLabelText('工作流整组执行状态')
+    await waitFor(() => expect(status).toHaveAttribute('data-status', 'paused'))
+    expect(status).toHaveTextContent('演示供应商暂时失败')
+    await user.click(within(status).getByRole('button', { name: '重试当前节点' }))
+    await waitFor(() => expect(status).toHaveAttribute('data-status', 'completed'))
+    expect(sceneAttempts).toBe(2)
+  })
+
   test('renders drag positions continuously but commits one history entry on release', () => {
     renderCanvas()
 

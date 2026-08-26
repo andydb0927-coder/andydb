@@ -45,6 +45,7 @@ import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { VideoMediaContextBar } from './VideoContextTools'
 import { ImageAnnotationEditor } from './ImageAnnotationEditor'
 import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
+import { PanoramaViewer } from './PanoramaViewer'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -663,6 +664,7 @@ type ImageToolSurface =
   | 'annotation'
   | 'transform'
   | 'preview'
+  | 'panorama'
 
 function activeImageAsset(project: Project, node: CanvasNode) {
   const version = node.versions.find(({ id }) => id === node.activeVersionId)
@@ -807,6 +809,16 @@ export function SelectionContextBar({
         >
           <span className="image-context-action__panorama-icon" aria-hidden="true">720</span>
           全景
+        </button>
+        <button
+          type="button"
+          data-compact="false"
+          aria-label="全景预览"
+          title="以720全景查看器打开当前结果"
+          onClick={() => setSurface('panorama')}
+        >
+          <span className="image-context-action__panorama-icon" aria-hidden="true">720</span>
+          全景预览
         </button>
         <button type="button" data-compact="false" onClick={() => setSurface('multi-angle')}><Rotate3D aria-hidden="true" />多角度</button>
         <button type="button" data-compact="false" onClick={() => setSurface('lighting')}><Lightbulb aria-hidden="true" />打光</button>
@@ -954,6 +966,13 @@ export function SelectionContextBar({
           {previewIndex > 0 ? <button type="button" aria-label="上一张图片" onClick={() => setPreviewIndex((index) => index - 1)}><ChevronLeft aria-hidden="true" /></button> : null}
           {previewIndex < previewItems.length - 1 ? <button type="button" aria-label="下一张图片" onClick={() => setPreviewIndex((index) => index + 1)}><ChevronRight aria-hidden="true" /></button> : null}
         </div>
+      ) : null}
+      {surface === 'panorama' ? (
+        <PanoramaViewer
+          imageUrl={asset.url}
+          title={node.title}
+          onClose={() => setSurface(undefined)}
+        />
       ) : null}
     </>
   )

@@ -50,6 +50,7 @@ export type ModelCapability =
   | 'text-to-video'
   | 'image-to-video'
   | 'audio'
+  | 'panorama-720'
 
 export interface ModelProviderPricing {
   amount: number
@@ -164,6 +165,7 @@ const capabilityCopy: Record<ModelCapability, string> = {
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
   audio: '音频',
+  'panorama-720': '720全景生成',
 }
 
 function generationCapability(request: GenerationRequest): ModelCapability {
@@ -1077,6 +1079,17 @@ export function createDefaultProviderRegistry(
     }),
     createArkTtsProvider(options.arkTts),
     createArkAudioGenProvider(options.arkAudio),
+    placeholderProvider({
+      id: 'panorama-720-api',
+      name: '720全景',
+      modelName: '720全景生成',
+      selectorVisible: false,
+      disabledReason: '待接入720全景生成',
+      capabilities: ['panorama-720'],
+      parameters: {},
+      pricing: { amount: 0, currency: 'credits', unit: 'generation' },
+      officialApiEndpoint: 'pending://panorama-720',
+    }),
     placeholderProvider({
       id: 'tongyi-api',
       name: '通义万相',

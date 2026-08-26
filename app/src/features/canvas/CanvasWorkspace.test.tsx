@@ -342,6 +342,10 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   const panorama = within(imageToolbar).getByRole('button', { name: '全景' })
   expect(panorama).toHaveAttribute('title', '基于当前场景创建720°全景图')
   expect(panorama.querySelector('.image-context-action__panorama-icon')).toHaveTextContent('720')
+  await user.click(within(imageToolbar).getByRole('button', { name: '全景预览' }))
+  expect(screen.getByRole('dialog', { name: '角色图 720全景预览' })).toBeVisible()
+  expect(screen.getByRole('img', { name: '角色图 720全景视图' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: '关闭全景预览' }))
   for (const label of ['九宫格', '宫格切分']) {
     const menuTrigger = within(imageToolbar).getByRole('button', { name: label })
     expect(menuTrigger).toHaveAttribute('aria-haspopup', 'menu')

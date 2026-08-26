@@ -337,6 +337,12 @@ export interface CanvasGroup {
   title: string
   kind?: 'standard' | 'storyboard' | 'preset'
   nodeIds: string[]
+  storyboardLayout?: {
+    preset: '2x2' | '2x3' | '3x3' | 'custom'
+    columns: number
+    rows: number
+  }
+  storyboardCaptions?: Record<string, string>
   createdAt: string
   updatedAt: string
 }
