@@ -16,6 +16,10 @@ import {
   createSeedreamLiveProvider,
   type SeedreamLiveProviderOptions,
 } from './seedream-live-provider'
+import {
+  createArkTextLlmProvider,
+  type ArkTextLlmProviderOptions,
+} from './ark-text-llm-provider'
 import { ImageSizeResolver, type ImageSizePolicy } from './image-size-resolver'
 import {
   resolveModelParameterManifest,
@@ -78,6 +82,10 @@ export interface ModelProvider {
   parameterSchema: ModelParameterSchema
   sizePolicy?: ImageSizePolicy
   pricing: ModelProviderPricing
+  tokenPricing?: {
+    inputPerMillionCny: number
+    outputPerMillionCny: number
+  }
   officialApiEndpoint: string
   variants?: readonly ModelProviderVariant[]
   generate(
@@ -151,6 +159,7 @@ const capabilityCopy: Record<ModelCapability, string> = {
 }
 
 function generationCapability(request: GenerationRequest): ModelCapability {
+  if (request.targetKind === 'text') return 'text'
   if (request.targetKind === 'audio') return 'audio'
   const hasMedia = request.referenceAssets.length > 0
   if (request.targetKind === 'image') {
@@ -353,6 +362,7 @@ export class ProviderRegistry {
     return {
       ...result,
       usage: {
+        ...result.usage,
         providerId: provider.id,
         providerName: provider.name,
         modelName: provider.modelName,
@@ -750,6 +760,7 @@ export function createDemoProviderFromManifest(
       return scheduledProgress(context, 300, [25, 55, 85, 100], () => {
         const video = request.targetKind === 'video'
         const audio = request.targetKind === 'audio'
+        const text = request.targetKind === 'text'
         const requestedDuration = Number(
           request.parameters?.duration ??
             parameterSchema.duration?.defaultValue ??
@@ -765,12 +776,37 @@ export function createDemoProviderFromManifest(
           requestedCount > 1
             ? requestedCount
             : 1
-        const resolvedSize = !video && !audio && manifest.sizePolicy
+        const resolvedSize = !video && !audio && !text && manifest.sizePolicy
           ? new ImageSizeResolver(manifest.sizePolicy).resolve(request.parameters)
+          : undefined
+        const textContent = text
+          ? request.parameters?.outputKind === 'script'
+            ? JSON.stringify({
+                chapters: Array.from(
+                  {
+                    length: Math.min(
+                      20,
+                      Math.max(1, Number(request.parameters?.sceneCount ?? 3)),
+                    ),
+                  },
+                  (_, index) => ({
+                    title: `场次 ${String(index + 1).padStart(2, '0')}`,
+                    summary: `${request.prompt} · 第 ${index + 1} 场本地演示拆解`,
+                  }),
+                ),
+              })
+            : `基础文案：${request.prompt}。本地演示结果已回填。`
           : undefined
         const assets = Array.from({ length: count }, () => {
           const assetId = crypto.randomUUID()
-          return audio
+          return text
+            ? {
+                id: assetId,
+                kind: 'text' as const,
+                url: `data:text/plain;charset=utf-8,${encodeURIComponent(textContent ?? '')}`,
+                mimeType: 'text/plain',
+              }
+            : audio
             ? {
                 id: assetId,
                 kind: 'audio' as const,
@@ -809,7 +845,9 @@ export function createDemoProviderFromManifest(
             createdAt: new Date().toISOString(),
             prompt: request.prompt,
             assetId: asset.id,
+            ...(textContent ? { textContent } : {}),
           },
+          ...(text ? { persistence: 'project' as const } : {}),
         }
       })
     },
@@ -931,6 +969,7 @@ function placeholderProvider(config: ProviderManifestCore): ModelProvider {
 export interface DefaultProviderRegistryOptions {
   kling?: KlingLiveProviderOptions
   seedream?: SeedreamLiveProviderOptions
+  arkText?: ArkTextLlmProviderOptions
 }
 
 export function createDefaultProviderRegistry(
@@ -1004,6 +1043,7 @@ export function createDefaultProviderRegistry(
       ],
       officialApiEndpoint: 'mock://local/text-llm',
     }),
+    createArkTextLlmProvider(options.arkText),
     ...liblibVideoModelCatalog.map(videoCatalogProvider),
     createKlingLiveProvider(options.kling),
     demoProvider({

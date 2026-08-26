@@ -58,11 +58,12 @@ export interface NodeVersion {
   prompt: string
   assetId?: string
   generationJobId?: string
+  textContent?: string
 }
 
 export interface Asset {
   id: string
-  kind: 'image' | 'video' | 'audio'
+  kind: 'image' | 'video' | 'audio' | 'text'
   url: string
   mimeType: string
   width?: number
@@ -140,7 +141,7 @@ export interface GenerationReferenceConfig {
 }
 
 export interface GenerationConfiguration {
-  targetKind: 'image' | 'video' | 'audio'
+  targetKind: 'image' | 'video' | 'audio' | 'text'
   providerId?: string
   parameters?: Record<string, string | number | boolean>
   referenceAssets: GenerationReferenceConfig[]
@@ -392,6 +393,10 @@ export interface GenerationJob {
   progress?: number
   estimatedCost?: number
   creditsSpent?: number
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  estimatedCostCny?: number
   generationConfig?: GenerationConfiguration
 }
 

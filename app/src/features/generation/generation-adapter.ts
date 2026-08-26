@@ -21,6 +21,10 @@ export interface GenerationUsage {
   modelName: string
   cost: number
   currency: 'credits'
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  estimatedCostCny?: number
 }
 
 export interface GenerationResult {

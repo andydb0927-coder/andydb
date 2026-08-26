@@ -319,7 +319,7 @@ export function parseWorkflowImport(
     if (
       !record(asset) ||
       typeof asset.id !== 'string' ||
-      !['image', 'video', 'audio'].includes(String(asset.kind)) ||
+      !['image', 'video', 'audio', 'text'].includes(String(asset.kind)) ||
       typeof asset.url !== 'string' ||
       typeof asset.mimeType !== 'string'
     ) {

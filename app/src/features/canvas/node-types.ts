@@ -93,6 +93,10 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onSaveImageAnnotations?(annotations: ImageAnnotation[]): void
   onMirrorImage?(axis: 'horizontal' | 'vertical'): void
   onLocalVideoGenerate?(prompt: string): void
+  onGenerateText?(
+    details: Extract<CanvasNodeDetails, { type: 'text' | 'script' }>,
+    prompt: string,
+  ): void
   onCreateTextToVideoPreset?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
   onUpdateNodeDetails?(details: CanvasNodeDetails): void

@@ -21,6 +21,8 @@ import type {
 } from '../../project/model'
 import {
   defaultProviderRegistry,
+  groupProvidersForMenu,
+  isProviderEnabled,
   modelProviderVariant,
   modelProviderVariantCost,
   modelProviderVariants,
@@ -120,6 +122,73 @@ function ModelVariantField({
   )
 }
 
+function TextModelField({
+  data,
+  label,
+  provider,
+  variantId,
+  onChange,
+}: {
+  data: CreativeNodeData
+  label: string
+  provider: ModelProvider
+  variantId: string
+  onChange(provider: ModelProvider, variantId: string | undefined): void
+}) {
+  const registry = data.providerRegistry ?? defaultProviderRegistry
+  const providers = registry.matching(['text'])
+  const value = provider.variants?.length ? variantId : provider.id
+
+  return (
+    <label className="specialized-node-details__field text-node-composer__model">
+      <span className="visually-hidden">{label}</span>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(event) => {
+          const nextValue = event.currentTarget.value
+          const directProvider = providers.find(({ id }) => id === nextValue)
+          if (directProvider) {
+            onChange(directProvider, directProvider.variants?.[0]?.id)
+            return
+          }
+          const variantProvider = providers.find((candidate) =>
+            candidate.variants?.some(({ id }) => id === nextValue),
+          )
+          if (variantProvider) onChange(variantProvider, nextValue)
+        }}
+      >
+        {groupProvidersForMenu(providers).map((group) => (
+          <optgroup key={group.id} label={group.label}>
+            {group.providers.flatMap((candidate) =>
+              candidate.variants?.length
+                ? candidate.variants.map((variant) => (
+                    <option
+                      key={`${candidate.id}:${variant.id}`}
+                      value={variant.id}
+                      disabled={!isProviderEnabled(candidate)}
+                    >
+                      {variant.name} · {variant.pricing.amount} 积分
+                    </option>
+                  ))
+                : [(
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                      disabled={!isProviderEnabled(candidate)}
+                    >
+                      {candidate.modelName} · {candidate.pricing.amount} 积分
+                      {candidate.disabledReason ? ` · ${candidate.disabledReason}` : ''}
+                    </option>
+                  )],
+            )}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 function DemoModelMeta({
   provider,
   variantId,
@@ -144,13 +213,15 @@ function TextDetails({
   details: TextNodeDetails
   onUpdate(details: TextNodeDetails): void
 }) {
-  const provider = providerForDetails(
+  const initialProvider = providerForDetails(
     data,
     details.modelProviderId ?? 'mock-text-llm',
     'text',
   )
-  if (!provider) return <p role="status">本地文本模型未配置</p>
-  const initialVariant = modelProviderVariant(provider, details.modelVariant)
+  if (!initialProvider) return <p role="status">文本模型未配置</p>
+  const [providerId, setProviderId] = useState(initialProvider.id)
+  const provider = providerForDetails(data, providerId, 'text') ?? initialProvider
+  const initialVariant = modelProviderVariant(initialProvider, details.modelVariant)
   const [variantId, setVariantId] = useState(initialVariant?.id ?? '')
   const [prompt, setPrompt] = useState(details.prompt ?? '')
   const [generatedModel, setGeneratedModel] = useState(details.generatedByModel ?? '')
@@ -159,13 +230,18 @@ function TextDetails({
   const selectedVariant = modelProviderVariant(provider, variantId)
   const cost = modelProviderVariantCost(provider, variantId)
 
-  const selectVariant = (nextVariantId: string) => {
-    setVariantId(nextVariantId)
-    const variant = modelProviderVariant(provider, nextVariantId)
+  const selectModel = (
+    nextProvider: ModelProvider,
+    nextVariantId: string | undefined,
+  ) => {
+    const normalizedVariantId = nextVariantId ?? ''
+    setProviderId(nextProvider.id)
+    setVariantId(normalizedVariantId)
+    const variant = modelProviderVariant(nextProvider, normalizedVariantId)
     const fontStyle = variant?.defaultParameters?.fontStyle
     onUpdate({
       ...details,
-      modelProviderId: provider.id,
+      modelProviderId: nextProvider.id,
       modelVariant: nextVariantId,
       prompt,
       fontStyle:
@@ -183,6 +259,20 @@ function TextDetails({
     }
     const variant = modelProviderVariant(provider, variantId)
     const modelName = variant?.name ?? provider.modelName
+    const nextDetails: TextNodeDetails = {
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: variant?.id,
+      prompt: cleanPrompt,
+      generatedByModel: modelName,
+    }
+    if (data.onGenerateText) {
+      onUpdate(nextDetails)
+      data.onGenerateText(nextDetails, cleanPrompt)
+      setGeneratedModel(modelName)
+      setStatus('文本生成任务已提交。')
+      return
+    }
     const lead =
       variantId === 'deep-script'
         ? '深度脚本文案'
@@ -236,26 +326,22 @@ function TextDetails({
         />
       </label>
       <footer className="text-node-composer__controls">
-        <label className="text-node-composer__model">
-          <span className="visually-hidden">文本模型</span>
-          <select
-            aria-label="文本模型"
-            value={variantId}
-            onChange={(event) => selectVariant(event.currentTarget.value)}
-          >
-            {modelProviderVariants(provider).map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {variant.name} · {variant.pricing.amount} 积分
-              </option>
-            ))}
-          </select>
-        </label>
+        <TextModelField
+          data={data}
+          label="文本模型"
+          provider={provider}
+          variantId={variantId}
+          onChange={selectModel}
+        />
         <span className="text-node-composer__latency">
           {String(selectedVariant?.defaultParameters?.latency ?? '')}{' '}
           {String(selectedVariant?.defaultParameters?.steps ?? '')}
         </span>
-        <span className="text-node-composer__demo" title="演示 Provider 不会连接真实 API">
-          本地演示
+        <span
+          className="text-node-composer__demo"
+          title={provider.kind === 'live' ? provider.modelNotice : '演示 Provider 不会连接真实 API'}
+        >
+          {provider.kind === 'live' ? '官方 API 已接' : '本地演示'}
         </span>
         <span className="text-node-composer__spacer" />
         <button
@@ -275,7 +361,7 @@ function TextDetails({
           className="text-node-composer__generate"
           aria-label={`生成文本，预计成本 ${cost}`}
           disabled={!prompt.trim()}
-          title={prompt.trim() ? '本地演示' : '请输入提示词后生成'}
+          title={prompt.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入提示词后生成'}
           onClick={generate}
         >
           <ArrowUp aria-hidden="true" />
@@ -320,13 +406,15 @@ function ScriptDetails({
   details: ScriptNodeDetails
   onUpdate(details: ScriptNodeDetails): void
 }) {
-  const provider = providerForDetails(
+  const initialProvider = providerForDetails(
     data,
     details.modelProviderId ?? 'mock-text-llm',
     'text',
   )
-  if (!provider) return <p role="status">本地脚本模型未配置</p>
-  const defaultVariant = modelProviderVariant(provider, details.modelVariant ?? 'deep-script')
+  if (!initialProvider) return <p role="status">脚本模型未配置</p>
+  const [providerId, setProviderId] = useState(initialProvider.id)
+  const provider = providerForDetails(data, providerId, 'text') ?? initialProvider
+  const defaultVariant = modelProviderVariant(initialProvider, details.modelVariant ?? 'deep-script')
   const [variantId, setVariantId] = useState(defaultVariant?.id ?? '')
   const [outline, setOutline] = useState(details.outline ?? '')
   const [sceneCountDraft, setSceneCountDraft] = useState(
@@ -336,11 +424,16 @@ function ScriptDetails({
   const [status, setStatus] = useState('')
   const cost = modelProviderVariantCost(provider, variantId)
 
-  const selectVariant = (nextVariantId: string) => {
-    setVariantId(nextVariantId)
+  const selectModel = (
+    nextProvider: ModelProvider,
+    nextVariantId: string | undefined,
+  ) => {
+    const normalizedVariantId = nextVariantId ?? ''
+    setProviderId(nextProvider.id)
+    setVariantId(normalizedVariantId)
     const defaultSceneCount = modelProviderVariant(
-      provider,
-      nextVariantId,
+      nextProvider,
+      normalizedVariantId,
     )?.defaultParameters?.sceneCount
     const nextSceneCount =
       typeof defaultSceneCount === 'number'
@@ -349,7 +442,7 @@ function ScriptDetails({
     setSceneCountDraft(String(nextSceneCount))
     onUpdate({
       ...details,
-      modelProviderId: provider.id,
+      modelProviderId: nextProvider.id,
       modelVariant: nextVariantId,
       outline,
       sceneCount: nextSceneCount,
@@ -368,6 +461,21 @@ function ScriptDetails({
     )
     const variant = modelProviderVariant(provider, variantId)
     const modelName = variant?.name ?? provider.modelName
+    const nextDetails: ScriptNodeDetails = {
+      ...details,
+      modelProviderId: provider.id,
+      modelVariant: variant?.id,
+      outline: cleanOutline,
+      sceneCount: count,
+      generatedByModel: modelName,
+    }
+    if (data.onGenerateText) {
+      onUpdate(nextDetails)
+      data.onGenerateText(nextDetails, cleanOutline)
+      setGeneratedModel(modelName)
+      setStatus('脚本生成任务已提交。')
+      return
+    }
     onUpdate({
       ...details,
       modelProviderId: provider.id,
@@ -387,7 +495,13 @@ function ScriptDetails({
 
   return (
     <>
-      <ModelVariantField label="脚本模型" provider={provider} value={variantId} onChange={selectVariant} />
+      <TextModelField
+        data={data}
+        label="脚本模型"
+        provider={provider}
+        variantId={variantId}
+        onChange={selectModel}
+      />
       <label className="specialized-node-details__field">
         <span>剧情大纲</span>
         <textarea aria-label="剧情大纲" rows={4} maxLength={3000} value={outline} onChange={(event) => setOutline(event.currentTarget.value)} />
@@ -412,13 +526,20 @@ function ScriptDetails({
           }}
         />
       </label>
-      <DemoModelMeta provider={provider} variantId={variantId} />
+      {provider.kind === 'live' ? (
+        <div className="specialized-node-details__meta">
+          <span>预计成本 {cost}</span>
+          <span title={provider.modelNotice}>官方 API 已接</span>
+        </div>
+      ) : (
+        <DemoModelMeta provider={provider} variantId={variantId} />
+      )}
       <button
         type="button"
         className="specialized-node-details__primary"
         aria-label={`生成脚本，预计成本 ${cost}`}
         disabled={!outline.trim()}
-        title={outline.trim() ? '本地演示' : '请输入剧情大纲后生成'}
+        title={outline.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入剧情大纲后生成'}
         onClick={generate}
       >生成脚本</button>
       {!outline.trim() ? <small>请输入剧情大纲后生成</small> : null}

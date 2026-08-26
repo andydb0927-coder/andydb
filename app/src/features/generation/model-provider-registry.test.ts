@@ -44,6 +44,7 @@ describe('model provider registry', () => {
         'seedream-5-pro-api',
         'mock-tongyi-image',
         'mock-text-llm',
+        'ark-text-llm',
         'mock-seedance-25',
         'mock-seedance-20-vip',
         'mock-seedance-20-mini',
@@ -117,6 +118,19 @@ describe('model provider registry', () => {
         expect.objectContaining({ id: 'basic-copy', name: 'GVLM 3.1 Flash', pricing: expect.objectContaining({ amount: 8 }) }),
         expect.objectContaining({ id: 'qwen-3-vl-flash', name: 'Qwen 3 VL Flash', pricing: expect.objectContaining({ amount: 1 }) }),
       ],
+    })
+    expect(registry.require('ark-text-llm')).toMatchObject({
+      name: '火山方舟',
+      modelName: '豆包 Seed 2.1 Pro',
+      kind: 'live',
+      disabledReason: '火山方舟文本开发验证未启用',
+      capabilities: ['text'],
+      officialApiEndpoint:
+        'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      tokenPricing: {
+        inputPerMillionCny: 6,
+        outputPerMillionCny: 30,
+      },
     })
     expect(registry.require('mock-audio')).toMatchObject({
       variants: [

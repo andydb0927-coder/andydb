@@ -2,6 +2,7 @@ import {
   Download,
   Eye,
   Film,
+  FileText,
   Grid2X2,
   Image as ImageIcon,
   List,
@@ -26,6 +27,7 @@ const kindCopy: Record<HistoryKind, string> = {
   image: '图片',
   video: '视频',
   audio: '音频',
+  text: '文本',
 }
 
 const statusCopy: Record<GenerationJob['status'], string> = {
@@ -121,6 +123,7 @@ function HistoryMedia({ record }: { record: HistoryRecord }) {
     return <video src={record.asset.url} muted preload="metadata" />
   }
   if (record.kind === 'audio') return <Music2 aria-hidden="true" />
+  if (record.kind === 'text') return <FileText aria-hidden="true" />
   if (record.kind === 'video') return <Film aria-hidden="true" />
   return <ImageIcon aria-hidden="true" />
 }
@@ -140,8 +143,10 @@ export function GenerationHistoryPanel({
       ? 'image'
       : records.some((record) => record.kind === 'video')
         ? 'video'
-        : records.some((record) => record.kind === 'audio')
+      : records.some((record) => record.kind === 'audio')
           ? 'audio'
+          : records.some((record) => record.kind === 'text')
+            ? 'text'
           : 'image',
   )
   const [thumbnailSize, setThumbnailSize] =
@@ -220,7 +225,7 @@ export function GenerationHistoryPanel({
         </p>
       ) : null}
       <div className="generation-history__tabs" role="tablist" aria-label="历史类型">
-        {(['image', 'video', 'audio'] as const).map((candidate) => {
+        {(['image', 'video', 'audio', 'text'] as const).map((candidate) => {
           const count = records.filter((record) => record.kind === candidate).length
           return (
             <button
@@ -430,6 +435,10 @@ export function GenerationHistoryPanel({
               <video src={previewRecord.asset.url} controls autoPlay={false} />
             ) : previewRecord.asset?.kind === 'audio' ? (
               <audio src={previewRecord.asset.url} controls />
+            ) : previewRecord.asset?.kind === 'text' ? (
+              <pre>{previewRecord.asset.url.startsWith('data:text/plain')
+                ? decodeURIComponent(previewRecord.asset.url.split(',').slice(1).join(','))
+                : previewRecord.job.prompt}</pre>
             ) : null}
           </div>
           <strong>{previewRecord.title}</strong>

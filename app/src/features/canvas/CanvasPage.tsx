@@ -78,6 +78,7 @@ import {
   type CanvasCreation,
   type CanvasGroup,
   type CreativeCardKind,
+  type GenerationConfiguration,
   type GenerationJob,
   type ImageAnnotation,
   type Project,
@@ -447,9 +448,18 @@ function buildGenerationRequest(
   const targetKind =
     operation === 'generate-video'
       ? 'video'
-      : savedConfig?.targetKind ?? (node.kind === 'video' ? 'video' : 'image')
+      : savedConfig?.targetKind ??
+        (node.kind === 'video'
+          ? 'video'
+          : node.kind === 'text' || node.kind === 'script'
+            ? 'text'
+            : 'image')
   const defaultProviderId =
-    targetKind === 'video' ? 'mock-seedance-25' : undefined
+    targetKind === 'video'
+      ? 'mock-seedance-25'
+      : targetKind === 'text'
+        ? 'mock-text-llm'
+        : undefined
   const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
   const configuredProvider = configuredProviderId
     ? providerRegistry.list().find(({ id }) => id === configuredProviderId)
@@ -458,6 +468,8 @@ function buildGenerationRequest(
     Boolean(provider?.capabilities.some((capability) =>
       targetKind === 'video'
         ? capability === 'text-to-video' || capability === 'image-to-video'
+        : targetKind === 'text'
+          ? capability === 'text'
         : targetKind === 'audio'
           ? capability === 'audio'
           : capability === 'text-to-image' || capability === 'image-to-image',
@@ -526,13 +538,12 @@ function buildGenerationRequest(
       const sourceAsset = project.assets.find(
         ({ id }) => id === sourceVersion?.assetId,
       )
-      return sourceAsset
-        ? [{
-            url: sourceAsset.url,
-            kind: sourceAsset.kind,
-            mimeType: sourceAsset.mimeType,
-          }]
-        : []
+      if (!sourceAsset || sourceAsset.kind === 'text') return []
+      return [{
+        url: sourceAsset.url,
+        kind: sourceAsset.kind,
+        mimeType: sourceAsset.mimeType,
+      }]
     })
 
   return {
@@ -552,7 +563,7 @@ function buildGenerationRequest(
               node.kind === 'scene') &&
             incomingReferenceAssets.length
           ? incomingReferenceAssets
-          : asset
+          : asset && asset.kind !== 'text'
             ? [
                 {
                   url: asset.url,
@@ -2508,6 +2519,36 @@ export function CanvasPage({
           },
           onUpdateNodeDetails: (details) => {
             updateNode(node.id, { details })
+          },
+          onGenerateText: (details, prompt) => {
+            const selectedProvider = providerRegistry.list().find(
+              ({ id }) => id === details.modelProviderId,
+            )
+            const parameters = {
+              ...(selectedProvider
+                ? providerDefaultParameters(selectedProvider)
+                : {}),
+              outputKind: details.type,
+              ...(details.modelVariant
+                ? { modelVariant: details.modelVariant }
+                : {}),
+              ...(details.type === 'script'
+                ? { sceneCount: details.sceneCount ?? 3 }
+                : {}),
+            }
+            updateNode(node.id, {
+              details,
+              modelProviderId: details.modelProviderId,
+              generationConfig: {
+                targetKind: 'text',
+                ...(details.modelProviderId
+                  ? { providerId: details.modelProviderId }
+                  : {}),
+                parameters,
+                referenceAssets: [],
+              },
+            })
+            handleAction(node.id, 'generate', undefined, prompt)
           },
           onAction: (action, trigger) => handleAction(node.id, action, trigger),
         },
@@ -4529,15 +4570,17 @@ export function CanvasPage({
       const sourceAsset = currentProject.assets.find(({ id }) => id === job.assetId)
       const targetKind =
         job.generationConfig?.targetKind ??
-        (sourceAsset?.kind === 'audio'
+        (sourceAsset?.kind === 'text' || sourceNode?.kind === 'text' || sourceNode?.kind === 'script'
+          ? 'text'
+          : sourceAsset?.kind === 'audio'
           ? 'audio'
           : sourceAsset?.kind === 'video' || sourceNode?.kind === 'video'
             ? 'video'
             : 'image')
-      const config = job.generationConfig ?? {
+      const config: GenerationConfiguration = job.generationConfig ?? {
         targetKind,
         ...(job.providerId ? { providerId: job.providerId } : {}),
-        referenceAssets: sourceAsset
+        referenceAssets: sourceAsset && sourceAsset.kind !== 'text'
           ? [{
               url: sourceAsset.url,
               kind: sourceAsset.kind,
@@ -4546,7 +4589,13 @@ export function CanvasPage({
           : [],
       }
       const fallbackLabel =
-        targetKind === 'video' ? '视频' : targetKind === 'audio' ? '音频' : '图片'
+        targetKind === 'video'
+          ? '视频'
+          : targetKind === 'audio'
+            ? '音频'
+            : targetKind === 'text'
+              ? '文本'
+              : '图片'
       const label = `${sourceNode?.title ?? fallbackLabel} 重发`
       const count = currentProject.nodes.filter(({ title }) =>
         title.startsWith(label),

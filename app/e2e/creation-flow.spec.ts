@@ -1449,7 +1449,7 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await textPanel.getByRole('button', { name: '生成文本，预计成本 12' }).click()
   await expect(textPanel.getByRole('textbox', { name: '文本内容' })).toHaveValue(/\u96e8\u5df7\u4e2d\u7684\u6cb3\u706f\u65c1\u767d/)
   await expect(textPanel.getByText('来源模型：GVLM 3.1')).toBeVisible()
-  await expect(textPanel.getByRole('status')).toContainText('本地演示生成完成')
+  await expect(textPanel.getByRole('status')).toContainText('文本生成任务已提交')
 
   await openAddNodeAtBlank(page, '脚本')
   await expect(textPanel).toBeHidden()

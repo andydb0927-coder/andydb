@@ -95,9 +95,18 @@ async function createQuickCardAtBlank(
   label: '故事脚本生成' | '角色三视图' | '世界观卡',
   reverse = false,
 ) {
-  const point = await findBlankCanvasPoint(page, reverse)
-  await page.mouse.dblclick(point.x, point.y)
   const picker = page.getByRole('dialog', { name: '选择节点类型' })
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const point = await findBlankCanvasPoint(page, attempt % 2 === 0 ? reverse : !reverse)
+    await page.mouse.dblclick(point.x, point.y)
+    const opened = await picker
+      .waitFor({ state: 'visible', timeout: 1_500 })
+      .then(() => true)
+      .catch(() => false)
+    if (opened) break
+    await page.keyboard.press('Escape')
+  }
+  await expect(picker).toBeVisible()
   await picker
     .getByRole('button', {
       name: label === '角色三视图' ? '素材库' : '脚本',

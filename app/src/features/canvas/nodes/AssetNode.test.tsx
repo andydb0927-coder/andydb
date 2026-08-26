@@ -5,6 +5,7 @@ import { expect, test, vi } from 'vitest'
 
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { AssetNode } from './AssetNode'
+import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
 
 function renderNode(onHandleActivate = vi.fn(), onRenameNode = vi.fn()) {
   const data: CreativeNodeData = {
@@ -517,6 +518,7 @@ test('selects a text LLM tier and fills locally generated text with model proven
   const model = within(panel).getByRole('combobox', { name: '文本模型' })
 
   expect(within(model).getAllByRole('option').map((option) => option.textContent)).toEqual([
+    '豆包 Seed 2.1 Pro · 1 积分 · 火山方舟文本开发验证未启用',
     'GVLM 3.1 · 12 积分',
     'CVLM 5.5 · 15 积分',
     'GVLM 3.1 Flash · 8 积分',
@@ -539,6 +541,102 @@ test('selects a text LLM tier and fills locally generated text with model proven
     }),
   )
   expect(within(panel).getByRole('status')).toHaveTextContent('本地演示生成完成')
+})
+
+test('groups the configured Ark text model as an official API and dispatches real text generation', async () => {
+  const user = userEvent.setup()
+  const onGenerateText = vi.fn()
+  const registry = createDefaultProviderRegistry({
+    arkText: {
+      mode: 'ark-text-dev',
+      apiKey: 'fixture-key',
+      fetchFn: vi.fn<typeof fetch>(),
+    },
+  })
+  const details = {
+    type: 'text',
+    content: '',
+    fontStyle: '正文',
+    modelProviderId: 'mock-text-llm',
+    modelVariant: 'basic-copy',
+    prompt: '',
+  }
+  const { onUpdateNodeDetails } = renderSpecializedNode(
+    '文本 01',
+    'text',
+    details,
+    true,
+    { providerRegistry: registry, onGenerateText } as Partial<CreativeNodeData>,
+  )
+  const panel = screen.getByRole('region', { name: '文本 01 文本参数' })
+  const model = within(panel).getByRole('combobox', { name: '文本模型' })
+
+  expect(within(model).getByRole('group', { name: '官方 API 已接（开发直连）' }))
+    .toBeVisible()
+  expect(within(model).getByRole('option', { name: '豆包 Seed 2.1 Pro · 1 积分' }))
+    .toBeEnabled()
+
+  await user.selectOptions(model, 'ark-text-llm')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(expect.objectContaining({
+    modelProviderId: 'ark-text-llm',
+    modelVariant: undefined,
+  }))
+  await user.type(
+    within(panel).getByRole('textbox', { name: '文本生成提示词' }),
+    '清晨薄雾中的古桥',
+  )
+  await user.click(
+    within(panel).getByRole('button', { name: '生成文本，预计成本 1' }),
+  )
+
+  expect(onGenerateText).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: 'text',
+      modelProviderId: 'ark-text-llm',
+      prompt: '清晨薄雾中的古桥',
+    }),
+    '清晨薄雾中的古桥',
+  )
+  expect(within(panel).getByRole('status')).toHaveTextContent('文本生成任务已提交')
+})
+
+test('dispatches a configured Ark script generation with outline and scene count', async () => {
+  const user = userEvent.setup()
+  const onGenerateText = vi.fn()
+  const registry = createDefaultProviderRegistry({
+    arkText: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-key',
+      fetchFn: vi.fn<typeof fetch>(),
+    },
+  })
+  const details = {
+    type: 'script',
+    chapters: [],
+    modelProviderId: 'ark-text-llm',
+    outline: '',
+    sceneCount: 2,
+  }
+  renderSpecializedNode('脚本 01', 'script', details, true, {
+    providerRegistry: registry,
+    onGenerateText,
+  } as Partial<CreativeNodeData>)
+  const panel = screen.getByRole('region', { name: '脚本 01 脚本参数' })
+
+  expect(within(panel).getByRole('combobox', { name: '脚本模型' }))
+    .toHaveValue('ark-text-llm')
+  await user.type(within(panel).getByRole('textbox', { name: '剧情大纲' }), '河灯引出旧案')
+  await user.click(within(panel).getByRole('button', { name: '生成脚本，预计成本 1' }))
+
+  expect(onGenerateText).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: 'script',
+      modelProviderId: 'ark-text-llm',
+      outline: '河灯引出旧案',
+      sceneCount: 2,
+    }),
+    '河灯引出旧案',
+  )
 })
 
 test('shows editable script chapters, summaries, and word counts', async () => {

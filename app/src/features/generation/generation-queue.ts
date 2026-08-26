@@ -218,6 +218,10 @@ export class GenerationQueue {
             providerName: result.usage.providerName,
             modelName: result.usage.modelName,
             creditsSpent: result.usage.cost,
+            inputTokens: result.usage.inputTokens,
+            outputTokens: result.usage.outputTokens,
+            totalTokens: result.usage.totalTokens,
+            estimatedCostCny: result.usage.estimatedCostCny,
           }
         : {}),
       updatedAt: new Date().toISOString(),

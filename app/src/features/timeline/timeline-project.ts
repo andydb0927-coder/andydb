@@ -128,7 +128,7 @@ function activeAsset(project: Project, nodeId: string) {
 }
 
 function trackForAsset(asset: Asset | undefined, fallback: TimelineTrackKind) {
-  return asset?.kind ?? fallback
+  return asset?.kind === 'text' ? fallback : asset?.kind ?? fallback
 }
 
 // 画布视频节点的 demo 产物可能是 PNG 缩略图，但语义上属于视频轨；
@@ -293,7 +293,7 @@ export function libraryTimelineCandidate(
   return {
     id: `library:${record.id}`,
     name: record.name,
-    kind: record.kind,
+    kind: record.kind === 'text' ? 'image' : record.kind,
     durationSeconds: record.durationSeconds ?? (record.kind === 'image' ? 5 : 5),
     source: {
       type: 'library-asset',

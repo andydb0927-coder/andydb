@@ -50,7 +50,7 @@ const assetOrganizeReport: AgentSkillDefinition = {
   outputMode: 'card-or-node',
   inputSchema: { type: 'object', properties: {} },
   execute(_input, { project }) {
-    const counts = { image: 0, video: 0, audio: 0 }
+    const counts = { image: 0, video: 0, audio: 0, text: 0 }
     project.assets.forEach(({ kind }) => { counts[kind] += 1 })
     const referenced = new Set(
       project.nodes.flatMap(({ versions }) =>
@@ -62,7 +62,7 @@ const assetOrganizeReport: AgentSkillDefinition = {
       title: `${project.title} · 素材整理报告`,
       summary: `${project.assets.length} 个素材，${orphaned.length} 个未被画布引用`,
       content: [
-        `图片 ${counts.image} · 视频 ${counts.video} · 音频 ${counts.audio}`,
+        `图片 ${counts.image} · 视频 ${counts.video} · 音频 ${counts.audio} · 文本 ${counts.text}`,
         `未被画布引用：${orphaned.length}`,
         orphaned.length ? orphaned.map(({ id, mimeType }) => `- ${id}（${mimeType}）`).join('\n') : '- 无',
       ].join('\n'),

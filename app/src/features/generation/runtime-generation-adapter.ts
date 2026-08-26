@@ -22,8 +22,11 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
 
   describe(request: GenerationRequest) {
     const preference = this.preferenceStore.read()
-    const adapter = preference.provider === 'libtv' ? this.libtv : this.demo
-    if (preference.provider === 'libtv') {
+    const useLibTv =
+      preference.provider === 'libtv' &&
+      (request.targetKind === 'image' || request.targetKind === 'video')
+    const adapter = useLibTv ? this.libtv : this.demo
+    if (useLibTv && preference.provider === 'libtv') {
       return {
         providerId: 'libtv-bridge',
         providerName: 'LibTV',
@@ -47,7 +50,8 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
     signal: AbortSignal,
     onProgress?: (percentage: number) => void,
   ): Promise<GenerationResult> {
-    return this.preferenceStore.read().provider === 'libtv'
+    return this.preferenceStore.read().provider === 'libtv' &&
+      (request.targetKind === 'image' || request.targetKind === 'video')
       ? this.libtv.start(request, signal, onProgress)
       : this.demo.start(request, signal, onProgress)
   }

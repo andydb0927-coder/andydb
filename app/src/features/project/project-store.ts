@@ -228,6 +228,61 @@ function cloneGenerationConfig(job: GenerationJob) {
   }
 }
 
+function textGenerationDetails(
+  source: CanvasNode,
+  job: GenerationJob,
+  version: NodeVersion,
+) {
+  const content = version.textContent?.trim()
+  if (!content || !source.details) return source.details
+  if (source.details.type === 'text') {
+    return {
+      ...source.details,
+      content,
+      prompt: job.prompt,
+      generatedByModel: job.modelName ?? source.details.generatedByModel,
+      ...(job.providerId ? { modelProviderId: job.providerId } : {}),
+    }
+  }
+  if (source.details.type !== 'script') return source.details
+  let parsedChapters: Array<{ title: string; summary: string }> = []
+  try {
+    const parsed = JSON.parse(content) as {
+      chapters?: Array<{ title?: unknown; summary?: unknown }>
+    }
+    parsedChapters = Array.isArray(parsed.chapters)
+      ? parsed.chapters.flatMap((chapter) =>
+          typeof chapter?.title === 'string' &&
+          typeof chapter.summary === 'string'
+            ? [{ title: chapter.title.trim(), summary: chapter.summary.trim() }]
+            : [],
+        )
+      : []
+  } catch {
+    parsedChapters = content
+      .split(/\n{2,}/u)
+      .map((summary, index) => ({
+        title: `场次 ${String(index + 1).padStart(2, '0')}`,
+        summary: summary.trim(),
+      }))
+      .filter(({ summary }) => summary.length > 0)
+  }
+  return {
+    ...source.details,
+    outline: job.prompt,
+    generatedByModel: job.modelName ?? source.details.generatedByModel,
+    ...(job.providerId ? { modelProviderId: job.providerId } : {}),
+    ...(parsedChapters.length
+      ? {
+          chapters: parsedChapters.map((chapter) => ({
+            id: crypto.randomUUID(),
+            ...chapter,
+          })),
+        }
+      : {}),
+  }
+}
+
 function findDownstream(project: Project, nodeId: string) {
   const nodeIds = new Set<string>()
   const edgeIds = new Set<string>()
@@ -1634,6 +1689,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                     : {}),
                   ...(job.generationConfig
                     ? { generationConfig: cloneGenerationConfig(job) }
+                    : {}),
+                  ...(version.textContent
+                    ? { details: textGenerationDetails(source, job, version) }
+                    : {}),
+                  ...(job.providerId && job.providerId !== 'libtv-bridge'
+                    ? { modelProviderId: job.providerId }
                     : {}),
                 }
               : node,

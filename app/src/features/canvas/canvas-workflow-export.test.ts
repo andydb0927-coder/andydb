@@ -99,6 +99,55 @@ describe('workflow JSON', () => {
     expect(exported.imageAnnotations).toEqual(project.nodes[0].imageAnnotations)
   })
 
+  test('round-trips a persistent text generation asset and node version', () => {
+    const current = makeProjectFixture()
+    const textAsset = {
+      id: 'asset-text-live',
+      kind: 'text' as const,
+      url: 'data:text/plain;charset=utf-8,%E9%9B%A8%E5%A4%9C',
+      mimeType: 'text/plain',
+    }
+    const imported = {
+      ...current,
+      id: 'text-workflow',
+      assets: [...current.assets, textAsset],
+      nodes: [{
+        id: 'text-live-node',
+        kind: 'text' as const,
+        title: '文本 01',
+        position: { x: 20, y: 30 },
+        versions: [{
+          id: 'text-live-version',
+          createdAt: '2026-08-26T00:00:00.000Z',
+          prompt: '雨夜',
+          assetId: textAsset.id,
+          textContent: '雨夜的灯。',
+        }],
+        activeVersionId: 'text-live-version',
+        sourceChanged: false,
+        details: {
+          type: 'text' as const,
+          content: '雨夜的灯。',
+          fontStyle: '正文' as const,
+          modelProviderId: 'ark-text-llm',
+        },
+      }],
+      edges: [],
+    }
+
+    const result = parseWorkflowImport(
+      JSON.stringify(createWorkflowSnapshot(imported)),
+      current,
+    )
+
+    expect(result.valid).toBe(true)
+    expect(result.snapshot?.project.assets).toContainEqual(textAsset)
+    expect(result.snapshot?.project.nodes[0].versions[0]).toMatchObject({
+      textContent: '雨夜的灯。',
+      assetId: textAsset.id,
+    })
+  })
+
   test('reports duplicate titles and rejects missing graph references', () => {
     const current = makeProjectFixture()
     const imported = {

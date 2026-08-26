@@ -122,6 +122,113 @@ afterEach(() => {
 })
 
 describe('generation queue lifecycle', () => {
+  test('persists live text output, token usage, node version, and generation history', async () => {
+    const base = makeProjectFixture()
+    activate({
+      ...base,
+      assets: [],
+      edges: [],
+      jobs: [],
+      canvases: undefined,
+      activeCanvasId: undefined,
+      nodes: [{
+        id: 'text-live-node',
+        kind: 'text',
+        title: '文本 01',
+        position: { x: 0, y: 0 },
+        versions: [{
+          id: 'text-live-version-before',
+          createdAt: '2026-08-26T00:00:00.000Z',
+          prompt: '',
+        }],
+        activeVersionId: 'text-live-version-before',
+        sourceChanged: false,
+        details: {
+          type: 'text',
+          content: '',
+          fontStyle: '正文',
+          modelProviderId: 'ark-text-llm',
+          prompt: '写一段雨夜旁白',
+        },
+      }],
+    })
+    const request: GenerationRequest = {
+      projectId: base.id,
+      nodeId: 'text-live-node',
+      operation: 'regenerate',
+      targetKind: 'text',
+      providerId: 'ark-text-llm',
+      prompt: '写一段雨夜旁白',
+      parameters: { outputKind: 'text' },
+      referenceAssets: [],
+    }
+    const queue = createQueue({
+      describe: () => ({
+        providerId: 'ark-text-llm',
+        providerName: '火山方舟',
+        modelName: '豆包 Seed 2.1 Pro',
+        estimatedCost: 1,
+      }),
+      start: async () => ({
+        persistence: 'project',
+        asset: {
+          id: 'asset-live-text',
+          kind: 'text',
+          url: 'data:text/plain;charset=utf-8,%E9%9B%A8%E5%A4%9C',
+          mimeType: 'text/plain',
+        },
+        version: {
+          id: 'version-live-text',
+          createdAt: '2026-08-26T00:00:02.000Z',
+          prompt: request.prompt,
+          assetId: 'asset-live-text',
+          textContent: '雨夜的灯在河面上摇晃。',
+        },
+        usage: {
+          providerId: 'ark-text-llm',
+          providerName: '火山方舟',
+          modelName: '豆包 Seed 2.1 Pro',
+          cost: 1,
+          currency: 'credits',
+          inputTokens: 20,
+          outputTokens: 12,
+          totalTokens: 32,
+          estimatedCostCny: 0.00048,
+        },
+      }),
+    })
+
+    const enqueued = queue.enqueue(request)
+    await vi.waitFor(() => expect(queue.get(enqueued.id)?.status).toBe('succeeded'))
+
+    const project = useProjectStore.getState().activeProject!
+    const node = project.nodes[0]
+    expect(node.details).toMatchObject({
+      type: 'text',
+      content: '雨夜的灯在河面上摇晃。',
+      prompt: request.prompt,
+      generatedByModel: '豆包 Seed 2.1 Pro',
+      modelProviderId: 'ark-text-llm',
+    })
+    expect(node.versions.at(-1)).toMatchObject({
+      id: 'version-live-text',
+      textContent: '雨夜的灯在河面上摇晃。',
+      generationJobId: enqueued.id,
+    })
+    expect(project.assets).toContainEqual(expect.objectContaining({
+      id: 'asset-live-text',
+      kind: 'text',
+    }))
+    expect(project.jobs).toContainEqual(expect.objectContaining({
+      id: enqueued.id,
+      status: 'succeeded',
+      inputTokens: 20,
+      outputTokens: 12,
+      totalTokens: 32,
+      estimatedCostCny: 0.00048,
+    }))
+  })
+
   test('binds a job to the project that owned its request', () => {
     const queue = createQueue(new DemoGenerationAdapter())
 

@@ -13,6 +13,10 @@ export type ModelParameterName =
   | 'customHeight'
   | 'multiShot'
   | 'autoLink'
+  | 'maxTokens'
+  | 'temperature'
+  | 'thinking'
+  | 'stream'
 
 export type ModelParameterDefinition =
   | {
