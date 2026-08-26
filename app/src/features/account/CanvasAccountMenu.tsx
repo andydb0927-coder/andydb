@@ -12,6 +12,8 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
+import type { GenerationJob } from '../project/model'
+import { deriveGenerationNotifications } from './generation-notifications'
 import {
   createLocalAccountPreferenceStore,
   type LocalAccountPreferences,
@@ -26,6 +28,7 @@ type AccountPanel =
 
 interface CanvasAccountMenuProps {
   creditBalance?: number
+  generationJobs?: GenerationJob[]
   preferenceStore?: LocalAccountPreferenceStore
 }
 
@@ -53,7 +56,18 @@ function MenuAction({ icon, label, onClick, trailing = <ChevronRight aria-hidden
   )
 }
 
-export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
+function formatNotificationTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '时间未知'
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+export function CanvasAccountMenu({ generationJobs = [], preferenceStore }: CanvasAccountMenuProps) {
   const store = useMemo(
     () => preferenceStore ?? createLocalAccountPreferenceStore(),
     [preferenceStore],
@@ -65,6 +79,15 @@ export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const popoverRef = useRef<HTMLElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const notifications = useMemo(
+    () => deriveGenerationNotifications(generationJobs),
+    [generationJobs],
+  )
+  const readNotificationIds = useMemo(
+    () => new Set(preferences.readNotificationIds),
+    [preferences.readNotificationIds],
+  )
+  const unreadCount = notifications.filter(({ id }) => !readNotificationIds.has(id)).length
 
   const persist = (patch: Partial<LocalAccountPreferences>) => {
     setPreferences((current) => store.write({ ...current, ...patch }))
@@ -110,8 +133,8 @@ export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }
 
-  const notificationLabel = preferences.notificationUnreadCount > 0
-    ? `通知 ${preferences.notificationUnreadCount} 条未读`
+  const notificationLabel = unreadCount > 0
+    ? `通知 ${unreadCount} 条未读`
     : '通知'
 
   return (
@@ -126,7 +149,7 @@ export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
         onClick={() => setOpen((current) => !current)}
       >
         {preferences.displayName.slice(0, 1)}
-        {preferences.notificationUnreadCount > 0 ? (
+        {unreadCount > 0 ? (
           <span className="canvas-account-menu__avatar-dot" aria-hidden="true" />
         ) : null}
       </button>
@@ -165,13 +188,13 @@ export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
               icon={<Bell />}
               label={notificationLabel}
               onClick={() => showPanel('notifications')}
-              trailing={preferences.notificationUnreadCount > 0 ? (
-                <b className="canvas-account-menu__notification-badge">{preferences.notificationUnreadCount}</b>
+              trailing={unreadCount > 0 ? (
+                <b className="canvas-account-menu__notification-badge">{unreadCount}</b>
               ) : <ChevronRight />}
             />
           </nav>
 
-          <p className="canvas-account-menu__honesty">未连接账户、会员、额度、支付或云端团队服务。</p>
+          <p className="canvas-account-menu__honesty">会员与积分为本地统计；支付和云端团队服务尚未接入。</p>
         </section>
       ), document.body) : null}
 
@@ -213,9 +236,26 @@ export function CanvasAccountMenu({ preferenceStore }: CanvasAccountMenuProps) {
               ) : null}
               {activePanel === 'notifications' ? (
                 <>
-                  <div className="canvas-account-detail__section-heading"><strong>{preferences.notificationUnreadCount} 条未读</strong><button type="button" disabled={preferences.notificationUnreadCount === 0} onClick={() => persist({ notificationUnreadCount: 0 })}>全部标为已读</button></div>
-                  <article><h3>画布功能已更新</h3><p>本地偏好现在会保存在当前浏览器。</p></article>
-                  <article><h3>任务提醒</h3><p>本地任务完成后会在工作区内提示。</p></article>
+                  <div className="canvas-account-detail__section-heading"><strong>{unreadCount} 条未读</strong><button type="button" disabled={unreadCount === 0} onClick={() => persist({ readNotificationIds: notifications.map(({ id }) => id) })}>全部标为已读</button></div>
+                  {notifications.length ? (
+                    <div className="canvas-account-notifications" aria-label="生成任务通知列表">
+                      {notifications.map((notification) => {
+                        const isRead = readNotificationIds.has(notification.id)
+                        return (
+                          <article key={notification.id} data-status={notification.status} data-read={isRead || undefined}>
+                            <div>
+                              <h3>{notification.title}</h3>
+                              <time dateTime={notification.timestamp}>{formatNotificationTime(notification.timestamp)}</time>
+                            </div>
+                            <p>{notification.detail}</p>
+                            {isRead ? <span>已读</span> : (
+                              <button type="button" onClick={() => persist({ readNotificationIds: [...preferences.readNotificationIds, notification.id] })}>标为已读</button>
+                            )}
+                          </article>
+                        )
+                      })}
+                    </div>
+                  ) : <div className="canvas-account-notifications__empty"><Bell aria-hidden="true" /><strong>暂无生成任务通知</strong><p>任务提交、运行、完成或失败后会显示在这里。</p></div>}
                 </>
               ) : null}
             </div>

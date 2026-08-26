@@ -1,5 +1,6 @@
 import {
   CircleHelp,
+  CircleDollarSign,
   Clapperboard,
   ClipboardList,
   FolderKanban,
@@ -28,6 +29,8 @@ export const platformNavigation = [
     icon: Trophy,
     end: false,
   },
+  { to: '/membership', label: '积分会员', icon: CircleDollarSign, end: true },
+  { to: '/help', label: '帮助', icon: CircleHelp, end: true },
 ] as const
 
 export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode }) {
@@ -95,10 +98,6 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
             </NavLink>
           ))}
         </nav>
-        <Link className="platform-shell__help focus-visible" to="/tutorials">
-          <CircleHelp aria-hidden="true" />
-          <span>帮助</span>
-        </Link>
         {isHomepage ? null : (
           <button
             ref={taskTriggerRef}

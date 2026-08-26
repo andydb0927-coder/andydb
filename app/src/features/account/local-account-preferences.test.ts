@@ -35,7 +35,7 @@ describe('local account preferences', () => {
       aiWatermark: true,
       inAppNotifications: true,
       themeMode: 'dark',
-      notificationUnreadCount: 2,
+      readNotificationIds: [],
       consumeOrder: 'balanced',
       accountScope: 'team',
     })
@@ -70,7 +70,7 @@ describe('local account preferences', () => {
       aiWatermark: false,
       inAppNotifications: false,
       themeMode: 'dark',
-      notificationUnreadCount: 2,
+      readNotificationIds: [],
       consumeOrder: 'balanced',
       accountScope: 'team',
       updatedAt: '2026-08-13T09:00:00.000Z',
@@ -78,20 +78,20 @@ describe('local account preferences', () => {
     expect(storage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).not.toContain('token')
   })
 
-  test('persists account menu theme, quota order, notification, and scope preferences', () => {
+  test('persists account menu theme, quota order, notification reads, and scope preferences', () => {
     const store = createLocalAccountPreferenceStore(storage)
 
     const saved = store.write({
       ...store.read(),
       themeMode: 'light',
-      notificationUnreadCount: 0,
+      readNotificationIds: ['generation:job-1:succeeded'],
       consumeOrder: 'image-first',
       accountScope: 'personal',
     })
 
     expect(saved).toMatchObject({
       themeMode: 'light',
-      notificationUnreadCount: 0,
+      readNotificationIds: ['generation:job-1:succeeded'],
       consumeOrder: 'image-first',
       accountScope: 'personal',
     })

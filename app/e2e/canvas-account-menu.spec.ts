@@ -12,7 +12,7 @@ test('keeps local settings usable on the compact canvas', async ({ page }) => {
   const account = page.getByRole('dialog', { name: '本地设置' })
   await expect(account).toBeVisible()
   await expect(account.getByText('本地创作偏好 · 仅保存在当前浏览器')).toBeVisible()
-  await expect(account.getByText('未连接账户、会员、额度、支付或云端团队服务。')).toBeVisible()
+  await expect(account.getByText('会员与积分为本地统计；支付和云端团队服务尚未接入。')).toBeVisible()
   await expect(account.getByText('标准版团队 VIP')).toHaveCount(0)
   const geometry = await account.evaluate((element) => {
     const rect = element.getBoundingClientRect()
@@ -37,9 +37,10 @@ test('keeps local settings usable on the compact canvas', async ({ page }) => {
   await expect(avatar).toBeFocused()
 
   await avatar.click()
-  await page.getByRole('button', { name: '通知 2 条未读' }).click()
+  await page.getByRole('button', { name: '通知' }).click()
   const notifications = page.getByRole('dialog', { name: '通知中心' })
-  await notifications.getByRole('button', { name: '全部标为已读' }).click()
+  await expect(notifications.getByText('暂无生成任务通知')).toBeVisible()
+  await expect(notifications.getByRole('button', { name: '全部标为已读' })).toBeDisabled()
   await notifications.getByRole('button', { name: '完成' }).click()
   await avatar.click()
   await expect(page.getByRole('button', { name: '通知' })).toBeVisible()

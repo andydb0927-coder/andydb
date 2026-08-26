@@ -33,9 +33,12 @@ describe('platform shell', () => {
       '作品',
       'Skills',
       '创作者挑战赛',
+      '积分会员',
+      '帮助',
     ])
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
-    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/tutorials')
+    expect(screen.getByRole('link', { name: '积分会员' })).toHaveAttribute('href', '/membership')
+    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/help')
 
     await user.click(screen.getByRole('button', { name: '收起平台导航' }))
 
@@ -61,7 +64,7 @@ describe('platform shell', () => {
     expect(homeNavigation).toBeVisible()
     expect(homeNavigation).toHaveAttribute('data-collapsed', 'true')
     expect(screen.getByRole('button', { name: '展开平台导航' })).toBeVisible()
-    expect(within(homeNavigation).getAllByRole('link')).toHaveLength(5)
+    expect(within(homeNavigation).getAllByRole('link')).toHaveLength(7)
     expect(within(homeNavigation).getByRole('link', { name: '首页' })).toHaveAttribute('href', '/')
     expect(within(homeNavigation).getByRole('link', { name: '项目' })).toHaveAttribute('href', '/projects')
     expect(within(homeNavigation).getByRole('link', { name: '作品' })).toHaveAttribute('href', '/works')
@@ -70,7 +73,8 @@ describe('platform shell', () => {
       'href',
       '/challenges',
     )
-    expect(screen.getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/tutorials')
+    expect(within(homeNavigation).getByRole('link', { name: '积分会员' })).toHaveAttribute('href', '/membership')
+    expect(within(homeNavigation).getByRole('link', { name: '帮助' })).toHaveAttribute('href', '/help')
     expect(screen.getByRole('link', { name: '新建项目' })).toHaveAttribute('href', '/projects/new')
     expect(screen.queryByRole('link', { name: '故事设定' })).not.toBeInTheDocument()
 
@@ -91,6 +95,8 @@ describe('platform shell', () => {
       '作品',
       'Skills',
       '创作者挑战赛',
+      '积分会员',
+      '帮助',
     ])
     for (const removed of ['素材与历史', '故事设定', '剪辑项目', '交付与发布', '发现与作品', '模型能力']) {
       expect(within(platformNavigation).queryByRole('link', { name: removed })).not.toBeInTheDocument()

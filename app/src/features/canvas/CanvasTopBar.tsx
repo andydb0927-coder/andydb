@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom'
 import { StatusText } from '../../ui/StatusText'
 import { CanvasAccountMenu } from '../account/CanvasAccountMenu'
 import type { PersistenceStatus } from '../project/project-store'
-import type { ProjectCanvas } from '../project/model'
+import type { GenerationJob, ProjectCanvas } from '../project/model'
 import type { WorkspaceMode } from './CanvasWorkspace'
 
 const persistenceCopy: Record<PersistenceStatus, string> = {
@@ -37,6 +37,7 @@ interface CanvasTopBarProps {
   mode: WorkspaceMode
   agentOpen: boolean
   creditBalance?: number
+  generationJobs?: GenerationJob[]
   canvases?: ProjectCanvas[]
   activeCanvasId?: string
   onUndo(): void
@@ -64,6 +65,7 @@ export function CanvasTopBar({
   canRedo,
   mode,
   agentOpen,
+  generationJobs,
   canvases,
   activeCanvasId,
   onUndo,
@@ -269,7 +271,7 @@ export function CanvasTopBar({
           <ListTree aria-hidden="true" />
           节点列表
         </button>
-        <CanvasAccountMenu />
+        <CanvasAccountMenu generationJobs={generationJobs} />
         <div className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button
             type="button"

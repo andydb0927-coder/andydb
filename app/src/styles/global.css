@@ -14994,6 +14994,412 @@ select {
   font-size: 0.6875rem;
 }
 
+/* Hosted batch 5: local membership, help, and task notifications */
+
+.membership-page,
+.help-center-page {
+  display: grid;
+  gap: var(--space-7);
+  padding-bottom: 72px;
+}
+
+.membership-page__hero,
+.help-center__hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: clamp(28px, 5vw, 64px);
+  border: 1px solid var(--neutral-white-a09);
+  border-radius: var(--radius-panel);
+  background:
+    radial-gradient(circle at 88% 18%, var(--brand-secondary-a20), transparent 30%),
+    linear-gradient(135deg, var(--surface-panel-strong), var(--surface-canvas));
+  box-shadow: var(--shadow-panel);
+}
+
+.membership-page__hero h1,
+.help-center__hero h1 {
+  margin: var(--space-2) 0;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+}
+
+.membership-page__hero p,
+.help-center__hero p,
+.membership-plan-card > p,
+.help-category header p,
+.membership-ledger-empty span {
+  color: var(--text-muted);
+}
+
+.membership-balance {
+  display: grid;
+  min-width: 220px;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--brand-secondary-a42);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.membership-balance > svg {
+  grid-row: 1 / 4;
+  width: 32px;
+  height: 32px;
+  color: var(--focus-ring);
+}
+
+.membership-balance strong {
+  color: var(--text-primary);
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.membership-balance small {
+  color: var(--text-muted);
+}
+
+.membership-page__plans,
+.membership-page__ledger {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.membership-section-heading,
+.membership-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.membership-section-heading {
+  justify-content: space-between;
+}
+
+.membership-section-heading h2 {
+  margin: 0;
+}
+
+.membership-section-heading > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.membership-section-heading svg {
+  width: 18px;
+  height: 18px;
+  color: var(--focus-ring);
+}
+
+.membership-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.membership-plan-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  min-height: 340px;
+  padding: var(--space-5);
+  border: 1px solid var(--neutral-white-a10);
+  border-radius: var(--radius-card);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-card);
+}
+
+.membership-plan-card[data-current] {
+  border-color: var(--brand-secondary-a58);
+  box-shadow: var(--selection-ring), var(--shadow-card);
+}
+
+.membership-plan-card header {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.membership-plan-card header > svg {
+  color: var(--focus-ring);
+}
+
+.membership-plan-card h3,
+.membership-plan-card p,
+.membership-plan-card ul {
+  margin: 0;
+}
+
+.membership-plan-card header strong {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--focus-ring);
+}
+
+.membership-plan-card ul {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.membership-plan-card li[data-enabled='true'] {
+  color: var(--text-primary);
+}
+
+.membership-plan-card button {
+  align-self: end;
+  min-height: 42px;
+  margin-top: auto;
+  border: 1px solid var(--neutral-white-a10);
+  border-radius: var(--radius-button);
+  color: var(--text-muted);
+  background: var(--surface-control);
+}
+
+.membership-ledger-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--neutral-white-a09);
+  border-radius: var(--radius-card);
+  background: var(--surface-panel);
+}
+
+.membership-ledger-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.membership-ledger-scroll th,
+.membership-ledger-scroll td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--neutral-white-a08);
+  text-align: left;
+}
+
+.membership-ledger-scroll th {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.membership-ledger-scroll td {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.membership-ledger__amount {
+  color: var(--status-error);
+  font-weight: 700;
+}
+
+.membership-ledger-empty,
+.help-center__empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--neutral-white-a12);
+  border-radius: var(--radius-card);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.membership-ledger-empty p,
+.help-center__empty h2,
+.help-center__empty p {
+  margin: 0;
+}
+
+.help-center__hero > a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--brand-secondary-a42);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  background: var(--surface-control);
+  text-decoration: none;
+}
+
+.help-center__search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--neutral-white-a10);
+  border-radius: var(--radius-card);
+  background: var(--surface-panel);
+}
+
+.help-center__search input {
+  min-height: 36px;
+  border: 0;
+  color: var(--text-primary);
+  outline: 0;
+  background: transparent;
+}
+
+.help-center__search [role='status'] {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.help-center__categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.help-category {
+  padding: var(--space-5);
+  border: 1px solid var(--neutral-white-a09);
+  border-radius: var(--radius-card);
+  background: var(--surface-panel);
+}
+
+.help-category > header {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.help-category > header svg {
+  flex: none;
+  color: var(--focus-ring);
+}
+
+.help-category h2,
+.help-category header p {
+  margin: 0;
+}
+
+.help-category header p {
+  margin-top: var(--space-1);
+  font-size: 0.8125rem;
+}
+
+.help-category__faqs {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.help-category details {
+  border: 1px solid var(--neutral-white-a08);
+  border-radius: var(--radius-button);
+  background: var(--surface-control);
+}
+
+.help-category summary {
+  padding: var(--space-3);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.help-category details p {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.canvas-account-notifications {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.canvas-account-notifications article {
+  position: relative;
+  padding-left: var(--space-4);
+}
+
+.canvas-account-notifications article::before {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-2);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-progress);
+  content: '';
+}
+
+.canvas-account-notifications article[data-status='succeeded']::before {
+  background: var(--status-success);
+}
+
+.canvas-account-notifications article[data-status='failed']::before {
+  background: var(--status-error);
+}
+
+.canvas-account-notifications article[data-read] {
+  opacity: 0.68;
+}
+
+.canvas-account-notifications article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.canvas-account-notifications h3,
+.canvas-account-notifications p {
+  margin: 0;
+}
+
+.canvas-account-notifications time,
+.canvas-account-notifications article > span {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.canvas-account-notifications article > button {
+  margin-top: var(--space-2);
+}
+
+.canvas-account-notifications__empty {
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.canvas-account-notifications__empty p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .membership-page__hero,
+  .help-center__hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .membership-plan-grid,
+  .help-center__categories {
+    grid-template-columns: 1fr;
+  }
+
+  .membership-balance {
+    min-width: 0;
+  }
+}
+
 .selection-context-bar button[data-compact='true'] {
   width: 32px;
   min-width: 32px;

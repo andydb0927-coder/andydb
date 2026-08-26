@@ -10,7 +10,7 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   await page.goto('/')
   const sidebar = page.getByRole('complementary', { name: '侧边导航' })
   await expect(sidebar.getByRole('navigation', { name: '首页导航' })).toBeVisible()
-  for (const destination of ['新建项目', '首页', '项目', '作品', 'Skills', '创作者挑战赛', '帮助']) {
+  for (const destination of ['新建项目', '首页', '项目', '作品', 'Skills', '创作者挑战赛', '积分会员', '帮助']) {
     await expect(sidebar.getByRole('link', { name: destination, exact: true })).toBeVisible()
   }
   await expect(sidebar.getByRole('link', { name: '工作流与模板' })).toHaveCount(0)

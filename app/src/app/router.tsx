@@ -47,6 +47,12 @@ const TutorialDetailPage = lazy(() =>
 const CreationProcessPage = lazy(() =>
   import('../features/community/CreationProcessPage').then((m) => ({ default: m.CreationProcessPage })),
 )
+const MembershipPage = lazy(() =>
+  import('../features/membership/MembershipPage').then((m) => ({ default: m.MembershipPage })),
+)
+const HelpCenterPage = lazy(() =>
+  import('../features/help/HelpCenterPage').then((m) => ({ default: m.HelpCenterPage })),
+)
 
 function RouteLoading() {
   return (
@@ -73,6 +79,8 @@ export const routes: RouteObject[] = [
       { path: '/agents', element: withSuspense(<AgentsPage />) },
       { path: '/challenges', element: withSuspense(<ChallengesPage />) },
       { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
+      { path: '/membership', element: withSuspense(<MembershipPage />) },
+      { path: '/help', element: withSuspense(<HelpCenterPage />) },
     ],
   },
   {

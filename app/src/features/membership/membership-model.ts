@@ -38,7 +38,7 @@ export const membershipPlans: MembershipPlanDefinition[] = [
   },
   {
     id: 'creator',
-    name: '创作者版',
+    name: '基础版',
     priceLabel: '¥39 / 月（模拟）',
     description: '增加 EDL 与预览录制等高级导出。',
     features: {

@@ -5615,6 +5615,7 @@ export function CanvasPage({
         canRedo={Boolean(project) && canRedo}
         mode={workspaceMode}
         agentOpen={agentOpen}
+        generationJobs={project?.jobs}
         creditBalance={Math.max(
           0,
           120 -

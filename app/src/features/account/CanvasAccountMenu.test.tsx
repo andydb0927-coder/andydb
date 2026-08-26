@@ -4,6 +4,31 @@ import { beforeEach, expect, test } from 'vitest'
 
 import { LOCAL_ACCOUNT_PREFERENCES_KEY } from './local-account-preferences'
 import { CanvasAccountMenu } from './CanvasAccountMenu'
+import type { GenerationJob } from '../project/model'
+
+const generationJobs: GenerationJob[] = [
+  {
+    id: 'job-image-success',
+    nodeId: 'image-1',
+    status: 'succeeded',
+    prompt: '清晨薄雾中的古桥',
+    providerName: 'Mock Studio',
+    modelName: 'Lib Image',
+    createdAt: '2026-08-27T08:00:00.000Z',
+    updatedAt: '2026-08-27T08:01:00.000Z',
+    generationConfig: { targetKind: 'image', referenceAssets: [] },
+  },
+  {
+    id: 'job-video-failed',
+    nodeId: 'video-1',
+    status: 'failed',
+    prompt: '雨夜追逐',
+    error: '请求超时',
+    createdAt: '2026-08-27T07:00:00.000Z',
+    updatedAt: '2026-08-27T07:01:00.000Z',
+    generationConfig: { targetKind: 'video', referenceAssets: [] },
+  },
+]
 
 beforeEach(() => {
   localStorage.clear()
@@ -24,7 +49,7 @@ test('opens honest local settings without fake account, billing, or quota data',
     '个人中心',
     'AI 水印设置',
     'CLI & Skill',
-    '通知 2 条未读',
+    '通知',
   ]) {
     expect(within(panel).getByRole('button', { name })).toBeVisible()
   }
@@ -40,7 +65,7 @@ test('opens honest local settings without fake account, billing, or quota data',
 
 test('persists theme, watermark, and notification controls', async () => {
   const user = userEvent.setup()
-  render(<CanvasAccountMenu creditBalance={120} />)
+  render(<CanvasAccountMenu creditBalance={120} generationJobs={generationJobs} />)
 
   await user.click(screen.getByRole('button', { name: /本地设置/ }))
   await user.click(screen.getByRole('button', { name: '切换为浅色模式' }))
@@ -59,7 +84,8 @@ test('persists theme, watermark, and notification controls', async () => {
 
   expect(localStorage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).toContain('"themeMode":"light"')
   expect(localStorage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).toContain('"aiWatermark":false')
-  expect(localStorage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).toContain('"notificationUnreadCount":0')
+  expect(localStorage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).toContain('"readNotificationIds"')
+  expect(localStorage.getItem(LOCAL_ACCOUNT_PREFERENCES_KEY)).toContain('generation:job-image-success:succeeded')
 })
 
 test('edits the local display name and opens every local settings destination', async () => {

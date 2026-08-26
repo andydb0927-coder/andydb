@@ -6,7 +6,7 @@ export interface LocalAccountPreferences {
   aiWatermark: boolean
   inAppNotifications: boolean
   themeMode: 'dark' | 'light'
-  notificationUnreadCount: number
+  readNotificationIds: string[]
   consumeOrder: 'balanced' | 'image-first' | 'video-first'
   accountScope: 'team' | 'personal'
   updatedAt?: string
@@ -17,7 +17,7 @@ export interface LocalAccountPreferenceInput {
   aiWatermark: boolean
   inAppNotifications: boolean
   themeMode?: 'dark' | 'light'
-  notificationUnreadCount?: number
+  readNotificationIds?: string[]
   consumeOrder?: 'balanced' | 'image-first' | 'video-first'
   accountScope?: 'team' | 'personal'
   [key: string]: unknown
@@ -34,7 +34,7 @@ const defaultPreferences: LocalAccountPreferences = {
   aiWatermark: true,
   inAppNotifications: true,
   themeMode: 'dark',
-  notificationUnreadCount: 2,
+  readNotificationIds: [],
   consumeOrder: 'balanced',
   accountScope: 'team',
 }
@@ -42,6 +42,11 @@ const defaultPreferences: LocalAccountPreferences = {
 function normalizeDisplayName(value: unknown): string {
   if (typeof value !== 'string') return defaultPreferences.displayName
   return value.trim() || defaultPreferences.displayName
+}
+
+function normalizeReadNotificationIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return Array.from(new Set(value.filter((id): id is string => typeof id === 'string' && id.length > 0))).slice(-500)
 }
 
 function normalizePreferences(value: unknown): LocalAccountPreferences {
@@ -52,7 +57,7 @@ function normalizePreferences(value: unknown): LocalAccountPreferences {
     aiWatermark?: unknown
     inAppNotifications?: unknown
     themeMode?: unknown
-    notificationUnreadCount?: unknown
+    readNotificationIds?: unknown
     consumeOrder?: unknown
     accountScope?: unknown
     updatedAt?: unknown
@@ -72,11 +77,7 @@ function normalizePreferences(value: unknown): LocalAccountPreferences {
     aiWatermark: candidate.aiWatermark,
     inAppNotifications: candidate.inAppNotifications,
     themeMode: candidate.themeMode === 'light' ? 'light' : 'dark',
-    notificationUnreadCount:
-      typeof candidate.notificationUnreadCount === 'number' &&
-      Number.isFinite(candidate.notificationUnreadCount)
-        ? Math.max(0, Math.floor(candidate.notificationUnreadCount))
-        : defaultPreferences.notificationUnreadCount,
+    readNotificationIds: normalizeReadNotificationIds(candidate.readNotificationIds),
     consumeOrder:
       candidate.consumeOrder === 'image-first' || candidate.consumeOrder === 'video-first'
         ? candidate.consumeOrder
@@ -115,11 +116,7 @@ class BrowserLocalAccountPreferenceStore implements LocalAccountPreferenceStore 
       aiWatermark: value.aiWatermark,
       inAppNotifications: value.inAppNotifications,
       themeMode: value.themeMode === 'light' ? 'light' : 'dark',
-      notificationUnreadCount:
-        typeof value.notificationUnreadCount === 'number' &&
-        Number.isFinite(value.notificationUnreadCount)
-          ? Math.max(0, Math.floor(value.notificationUnreadCount))
-          : defaultPreferences.notificationUnreadCount,
+      readNotificationIds: normalizeReadNotificationIds(value.readNotificationIds),
       consumeOrder:
         value.consumeOrder === 'image-first' || value.consumeOrder === 'video-first'
           ? value.consumeOrder
