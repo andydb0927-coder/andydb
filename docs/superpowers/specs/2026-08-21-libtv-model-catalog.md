@@ -54,7 +54,7 @@ CLI 缓存中的 `nebula-ultra/core`、`qwen/qwen-edit`、`seedream-4/4.5`、`mj
 
 ## 3. 视频节点
 
-2026-08-25 使用登录态 `libtv model search --type video` 重新核对线上 supportModels。为避免下拉菜单继续堆积同一家族旧版本，本项目采用“同一家族保留最高代，特殊用途模型单独保留”的精简策略；可灵官方开发直连 `kling-api` 继续保留。
+2026-08-25 使用登录态 `libtv model search --type video` 重新核对线上 supportModels。为避免下拉菜单继续堆积同一家族旧版本，本项目采用“同一家族保留最高代，特殊用途模型单独保留”的精简策略；真实视频入口现已统一为火山方舟 `seedance-api`。
 
 页面通用参数能力：提示词上限 2000 字；模式会按模型变化（文生视频/全能参考/图生视频/首尾帧/图片参考）；比例、时长、数量、清晰度、声音也按模型 Schema 动态收窄。
 
@@ -64,7 +64,7 @@ CLI 缓存中的 `nebula-ultra/core`、`qwen/qwen-edit`、`seedream-4/4.5`、`mj
 | 2 | Kling O3 | `mock-kling-o3` | 视频编辑、参考一致性、音画同出、多镜头；本地演示 |
 | 3 | Kling 3.0 Turbo | `mock-kling-30-turbo` | 高质感、多镜头；本地演示 |
 | 4 | 可灵O1 | `kling-video-o1` | 本地演示，保留 |
-| 5 | 可灵V2.6 | `kling-v2-6` | 官方开发直连，保留 |
+| 5 | 可灵V2.6 | `kling-v2-6` | LibTV 目录实测项；本项目不再提供该 live 接口 |
 | 6 | Minimax H3 | `mock-minimax-h3` | 全模态输入、多参数控制、商用级；本地演示 |
 | 7 | Wan 2.7 | `mock-wan-27` | 全能参考，可改画面/剧情/环境；本地演示 |
 | 8 | Wan 2.6 | `wanxiang-v2-6` | 本地演示，保留 |
@@ -132,7 +132,7 @@ CLI 的 script 缓存还列出 `nebula-ultra/core`、`seedream-4/4.5` 作为 `sc
 ## 6. 对本项目注册表的调整规则
 
 1. 图片选择器补齐上表 17 个名称；默认 `Lib Image`，图片编辑模型声明 `image-to-image`。
-2. 视频选择器只展示上表 23 个当前模型；保留 `kling-api` live Provider，不用 Mock 覆盖真实开发验证入口；同一家族旧版不再进入选择器。
+2. 视频选择器保留已批准的六款本地演示模型，并增加 `seedance-api` live Provider；同一家族未批准旧版不再进入选择器。
 3. 文本三档保留产品需要的“基础文案/深度脚本/灵感扩展”语义，同时映射到当前 LibTV 文本/脚本模型名。
 4. 音频三档保留“氛围音/人声旁白/音效”语义，同时映射到 Mureka / ElevenLabs 名称。
 5. 浏览器只观察到少数当前配置成本；其他 Provider 的本地数字属于演示计费，不声明为 LibTV 官方固定单价。

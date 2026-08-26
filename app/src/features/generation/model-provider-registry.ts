@@ -9,9 +9,9 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import {
-  createKlingLiveProvider,
-  type KlingLiveProviderOptions,
-} from './kling-live-provider'
+  createSeedanceVideoProvider,
+  type SeedanceVideoProviderOptions,
+} from './seedance-video-provider'
 import {
   createSeedreamLiveProvider,
   type SeedreamLiveProviderOptions,
@@ -481,34 +481,6 @@ const videoSchema: ModelParameterManifest = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const seedanceVideoSchema: ModelParameterManifest = {
-  aspectRatio: {
-    type: 'enum',
-    defaultValue: '16:9',
-    options: ['Auto', '16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
-  },
-  duration: {
-    type: 'enum',
-    defaultValue: '5',
-    options: Array.from({ length: 12 }, (_, index) => String(index + 4)),
-  },
-  quality: {
-    type: 'enum',
-    defaultValue: '720P',
-    options: ['480P', '720P', '1080P', '4K'],
-  },
-  sound: { type: 'boolean', defaultValue: true },
-  resolution: {
-    type: 'enum',
-    defaultValue: '1280×720',
-    options: ['854×480', '1280×720', '1920×1080', '3840×2160'],
-  },
-  count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
-  onlineSearch: { type: 'boolean', defaultValue: true },
-  materialValidation: { type: 'boolean', defaultValue: true },
-  autoLink: { type: 'boolean', defaultValue: true },
-}
-
 const seedance25VideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
@@ -967,7 +939,7 @@ function placeholderProvider(config: ProviderManifestCore): ModelProvider {
 }
 
 export interface DefaultProviderRegistryOptions {
-  kling?: KlingLiveProviderOptions
+  seedanceVideo?: SeedanceVideoProviderOptions
   seedream?: SeedreamLiveProviderOptions
   arkText?: ArkTextLlmProviderOptions
 }
@@ -1045,7 +1017,7 @@ export function createDefaultProviderRegistry(
     }),
     createArkTextLlmProvider(options.arkText),
     ...liblibVideoModelCatalog.map(videoCatalogProvider),
-    createKlingLiveProvider(options.kling),
+    createSeedanceVideoProvider(options.seedanceVideo),
     demoProvider({
       id: 'mock-audio',
       name: 'Mock Studio',
@@ -1092,16 +1064,6 @@ export function createDefaultProviderRegistry(
         },
       ],
       officialApiEndpoint: 'mock://local/audio',
-    }),
-    placeholderProvider({
-      id: 'seedance-api',
-      name: 'Seedance',
-      modelName: 'Seedance 官方 API',
-      selectorVisible: false,
-      capabilities: ['text-to-video', 'image-to-video'],
-      parameters: seedanceVideoSchema,
-      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
     }),
     placeholderProvider({
       id: 'tongyi-api',

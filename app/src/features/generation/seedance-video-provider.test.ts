@@ -1,0 +1,197 @@
+import { describe, expect, test, vi } from 'vitest'
+
+import {
+  seedanceVideoCancelledFixture,
+  seedanceVideoConfigFixture,
+  seedanceVideoCreateRequestFixture,
+  seedanceVideoCreateSuccessFixture,
+  seedanceVideoFailedFixture,
+  seedanceVideoForbiddenFixture,
+  seedanceVideoGenerationRequestFixture,
+  seedanceVideoInvalidUrlFixture,
+  seedanceVideoRateLimitedFixture,
+  seedanceVideoRunningFixture,
+  seedanceVideoSuccessFixture,
+  seedanceVideoTaskIdFixture,
+  seedanceVideoTimeoutFixture,
+  seedanceVideoUnauthorizedFixture,
+} from './fixtures/seedance-video.fixture'
+import { createSeedanceVideoProvider } from './seedance-video-provider'
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
+}
+
+function createProvider(fetchFn: typeof fetch, overrides = {}) {
+  return createSeedanceVideoProvider({
+    ...seedanceVideoConfigFixture,
+    fetchFn,
+    pollIntervalMs: 0,
+    maxPollAttempts: 3,
+    ...overrides,
+  })
+}
+
+describe('Seedance video live provider', () => {
+  test('creates with the official content contract, polls, and returns a project-persistent video', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoCreateSuccessFixture))
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoRunningFixture))
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoSuccessFixture))
+    const provider = createProvider(fetchFn)
+    const progress: number[] = []
+
+    const result = await provider.generate(
+      seedanceVideoGenerationRequestFixture,
+      {
+        signal: new AbortController().signal,
+        onProgress: (value) => progress.push(value),
+      },
+    )
+
+    expect(provider).toMatchObject({
+      id: 'seedance-api',
+      name: '火山方舟',
+      modelName: 'Seedance 2.0',
+      kind: 'live',
+      capabilities: ['text-to-video', 'image-to-video'],
+      pricing: { amount: 135, currency: 'credits', unit: 'generation' },
+    })
+    expect(provider.disabledReason).toBeUndefined()
+    expect(fetchFn).toHaveBeenCalledTimes(3)
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(
+      'https://fixture.ark.invalid/api/v3/contents/generations/tasks',
+    )
+    expect(fetchFn.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer fixture-ark-api-key',
+      }),
+      body: JSON.stringify(seedanceVideoCreateRequestFixture),
+    })
+    expect(fetchFn.mock.calls[1]?.[0]).toBe(
+      `https://fixture.ark.invalid/api/v3/contents/generations/tasks/${seedanceVideoTaskIdFixture}`,
+    )
+    expect(result).toMatchObject({
+      persistence: 'project',
+      asset: {
+        kind: 'video',
+        url: 'https://media.fixture.invalid/seedance-result.mp4',
+        durationSeconds: 8,
+      },
+      version: {
+        prompt: seedanceVideoGenerationRequestFixture.prompt,
+      },
+      usage: {
+        outputTokens: 108_000,
+        totalTokens: 108_000,
+      },
+    })
+    expect(result.version.assetId).toBe(result.asset.id)
+    expect(progress).toEqual([10, 55, 100])
+  })
+
+  test('is disabled before fetch when the shared Ark development configuration is incomplete', async () => {
+    const fetchFn = vi.fn<typeof fetch>()
+    const provider = createSeedanceVideoProvider({
+      mode: 'seedream-direct-dev',
+      apiKey: '',
+      apiBase: '',
+      modelId: '',
+      fetchFn,
+    })
+
+    expect(provider).toMatchObject({
+      kind: 'live',
+      disabledReason: '火山方舟 Seedance 开发验证配置未完成',
+    })
+    await expect(
+      provider.generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('火山方舟 Seedance 开发验证配置未完成')
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    [seedanceVideoUnauthorizedFixture, '火山方舟 Seedance 鉴权失败（401）'],
+    [seedanceVideoForbiddenFixture, '火山方舟 Seedance 访问被拒绝（403）'],
+    [seedanceVideoRateLimitedFixture, '火山方舟 Seedance 请求过于频繁（429）'],
+  ])('maps HTTP $status without leaking response details', async (fixture, message) => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(fixture.body, { status: fixture.status }),
+    )
+
+    await expect(
+      createProvider(fetchFn).generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow(message)
+  })
+
+  test.each([
+    [seedanceVideoFailedFixture, '火山方舟 Seedance 生成失败：fixture content rejected'],
+    [seedanceVideoCancelledFixture, '火山方舟 Seedance 任务已取消'],
+  ])('maps terminal status $status to a safe Chinese failure', async (fixture, message) => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoCreateSuccessFixture))
+      .mockResolvedValueOnce(jsonResponse(fixture))
+
+    await expect(
+      createProvider(fetchFn).generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow(message)
+  })
+
+  test('stops after the bounded polling attempts', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoCreateSuccessFixture))
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(seedanceVideoTimeoutFixture)),
+      )
+
+    await expect(
+      createProvider(fetchFn, { maxPollAttempts: 2 }).generate(
+        seedanceVideoGenerationRequestFixture,
+        { signal: new AbortController().signal },
+      ),
+    ).rejects.toThrow('火山方舟 Seedance 生成等待超时')
+    expect(fetchFn).toHaveBeenCalledTimes(3)
+  })
+
+  test('rejects a non-HTTPS result URL', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoCreateSuccessFixture))
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoInvalidUrlFixture))
+
+    await expect(
+      createProvider(fetchFn).generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('火山方舟 Seedance 结果 URL 无效')
+  })
+
+  test('forwards AbortSignal to create and poll requests', async () => {
+    const controller = new AbortController()
+    const fetchFn = vi.fn<typeof fetch>().mockImplementation(async (_input, init) => {
+      expect(init?.signal).toBe(controller.signal)
+      controller.abort()
+      throw new DOMException('cancelled', 'AbortError')
+    })
+
+    await expect(
+      createProvider(fetchFn).generate(seedanceVideoGenerationRequestFixture, {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})

@@ -52,7 +52,6 @@ describe('model provider registry', () => {
         'mock-kling-30',
         'mock-minimax-h3',
         'mock-audio',
-        'kling-api',
         'seedance-api',
         'tongyi-api',
       ]),
@@ -73,11 +72,13 @@ describe('model provider registry', () => {
       pricing: { amount: 18, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/liblib-image/mock-mj-image',
     })
-    expect(registry.require('kling-api')).toMatchObject({
+    expect(registry.require('seedance-api')).toMatchObject({
       kind: 'live',
-      disabledReason: '可灵开发验证配置未完成',
-      capabilities: ['text-to-video'],
-      officialApiEndpoint: 'https://api.klingai.com/text-to-video/kling-2.6',
+      name: '火山方舟',
+      modelName: 'Seedance 2.0',
+      disabledReason: '火山方舟 Seedance 开发验证配置未完成',
+      capabilities: ['text-to-video', 'image-to-video'],
+      officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
     })
     expect(registry.require('seedream-5-pro-api')).toMatchObject({
       kind: 'live',
@@ -177,7 +178,7 @@ describe('model provider registry', () => {
       'mock-kling-o3',
       'mock-kling-30',
       'mock-minimax-h3',
-      'kling-api',
+      'seedance-api',
     ])
     const retiredIds = [
       'mock-kling-30-turbo',
@@ -194,8 +195,7 @@ describe('model provider registry', () => {
     expect(registry.list().map(({ id }) => id)).not.toEqual(
       expect.arrayContaining(retiredIds),
     )
-    expect(registry.require('kling-api')).toMatchObject({ kind: 'live' })
-    expect(registry.require('seedance-api')).toMatchObject({ kind: 'placeholder' })
+    expect(registry.require('seedance-api')).toMatchObject({ kind: 'live' })
     expect(registry.require('tongyi-api')).toMatchObject({ kind: 'placeholder' })
     expect(
       registry
@@ -325,7 +325,7 @@ describe('model provider registry', () => {
     ])
     expect(video.map(({ id }) => id)).toEqual([
       ...liblibVideoModelCatalog.map(({ providerId }) => providerId),
-      'kling-api',
+      'seedance-api',
     ])
     expect(image.every((provider) => !provider.capabilities.includes('audio'))).toBe(true)
   })
@@ -361,13 +361,13 @@ describe('model provider registry', () => {
   test('resolves video modes from the selected provider capabilities', () => {
     const registry = createDefaultProviderRegistry()
     const flexible = registry.require('mock-seedance-25')
-    const textOnly = registry.require('kling-api')
+    const liveSeedance = registry.require('seedance-api')
 
     expect(resolveVideoGenerationMode(flexible, defaultVideoGenerationMode)).toBe(
       '全能参考',
     )
-    expect(resolveVideoGenerationMode(textOnly, '全能参考')).toBe('文生视频')
-    expect(resolveVideoGenerationMode(textOnly, '文生视频')).toBe('文生视频')
+    expect(resolveVideoGenerationMode(liveSeedance, '全能参考')).toBe('全能参考')
+    expect(resolveVideoGenerationMode(liveSeedance, '文生视频')).toBe('文生视频')
   })
 
   test('uses Seedance 2.5 as the flagship default for video requests', () => {
@@ -383,15 +383,15 @@ describe('model provider registry', () => {
 
   test('rejects duplicate provider ids and never performs network work while live configuration is disabled', async () => {
     const registry = createDefaultProviderRegistry()
-    const provider = registry.require('kling-api')
-    expect(() => registry.register(provider)).toThrow('Provider already registered: kling-api')
+    const provider = registry.require('seedance-api')
+    expect(() => registry.register(provider)).toThrow('Provider already registered: seedance-api')
 
     await expect(
       registry.generate(
-        { ...imageRequest, providerId: 'kling-api', targetKind: 'video' },
+        { ...imageRequest, providerId: 'seedance-api', targetKind: 'video' },
         { signal: new AbortController().signal },
       ),
-    ).rejects.toThrow('可灵开发验证配置未完成')
+    ).rejects.toThrow('火山方舟 Seedance 开发验证配置未完成')
   })
 
   test('dispatches mock generation with progress, cost and deterministic result metadata', async () => {

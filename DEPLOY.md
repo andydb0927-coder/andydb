@@ -4,10 +4,10 @@
 
 当前版本是可直接静态托管的 Vite 单页应用。部署产物为 `app/dist`，可发布到 Vercel、Netlify 或任何支持 SPA 路由回退的静态托管服务。
 
-公开静态部署仍保持 Mock 默认模式；本地开发环境可显式开启可灵或 Seedream 的短期真实 API 验证：
+公开静态部署仍保持 Mock 默认模式；本地开发环境可显式开启火山方舟 Seedream、Seedance 与豆包的短期真实 API 验证：
 
 - 未配置开发验证模式时，生成能力继续使用本地演示数据；
-- `kling-direct-dev` 与 `seedream-direct-dev` 仅供本机短期验证，不能用于公开静态部署；
+- `seedream-direct-dev` 仅供本机短期验证，不能用于公开静态部署；
 - 不新增后端、数据库、对象存储或远端任务队列；
 - 项目数据保存在当前浏览器的本地存储中，不提供跨浏览器、跨设备同步；
 - 本地开发专用的 LibTV bridge 依赖 Vite 开发服务器，静态部署不提供该 bridge，线上预览应保持演示供应商模式。
@@ -131,25 +131,18 @@ VITE_GENERATION_API_BASE=/api
 
 ### 真实生成的本地开发验证预留
 
-后续最小闭环可在仅限本机、短期验证的环境中临时使用：
-
-```dotenv
-VITE_GENERATION_MODE=kling-direct-dev
-VITE_KLING_API_KEY=temporary-development-api-key
-VITE_KLING_API_BASE=official-endpoint-confirmed-before-implementation
-VITE_KLING_MODEL_ID=kling-2.6
-```
-
-Seedream 5.0 Pro 文生图开发验证：
+火山方舟 Seedream 5.0 Pro 文生图、Seedance 2.0 视频和豆包文本模型在本机开发验证时复用同一平台级 Key：
 
 ```dotenv
 VITE_GENERATION_MODE=seedream-direct-dev
 VITE_SEEDREAM_API_KEY=temporary-development-api-key
 VITE_SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
 VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128
+VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+VITE_ARK_TEXT_MODEL_ID=<控制台已开通的豆包文本模型或接入点 ID>
 ```
 
-启用后，图片模型菜单的“官方 API 已接（开发直连）”分组会开放 `Seedream 5.0 Pro`。生成请求调用 `/images/generations`，真实结果 URL 只保存在当前内存会话，刷新页面后失效。未配置密钥时模型保持禁用并显示“Seedream 开发验证配置未完成”，不会回退为 Mock 伪装成功。
+启用后，模型菜单的“官方 API 已接（开发直连）”分组会开放 Seedream 5.0 Pro、Seedance 2.0 和已配置的豆包文本模型。图片调用 `/images/generations`，视频调用 `/contents/generations/tasks` 并轮询任务；成功结果写入节点版本、项目资产和生成历史。未配置 Key 时真实模型保持禁用并显示明确原因，不会回退为 Mock 伪装成功。
 
 这些变量只允许使用低额度、可随时撤销的开发凭证；不得提交到 Git，不得配置到公开 Preview/Production 静态站点。验证完成后应立即撤销或轮换。
 
@@ -158,12 +151,11 @@ VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128
 生产环境必须由同源服务端代理或 Serverless Function 保管密钥；这些变量不带 `VITE_` 前缀，也不得返回给浏览器：
 
 ```dotenv
-KLING_API_KEY=production-secret
-KLING_API_BASE=official-endpoint-confirmed-before-implementation
-KLING_MODEL_ID=kling-2.6
-SEEDREAM_API_KEY=production-secret
-SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
-SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128
+ARK_API_KEY=production-secret
+ARK_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+ARK_IMAGE_MODEL_ID=doubao-seedream-5-0-260128
+ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+ARK_TEXT_MODEL_ID=<控制台已开通的豆包文本模型或接入点 ID>
 ALLOWED_ORIGINS=https://canvas.example.com
 ```
 
@@ -189,7 +181,7 @@ Preview 页面应明显标注“演示”或“Preview”，避免用户把本�
 - [ ] 演示供应商标识可见，生成操作不请求真实第三方 API；
 - [ ] 同一浏览器刷新后本地项目仍存在，换浏览器不承诺同步；
 - [ ] 控制台无未处理错误，静态资源无 404；
-- [ ] 不存在 `VITE_KLING_API_KEY` 或其他真实密钥；
+- [ ] 不存在 `VITE_SEEDREAM_API_KEY` 或其他真实密钥；
 - [ ] 深链回退、HTTPS、缓存和音视频加载正常。
 
 ## 10. 回滚

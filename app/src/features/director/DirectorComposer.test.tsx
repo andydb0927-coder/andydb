@@ -69,7 +69,7 @@ describe('complete canvas Agent workspace', () => {
     expect(videoModel).toHaveValue('mock-seedance-25')
     expect(within(videoModel).getByRole('option', { name: /Seedance 2\.5/ })).toBeVisible()
     expect(within(videoModel).getByRole('option', { name: /Seedance 2\.0 VIP/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /可灵V2\.6/ })).toBeDisabled()
+    expect(within(videoModel).getByRole('option', { name: /火山方舟.*Seedance 2\.0/ })).toBeDisabled()
     expect(screen.getByText('模型选择只保存到本机，不会发起第三方请求。')).toBeVisible()
   })
 

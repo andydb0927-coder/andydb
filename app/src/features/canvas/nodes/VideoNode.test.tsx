@@ -1,9 +1,9 @@
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
-import { klingMinLoopConfigFixture } from '../../generation/fixtures/kling-min-loop.fixture'
+import { seedanceVideoConfigFixture } from '../../generation/fixtures/seedance-video.fixture'
 import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { VideoNode } from './VideoNode'
@@ -171,8 +171,8 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(model).getAllByRole('option')).toHaveLength(7)
   expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.5.*演示/ })).toBeEnabled()
   expect(within(model).getByRole('option', { name: /Mock Studio.*Kling O3.*24 积分\/次.*演示/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Kling.*可灵开发验证配置未完成/ })).toBeDisabled()
-  expect(within(panel).getByText('可灵开发验证配置未完成')).toBeVisible()
+  expect(within(model).getByRole('option', { name: /火山方舟.*Seedance 2.0.*配置未完成/ })).toBeDisabled()
+  expect(within(panel).getByText('火山方舟 Seedance 开发验证配置未完成')).toBeVisible()
   expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
   await user.selectOptions(model, 'mock-kling-o3')
   expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-o3')
@@ -374,10 +374,10 @@ test('narrows Seedance 2.5 parameters and exposes its 30 second flagship limit',
   expect(within(panel).getByRole('combobox', { name: '声音' })).toHaveValue('开启')
 })
 
-test('switches an unsupported mode to the first mode supported by the selected model', async () => {
+test('keeps all reference modes available when switching to live Seedance 2.0', async () => {
   const user = userEvent.setup()
   const registry = createDefaultProviderRegistry({
-    kling: klingMinLoopConfigFixture,
+    seedanceVideo: seedanceVideoConfigFixture,
   })
   const data = makeData(true)
   data.providerRegistry = registry
@@ -394,46 +394,43 @@ test('switches an unsupported mode to the first mode supported by the selected m
   const view = render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
 
-  await user.selectOptions(within(panel).getByLabelText('模型'), 'kling-api')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('kling-api')
+  await user.selectOptions(within(panel).getByLabelText('模型'), 'seedance-api')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('seedance-api')
 
   view.rerender(renderVideo({
     ...data,
     node: {
       ...data.node,
-      modelProviderId: 'kling-api',
+      modelProviderId: 'seedance-api',
       generationConfig: {
         targetKind: 'video',
-        providerId: 'kling-api',
-        parameters: { generationMode: '文生视频' },
+        providerId: 'seedance-api',
+        parameters: { generationMode: '全能参考' },
         referenceAssets: [],
       },
     },
   }))
 
   const mode = within(panel).getByLabelText('生成模式')
-  expect(mode).toHaveValue('文生视频')
-  expect(within(mode).getByRole('option', { name: '文生视频' })).toBeEnabled()
-  for (const label of ['全能参考', '图生视频', '首尾帧', '图片参考']) {
-    expect(within(mode).getByRole('option', { name: label })).toBeDisabled()
+  expect(mode).toHaveValue('全能参考')
+  for (const label of ['文生视频', '全能参考', '图生视频', '首尾帧', '图片参考']) {
+    expect(within(mode).getByRole('option', { name: label })).toBeEnabled()
   }
-  expect(within(panel).getByRole('status')).toHaveTextContent(
-    '当前模型不支持全能参考，已自动切换为文生视频',
-  )
+  expect(within(panel).queryByRole('status')).not.toBeInTheDocument()
 })
 
-test('repairs an unsupported saved mode when a text-only video node is first rendered', async () => {
+test('preserves a supported saved mode when live Seedance is first rendered', () => {
   const registry = createDefaultProviderRegistry({
-    kling: klingMinLoopConfigFixture,
+    seedanceVideo: seedanceVideoConfigFixture,
   })
   const data = makeData(true)
   data.providerRegistry = registry
   data.node = {
     ...data.node,
-    modelProviderId: 'kling-api',
+    modelProviderId: 'seedance-api',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'kling-api',
+      providerId: 'seedance-api',
       parameters: { generationMode: '全能参考' },
       referenceAssets: [],
     },
@@ -441,15 +438,9 @@ test('repairs an unsupported saved mode when a text-only video node is first ren
 
   render(renderVideo(data))
 
-  expect(screen.getByLabelText('生成模式')).toHaveValue('文生视频')
-  await waitFor(() => {
-    expect(data.onUpdateVideoGenerationParameters).toHaveBeenCalledWith({
-      generationMode: '文生视频',
-    })
-  })
-  expect(screen.getByRole('status')).toHaveTextContent(
-    '当前模型不支持全能参考，已自动切换为文生视频',
-  )
+  expect(screen.getByLabelText('生成模式')).toHaveValue('全能参考')
+  expect(data.onUpdateVideoGenerationParameters).not.toHaveBeenCalled()
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
 })
 
 test('exposes frame confirmations beside the result player and all seven reference controls', async () => {

@@ -268,7 +268,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const cost = selectedProvider.pricing.amount
   const selectedProviderEnabled = isProviderEnabled(selectedProvider)
   const liveConfigurationReason = providers.find(
-    ({ id }) => id === 'kling-api',
+    ({ id }) => id === 'seedance-api',
   )?.disabledReason
   const advancedParameters = [
     ['onlineSearch', '联网搜索'],
@@ -482,7 +482,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           title={
             selectedProvider.disabledReason ??
             (selectedProvider.kind === 'live'
-              ? '可灵开发直连验证'
+              ? `${selectedProvider.modelName} 开发直连验证`
               : '本地演示，不连接真实生成')
           }
           disabled={!selectedProviderEnabled}

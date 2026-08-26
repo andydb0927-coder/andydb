@@ -21,10 +21,10 @@ import type {
 } from '../generation/generation-adapter'
 import { EphemeralGenerationResultStore } from '../generation/ephemeral-generation-result-store'
 import {
-  klingMinLoopConfigFixture,
-  klingMinLoopCreateSuccessFixture,
-  klingMinLoopSuccessFixture,
-} from '../generation/fixtures/kling-min-loop.fixture'
+  seedanceVideoConfigFixture,
+  seedanceVideoCreateSuccessFixture,
+  seedanceVideoSuccessFixture,
+} from '../generation/fixtures/seedance-video.fixture'
 import {
   seedreamMinLoopConfigFixture,
   seedreamMinLoopMultiOutputFixture,
@@ -1168,14 +1168,14 @@ describe('creative canvas', () => {
     expect(start.mock.calls[0]?.[0].parameters).not.toHaveProperty('quality')
   })
 
-  test('persists a Kling live result into project versions, assets, and generation history', async () => {
+  test('persists a Seedance live video into project versions, assets, and generation history', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     project.nodes = project.nodes.map((node) =>
       node.id === 'video'
         ? {
             ...node,
-            modelProviderId: 'kling-api',
+            modelProviderId: 'seedance-api',
             versions: [{
               id: 'version-video-live',
               createdAt: project.createdAt,
@@ -1184,7 +1184,7 @@ describe('creative canvas', () => {
             activeVersionId: 'version-video-live',
             generationConfig: {
               targetKind: 'video',
-              providerId: 'kling-api',
+              providerId: 'seedance-api',
               parameters: {
                 aspectRatio: '16:9',
                 duration: '5',
@@ -1198,14 +1198,13 @@ describe('creative canvas', () => {
     act(() => activate(project))
     const fetchFn = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(new Response(JSON.stringify(klingMinLoopCreateSuccessFixture)))
-      .mockResolvedValueOnce(new Response(JSON.stringify(klingMinLoopSuccessFixture)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(seedanceVideoCreateSuccessFixture)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(seedanceVideoSuccessFixture)))
     const providerRegistry = createDefaultProviderRegistry({
-      kling: {
-        ...klingMinLoopConfigFixture,
+      seedanceVideo: {
+        ...seedanceVideoConfigFixture,
         fetchFn,
         pollIntervalMs: 0,
-        requestIdFactory: () => 'fixture-request-id',
       },
     })
     const ephemeralGenerationResultStore =
@@ -1220,13 +1219,13 @@ describe('creative canvas', () => {
     })
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     await user.click(
-      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
+      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
     )
 
     await waitFor(() => {
       expect(document.querySelector('video')).toHaveAttribute(
         'src',
-        'https://media.fixture.invalid/kling-result.mp4',
+        'https://media.fixture.invalid/seedance-result.mp4',
       )
     })
     await waitFor(() => expect(save).toHaveBeenCalled())
@@ -1234,11 +1233,11 @@ describe('creative canvas', () => {
     expect(persisted.assets).toContainEqual(
       expect.objectContaining({
         kind: 'video',
-        url: 'https://media.fixture.invalid/kling-result.mp4',
+        url: 'https://media.fixture.invalid/seedance-result.mp4',
       }),
     )
     expect(persisted.jobs).toContainEqual(
-      expect.objectContaining({ status: 'succeeded', providerId: 'kling-api' }),
+      expect.objectContaining({ status: 'succeeded', providerId: 'seedance-api' }),
     )
     expect(persisted.nodes.find(({ id }) => id === 'video')?.versions).toContainEqual(
       expect.objectContaining({ generationJobId: expect.any(String), assetId: expect.any(String) }),
@@ -3524,13 +3523,13 @@ describe('creative canvas', () => {
     ).toBeVisible()
   })
 
-  test('persists the live text mode and excludes media references after switching to Kling', async () => {
+  test('persists the live Seedance model and keeps all-reference mode available', async () => {
     const user = userEvent.setup()
     const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
       () => new Promise(() => undefined),
     )
     const providerRegistry = createDefaultProviderRegistry({
-      kling: klingMinLoopConfigFixture,
+      seedanceVideo: seedanceVideoConfigFixture,
     })
     renderCanvas({
       repository: noOpCanvasRepository,
@@ -3544,34 +3543,31 @@ describe('creative canvas', () => {
 
     await user.selectOptions(
       within(panel).getByLabelText('模型'),
-      'kling-api',
+      'seedance-api',
     )
 
-    expect(within(panel).getByLabelText('生成模式')).toHaveValue('文生视频')
-    expect(within(panel).getByRole('status')).toHaveTextContent(
-      '当前模型不支持全能参考，已自动切换为文生视频',
-    )
+    expect(within(panel).getByLabelText('生成模式')).toHaveValue('全能参考')
     expect(
       useProjectStore
         .getState()
         .activeProject?.nodes.find(({ id }) => id === 'video'),
     ).toMatchObject({
-      modelProviderId: 'kling-api',
+      modelProviderId: 'seedance-api',
       generationConfig: {
-        providerId: 'kling-api',
-        parameters: { generationMode: '文生视频' },
+        providerId: 'seedance-api',
+        parameters: { generationMode: '全能参考' },
       },
     })
 
     await user.click(
-      within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
+      within(panel).getByRole('button', { name: '生成视频，预计成本 135' }),
     )
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
-    expect(screen.getByText(/可灵生成中/)).toBeVisible()
+    expect(screen.getByText(/Seedance 2.0生成中/)).toBeVisible()
     expect(start.mock.calls[0]?.[0]).toMatchObject({
-      providerId: 'kling-api',
-      parameters: { generationMode: '文生视频' },
-      referenceAssets: [],
+      providerId: 'seedance-api',
+      parameters: { generationMode: '全能参考' },
+      referenceAssets: [expect.objectContaining({ kind: 'image' })],
     })
   })
 

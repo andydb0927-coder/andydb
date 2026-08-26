@@ -6,13 +6,11 @@ const baseURL = offlineDist
   ? 'http://wireless-canvas.local'
   : `http://127.0.0.1:${port}`
 const fixtureGenerationEnvironment = [
-  'VITE_GENERATION_MODE=kling-direct-dev,seedream-direct-dev',
-  'VITE_KLING_API_KEY=playwright-fixture-api-key',
-  'VITE_KLING_API_BASE=https://fixture.kling.invalid',
-  'VITE_KLING_MODEL_ID=kling-2.6',
+  'VITE_GENERATION_MODE=seedream-direct-dev',
   'VITE_SEEDREAM_API_KEY=playwright-fixture-seedream-key',
   'VITE_SEEDREAM_API_BASE=https://fixture.seedream.invalid/api/v3',
   'VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128',
+  'VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128',
 ].join(' ')
 
 export default defineConfig({

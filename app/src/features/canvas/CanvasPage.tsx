@@ -1014,9 +1014,7 @@ export function CanvasPage({
             ? providerRegistry.list().find(({ id }) => id === jobProviderId)
             : undefined
           if (liveProvider?.kind === 'live') {
-            const providerLabel = jobProviderId === 'kling-api'
-              ? '可灵'
-              : liveProvider.modelName
+            const providerLabel = liveProvider.modelName
             if (job.status === 'queued') {
               setGenerationFeedback(`${providerLabel}生成任务已提交。`)
             } else if (job.status === 'running') {
@@ -1043,9 +1041,7 @@ export function CanvasPage({
               job.nodeId,
               result,
             )
-            const providerLabel = job.providerId === 'kling-api'
-              ? '可灵'
-              : job.modelName ?? '真实模型'
+            const providerLabel = job.modelName ?? '真实模型'
             setGenerationFeedback(
               `${providerLabel}临时结果已显示，刷新页面后失效。`,
             )
@@ -1058,9 +1054,7 @@ export function CanvasPage({
             ? providerRegistry.list().find(({ id }) => id === job.providerId)
             : undefined
           if (completedProvider?.kind === 'live') {
-            const providerLabel = job.providerId === 'kling-api'
-              ? '可灵'
-              : completedProvider.modelName
+            const providerLabel = completedProvider.modelName
             setGenerationFeedback(
               `${providerLabel}结果已保存到项目与生成历史。`,
             )
