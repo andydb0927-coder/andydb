@@ -12,6 +12,7 @@ import {
   resolveVideoGenerationMode,
 } from './model-provider-registry'
 import { RegistryGenerationAdapter } from './registry-generation-adapter'
+import { resolveModelParameterManifest } from './model-parameter-semantics'
 
 const imageRequest: GenerationRequest = {
   projectId: 'project-1',
@@ -82,6 +83,16 @@ describe('model provider registry', () => {
       disabledReason: 'Seedream 开发验证配置未完成',
       capabilities: ['text-to-image', 'image-to-image', 'image-edit'],
       officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
+      sizePolicy: {
+        multiImageStrategy: 'serial',
+        pixelConstraints: {
+          minTotalPixels: 921_600,
+          maxTotalPixels: 4_624_220,
+          minRatio: 1 / 16,
+          maxRatio: 16,
+        },
+        costMode: { amount: 18, per: 'image' },
+      },
     })
     expect(registry.require('mock-seedance-25')).toMatchObject({
       modelName: 'Seedance 2.5',
@@ -114,6 +125,16 @@ describe('model provider registry', () => {
         expect.objectContaining({ id: 'sound-effect', name: 'ElevenLabs V2 · 音效', pricing: expect.objectContaining({ amount: 3 }) }),
       ],
     })
+  })
+
+  test('compiles every live, placeholder and mock parameter schema from its manifest', () => {
+    const registry = createDefaultProviderRegistry()
+    for (const provider of registry.list()) {
+      expect(provider.parameterManifest).toBeDefined()
+      expect(provider.parameterSchema).toEqual(
+        resolveModelParameterManifest(provider.parameterManifest),
+      )
+    }
   })
 
   test('publishes only the approved six video mocks in flagship order and retains integrations', () => {

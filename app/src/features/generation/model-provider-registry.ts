@@ -16,6 +16,19 @@ import {
   createSeedreamLiveProvider,
   type SeedreamLiveProviderOptions,
 } from './seedream-live-provider'
+import { ImageSizeResolver, type ImageSizePolicy } from './image-size-resolver'
+import {
+  resolveModelParameterManifest,
+  type ModelParameterManifest,
+  type ModelParameterSchema,
+} from './model-parameter-semantics'
+
+export type {
+  ModelParameterDefinition,
+  ModelParameterManifest,
+  ModelParameterName,
+  ModelParameterSchema,
+} from './model-parameter-semantics'
 
 export type ModelCapability =
   | 'text'
@@ -25,44 +38,6 @@ export type ModelCapability =
   | 'text-to-video'
   | 'image-to-video'
   | 'audio'
-
-export type ModelParameterName =
-  | 'aspectRatio'
-  | 'duration'
-  | 'generationMode'
-  | 'quality'
-  | 'sound'
-  | 'resolution'
-  | 'count'
-  | 'onlineSearch'
-  | 'materialValidation'
-  | 'editStrength'
-  | 'customWidth'
-  | 'customHeight'
-  | 'multiShot'
-  | 'autoLink'
-
-export type ModelParameterDefinition =
-  | {
-      type: 'enum'
-      defaultValue: string
-      options: readonly string[]
-    }
-  | {
-      type: 'boolean'
-      defaultValue: boolean
-    }
-  | {
-      type: 'number'
-      defaultValue: number
-      min: number
-      max: number
-      step: number
-    }
-
-export type ModelParameterSchema = Partial<
-  Record<ModelParameterName, ModelParameterDefinition>
->
 
 export interface ModelProviderPricing {
   amount: number
@@ -91,6 +66,7 @@ export interface ModelProvider {
   id: string
   name: string
   modelName: string
+  apiDisplayName?: string
   kind: 'demo' | 'placeholder' | 'live'
   badge?: '演示'
   selectorVisible?: boolean
@@ -98,7 +74,9 @@ export interface ModelProvider {
   modelNotice?: string
   supportedVideoModes?: readonly VideoGenerationMode[]
   capabilities: readonly ModelCapability[]
+  parameterManifest: ModelParameterManifest
   parameterSchema: ModelParameterSchema
+  sizePolicy?: ImageSizePolicy
   pricing: ModelProviderPricing
   officialApiEndpoint: string
   variants?: readonly ModelProviderVariant[]
@@ -181,7 +159,7 @@ function generationCapability(request: GenerationRequest): ModelCapability {
   return hasMedia ? 'image-to-video' : 'text-to-video'
 }
 
-function providerCost(
+export function providerGenerationCost(
   provider: ModelProvider,
   parameters?: GenerationRequest['parameters'],
 ) {
@@ -192,6 +170,11 @@ function providerCost(
     ({ id }) => id === parameters?.modelVariant,
   )
   const pricing = variant?.pricing ?? provider.pricing
+  if (provider.sizePolicy?.costMode) {
+    return provider.sizePolicy.costMode.amount * (
+      provider.sizePolicy.costMode.per === 'image' ? count : 1
+    )
+  }
   if (pricing.unit === 'generation') {
     return pricing.amount * count
   }
@@ -352,7 +335,7 @@ export class ProviderRegistry {
       providerId: provider.id,
       providerName: provider.name,
       modelName: provider.modelName,
-      estimatedCost: providerCost(provider, request.parameters),
+      estimatedCost: providerGenerationCost(provider, request.parameters),
     }
   }
 
@@ -373,7 +356,7 @@ export class ProviderRegistry {
         providerId: provider.id,
         providerName: provider.name,
         modelName: provider.modelName,
-        cost: providerCost(provider, request.parameters),
+        cost: providerGenerationCost(provider, request.parameters),
         currency: 'credits',
       },
     }
@@ -391,31 +374,13 @@ export class ProviderRegistry {
       providerId: provider.id,
       providerName: provider.name,
       modelName: provider.modelName,
-      cost: providerCost(provider),
+      cost: providerGenerationCost(provider),
     }
   }
 }
 
-const imageSchema: ModelParameterSchema = {
-  aspectRatio: {
-    type: 'enum',
-    defaultValue: '16:9',
-    options: [
-      '1:1',
-      '1:2',
-      '2:1',
-      '9:16',
-      '16:9',
-      '3:4',
-      '4:3',
-      '3:2',
-      '2:3',
-      '5:4',
-      '4:5',
-      '21:9',
-      '9:21',
-    ],
-  },
+const imageSchema: ModelParameterManifest = {
+  aspectRatio: true,
   quality: {
     type: 'enum',
     defaultValue: '标准画质',
@@ -426,11 +391,11 @@ const imageSchema: ModelParameterSchema = {
     defaultValue: '2K',
     options: ['1K', '2K', '4K'],
   },
-  count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
+  count: true,
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const styleImageSchema: ModelParameterSchema = {
+const styleImageSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -446,7 +411,7 @@ const styleImageSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const styleImageV82Schema: ModelParameterSchema = {
+const styleImageV82Schema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -462,12 +427,12 @@ const styleImageV82Schema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const imageEditSchema: ModelParameterSchema = {
+const imageEditSchema: ModelParameterManifest = {
   ...imageSchema,
   editStrength: { type: 'number', defaultValue: 0.6, min: 0, max: 1, step: 0.05 },
 }
 
-const tongyiImageSchema: ModelParameterSchema = {
+const tongyiImageSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -480,7 +445,7 @@ const tongyiImageSchema: ModelParameterSchema = {
   },
 }
 
-const videoSchema: ModelParameterSchema = {
+const videoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -506,7 +471,7 @@ const videoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const seedanceVideoSchema: ModelParameterSchema = {
+const seedanceVideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -534,7 +499,7 @@ const seedanceVideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const seedance25VideoSchema: ModelParameterSchema = {
+const seedance25VideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -562,7 +527,7 @@ const seedance25VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const klingO3VideoSchema: ModelParameterSchema = {
+const klingO3VideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -590,7 +555,7 @@ const klingO3VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const kling30VideoSchema: ModelParameterSchema = {
+const kling30VideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -617,7 +582,7 @@ const kling30VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const minimaxH3VideoSchema: ModelParameterSchema = {
+const minimaxH3VideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -644,7 +609,7 @@ const minimaxH3VideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const seedance20VipVideoSchema: ModelParameterSchema = {
+const seedance20VipVideoSchema: ModelParameterManifest = {
   aspectRatio: {
     type: 'enum',
     defaultValue: '16:9',
@@ -672,7 +637,7 @@ const seedance20VipVideoSchema: ModelParameterSchema = {
   autoLink: { type: 'boolean', defaultValue: true },
 }
 
-const seedance20MiniVideoSchema: ModelParameterSchema = {
+const seedance20MiniVideoSchema: ModelParameterManifest = {
   ...seedance20VipVideoSchema,
   quality: {
     type: 'enum',
@@ -753,30 +718,63 @@ function scheduledProgress<T>(
   })
 }
 
-function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' | 'export'>): ModelProvider {
+type ProviderManifestCore = Omit<
+  ModelProvider,
+  'kind' | 'badge' | 'parameterManifest' | 'parameterSchema' | 'generate' | 'export'
+> & {
+  parameters: ModelParameterManifest
+}
+
+export interface DemoProviderFixture {
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+}
+
+export type DemoModelProviderManifest = ProviderManifestCore & {
+  fixture?: DemoProviderFixture
+}
+
+export function createDemoProviderFromManifest(
+  config: DemoModelProviderManifest,
+): ModelProvider {
+  const { parameters, fixture, ...manifest } = config
+  const parameterSchema = resolveModelParameterManifest(parameters)
   return {
-    ...config,
+    ...manifest,
     kind: 'demo',
     badge: '演示',
+    parameterManifest: parameters,
+    parameterSchema,
     generate(request, context) {
       return scheduledProgress(context, 300, [25, 55, 85, 100], () => {
-        const assetId = crypto.randomUUID()
         const video = request.targetKind === 'video'
         const audio = request.targetKind === 'audio'
         const requestedDuration = Number(
           request.parameters?.duration ??
-            config.parameterSchema.duration?.defaultValue ??
+            parameterSchema.duration?.defaultValue ??
             3,
         )
         const durationSeconds = Number.isFinite(requestedDuration)
           ? requestedDuration
           : 3
-        return {
-          asset: audio
+        const requestedCount = Number(request.parameters?.count ?? 1)
+        const count =
+          manifest.sizePolicy?.multiImageStrategy === 'batch' &&
+          Number.isFinite(requestedCount) &&
+          requestedCount > 1
+            ? requestedCount
+            : 1
+        const resolvedSize = !video && !audio && manifest.sizePolicy
+          ? new ImageSizeResolver(manifest.sizePolicy).resolve(request.parameters)
+          : undefined
+        const assets = Array.from({ length: count }, () => {
+          const assetId = crypto.randomUUID()
+          return audio
             ? {
                 id: assetId,
                 kind: 'audio' as const,
-                url: withAppBase('/demo/audio-preview.mp3'),
+                url: fixture?.audioUrl ?? withAppBase('/demo/audio-preview.mp3'),
                 mimeType: 'audio/mpeg',
                 durationSeconds: 5,
               }
@@ -784,7 +782,7 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
               ? {
                   id: assetId,
                   kind: 'video' as const,
-                  url: withAppBase('/demo/video-preview.mp4'),
+                  url: fixture?.videoUrl ?? withAppBase('/demo/video-preview.mp4'),
                   mimeType: 'video/mp4',
                   width: 1280,
                   height: 720,
@@ -795,16 +793,22 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
                   kind: 'image' as const,
                   url:
                     request.referenceAssets[0]?.url ??
+                    fixture?.imageUrl ??
                     withAppBase('/demo/shot-river.png'),
                   mimeType: 'image/png',
-                  width: 1920,
-                  height: 1080,
-                },
+                  width: resolvedSize?.width ?? 1920,
+                  height: resolvedSize?.height ?? 1080,
+                }
+        })
+        const asset = assets[0]!
+        return {
+          asset,
+          ...(assets.length > 1 ? { assets } : {}),
           version: {
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             prompt: request.prompt,
-            assetId,
+            assetId: asset.id,
           },
         }
       })
@@ -819,6 +823,8 @@ function demoProvider(config: Omit<ModelProvider, 'kind' | 'badge' | 'generate' 
   }
 }
 
+const demoProvider = createDemoProviderFromManifest
+
 function imageCatalogProvider(entry: LiblibModelCatalogEntry) {
   const styleModel = entry.providerId.startsWith('mock-style-image-')
   const config = {
@@ -826,7 +832,7 @@ function imageCatalogProvider(entry: LiblibModelCatalogEntry) {
     name: 'Mock Studio',
     modelName: entry.modelName,
     capabilities: entry.capabilities,
-    parameterSchema:
+    parameters:
       entry.providerId === 'mock-style-image-v82'
         ? styleImageV82Schema
         : styleModel
@@ -877,7 +883,7 @@ function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
               : minimaxH3
                 ? '全模态输入、多参数控制、商用级，预计 2 分钟。'
                 : undefined
-  const parameterSchema = seedance25
+  const parameters = seedance25
     ? seedance25VideoSchema
     : seedance20Vip
       ? seedance20VipVideoSchema
@@ -893,7 +899,7 @@ function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
     name: 'Mock Studio',
     modelName: entry.modelName,
     capabilities: entry.capabilities,
-    parameterSchema,
+    parameters,
     pricing: {
       amount: 24,
       currency: 'credits' as const,
@@ -906,16 +912,17 @@ function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
   return demoProvider(config)
 }
 
-function placeholderProvider(
-  config: Omit<ModelProvider, 'kind' | 'generate' | 'export'>,
-): ModelProvider {
+function placeholderProvider(config: ProviderManifestCore): ModelProvider {
   const unavailable = async (context: ProviderExecutionContext) => {
     context.signal.throwIfAborted()
     throw new Error(`${config.name} API 尚未配置；当前仅提供接口占位。`)
   }
+  const { parameters, ...manifest } = config
   return {
-    ...config,
+    ...manifest,
     kind: 'placeholder',
+    parameterManifest: parameters,
+    parameterSchema: resolveModelParameterManifest(parameters),
     generate: (_request, context) => unavailable(context),
     export: (_request, context) => unavailable(context),
   }
@@ -938,7 +945,7 @@ export function createDefaultProviderRegistry(
       modelName: '通义万相图片',
       selectorVisible: false,
       capabilities: ['text-to-image', 'image-to-image'],
-      parameterSchema: tongyiImageSchema,
+      parameters: tongyiImageSchema,
       pricing: { amount: 6, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'mock://local/tongyi-image',
     }),
@@ -947,7 +954,7 @@ export function createDefaultProviderRegistry(
       name: 'Mock Studio',
       modelName: '文本 LLM',
       capabilities: ['text'],
-      parameterSchema: {},
+      parameters: {},
       pricing: { amount: 8, currency: 'credits', unit: 'generation' },
       variants: [
         {
@@ -1004,7 +1011,7 @@ export function createDefaultProviderRegistry(
       name: 'Mock Studio',
       modelName: '音频生成',
       capabilities: ['audio'],
-      parameterSchema: {
+      parameters: {
         duration: { type: 'enum', defaultValue: '5', options: ['5', '10', '30'] },
         quality: { type: 'enum', defaultValue: '标准', options: ['标准', '高清'] },
       },
@@ -1052,7 +1059,7 @@ export function createDefaultProviderRegistry(
       modelName: 'Seedance 官方 API',
       selectorVisible: false,
       capabilities: ['text-to-video', 'image-to-video'],
-      parameterSchema: seedanceVideoSchema,
+      parameters: seedanceVideoSchema,
       pricing: { amount: 135, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
     }),
@@ -1062,7 +1069,7 @@ export function createDefaultProviderRegistry(
       modelName: 'Tongyi 官方 API',
       selectorVisible: false,
       capabilities: ['text-to-image', 'image-to-image', 'text-to-video', 'image-to-video'],
-      parameterSchema: { ...imageSchema, ...videoSchema },
+      parameters: { ...imageSchema, ...videoSchema },
       pricing: { amount: 18, currency: 'credits', unit: 'generation' },
       officialApiEndpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc',
     }),

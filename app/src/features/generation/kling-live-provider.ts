@@ -5,10 +5,30 @@ import type {
 import type {
   ModelProvider,
 } from './model-provider-registry'
+import {
+  resolveModelParameterManifest,
+  type ModelParameterManifest,
+} from './model-parameter-semantics'
 
 const configurationError = '可灵开发验证配置未完成'
 const defaultApiBase = 'https://api.klingai.com'
 const defaultModelId = 'kling-2.6'
+
+const klingParameterManifest: ModelParameterManifest = {
+  aspectRatio: {
+    type: 'enum',
+    defaultValue: '16:9',
+    options: ['16:9', '9:16', '1:1'],
+  },
+  duration: { type: 'enum', defaultValue: '5', options: ['5', '10'] },
+  resolution: {
+    type: 'enum',
+    defaultValue: '720p',
+    options: ['720p', '1080p'],
+  },
+  sound: { type: 'boolean', defaultValue: false },
+  count: { semantic: true, defaultValue: '1', options: ['1'] },
+}
 
 export interface KlingLiveProviderOptions {
   mode?: string
@@ -193,25 +213,8 @@ export function createKlingLiveProvider(
     kind: 'live',
     ...(enabled ? {} : { disabledReason: configurationError }),
     capabilities: ['text-to-video'],
-    parameterSchema: {
-      aspectRatio: {
-        type: 'enum',
-        defaultValue: '16:9',
-        options: ['16:9', '9:16', '1:1'],
-      },
-      duration: {
-        type: 'enum',
-        defaultValue: '5',
-        options: ['5', '10'],
-      },
-      resolution: {
-        type: 'enum',
-        defaultValue: '720p',
-        options: ['720p', '1080p'],
-      },
-      sound: { type: 'boolean', defaultValue: false },
-      count: { type: 'enum', defaultValue: '1', options: ['1'] },
-    },
+    parameterManifest: klingParameterManifest,
+    parameterSchema: resolveModelParameterManifest(klingParameterManifest),
     pricing: { amount: 24, currency: 'credits', unit: 'generation' },
     officialApiEndpoint: createUrl,
     async generate(request, context) {

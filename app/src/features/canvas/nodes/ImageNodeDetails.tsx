@@ -26,6 +26,7 @@ import {
   defaultProviderRegistry,
   groupProvidersForMenu,
   isProviderEnabled,
+  providerGenerationCost,
   providerCapabilityLabel,
   providerDefaultParameters,
   providerOptionLabel,
@@ -35,10 +36,9 @@ import type {
   ModelProvider,
 } from '../../generation/model-provider-registry'
 import {
-  customImageSizeError,
-  resolveSeedreamImageSize,
+  imageSizeResolver,
   simplifiedImageRatio,
-} from '../../generation/image-size'
+} from '../../generation/image-size-resolver'
 import type { CreativeNodeData } from '../node-types'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 
@@ -506,9 +506,10 @@ function ImageParameterPicker({
   const editStrength = provider.parameterSchema.editStrength
   const customWidth = provider.parameterSchema.customWidth
   const customHeight = provider.parameterSchema.customHeight
-  const customSizeErrorMessage = settings.aspectRatio === '自定义'
-    ? customImageSizeError(settings.customWidth, settings.customHeight)
-    : undefined
+  const resolver = imageSizeResolver(provider.sizePolicy)
+  const customSizeErrorMessage = resolver?.validationError(
+    settings as unknown as Record<string, string | number | boolean>,
+  )
 
   return (
     <div
@@ -808,17 +809,17 @@ export function ImageGenerationPanel({
       generationParameters,
     ),
   )
-  const customSizeErrorMessage = settings.aspectRatio === '自定义'
-    ? customImageSizeError(settings.customWidth, settings.customHeight)
-    : undefined
-  const isLiveSeedream = selectedProvider.id === 'seedream-5-pro-api'
-  const seedreamSize = isLiveSeedream && !customSizeErrorMessage
-    ? resolveSeedreamImageSize(settings as unknown as Record<
+  const resolver = imageSizeResolver(selectedProvider.sizePolicy)
+  const customSizeErrorMessage = resolver?.validationError(
+    settings as unknown as Record<string, string | number | boolean>,
+  )
+  const resolvedSize = resolver && !customSizeErrorMessage
+    ? resolver.resolve(settings as unknown as Record<
         string,
         string | number | boolean
       >)
     : undefined
-  const aspectRatioSummary = seedreamSize?.label ?? (
+  const aspectRatioSummary = resolvedSize?.label ?? (
     settings.aspectRatio === '自定义'
       ? `${settings.customWidth}×${settings.customHeight}`
       : settings.aspectRatio
@@ -829,7 +830,9 @@ export function ImageGenerationPanel({
     selectedProvider.parameterSchema.resolution ? settings.resolution : undefined,
     selectedProvider.parameterSchema.count ? `${settings.count}张` : undefined,
   ].filter(Boolean).join(' · ')
-  const cost = selectedProvider.pricing.amount * settings.count
+  const cost = providerGenerationCost(selectedProvider, {
+    count: settings.count,
+  })
   const providerEnabled = isProviderEnabled(selectedProvider)
   const eligible =
     Boolean(prompt.trim() || hasMedia) &&
@@ -844,7 +847,7 @@ export function ImageGenerationPanel({
       ? '请输入提示词或添加参考媒体后再生成。'
       : undefined
   const submitTitle = selectedProvider.kind === 'live'
-    ? '调用真实 Seedream API；临时结果刷新后失效'
+    ? `调用真实 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} API；临时结果刷新后失效`
     : selectedProvider.kind === 'placeholder'
       ? selectedProvider.disabledReason ?? '模型待接入'
       : '本地演示，不连接真实生成'
@@ -1373,9 +1376,18 @@ export function ImageGenerationPanel({
               <X aria-hidden="true" />
             </button>
             <h2>确认真实图片生成</h2>
-            <p>{settings.count} 张 × {selectedProvider.pricing.amount} 积分</p>
+            <p>
+              {settings.count} 张 × {selectedProvider.sizePolicy?.costMode.amount ?? selectedProvider.pricing.amount} 积分
+            </p>
             <p>总成本 {cost} 积分</p>
-            <p>将串行调用 Seedream {settings.count} 次；结果仅在当前页面临时保存。</p>
+            <p>
+              {selectedProvider.sizePolicy?.multiImageStrategy === 'serial'
+                ? `将串行调用 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} ${settings.count} 次`
+                : selectedProvider.sizePolicy?.multiImageStrategy === 'batch'
+                  ? `将批量请求 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} ${settings.count} 张`
+                  : `将调用 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName}`}
+              ；结果仅在当前页面临时保存。
+            </p>
             <div>
               <button type="button" onClick={closeLiveConfirmation}>取消</button>
               <button

@@ -5,14 +5,93 @@ import type {
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
 import {
-  customImageSizeLimits,
-  resolveSeedreamImageSize,
-  seedreamAspectRatioOptions,
-} from './image-size'
+  ImageSizeResolver,
+  type ImageSizePolicy,
+} from './image-size-resolver'
+import {
+  resolveModelParameterManifest,
+  standardImageAspectRatios,
+  type ModelParameterManifest,
+} from './model-parameter-semantics'
 
 const configurationError = 'Seedream 开发验证配置未完成'
 const defaultApiBase = 'https://ark.cn-beijing.volces.com/api/v3'
 const defaultModelId = 'doubao-seedream-5-0-260128'
+
+export const seedreamImageSizePolicy: ImageSizePolicy = {
+  aspectOptions: [...standardImageAspectRatios, '自适应', '自定义'],
+  resolutionTiers: [
+    {
+      id: '1K',
+      squareEdge: 1024,
+      exactSizes: {
+        '1:1': [1024, 1024],
+        '4:3': [1152, 864],
+        '3:4': [864, 1152],
+        '16:9': [1424, 800],
+        '9:16': [800, 1424],
+        '3:2': [1248, 832],
+        '2:3': [832, 1248],
+        '21:9': [1568, 672],
+        '9:21': [672, 1568],
+      },
+    },
+    {
+      id: '1.5K',
+      squareEdge: 1536,
+      exactSizes: {
+        '1:1': [1536, 1536],
+        '4:3': [1792, 1344],
+        '3:4': [1344, 1792],
+        '16:9': [2048, 1152],
+        '9:16': [1152, 2048],
+        '3:2': [1872, 1248],
+        '2:3': [1248, 1872],
+        '21:9': [2352, 1008],
+        '9:21': [1008, 2352],
+      },
+    },
+    {
+      id: '2K',
+      squareEdge: 2048,
+      exactSizes: {
+        '1:1': [2048, 2048],
+        '4:3': [2368, 1776],
+        '3:4': [1776, 2368],
+        '16:9': [2816, 1584],
+        '9:16': [1584, 2816],
+        '3:2': [2496, 1664],
+        '2:3': [1664, 2496],
+        '21:9': [3136, 1344],
+        '9:21': [1344, 3136],
+      },
+    },
+  ],
+  pixelConstraints: {
+    minTotalPixels: 921_600,
+    maxTotalPixels: 4_624_220,
+    minRatio: 1 / 16,
+    maxRatio: 16,
+  },
+  multiImageStrategy: 'serial',
+  costMode: { amount: 18, per: 'image' },
+}
+
+const seedreamParameterManifest: ModelParameterManifest = {
+  aspectRatio: {
+    semantic: true,
+    options: seedreamImageSizePolicy.aspectOptions,
+    defaultValue: '16:9',
+  },
+  resolution: true,
+  count: true,
+  customWidth: { type: 'number', defaultValue: 2048, min: 1, max: 10_000, step: 1 },
+  customHeight: { type: 'number', defaultValue: 2048, min: 1, max: 10_000, step: 1 },
+  editStrength: { type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.05 },
+  autoLink: { type: 'boolean', defaultValue: true },
+}
+
+const seedreamImageSizeResolver = new ImageSizeResolver(seedreamImageSizePolicy)
 
 export interface SeedreamLiveProviderOptions {
   mode?: string
@@ -92,7 +171,7 @@ async function assertSuccessfulResponse(response: Response) {
 function imageSizeSetting(
   parameters: Record<string, string | number | boolean> | undefined,
 ) {
-  return resolveSeedreamImageSize(parameters).apiValue
+  return seedreamImageSizeResolver.resolve(parameters).apiValue
 }
 
 function booleanSetting(value: unknown, fallback: boolean) {
@@ -185,48 +264,13 @@ export function createSeedreamLiveProvider(
     id: 'seedream-5-pro-api',
     name: '火山方舟',
     modelName: 'Seedream 5.0 Pro',
+    apiDisplayName: 'Seedream',
     kind: 'live',
     ...(enabled ? {} : { disabledReason: configurationError }),
     capabilities: ['text-to-image', 'image-to-image', 'image-edit'],
-    parameterSchema: {
-      aspectRatio: {
-        type: 'enum',
-        defaultValue: '16:9',
-        options: [
-          ...seedreamAspectRatioOptions,
-          '自适应',
-          '自定义',
-        ],
-      },
-      resolution: {
-        type: 'enum',
-        defaultValue: '2K',
-        options: ['1K', '1.5K', '2K'],
-      },
-      count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
-      customWidth: {
-        type: 'number',
-        defaultValue: 2048,
-        min: customImageSizeLimits.inputMin,
-        max: customImageSizeLimits.inputMax,
-        step: 1,
-      },
-      customHeight: {
-        type: 'number',
-        defaultValue: 2048,
-        min: customImageSizeLimits.inputMin,
-        max: customImageSizeLimits.inputMax,
-        step: 1,
-      },
-      editStrength: {
-        type: 'number',
-        defaultValue: 0.5,
-        min: 0,
-        max: 1,
-        step: 0.05,
-      },
-      autoLink: { type: 'boolean', defaultValue: true },
-    },
+    parameterManifest: seedreamParameterManifest,
+    parameterSchema: resolveModelParameterManifest(seedreamParameterManifest),
+    sizePolicy: seedreamImageSizePolicy,
     pricing: { amount: 18, currency: 'credits', unit: 'generation' },
     officialApiEndpoint: createUrl,
     async generate(request, context) {
@@ -255,7 +299,10 @@ export function createSeedreamLiveProvider(
 
       context.onProgress?.(10)
       const outputs: SeedreamOutput[] = []
-      for (let index = 0; index < count; index += 1) {
+      const requestCount = seedreamImageSizePolicy.multiImageStrategy === 'serial'
+        ? count
+        : 1
+      for (let index = 0; index < requestCount; index += 1) {
         context.signal.throwIfAborted()
         const response = await fetchFn(createUrl, {
           method: 'POST',
@@ -269,7 +316,7 @@ export function createSeedreamLiveProvider(
         await assertSuccessfulResponse(response)
         const responseBody = await readJson(response) as SeedreamResponse
         if (Array.isArray(responseBody.data)) outputs.push(...responseBody.data)
-        context.onProgress?.(10 + Math.round(((index + 1) / count) * 75))
+        context.onProgress?.(10 + Math.round(((index + 1) / requestCount) * 75))
       }
       if (!outputs.length) throw new Error('Seedream 未返回图片结果')
       const result = liveResult(request, outputs)
