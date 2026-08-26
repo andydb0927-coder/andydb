@@ -10,7 +10,10 @@ import {
   moveClip,
   splitClip,
   trimClip,
+  updateClipLayout,
+  updateClipPlaybackRate,
   type TimelineClip,
+  type TimelineClipLayout,
   type TimelineProject,
   type TimelineSourceCandidate,
   type TimelineTrack,
@@ -191,6 +194,53 @@ export function TimelineEditor({
     onSelectedClipChange(undefined)
   }
 
+  const setPlaybackRate = (playbackRate: number) => {
+    if (!selectedClip) return
+    apply(updateClipPlaybackRate(timeline, selectedClip.id, playbackRate))
+  }
+
+  const setLayout = (layout: TimelineClipLayout) => {
+    if (!selectedClip) return
+    apply(updateClipLayout(timeline, selectedClip.id, layout))
+  }
+
+  const selectLayoutMode = (mode: TimelineClipLayout['mode']) => {
+    if (mode === 'full') {
+      setLayout({ mode, x: 0, y: 0, width: 1, height: 1, slot: 'main' })
+    } else if (mode === 'picture-in-picture') {
+      setLayout({ mode, x: 0.68, y: 0.62, width: 0.28, height: 0.3, slot: 'overlay' })
+    } else {
+      setLayout({ mode, x: 0, y: 0, width: 1 / 3, height: 1, slot: 'left' })
+    }
+  }
+
+  const updatePipGeometry = (
+    key: 'x' | 'y' | 'width' | 'height',
+    value: number,
+  ) => {
+    if (!selectedClip) return
+    const current = selectedClip.layout?.mode === 'picture-in-picture'
+      ? selectedClip.layout
+      : { mode: 'picture-in-picture' as const, x: 0.68, y: 0.62, width: 0.28, height: 0.3, slot: 'overlay' as const }
+    const next = { ...current, [key]: value }
+    next.x = Math.min(next.x, 1 - next.width)
+    next.y = Math.min(next.y, 1 - next.height)
+    next.width = Math.min(next.width, 1 - next.x)
+    next.height = Math.min(next.height, 1 - next.y)
+    setLayout(next)
+  }
+
+  const selectThirdsSlot = (slot: 'left' | 'center' | 'right') => {
+    setLayout({
+      mode: 'thirds',
+      x: slot === 'left' ? 0 : slot === 'center' ? 1 / 3 : 2 / 3,
+      y: 0,
+      width: 1 / 3,
+      height: 1,
+      slot,
+    })
+  }
+
   const ticks = Array.from(
     { length: Math.min(121, Math.max(1, Math.ceil(duration) + 1)) },
     (_, index) => index,
@@ -358,6 +408,69 @@ export function TimelineEditor({
               />
             </label>
             <output aria-label="片段时长">{clipDuration(selectedClip).toFixed(2)} 秒</output>
+            <label>
+              片段变速
+              <input
+                type="range"
+                aria-label="片段变速"
+                min={0.25}
+                max={4}
+                step={0.25}
+                value={selectedClip.playbackRate ?? 1}
+                onChange={(event) => setPlaybackRate(Number(event.target.value))}
+              />
+            </label>
+            <output aria-label="变速倍率">{(selectedClip.playbackRate ?? 1).toFixed(2)}x</output>
+            <output aria-label="变速后时长">{clipDuration(selectedClip).toFixed(2)} 秒</output>
+            {selectedClip.kind === 'video' || selectedClip.kind === 'image' ? (
+              <fieldset className="professional-timeline__layout-controls">
+                <legend>合成布局</legend>
+                <label>
+                  布局模式
+                  <select
+                    aria-label="布局模式"
+                    value={selectedClip.layout?.mode ?? 'full'}
+                    onChange={(event) => selectLayoutMode(event.target.value as TimelineClipLayout['mode'])}
+                  >
+                    <option value="full">主轨全屏</option>
+                    <option value="picture-in-picture">画中画副轨</option>
+                    <option value="thirds">三分屏</option>
+                  </select>
+                </label>
+                {selectedClip.layout?.mode === 'picture-in-picture' ? (
+                  <div className="professional-timeline__pip-grid">
+                    {(['x', 'y', 'width', 'height'] as const).map((key) => (
+                      <label key={key}>
+                        {{ x: '水平位置', y: '垂直位置', width: '副轨宽度', height: '副轨高度' }[key]}
+                        <input
+                          type="range"
+                          aria-label={{ x: '画中画水平位置', y: '画中画垂直位置', width: '画中画宽度', height: '画中画高度' }[key]}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          value={selectedClip.layout?.[key] ?? 0}
+                          onChange={(event) => updatePipGeometry(key, Number(event.target.value))}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                {selectedClip.layout?.mode === 'thirds' ? (
+                  <label>
+                    三分屏位置
+                    <select
+                      aria-label="三分屏位置"
+                      value={selectedClip.layout.slot}
+                      onChange={(event) => selectThirdsSlot(event.target.value as 'left' | 'center' | 'right')}
+                    >
+                      <option value="left">左</option>
+                      <option value="center">中</option>
+                      <option value="right">右</option>
+                    </select>
+                  </label>
+                ) : null}
+              </fieldset>
+            ) : null}
             <button type="button" onClick={splitSelected}>
               <Scissors aria-hidden="true" />
               在播放头处分割

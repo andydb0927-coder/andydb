@@ -25,6 +25,20 @@ export interface TimelineClip {
   source: TimelineClipSource
   text?: string
   legacyTimelineItemId?: string
+  playbackRate?: number
+  layout?: TimelineClipLayout
+}
+
+export type TimelineClipLayoutMode = 'full' | 'picture-in-picture' | 'thirds'
+export type TimelineClipLayoutSlot = 'main' | 'overlay' | 'left' | 'center' | 'right'
+
+export interface TimelineClipLayout {
+  mode: TimelineClipLayoutMode
+  x: number
+  y: number
+  width: number
+  height: number
+  slot: TimelineClipLayoutSlot
 }
 
 export interface TimelineTrack {
@@ -98,7 +112,8 @@ const defaultKinds: TimelineTrackKind[] = [
 ]
 
 export function clipDuration(clip: TimelineClip): number {
-  return Math.max(0, clip.sourceOutSeconds - clip.sourceInSeconds)
+  const playbackRate = clip.playbackRate ?? 1
+  return Math.max(0, clip.sourceOutSeconds - clip.sourceInSeconds) / playbackRate
 }
 
 function activeAsset(project: Project, nodeId: string) {
@@ -405,6 +420,66 @@ export function trimClip(
     timeline,
     timeline.tracks.map((track) =>
       track.id === target.id ? { ...track, clips: packClips(clips) } : track,
+    ),
+    environment,
+  )
+}
+
+export function updateClipPlaybackRate(
+  timeline: TimelineProject,
+  clipId: string,
+  playbackRate: number,
+  environment: TimelineEnvironment = defaultEnvironment,
+): TimelineProject {
+  if (!Number.isFinite(playbackRate) || playbackRate < 0.25 || playbackRate > 4) {
+    return timeline
+  }
+  const target = timeline.tracks.find((track) =>
+    track.clips.some((clip) => clip.id === clipId),
+  )
+  if (!target) return timeline
+  const current = target.clips.find((clip) => clip.id === clipId)
+  if (!current || (current.playbackRate ?? 1) === playbackRate) return timeline
+  const clips = target.clips.map((clip) =>
+    clip.id === clipId ? { ...clip, playbackRate } : clip,
+  )
+  return cloneWithTracks(
+    timeline,
+    timeline.tracks.map((track) =>
+      track.id === target.id ? { ...track, clips: packClips(clips) } : track,
+    ),
+    environment,
+  )
+}
+
+function validLayout(layout: TimelineClipLayout) {
+  return [layout.x, layout.y, layout.width, layout.height].every(Number.isFinite) &&
+    layout.x >= 0 &&
+    layout.y >= 0 &&
+    layout.width > 0 &&
+    layout.height > 0 &&
+    layout.x + layout.width <= 1.000001 &&
+    layout.y + layout.height <= 1.000001
+}
+
+export function updateClipLayout(
+  timeline: TimelineProject,
+  clipId: string,
+  layout: TimelineClipLayout,
+  environment: TimelineEnvironment = defaultEnvironment,
+): TimelineProject {
+  if (!validLayout(layout)) return timeline
+  const target = timeline.tracks.find((track) =>
+    track.clips.some((clip) => clip.id === clipId),
+  )
+  if (!target) return timeline
+  const clips = target.clips.map((clip) =>
+    clip.id === clipId ? { ...clip, layout: { ...layout } } : clip,
+  )
+  return cloneWithTracks(
+    timeline,
+    timeline.tracks.map((track) =>
+      track.id === target.id ? { ...track, clips } : track,
     ),
     environment,
   )

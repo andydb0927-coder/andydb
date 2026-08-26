@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type RefObject,
 } from 'react'
 
@@ -12,6 +13,7 @@ import type {
   ResolvedTimelineClip,
   ResolvedTimelineProject,
   TimelineProject,
+  TimelineClipLayout,
 } from './timeline-project'
 import { getTimelineDuration } from './timeline-project'
 
@@ -19,13 +21,24 @@ function drawPreviewFrame(
   canvas: HTMLCanvasElement | null,
   media: CanvasImageSource | undefined,
   subtitle: string | undefined,
+  layout: TimelineClipLayout | undefined,
+  clearCanvas = true,
 ) {
   const context = canvas?.getContext('2d')
   if (!canvas || !context || !media) return
-  context.fillStyle = '#090a0d'
-  context.fillRect(0, 0, canvas.width, canvas.height)
+  if (clearCanvas) {
+    context.fillStyle = '#090a0d'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+  }
+  const frame = layout ?? { x: 0, y: 0, width: 1, height: 1 }
   try {
-    context.drawImage(media, 0, 0, canvas.width, canvas.height)
+    context.drawImage(
+      media,
+      frame.x * canvas.width,
+      frame.y * canvas.height,
+      frame.width * canvas.width,
+      frame.height * canvas.height,
+    )
   } catch {
     return
   }
@@ -39,30 +52,49 @@ function drawPreviewFrame(
     context.fillText(subtitle, canvas.width / 2, canvas.height - 100)
   }
 }
+
+function layoutStyle(layout: TimelineClipLayout | undefined): CSSProperties {
+  const frame = layout ?? { x: 0, y: 0, width: 1, height: 1 }
+  return {
+    left: `${frame.x * 100}%`,
+    top: `${frame.y * 100}%`,
+    width: `${frame.width * 100}%`,
+    height: `${frame.height * 100}%`,
+  }
+}
 function PreviewMedia({
   asset,
   title,
   mediaTime,
   subtitle,
   canvasRef,
+  playbackRate,
+  layout,
+  clearCanvas,
 }: {
   asset?: Asset
   title: string
   mediaTime: number
   subtitle?: string
   canvasRef?: RefObject<HTMLCanvasElement | null>
+  playbackRate: number
+  layout?: TimelineClipLayout
+  clearCanvas?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.currentTime = Math.max(0, mediaTime)
-  }, [mediaTime])
+    if (videoRef.current) {
+      videoRef.current.currentTime = Math.max(0, mediaTime)
+      videoRef.current.playbackRate = playbackRate
+    }
+  }, [mediaTime, playbackRate])
 
   useEffect(() => {
     const media = videoRef.current ?? imageRef.current ?? undefined
-    drawPreviewFrame(canvasRef?.current ?? null, media, subtitle)
-  }, [canvasRef, mediaTime, subtitle])
+    drawPreviewFrame(canvasRef?.current ?? null, media, subtitle, layout, clearCanvas)
+  }, [canvasRef, clearCanvas, layout, mediaTime, subtitle])
 
   if (!asset) return <div className="preview-player__missing">缺少片段</div>
   if (asset.kind === 'video') {
@@ -70,13 +102,17 @@ function PreviewMedia({
       <video
         ref={videoRef}
         data-testid="preview-video"
+        data-playback-rate={playbackRate}
+        data-layout-mode={layout?.mode ?? 'full'}
+        className="preview-player__media-layer"
+        style={layoutStyle(layout)}
         src={asset.url}
         aria-label={title}
         muted
         playsInline
         preload="metadata"
         onSeeked={() =>
-          drawPreviewFrame(canvasRef?.current ?? null, videoRef.current ?? undefined, subtitle)
+          drawPreviewFrame(canvasRef?.current ?? null, videoRef.current ?? undefined, subtitle, layout, clearCanvas)
         }
       />
     )
@@ -84,10 +120,13 @@ function PreviewMedia({
   return (
     <img
       ref={imageRef}
+      data-layout-mode={layout?.mode ?? 'full'}
+      className="preview-player__media-layer"
+      style={layoutStyle(layout)}
       src={asset.url}
       alt={title}
       onLoad={() =>
-        drawPreviewFrame(canvasRef?.current ?? null, imageRef.current ?? undefined, subtitle)
+        drawPreviewFrame(canvasRef?.current ?? null, imageRef.current ?? undefined, subtitle, layout, clearCanvas)
       }
     />
   )
@@ -144,6 +183,13 @@ export function PreviewPlayer({
   const subtitle = resolved.subtitles.find(
     (item) => currentTime >= item.startSeconds && currentTime < item.endSeconds,
   )?.clip.text
+  const activeLayers = items
+    .filter((item) => currentTime >= item.startSeconds && currentTime < item.endSeconds)
+    .sort((left, right) => {
+      const leftOverlay = left.clip.layout?.mode && left.clip.layout.mode !== 'full' ? 1 : 0
+      const rightOverlay = right.clip.layout?.mode && right.clip.layout.mode !== 'full' ? 1 : 0
+      return leftOverlay - rightOverlay || left.clip.order - right.clip.order
+    })
 
   useEffect(() => {
     if (!active || active.clip.id === selectedClipId) return
@@ -179,7 +225,9 @@ export function PreviewPlayer({
   useEffect(() => {
     if (audioRef.current && activeAudio) {
       audioRef.current.currentTime =
-        activeAudio.clip.sourceInSeconds + currentTime - activeAudio.startSeconds
+        activeAudio.clip.sourceInSeconds +
+        (currentTime - activeAudio.startSeconds) * (activeAudio.clip.playbackRate ?? 1)
+      audioRef.current.playbackRate = activeAudio.clip.playbackRate ?? 1
     }
   }, [activeAudio, currentTime])
 
@@ -220,7 +268,8 @@ export function PreviewPlayer({
 
   const title = active.node?.title ?? active.clip.name ?? '缺少片段'
   const mediaTime =
-    active.clip.sourceInSeconds + Math.max(0, currentTime - active.startSeconds)
+    active.clip.sourceInSeconds +
+    Math.max(0, currentTime - active.startSeconds) * (active.clip.playbackRate ?? 1)
 
   return (
     <section className="preview-player" aria-label="成片播放器">
@@ -232,6 +281,8 @@ export function PreviewPlayer({
                 asset={previous.asset}
                 title={previous.node?.title ?? previous.clip.name}
                 mediaTime={previous.clip.sourceInSeconds}
+                playbackRate={previous.clip.playbackRate ?? 1}
+                layout={previous.clip.layout}
               />
               <figcaption>{previous.node?.title ?? previous.clip.name}</figcaption>
             </figure>
@@ -240,19 +291,30 @@ export function PreviewPlayer({
                 asset={active.asset}
                 title={title}
                 mediaTime={mediaTime}
+                playbackRate={active.clip.playbackRate ?? 1}
+                layout={active.clip.layout}
               />
               <figcaption>{title}</figcaption>
             </figure>
           </div>
         ) : (
           <>
-            <PreviewMedia
-              asset={active.asset}
-              title={title}
-              mediaTime={mediaTime}
-              subtitle={subtitle}
-              canvasRef={canvasRef}
-            />
+            {(activeLayers.length ? activeLayers : [active]).map((layer, index) => (
+              <PreviewMedia
+                key={layer.clip.id}
+                asset={layer.asset}
+                title={layer.node?.title ?? layer.clip.name}
+                mediaTime={
+                  layer.clip.sourceInSeconds +
+                  Math.max(0, currentTime - layer.startSeconds) * (layer.clip.playbackRate ?? 1)
+                }
+                subtitle={index === 0 ? subtitle : undefined}
+                canvasRef={canvasRef}
+                playbackRate={layer.clip.playbackRate ?? 1}
+                layout={layer.clip.layout}
+                clearCanvas={index === 0}
+              />
+            ))}
             {subtitle ? <div className="preview-player__subtitle">{subtitle}</div> : null}
           </>
         )}
@@ -265,7 +327,12 @@ export function PreviewPlayer({
         />
       </div>
       {activeAudio?.asset ? (
-        <audio ref={audioRef} src={activeAudio.asset.url} preload="metadata" />
+        <audio
+          ref={audioRef}
+          src={activeAudio.asset.url}
+          preload="metadata"
+          data-playback-rate={activeAudio.clip.playbackRate ?? 1}
+        />
       ) : null}
       <div className="preview-player__transport">
         <button type="button" onClick={() => setPlaying((value) => !value)}>

@@ -40,6 +40,7 @@ import {
   simplifiedImageRatio,
 } from '../../generation/image-size-resolver'
 import type { CreativeNodeData } from '../node-types'
+import { PromptAssist } from '../PromptAssist'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 
 function downloadUrl(url: string, filename: string) {
@@ -980,6 +981,20 @@ export function ImageGenerationPanel({
     data.onLocalImageGenerate?.(currentPrompt)
   }
 
+  const applyPrompt = (nextPrompt: string) => {
+    promptDraftRef.current = nextPrompt
+    setPrompt(nextPrompt)
+    if (promptRef.current && promptRef.current.textContent !== nextPrompt) {
+      promptRef.current.textContent = nextPrompt
+    }
+    data.onUpdateImageGenerationSettings?.({ prompt: nextPrompt })
+  }
+
+  const applyImageSettings = (changes: Partial<ImageGenerationSettings>) => {
+    setSettings((current) => ({ ...current, ...changes }))
+    data.onUpdateImageGenerationSettings?.(changes)
+  }
+
   return (
     <section
       className={`image-generation-panel nodrag${
@@ -1104,6 +1119,17 @@ export function ImageGenerationPanel({
             prompt: promptDraftRef.current,
           })
         }
+      />
+      <PromptAssist
+        context="image"
+        prompt={prompt}
+        autoLinkEnabled={settings.autoLink}
+        candidates={data.autoLinkCandidates ?? []}
+        linkedNodeIds={data.linkedAutoLinkNodeIds ?? []}
+        onPromptChange={applyPrompt}
+        onImageSettings={applyImageSettings}
+        onCreateNode={data.onCreatePromptNode}
+        onApplyAutoLink={data.onApplyAutoLink}
       />
       <div className="image-generation-panel__controls">
         <label className="image-generation-panel__model">

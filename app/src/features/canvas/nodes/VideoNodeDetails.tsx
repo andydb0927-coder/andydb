@@ -27,6 +27,7 @@ import type {
   VideoGenerationMode,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { PromptAssist } from '../PromptAssist'
 
 type VideoSurface =
   | 'reference'
@@ -284,6 +285,12 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
     value: string | boolean,
   ) => data.onUpdateVideoGenerationParameters?.({ [name]: value })
 
+  const applyPrompt = (nextPrompt: string) => {
+    promptDraftRef.current = nextPrompt
+    setPrompt(nextPrompt)
+    data.onUpdateVideoPrompt?.(nextPrompt)
+  }
+
   const modeAdjustmentMessage = (
     from: VideoGenerationMode,
     to: VideoGenerationMode,
@@ -386,6 +393,19 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           placeholder="描述你想要生成的画面内容，@引用素材"
         />
       </label>
+      <PromptAssist
+        context="video"
+        prompt={prompt}
+        autoLinkEnabled={parameterBoolean(parameters, 'autoLink', true)}
+        candidates={data.autoLinkCandidates ?? []}
+        linkedNodeIds={data.linkedAutoLinkNodeIds ?? []}
+        onPromptChange={applyPrompt}
+        onVideoParameters={(changes) =>
+          data.onUpdateVideoGenerationParameters?.(changes)
+        }
+        onCreateNode={data.onCreatePromptNode}
+        onApplyAutoLink={data.onApplyAutoLink}
+      />
       <div className="video-generation-panel__compact-controls">
         <label><span className="visually-hidden">模型</span><select
           aria-label="模型"

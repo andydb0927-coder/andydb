@@ -5,6 +5,7 @@ import {
   defaultImageGenerationSettings,
   type CanvasCreation,
   type CanvasGroup,
+  type CanvasViewportState,
   type CanvasNode,
   type DependencyEdge,
   type GenerationJob,
@@ -60,6 +61,11 @@ interface ProjectStore {
   past: Project[]
   future: Project[]
   renameProject: (title: string) => void
+  createCanvas: () => string | undefined
+  renameCanvas: (canvasId: string, title: string) => boolean
+  switchCanvas: (canvasId: string) => boolean
+  deleteCanvas: (canvasId: string) => boolean
+  updateCanvasViewport: (viewport: CanvasViewportState) => void
   addNode: (node: CanvasNode) => void
   createCanvasContent: (creation: CanvasCreation) => void
   createConnectedCanvasContent: (
@@ -132,6 +138,81 @@ const defaultRepository = new ProjectRepository()
 
 function withUpdatedTimestamp(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() }
+}
+
+const defaultCanvasViewport: CanvasViewportState = { x: 0, y: 0, zoom: 1 }
+
+function withCanvasCollection(project: Project): Project {
+  if (project.canvases?.length) {
+    const activeCanvasId = project.canvases.some(({ id }) => id === project.activeCanvasId)
+      ? project.activeCanvasId
+      : project.canvases[0].id
+    const timestamp = project.updatedAt || new Date().toISOString()
+    return {
+      ...project,
+      activeCanvasId,
+      canvases: project.canvases.map((canvas) =>
+        canvas.id === activeCanvasId
+          ? {
+              ...canvas,
+              nodes: project.nodes,
+              edges: project.edges,
+              groups: project.groups ?? [],
+              updatedAt: timestamp,
+            }
+          : canvas,
+      ),
+    }
+  }
+  const timestamp = project.updatedAt || new Date().toISOString()
+  const id = crypto.randomUUID()
+  return {
+    ...project,
+    activeCanvasId: id,
+    canvases: [{
+      id,
+      title: '画布 1',
+      nodes: project.nodes,
+      edges: project.edges,
+      groups: project.groups ?? [],
+      viewport: defaultCanvasViewport,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }],
+  }
+}
+
+function syncActiveCanvasSnapshot(project: Project): Project {
+  const normalized = withCanvasCollection(project)
+  const activeCanvasId = normalized.activeCanvasId!
+  const timestamp = normalized.updatedAt || new Date().toISOString()
+  return {
+    ...normalized,
+    canvases: normalized.canvases!.map((canvas) =>
+      canvas.id === activeCanvasId
+        ? {
+            ...canvas,
+            nodes: normalized.nodes,
+            edges: normalized.edges,
+            groups: normalized.groups ?? [],
+            updatedAt: timestamp,
+          }
+        : canvas,
+    ),
+  }
+}
+
+function loadCanvasSnapshot(project: Project, canvasId: string): Project {
+  const normalized = syncActiveCanvasSnapshot(project)
+  const canvas = normalized.canvases!.find(({ id }) => id === canvasId)
+  if (!canvas) return project
+  return withUpdatedTimestamp({
+    ...normalized,
+    activeCanvasId: canvas.id,
+    nodes: canvas.nodes,
+    edges: canvas.edges,
+    groups: canvas.groups,
+  })
 }
 
 function cloneGenerationConfig(job: GenerationJob) {
@@ -309,8 +390,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     const current = get().activeProject
     if (!current) return
 
-    const next = mutate(current)
-    if (next === current) return
+    const mutated = mutate(current)
+    if (mutated === current) return
+    const next = syncActiveCanvasSnapshot(mutated)
 
     set((state) => ({
       projectsById: { ...state.projectsById, [next.id]: next },
@@ -337,6 +419,127 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ? project
           : withUpdatedTimestamp({ ...project, title: normalized }),
       )
+    },
+
+    createCanvas: () => {
+      let createdId: string | undefined
+      commit((project) => {
+        const normalized = syncActiveCanvasSnapshot(project)
+        const timestamp = new Date().toISOString()
+        createdId = crypto.randomUUID()
+        const nextCanvas = {
+          id: createdId,
+          title: `画布 ${normalized.canvases!.length + 1}`,
+          nodes: [],
+          edges: [],
+          groups: [],
+          viewport: { ...defaultCanvasViewport },
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }
+        return withUpdatedTimestamp({
+          ...normalized,
+          activeCanvasId: createdId,
+          canvases: [...normalized.canvases!, nextCanvas],
+          nodes: [],
+          edges: [],
+          groups: [],
+        })
+      })
+      return createdId
+    },
+
+    renameCanvas: (canvasId, title) => {
+      const normalizedTitle = title.trim()
+      if (!normalizedTitle || normalizedTitle.length > 40) return false
+      let renamed = false
+      commit((project) => {
+        const normalized = syncActiveCanvasSnapshot(project)
+        const canvas = normalized.canvases!.find(({ id }) => id === canvasId)
+        if (!canvas || canvas.title === normalizedTitle) return project
+        renamed = true
+        const timestamp = new Date().toISOString()
+        return withUpdatedTimestamp({
+          ...normalized,
+          canvases: normalized.canvases!.map((candidate) =>
+            candidate.id === canvasId
+              ? { ...candidate, title: normalizedTitle, updatedAt: timestamp }
+              : candidate,
+          ),
+        })
+      })
+      return renamed
+    },
+
+    switchCanvas: (canvasId) => {
+      const current = get().activeProject
+      if (!current || current.activeCanvasId === canvasId) return false
+      let switched = false
+      commit((project) => {
+        const next = loadCanvasSnapshot(project, canvasId)
+        switched = next !== project
+        return next
+      })
+      return switched
+    },
+
+    deleteCanvas: (canvasId) => {
+      let deleted = false
+      commit((project) => {
+        const normalized = syncActiveCanvasSnapshot(project)
+        if (normalized.canvases!.length < 2) return project
+        const target = normalized.canvases!.find(({ id }) => id === canvasId)
+        if (!target) return project
+        deleted = true
+        const remaining = normalized.canvases!.filter(({ id }) => id !== canvasId)
+        if (normalized.activeCanvasId !== canvasId) {
+          return withUpdatedTimestamp({ ...normalized, canvases: remaining })
+        }
+        const fallback = remaining[0]
+        return withUpdatedTimestamp({
+          ...normalized,
+          canvases: remaining,
+          activeCanvasId: fallback.id,
+          nodes: fallback.nodes,
+          edges: fallback.edges,
+          groups: fallback.groups,
+        })
+      })
+      return deleted
+    },
+
+    updateCanvasViewport: (viewport) => {
+      if (
+        !Number.isFinite(viewport.x) ||
+        !Number.isFinite(viewport.y) ||
+        !Number.isFinite(viewport.zoom) ||
+        viewport.zoom <= 0
+      ) return
+      const current = get().activeProject
+      if (!current) return
+      const normalized = syncActiveCanvasSnapshot(current)
+      const active = normalized.canvases!.find(({ id }) => id === normalized.activeCanvasId)
+      if (
+        active &&
+        active.viewport.x === viewport.x &&
+        active.viewport.y === viewport.y &&
+        active.viewport.zoom === viewport.zoom
+      ) return
+      const timestamp = new Date().toISOString()
+      const next = {
+        ...normalized,
+        updatedAt: timestamp,
+        canvases: normalized.canvases!.map((canvas) =>
+          canvas.id === normalized.activeCanvasId
+            ? { ...canvas, viewport: { ...viewport }, updatedAt: timestamp }
+            : canvas,
+        ),
+      }
+      set((state) => ({
+        projectsById: { ...state.projectsById, [next.id]: next },
+        activeProject: next,
+        saveStatus: 'dirty',
+      }))
     },
 
     addNode: (node) => {
@@ -1597,8 +1800,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     persistActive: async (repository = defaultRepository) => {
       const requestId = ++persistenceRequestId
-      const project = get().activeProject
-      if (!project) return
+      const currentProject = get().activeProject
+      if (!currentProject) return
+      const project = syncActiveCanvasSnapshot(currentProject)
 
       if (!navigator.onLine) {
         set({ saveStatus: 'offline' })
@@ -1612,14 +1816,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         await write
         if (
           requestId === persistenceRequestId &&
-          get().activeProject === project
+          get().activeProject === currentProject
         ) {
           set({ saveStatus: 'saved' })
         }
       } catch {
         if (
           requestId === persistenceRequestId &&
-          get().activeProject === project
+          get().activeProject === currentProject
         ) {
           set({ saveStatus: 'error' })
         }
@@ -1628,11 +1832,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     hydrate: async (projectId, repository = defaultRepository, signal) => {
       const requestId = ++hydrationRequestId
-      const project = await repository.load(projectId)
+      const storedProject = await repository.load(projectId)
       if (requestId !== hydrationRequestId || signal?.aborted) return false
 
       persistenceRequestId += 1
-      if (!project) {
+      if (!storedProject) {
         set({
           activeProjectId: undefined,
           activeProject: undefined,
@@ -1641,6 +1845,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           saveStatus: 'saved',
         })
         return false
+      }
+
+      const normalized = withCanvasCollection(storedProject)
+      const activeCanvas = normalized.canvases!.find(
+        ({ id }) => id === normalized.activeCanvasId,
+      )!
+      const project = {
+        ...normalized,
+        nodes: activeCanvas.nodes,
+        edges: activeCanvas.edges,
+        groups: activeCanvas.groups,
       }
 
       set((state) => ({

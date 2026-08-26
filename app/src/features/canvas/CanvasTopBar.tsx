@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom'
 import { StatusText } from '../../ui/StatusText'
 import { CanvasAccountMenu } from '../account/CanvasAccountMenu'
 import type { PersistenceStatus } from '../project/project-store'
+import type { ProjectCanvas } from '../project/model'
 import type { WorkspaceMode } from './CanvasWorkspace'
 
 const persistenceCopy: Record<PersistenceStatus, string> = {
@@ -36,9 +37,15 @@ interface CanvasTopBarProps {
   mode: WorkspaceMode
   agentOpen: boolean
   creditBalance?: number
+  canvases?: ProjectCanvas[]
+  activeCanvasId?: string
   onUndo(): void
   onRedo(): void
   onRenameProject(title: string): void
+  onCreateCanvas?(): void
+  onRenameCanvas?(canvasId: string, title: string): void
+  onSwitchCanvas?(canvasId: string): void
+  onDeleteCanvas?(canvasId: string): void
   onOpenNodeList(trigger: HTMLButtonElement): void
   onModeChange(mode: WorkspaceMode): void
   onToggleAgent(): void
@@ -57,9 +64,15 @@ export function CanvasTopBar({
   canRedo,
   mode,
   agentOpen,
+  canvases,
+  activeCanvasId,
   onUndo,
   onRedo,
   onRenameProject,
+  onCreateCanvas,
+  onRenameCanvas,
+  onSwitchCanvas,
+  onDeleteCanvas,
   onOpenNodeList,
   onModeChange,
   onToggleAgent,
@@ -73,6 +86,12 @@ export function CanvasTopBar({
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(projectTitle)
+  const [editingCanvasId, setEditingCanvasId] = useState<string>()
+  const [canvasTitleDraft, setCanvasTitleDraft] = useState('')
+  const availableCanvases = canvases?.length
+    ? canvases
+    : [{ id: 'legacy-canvas', title: '画布 1' } as ProjectCanvas]
+  const activeCanvas = availableCanvases.find(({ id }) => id === activeCanvasId) ?? availableCanvases[0]
 
   useEffect(() => setTitleDraft(projectTitle), [projectTitle])
 
@@ -136,13 +155,83 @@ export function CanvasTopBar({
             aria-expanded={canvasMenuOpen}
             onClick={() => setCanvasMenuOpen((open) => !open)}
           >
-            画布 1 <ChevronDown aria-hidden="true" />
+            {activeCanvas.title} <ChevronDown aria-hidden="true" />
           </button>
           {canvasMenuOpen ? (
             <div className="canvas-top-bar__menu" role="menu" aria-label="画布菜单">
-              <button type="button" role="menuitem">新建画布</button>
-              <button type="button" role="menuitem" aria-current="page">画布 1</button>
-              <p>本地演示暂不创建第二画布</p>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!onCreateCanvas}
+                onClick={() => {
+                  onCreateCanvas?.()
+                  setCanvasMenuOpen(false)
+                }}
+              >
+                新建画布
+              </button>
+              {availableCanvases.map((canvas) => (
+                <div key={canvas.id} className="canvas-top-bar__canvas-row">
+                  {editingCanvasId === canvas.id ? (
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        const normalized = canvasTitleDraft.trim()
+                        if (normalized) onRenameCanvas?.(canvas.id, normalized)
+                        setEditingCanvasId(undefined)
+                      }}
+                    >
+                      <label>
+                        <span className="sr-only">画布名称</span>
+                        <input
+                          aria-label="画布名称"
+                          value={canvasTitleDraft}
+                          maxLength={40}
+                          autoFocus
+                          onChange={(event) => setCanvasTitleDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Escape') return
+                            event.preventDefault()
+                            setEditingCanvasId(undefined)
+                          }}
+                        />
+                      </label>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      aria-current={canvas.id === activeCanvas.id ? 'page' : undefined}
+                      onClick={() => {
+                        onSwitchCanvas?.(canvas.id)
+                        setCanvasMenuOpen(false)
+                      }}
+                    >
+                      {canvas.title}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`重命名${canvas.title}`}
+                    disabled={!onRenameCanvas}
+                    onClick={() => {
+                      setEditingCanvasId(canvas.id)
+                      setCanvasTitleDraft(canvas.title)
+                    }}
+                  >
+                    <PencilLine aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`删除${canvas.title}`}
+                    disabled={!onDeleteCanvas || availableCanvases.length < 2}
+                    onClick={() => onDeleteCanvas?.(canvas.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <p>每个画布独立保存节点、连线与视口</p>
             </div>
           ) : null}
         </div>

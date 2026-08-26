@@ -348,6 +348,23 @@ export interface DependencyEdge {
   sourceChanged?: boolean
 }
 
+export interface CanvasViewportState {
+  x: number
+  y: number
+  zoom: number
+}
+
+export interface ProjectCanvas {
+  id: string
+  title: string
+  nodes: CanvasNode[]
+  edges: DependencyEdge[]
+  groups: CanvasGroup[]
+  viewport: CanvasViewportState
+  createdAt: string
+  updatedAt: string
+}
+
 export interface TimelineItem {
   id: string
   nodeId: string
@@ -406,10 +423,13 @@ export interface Project {
   jobs: GenerationJob[]
   exportJobs: ExportJob[]
   groups?: CanvasGroup[]
+  canvases?: ProjectCanvas[]
+  activeCanvasId?: string
 }
 
 export function createProject(title: string, intent: string): Project {
   const timestamp = new Date().toISOString()
+  const canvasId = crypto.randomUUID()
 
   return {
     id: crypto.randomUUID(),
@@ -424,6 +444,17 @@ export function createProject(title: string, intent: string): Project {
     jobs: [],
     exportJobs: [],
     groups: [],
+    activeCanvasId: canvasId,
+    canvases: [{
+      id: canvasId,
+      title: '画布 1',
+      nodes: [],
+      edges: [],
+      groups: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }],
   }
 }
 

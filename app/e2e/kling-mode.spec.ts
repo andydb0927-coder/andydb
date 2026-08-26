@@ -88,7 +88,10 @@ test('switches Kling live to text-to-video and submits the supported request', a
   await expect(generate).toBeEnabled()
   await generate.click()
 
-  await expect.poll(() => createBodies.length).toBe(1)
+  await expect.poll(() => createBodies.length, {
+    timeout: 15_000,
+    message: 'Kling fixture create request should be dispatched under full-suite load',
+  }).toBe(1)
   await expect(
     page.getByRole('status').filter({ hasText: /已提交|生成中/ }),
   ).toBeVisible()

@@ -39,6 +39,58 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
   expect(onToggleAgent).toHaveBeenCalledOnce()
 })
 
+test('creates, renames, switches, and conditionally deletes project canvases', async () => {
+  const user = userEvent.setup()
+  const onCreateCanvas = vi.fn()
+  const onRenameCanvas = vi.fn()
+  const onSwitchCanvas = vi.fn()
+  const onDeleteCanvas = vi.fn()
+  const canvases = [
+    { id: 'one', title: '画布 1', nodes: [], edges: [], groups: [], viewport: { x: 0, y: 0, zoom: 1 }, createdAt: '', updatedAt: '' },
+    { id: 'two', title: '备选分镜', nodes: [], edges: [], groups: [], viewport: { x: -20, y: 10, zoom: 0.8 }, createdAt: '', updatedAt: '' },
+  ]
+  render(
+    <MemoryRouter>
+      <CanvasTopBar
+        projectTitle="工作台演示"
+        saveStatus="saved"
+        canUndo={false}
+        canRedo={false}
+        mode="workflow"
+        agentOpen={false}
+        canvases={canvases}
+        activeCanvasId="one"
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onRenameProject={vi.fn()}
+        onCreateCanvas={onCreateCanvas}
+        onRenameCanvas={onRenameCanvas}
+        onSwitchCanvas={onSwitchCanvas}
+        onDeleteCanvas={onDeleteCanvas}
+        onOpenNodeList={vi.fn()}
+        onModeChange={vi.fn()}
+        onToggleAgent={vi.fn()}
+      />
+    </MemoryRouter>,
+  )
+
+  await user.click(screen.getByRole('button', { name: '画布 1' }))
+  await user.click(screen.getByRole('menuitem', { name: '新建画布' }))
+  expect(onCreateCanvas).toHaveBeenCalledOnce()
+
+  await user.click(screen.getByRole('button', { name: '画布 1' }))
+  await user.click(screen.getByRole('menuitem', { name: '备选分镜' }))
+  expect(onSwitchCanvas).toHaveBeenCalledWith('two')
+
+  await user.click(screen.getByRole('button', { name: '画布 1' }))
+  await user.click(screen.getByRole('button', { name: '重命名画布 1' }))
+  await user.clear(screen.getByRole('textbox', { name: '画布名称' }))
+  await user.type(screen.getByRole('textbox', { name: '画布名称' }), '主画布{Enter}')
+  expect(onRenameCanvas).toHaveBeenCalledWith('one', '主画布')
+  await user.click(screen.getByRole('button', { name: '删除备选分镜' }))
+  expect(onDeleteCanvas).toHaveBeenCalledWith('two')
+})
+
 test('exposes local publish, share, preview and export actions', async () => {
   const user = userEvent.setup()
   const onOpenPublish = vi.fn()

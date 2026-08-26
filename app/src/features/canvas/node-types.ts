@@ -18,6 +18,7 @@ import type {
   VideoSegmentOptions,
 } from '../media/browser-media-processing'
 import type { ProviderRegistry } from '../generation/model-provider-registry'
+import type { AutoLinkCandidate } from './prompt-assist'
 import { AssetNode } from './nodes/AssetNode'
 import { CreativeCardNode } from './nodes/CreativeCardNode'
 import { PreviewNode } from './nodes/PreviewNode'
@@ -48,6 +49,8 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   imageReferences?: Array<{ id: string; title: string; asset: Asset }>
   videoReferences?: Array<{ id: string; title: string; asset: Asset }>
   incomingReferenceCount?: number
+  autoLinkCandidates?: AutoLinkCandidate[]
+  linkedAutoLinkNodeIds?: string[]
   imageReferenceSelecting?: boolean
   actionsPlacement: 'before' | 'after'
   contextual: boolean
@@ -69,6 +72,8 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
     parameters: Record<string, string | number | boolean>,
   ): void
   onUpdateVideoPrompt?(prompt: string): void
+  onCreatePromptNode?(kind: Extract<NodeKind, 'image' | 'storyboard' | 'video'>): void
+  onApplyAutoLink?(candidate: AutoLinkCandidate): void
   onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
   onEndImageReferenceSelection?(returnToNode: boolean): void
   onImportImageReference?(file: File): void

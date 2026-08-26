@@ -89,6 +89,52 @@ describe('project domain', () => {
     expect(project.nodes).toEqual([])
     expect(project.assets).toEqual([])
     expect(project.groups).toEqual([])
+    expect(project.canvases).toEqual([
+      expect.objectContaining({ title: '画布 1', nodes: [], edges: [] }),
+    ])
+  })
+
+  test('creates, renames, switches, deletes, and restores independent canvas snapshots', () => {
+    const firstNodeId = useProjectStore.getState().activeProject!.nodes[0].id
+
+    const secondCanvasId = useProjectStore.getState().createCanvas()
+    expect(secondCanvasId).toBeTruthy()
+    expect(useProjectStore.getState().activeProject).toMatchObject({
+      activeCanvasId: secondCanvasId,
+      nodes: [],
+      edges: [],
+    })
+
+    useProjectStore.getState().addNode({
+      id: 'canvas-two-node',
+      kind: 'text',
+      title: '第二画布文本',
+      position: { x: 20, y: 30 },
+      versions: [],
+      activeVersionId: '',
+      sourceChanged: false,
+    })
+    useProjectStore.getState().updateCanvasViewport({ x: -120, y: 60, zoom: 0.8 })
+    expect(useProjectStore.getState().renameCanvas(secondCanvasId!, '分镜备选')).toBe(true)
+
+    const firstCanvasId = useProjectStore.getState().activeProject!.canvases![0].id
+    expect(useProjectStore.getState().switchCanvas(firstCanvasId)).toBe(true)
+    expect(useProjectStore.getState().activeProject!.nodes.map(({ id }) => id)).toContain(firstNodeId)
+
+    expect(useProjectStore.getState().switchCanvas(secondCanvasId!)).toBe(true)
+    expect(useProjectStore.getState().activeProject).toMatchObject({
+      nodes: [expect.objectContaining({ id: 'canvas-two-node' })],
+      canvases: expect.arrayContaining([
+        expect.objectContaining({
+          id: secondCanvasId,
+          title: '分镜备选',
+          viewport: { x: -120, y: 60, zoom: 0.8 },
+        }),
+      ]),
+    })
+    expect(useProjectStore.getState().deleteCanvas(secondCanvasId!)).toBe(true)
+    expect(useProjectStore.getState().activeProject!.canvases).toHaveLength(1)
+    expect(useProjectStore.getState().deleteCanvas(firstCanvasId)).toBe(false)
   })
 
   test('appends a node version without changing prior versions or asset records', () => {

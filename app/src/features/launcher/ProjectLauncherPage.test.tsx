@@ -211,7 +211,15 @@ describe('project launcher', () => {
     await user.click(within(await screen.findByRole('region', { name: '最近项目' })).getByRole('link', { name: /霜河渡/ }))
     expect(await screen.findByRole('heading', { name: '项目画布' })).toBeVisible()
     expect(repository.save).not.toHaveBeenCalled()
-    expect(useProjectStore.getState().activeProject).toEqual(recentProject)
+    const hydrated = useProjectStore.getState().activeProject
+    expect(hydrated).toMatchObject(recentProject)
+    expect(hydrated?.activeCanvasId).toBe(hydrated?.canvases?.[0].id)
+    expect(hydrated?.canvases?.[0]).toMatchObject({
+      title: '画布 1',
+      nodes: recentProject.nodes,
+      edges: recentProject.edges,
+      viewport: { x: 0, y: 0, zoom: 1 },
+    })
   })
 
   test('loads a recent project only once when activated twice rapidly', async () => {

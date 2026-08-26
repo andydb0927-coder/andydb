@@ -693,6 +693,11 @@ export function CanvasPage({
   const redo = useProjectStore((state) => state.redo)
   const persistActive = useProjectStore((state) => state.persistActive)
   const renameProject = useProjectStore((state) => state.renameProject)
+  const createCanvas = useProjectStore((state) => state.createCanvas)
+  const renameCanvas = useProjectStore((state) => state.renameCanvas)
+  const switchCanvas = useProjectStore((state) => state.switchCanvas)
+  const deleteCanvas = useProjectStore((state) => state.deleteCanvas)
+  const updateCanvasViewport = useProjectStore((state) => state.updateCanvasViewport)
   const connectNodes = useProjectStore((state) => state.connectNodes)
   const connectImageReference = useProjectStore(
     (state) => state.connectImageReference,
@@ -831,6 +836,27 @@ export function CanvasPage({
     clientX: number
     clientY: number
   } | undefined>(undefined)
+  const renderedCanvasIdRef = useRef<string | undefined>(undefined)
+
+  const activeCanvas = project?.canvases?.find(
+    ({ id }) => id === project.activeCanvasId,
+  )
+
+  useEffect(() => {
+    if (!flowInstance || !activeCanvas) return
+    const previousCanvasId = renderedCanvasIdRef.current
+    renderedCanvasIdRef.current = activeCanvas.id
+    if (previousCanvasId && previousCanvasId !== activeCanvas.id) {
+      setSelectedNodeIds(new Set())
+      setPrimaryNodeId(undefined)
+      setSelectedEdgeIds(new Set())
+      setNodeMeasurements({ measurements: {} })
+    }
+    if (typeof flowInstance.setViewport === 'function') {
+      void flowInstance.setViewport(activeCanvas.viewport, { duration: 0 })
+    }
+    setZoomPercent(activeCanvas.viewport.zoom * 100)
+  }, [activeCanvas?.id, flowInstance])
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
@@ -2105,6 +2131,37 @@ export function CanvasPage({
       const videoReferences = incomingMediaReferences.filter(
         ({ asset: referenceAsset }) => referenceAsset.kind === 'image',
       )
+      const linkedAutoLinkNodeIds = project.edges
+        .filter(({ targetNodeId }) => targetNodeId === node.id)
+        .map(({ sourceNodeId }) => sourceNodeId)
+      const autoLinkCandidates = project.nodes.flatMap((candidate) => {
+        if (candidate.id === node.id) return []
+        const candidateVersion = candidate.versions.find(
+          ({ id }) => id === candidate.activeVersionId,
+        )
+        const candidateAsset = project.assets.find(
+          ({ id }) => id === candidateVersion?.assetId,
+        )
+        if (!candidateAsset || !['image', 'video'].includes(candidateAsset.kind)) return []
+        if (
+          node.kind === 'video' &&
+          !['image', 'character', 'scene', 'preview', 'storyboard'].includes(candidate.kind)
+        ) return []
+        const detailText = candidate.details
+          ? JSON.stringify(candidate.details)
+          : ''
+        return [{
+          nodeId: candidate.id,
+          title: candidate.title,
+          kind: candidate.kind,
+          assetId: candidateAsset.id,
+          tags: [
+            candidate.kind,
+            detailText,
+            candidateAsset.mimeType,
+          ].filter(Boolean),
+        }]
+      })
 
       return {
         id: node.id,
@@ -2119,6 +2176,8 @@ export function CanvasPage({
           imageReferences,
           videoReferences,
           incomingReferenceCount: imageReferences.length,
+          autoLinkCandidates,
+          linkedAutoLinkNodeIds,
           imageReferenceSelecting: imageReferenceTargetId === node.id,
           job,
           selected,
@@ -2208,6 +2267,74 @@ export function CanvasPage({
           },
           onUpdateVideoPrompt: (prompt) =>
             updateActiveNodePrompt(node.id, prompt),
+          onCreatePromptNode: (kind) => {
+            const currentProject = useProjectStore.getState().activeProject
+            const targetNode = currentProject?.nodes.find(({ id }) => id === node.id)
+            if (!currentProject || currentProject.id !== projectId || !targetNode) return
+            let creation = buildCanvasCreation(currentProject, {
+              kind,
+              title: nextNodeTitle(currentProject, kind),
+              content: kind === 'storyboard'
+                ? 'Slash 命令创建的分镜预设'
+                : kind === 'video'
+                  ? 'Slash 命令创建的视频预设'
+                  : 'Slash 命令创建的图片参考',
+              position: {
+                x: targetNode.position.x - 400,
+                y: targetNode.position.y,
+              },
+            })
+            if (kind === 'image') {
+              creation = {
+                ...creation,
+                node: {
+                  ...creation.node,
+                  imageGeneration: { ...defaultImageGenerationSettings },
+                  modelProviderId: 'mock-mj-image',
+                },
+              }
+            }
+            if (kind === 'video') {
+              const provider = providerRegistry.require('mock-seedance-25')
+              creation = {
+                ...creation,
+                node: {
+                  ...creation.node,
+                  modelProviderId: provider.id,
+                  generationConfig: {
+                    targetKind: 'video',
+                    providerId: provider.id,
+                    parameters: providerDefaultParameters(provider),
+                    referenceAssets: [],
+                  },
+                },
+              }
+            }
+            createCanvasContent(creation)
+            if (kind === 'storyboard' && targetNode.kind === 'video') {
+              connectNodes({
+                id: crypto.randomUUID(),
+                sourceNodeId: creation.node.id,
+                targetNodeId: targetNode.id,
+              })
+            }
+            setGenerationFeedback(`Slash 命令已创建“${creation.node.title}”。`)
+          },
+          onApplyAutoLink: (candidate) => {
+            const edge = {
+              id: crypto.randomUUID(),
+              sourceNodeId: candidate.nodeId,
+              targetNodeId: node.id,
+            }
+            const result = ['image', 'character', 'scene'].includes(node.kind)
+              ? connectImageReference(edge)
+              : connectNodes(edge)
+            setGenerationFeedback(
+              result.ok
+                ? `AutoLink 已引用“${candidate.title}”并建立连线。`
+                : connectionFailureMessage(result.reason),
+            )
+          },
           onStartImageReferenceSelection: (trigger) =>
             startImageReferenceSelection(node.id, trigger),
           onEndImageReferenceSelection: endImageReferenceSelection,
@@ -2389,6 +2516,9 @@ export function CanvasPage({
   }, [
     handleAction,
     createConnectedCanvasContent,
+    createCanvasContent,
+    connectImageReference,
+    connectNodes,
     connectionTool,
     endImageReferenceSelection,
     focusRequestVersion,
@@ -5009,6 +5139,19 @@ export function CanvasPage({
         onUndo={undo}
         onRedo={redo}
         onRenameProject={renameProject}
+        canvases={project?.canvases}
+        activeCanvasId={project?.activeCanvasId}
+        onCreateCanvas={() => {
+          const createdId = createCanvas()
+          if (createdId) setGenerationFeedback('已新建并切换到空画布。')
+        }}
+        onRenameCanvas={(canvasId, title) => renameCanvas(canvasId, title)}
+        onSwitchCanvas={(canvasId) => {
+          if (switchCanvas(canvasId)) setGenerationFeedback('已切换画布，节点、连线与视口已恢复。')
+        }}
+        onDeleteCanvas={(canvasId) => {
+          if (deleteCanvas(canvasId)) setGenerationFeedback('已删除画布并保留其他画布。')
+        }}
         onOpenNodeList={openNodeList}
         onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
@@ -5118,6 +5261,7 @@ export function CanvasPage({
           }}
           onInit={setFlowInstance}
           onMove={(_event, viewport) => setZoomPercent(viewport.zoom * 100)}
+          onMoveEnd={(_event, viewport) => updateCanvasViewport(viewport)}
           nodesConnectable={!imageReferenceTargetId}
           fitView
           fitViewOptions={{ padding: 0.16 }}

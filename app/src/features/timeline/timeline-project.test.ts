@@ -14,6 +14,8 @@ import {
   moveClip,
   resolveTimelineClips,
   splitClip,
+  updateClipLayout,
+  updateClipPlaybackRate,
   trimClip,
   type TimelineEnvironment,
 } from './timeline-project'
@@ -197,5 +199,60 @@ describe('professional timeline aggregate', () => {
     })
     expect(getTimelineDuration(withSubtitle)).toBe(12)
   })
-})
 
+  test('persists 0.25x-4x playback rates and repacks real timeline duration', () => {
+    const base = createTimelineProject(
+      { ...makeProjectFixture(), timeline: [] },
+      environment(),
+    )
+    const record: LibraryAssetRecord = {
+      id: 'speed-source',
+      name: '变速镜头',
+      kind: 'video',
+      mimeType: 'video/mp4',
+      url: '/speed.mp4',
+      durationSeconds: 8,
+      createdAt: '2026-08-13T10:00:00.000Z',
+      source: 'upload',
+    }
+    const inserted = addClip(base, libraryTimelineCandidate(record), environment(['speed']))
+    const fast = updateClipPlaybackRate(inserted, 'speed', 4, environment())
+
+    expect(fast.tracks.find(({ kind }) => kind === 'video')?.clips[0]).toMatchObject({
+      playbackRate: 4,
+      startSeconds: 0,
+    })
+    expect(getTimelineDuration(fast)).toBe(2)
+    expect(updateClipPlaybackRate(fast, 'speed', 4.25, environment())).toBe(fast)
+  })
+
+  test('persists picture-in-picture and thirds layout geometry', () => {
+    const base = createTimelineProject(makeProjectFixture(), environment())
+    const clipId = base.tracks.find(({ clips }) => clips.length)?.clips[0].id
+    const pip = updateClipLayout(base, clipId!, {
+      mode: 'picture-in-picture',
+      x: 0.68,
+      y: 0.62,
+      width: 0.28,
+      height: 0.3,
+      slot: 'overlay',
+    }, environment())
+    const thirds = updateClipLayout(pip, clipId!, {
+      mode: 'thirds',
+      x: 1 / 3,
+      y: 0,
+      width: 1 / 3,
+      height: 1,
+      slot: 'center',
+    }, environment())
+
+    expect(thirds.tracks.flatMap(({ clips }) => clips).find(({ id }) => id === clipId)?.layout).toEqual({
+      mode: 'thirds',
+      x: 1 / 3,
+      y: 0,
+      width: 1 / 3,
+      height: 1,
+      slot: 'center',
+    })
+  })
+})

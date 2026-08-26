@@ -143,4 +143,28 @@ describe('professional timeline editor', () => {
       '/project/project-frost-river?focus=shot-1',
     )
   })
+
+  test('persists playback speed and picture-in-picture geometry from the inspector', async () => {
+    const user = userEvent.setup()
+    const empty = createTimelineProject({ ...makeProjectFixture(), timeline: [] })
+    const initial = addClip(empty, libraryTimelineCandidate(record('slow-motion', 'video', 8)))
+    const onTimelineChange = vi.fn()
+    render(<Harness initial={initial} candidates={[]} onTimelineChange={onTimelineChange} />)
+
+    await user.click(screen.getByRole('button', { name: '选择视频 01' }))
+    fireEvent.change(screen.getByLabelText('片段变速'), { target: { value: '2' } })
+    expect(screen.getByLabelText('变速后时长')).toHaveTextContent('4.00 秒')
+
+    await user.selectOptions(screen.getByLabelText('布局模式'), 'picture-in-picture')
+    fireEvent.change(screen.getByLabelText('画中画水平位置'), { target: { value: '0.12' } })
+
+    const latest = onTimelineChange.mock.calls.at(-1)?.[0] as TimelineProject
+    const clip = latest.tracks.flatMap((track) => track.clips).find(({ id }) => id === initial.tracks[0].clips[0]?.id)
+    expect(clip?.playbackRate).toBe(2)
+    expect(clip?.layout).toMatchObject({
+      mode: 'picture-in-picture',
+      x: 0.12,
+      slot: 'overlay',
+    })
+  })
 })
