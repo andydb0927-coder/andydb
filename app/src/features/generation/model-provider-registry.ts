@@ -20,6 +20,14 @@ import {
   createArkTextLlmProvider,
   type ArkTextLlmProviderOptions,
 } from './ark-text-llm-provider'
+import {
+  createArkTtsProvider,
+  type ArkTtsProviderOptions,
+} from './ark-tts-provider'
+import {
+  createArkAudioGenProvider,
+  type ArkAudioGenProviderOptions,
+} from './ark-audio-gen-provider'
 import { ImageSizeResolver, type ImageSizePolicy } from './image-size-resolver'
 import {
   resolveModelParameterManifest,
@@ -942,6 +950,8 @@ export interface DefaultProviderRegistryOptions {
   seedanceVideo?: SeedanceVideoProviderOptions
   seedream?: SeedreamLiveProviderOptions
   arkText?: ArkTextLlmProviderOptions
+  arkTts?: ArkTtsProviderOptions
+  arkAudio?: ArkAudioGenProviderOptions
 }
 
 export function createDefaultProviderRegistry(
@@ -1065,6 +1075,8 @@ export function createDefaultProviderRegistry(
       ],
       officialApiEndpoint: 'mock://local/audio',
     }),
+    createArkTtsProvider(options.arkTts),
+    createArkAudioGenProvider(options.arkAudio),
     placeholderProvider({
       id: 'tongyi-api',
       name: '通义万相',

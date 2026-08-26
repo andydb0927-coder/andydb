@@ -45,6 +45,8 @@ describe('model provider registry', () => {
         'mock-tongyi-image',
         'mock-text-llm',
         'ark-text-llm',
+        'ark-tts',
+        'ark-audio-gen',
         'mock-seedance-25',
         'mock-seedance-20-vip',
         'mock-seedance-20-mini',
@@ -139,6 +141,18 @@ describe('model provider registry', () => {
         expect.objectContaining({ id: 'narration', name: 'ElevenLabs V3 · 人声旁白', pricing: expect.objectContaining({ amount: 8 }) }),
         expect.objectContaining({ id: 'sound-effect', name: 'ElevenLabs V2 · 音效', pricing: expect.objectContaining({ amount: 3 }) }),
       ],
+    })
+    expect(registry.require('ark-tts')).toMatchObject({
+      kind: 'live',
+      modelName: '豆包语音合成 2.0',
+      capabilities: ['audio'],
+      disabledReason: '火山方舟豆包语音开发验证未启用',
+    })
+    expect(registry.require('ark-audio-gen')).toMatchObject({
+      kind: 'live',
+      modelName: '豆包音频生成 1.0',
+      capabilities: ['audio'],
+      disabledReason: '火山方舟豆包音频开发验证未启用',
     })
   })
 

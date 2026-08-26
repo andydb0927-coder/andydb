@@ -449,7 +449,9 @@ function buildGenerationRequest(
     operation === 'generate-video'
       ? 'video'
       : savedConfig?.targetKind ??
-        (node.kind === 'video'
+        (node.details?.type === 'audio'
+          ? 'audio'
+          : node.kind === 'video'
           ? 'video'
           : node.kind === 'text' || node.kind === 'script'
             ? 'text'
@@ -459,6 +461,8 @@ function buildGenerationRequest(
       ? 'mock-seedance-25'
       : targetKind === 'text'
         ? 'mock-text-llm'
+        : targetKind === 'audio'
+          ? 'mock-audio'
         : undefined
   const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
   const configuredProvider = configuredProviderId
@@ -2535,6 +2539,38 @@ export function CanvasPage({
               modelProviderId: details.modelProviderId,
               generationConfig: {
                 targetKind: 'text',
+                ...(details.modelProviderId
+                  ? { providerId: details.modelProviderId }
+                  : {}),
+                parameters,
+                referenceAssets: [],
+              },
+            })
+            handleAction(node.id, 'generate', undefined, prompt)
+          },
+          onGenerateAudio: (details, prompt) => {
+            const selectedProvider = providerRegistry.list().find(
+              ({ id }) => id === details.modelProviderId,
+            )
+            const parameters = {
+              ...(selectedProvider
+                ? providerDefaultParameters(selectedProvider)
+                : {}),
+              ...(details.modelVariant
+                ? { modelVariant: details.modelVariant }
+                : {}),
+              voice: details.voice,
+              speed: details.speed,
+              volume: details.volume,
+              duration: details.durationSeconds,
+              sampleRate: details.sampleRate ?? 24_000,
+              format: details.format ?? 'mp3',
+            }
+            updateNode(node.id, {
+              details,
+              modelProviderId: details.modelProviderId,
+              generationConfig: {
+                targetKind: 'audio',
                 ...(details.modelProviderId
                   ? { providerId: details.modelProviderId }
                   : {}),

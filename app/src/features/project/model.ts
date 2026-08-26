@@ -250,6 +250,10 @@ export interface AudioNodeDetails {
   volume: number
   modelProviderId?: string
   modelVariant?: string
+  prompt?: string
+  sampleRate?: number
+  format?: 'mp3' | 'wav' | 'pcm' | 'ogg_opus'
+  generatedByModel?: string
   trimStartSeconds?: number
   trimEndSeconds?: number
   playbackRate?: number

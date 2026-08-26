@@ -1693,6 +1693,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(version.textContent
                     ? { details: textGenerationDetails(source, job, version) }
                     : {}),
+                  ...(result.asset.kind === 'audio' && source.details?.type === 'audio'
+                    ? {
+                        details: {
+                          ...source.details,
+                          durationSeconds:
+                            result.asset.durationSeconds ?? source.details.durationSeconds,
+                          generatedByModel:
+                            job.modelName ?? source.details.generatedByModel,
+                        },
+                      }
+                    : {}),
                   ...(job.providerId && job.providerId !== 'libtv-bridge'
                     ? { modelProviderId: job.providerId }
                     : {}),

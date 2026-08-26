@@ -17,6 +17,12 @@ export type ModelParameterName =
   | 'temperature'
   | 'thinking'
   | 'stream'
+  | 'audioMode'
+  | 'voice'
+  | 'speed'
+  | 'volume'
+  | 'sampleRate'
+  | 'format'
 
 export type ModelParameterDefinition =
   | {

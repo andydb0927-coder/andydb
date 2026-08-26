@@ -25,7 +25,9 @@ import {
   isProviderEnabled,
   modelProviderVariant,
   modelProviderVariantCost,
-  modelProviderVariants,
+  providerDefaultParameters,
+  providerGenerationCost,
+  providerPricingLabel,
   type ModelCapability,
   type ModelProvider,
 } from '../../generation/model-provider-registry'
@@ -93,35 +95,6 @@ function providerForDetails(
   )
 }
 
-function ModelVariantField({
-  label,
-  provider,
-  value,
-  onChange,
-}: {
-  label: string
-  provider: ModelProvider
-  value: string
-  onChange(variantId: string): void
-}) {
-  return (
-    <label className="specialized-node-details__field">
-      <span>{label}</span>
-      <select
-        aria-label={label}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
-      >
-        {modelProviderVariants(provider).map((variant) => (
-          <option key={variant.id} value={variant.id}>
-            {variant.name} · {variant.pricing.amount} 积分
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
 function TextModelField({
   data,
   label,
@@ -178,6 +151,71 @@ function TextModelField({
                       disabled={!isProviderEnabled(candidate)}
                     >
                       {candidate.modelName} · {candidate.pricing.amount} 积分
+                      {candidate.disabledReason ? ` · ${candidate.disabledReason}` : ''}
+                    </option>
+                  )],
+            )}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function AudioModelField({
+  data,
+  provider,
+  variantId,
+  onChange,
+}: {
+  data: CreativeNodeData
+  provider: ModelProvider
+  variantId: string
+  onChange(provider: ModelProvider, variantId: string | undefined): void
+}) {
+  const registry = data.providerRegistry ?? defaultProviderRegistry
+  const providers = registry.matching(['audio'])
+  const value = provider.variants?.length ? variantId : provider.id
+
+  return (
+    <label className="specialized-node-details__field">
+      <span>音频模型</span>
+      <select
+        aria-label="音频模型"
+        value={value}
+        onChange={(event) => {
+          const nextValue = event.currentTarget.value
+          const directProvider = providers.find(({ id }) => id === nextValue)
+          if (directProvider) {
+            onChange(directProvider, directProvider.variants?.[0]?.id)
+            return
+          }
+          const variantProvider = providers.find((candidate) =>
+            candidate.variants?.some(({ id }) => id === nextValue),
+          )
+          if (variantProvider) onChange(variantProvider, nextValue)
+        }}
+      >
+        {groupProvidersForMenu(providers).map((group) => (
+          <optgroup key={group.id} label={group.label}>
+            {group.providers.flatMap((candidate) =>
+              candidate.variants?.length
+                ? candidate.variants.map((variant) => (
+                    <option
+                      key={`${candidate.id}:${variant.id}`}
+                      value={variant.id}
+                      disabled={!isProviderEnabled(candidate)}
+                    >
+                      {variant.name} · {variant.pricing.amount} 积分
+                    </option>
+                  ))
+                : [(
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                      disabled={!isProviderEnabled(candidate)}
+                    >
+                      {candidate.modelName} · {providerPricingLabel(candidate)}
                       {candidate.disabledReason ? ` · ${candidate.disabledReason}` : ''}
                     </option>
                   )],
@@ -568,14 +606,25 @@ function AudioDetails({
   details: AudioNodeDetails
   onUpdate(details: AudioNodeDetails): void
 }) {
-  const provider = providerForDetails(
+  const initialProvider = providerForDetails(
     data,
     details.modelProviderId ?? 'mock-audio',
     'audio',
   )
-  if (!provider) return <p role="status">本地音频模型未配置</p>
+  if (!initialProvider) return <p role="status">音频模型未配置</p>
+  const [providerId, setProviderId] = useState(initialProvider.id)
+  const provider = providerForDetails(data, providerId, 'audio') ?? initialProvider
   const [variantId, setVariantId] = useState(
-    modelProviderVariant(provider, details.modelVariant)?.id ?? '',
+    modelProviderVariant(initialProvider, details.modelVariant)?.id ?? '',
+  )
+  const [prompt, setPrompt] = useState(details.prompt ?? '')
+  const [status, setStatus] = useState('')
+  const [durationDraft, setDurationDraft] = useState(details.durationSeconds)
+  const [sampleRateDraft, setSampleRateDraft] = useState(
+    details.sampleRate ?? Number(initialProvider.parameterSchema.sampleRate?.defaultValue ?? 24_000),
+  )
+  const [formatDraft, setFormatDraft] = useState<NonNullable<AudioNodeDetails['format']>>(
+    details.format ?? String(initialProvider.parameterSchema.format?.defaultValue ?? 'mp3') as NonNullable<AudioNodeDetails['format']>,
   )
   const audioRef = useRef<HTMLAudioElement>(null)
   const [waveform, setWaveform] = useState<number[]>([])
@@ -583,6 +632,11 @@ function AudioDetails({
   const startSeconds = details.trimStartSeconds ?? 0
   const endSeconds = details.trimEndSeconds ?? details.durationSeconds
   const playbackRate = details.playbackRate ?? 1
+  const sampleRate = sampleRateDraft
+  const format = formatDraft
+  const cost = provider.variants?.length
+    ? modelProviderVariantCost(provider, variantId)
+    : providerGenerationCost(provider, { duration: durationDraft })
 
   useEffect(() => {
     if (data.asset?.kind !== 'audio') return
@@ -610,30 +664,100 @@ function AudioDetails({
     return () => { active = false }
   }, [data.asset?.id, data.asset?.kind, data.asset?.url])
 
-  const selectVariant = (nextVariantId: string) => {
-    setVariantId(nextVariantId)
-    const defaults = modelProviderVariant(provider, nextVariantId)?.defaultParameters ?? {}
+  const selectModel = (
+    nextProvider: ModelProvider,
+    nextVariantId: string | undefined,
+  ) => {
+    const normalizedVariantId = nextVariantId ?? ''
+    setProviderId(nextProvider.id)
+    setVariantId(normalizedVariantId)
+    const defaults = {
+      ...providerDefaultParameters(nextProvider),
+      ...(modelProviderVariant(nextProvider, normalizedVariantId)?.defaultParameters ?? {}),
+    }
+    const nextDuration =
+      typeof defaults.durationSeconds === 'number' || typeof defaults.duration === 'number'
+        ? Number(defaults.durationSeconds ?? defaults.duration)
+        : durationDraft
+    const nextSampleRate = Number(defaults.sampleRate ?? sampleRate)
+    const nextFormat = typeof defaults.format === 'string'
+      ? defaults.format as NonNullable<AudioNodeDetails['format']>
+      : format
+    setDurationDraft(nextDuration)
+    setSampleRateDraft(nextSampleRate)
+    setFormatDraft(nextFormat)
     onUpdate({
       ...details,
-      modelProviderId: provider.id,
+      modelProviderId: nextProvider.id,
       modelVariant: nextVariantId,
-      durationSeconds:
-        typeof defaults.durationSeconds === 'number'
-          ? defaults.durationSeconds
-          : details.durationSeconds,
+      prompt,
+      durationSeconds: nextDuration,
       voice:
         typeof defaults.voice === 'string'
           ? (defaults.voice as AudioNodeDetails['voice'])
           : details.voice,
       speed: typeof defaults.speed === 'number' ? defaults.speed : details.speed,
       volume: typeof defaults.volume === 'number' ? defaults.volume : details.volume,
+      sampleRate: nextSampleRate,
+      format: nextFormat,
     })
+  }
+
+  const generate = () => {
+    const cleanPrompt = prompt.trim()
+    if (!cleanPrompt) {
+      setStatus('请输入文本或音频描述后再生成。')
+      return
+    }
+    const nextDetails: AudioNodeDetails = {
+      ...details,
+      durationSeconds: durationDraft,
+      modelProviderId: provider.id,
+      modelVariant: modelProviderVariant(provider, variantId)?.id,
+      prompt: cleanPrompt,
+      sampleRate,
+      format,
+      generatedByModel: provider.modelName,
+    }
+    onUpdate(nextDetails)
+    data.onGenerateAudio?.(nextDetails, cleanPrompt)
+    setStatus('音频生成任务已提交。')
   }
 
   return (
     <>
-      <ModelVariantField label="音频模型" provider={provider} value={variantId} onChange={selectVariant} />
-      <DemoModelMeta provider={provider} variantId={variantId} />
+      <AudioModelField
+        data={data}
+        provider={provider}
+        variantId={variantId}
+        onChange={selectModel}
+      />
+      {provider.kind === 'live' ? (
+        <div className="specialized-node-details__meta">
+          <span>预计成本 {cost}</span>
+          <span title={provider.modelNotice}>官方 API 已接</span>
+        </div>
+      ) : <DemoModelMeta provider={provider} variantId={variantId} />}
+      <label className="specialized-node-details__field">
+        <span>文本或音频描述</span>
+        <textarea
+          aria-label="音频生成提示词"
+          rows={4}
+          maxLength={3000}
+          placeholder="输入旁白文本，或描述希望生成的音效与音乐…"
+          value={prompt}
+          onChange={(event) => {
+            const nextPrompt = event.currentTarget.value
+            setPrompt(nextPrompt)
+            onUpdate({
+              ...details,
+              prompt: nextPrompt,
+              modelProviderId: provider.id,
+              modelVariant: modelProviderVariant(provider, variantId)?.id,
+            })
+          }}
+        />
+      </label>
       <div className="specialized-node-details__audio-summary">
         <span>当前时长</span>
         <strong>{formatDuration(details.durationSeconds)}</strong>
@@ -648,6 +772,25 @@ function AudioDetails({
         <label><span>语速</span><input type="number" aria-label="语速" min="0.5" max="2" step="0.1" value={details.speed} onChange={(event) => onUpdate({ ...details, speed: Math.min(2, Math.max(0.5, Number(event.currentTarget.value) || 0.5)) })} /></label>
         <label><span>音量</span><input type="number" aria-label="音量" min="0" max="100" step="1" value={details.volume} onChange={(event) => onUpdate({ ...details, volume: Math.min(100, Math.max(0, Number(event.currentTarget.value) || 0)) })} /></label>
       </div>
+      <div className="specialized-node-details__split-fields">
+        <label><span>输出格式</span><select aria-label="输出格式" value={format} onChange={(event) => { const value = event.currentTarget.value as NonNullable<AudioNodeDetails['format']>; setFormatDraft(value); onUpdate({ ...details, format: value }) }}>{['mp3', 'wav', 'pcm', 'ogg_opus'].map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label><span>采样率</span><select aria-label="采样率" value={String(sampleRate)} onChange={(event) => { const value = Number(event.currentTarget.value); setSampleRateDraft(value); onUpdate({ ...details, sampleRate: value }) }}>{[16000, 24000, 32000, 44100, 48000].map((value) => <option key={value} value={value}>{value} Hz</option>)}</select></label>
+      </div>
+      <label className="specialized-node-details__field">
+        <span>目标时长（秒）</span>
+        <input type="number" aria-label="目标时长" min="1" max="120" step="1" value={durationDraft} onChange={(event) => { const value = Math.min(120, Math.max(1, Number(event.currentTarget.value) || 1)); setDurationDraft(value); onUpdate({ ...details, durationSeconds: value }) }} />
+      </label>
+      <button
+        type="button"
+        className="specialized-node-details__primary"
+        aria-label={`生成音频，预计成本 ${cost}`}
+        disabled={!prompt.trim() || !isProviderEnabled(provider)}
+        title={!isProviderEnabled(provider) ? provider.disabledReason : !prompt.trim() ? '请输入文本或音频描述后生成' : provider.kind === 'live' ? '官方 API 开发直连' : '本地演示'}
+        onClick={generate}
+      >生成音频</button>
+      {!prompt.trim() ? <small>请输入文本或音频描述后生成</small> : null}
+      {details.generatedByModel ? <p>来源模型：{details.generatedByModel}</p> : null}
+      {status ? <p role="status">{status}</p> : null}
       {data.asset?.kind === 'audio' ? (
         <section className="audio-processing" aria-label="音频截取与变速">
           <div className="audio-processing__waveform" role="img" aria-label="真实音频波形">
@@ -663,6 +806,7 @@ function AudioDetails({
           <div>
             <button type="button" onClick={() => { const player = audioRef.current; if (!player) return; player.currentTime = startSeconds; player.playbackRate = playbackRate; void player.play() }}>试听选区</button>
             <button type="button" onClick={() => void data.onProcessAudio?.({ startSeconds, endSeconds, playbackRate })}>截取并导出 WAV</button>
+            <a href={data.asset.url} download={`${data.node.title}.${format}`}>下载音频</a>
           </div>
           {processingStatus ? <p role="status">{processingStatus}</p> : null}
         </section>

@@ -729,6 +729,69 @@ test('switches audio model tiers with model-driven defaults and estimated cost',
   expect(within(panel).getByText('本地演示')).toBeVisible()
 })
 
+test('groups live Ark audio models and dispatches TTS with persisted node parameters', async () => {
+  const user = userEvent.setup()
+  const onGenerateAudio = vi.fn()
+  const registry = createDefaultProviderRegistry({
+    arkTts: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-speech-key',
+      apiBase: 'https://fixture.speech.invalid/api/v3',
+      fetchFn: vi.fn<typeof fetch>(),
+    },
+    arkAudio: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-speech-key',
+      apiBase: 'https://fixture.speech.invalid/api/v3',
+      fetchFn: vi.fn<typeof fetch>(),
+    },
+  })
+  const details = {
+    type: 'audio',
+    durationSeconds: 12,
+    voice: '温暖女声',
+    speed: 1,
+    volume: 75,
+    modelProviderId: 'mock-audio',
+    modelVariant: 'ambience',
+    prompt: '',
+    sampleRate: 24000,
+    format: 'mp3',
+  }
+  renderSpecializedNode('音频 01', 'text', details, true, {
+    providerRegistry: registry,
+    onGenerateAudio,
+  } as Partial<CreativeNodeData>)
+  const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
+  const model = within(panel).getByRole('combobox', { name: '音频模型' })
+
+  expect(within(model).getByRole('group', { name: '官方 API 已接（开发直连）' }))
+    .toBeVisible()
+  expect(within(model).getByRole('option', { name: '豆包语音合成 2.0 · 1 积分/次' }))
+    .toBeEnabled()
+  expect(within(model).getByRole('option', { name: '豆包音频生成 1.0 · 1 积分/秒' }))
+    .toBeEnabled()
+
+  await user.selectOptions(model, 'ark-tts')
+  await user.type(
+    within(panel).getByRole('textbox', { name: '音频生成提示词' }),
+    '清晨薄雾中的古桥旁白',
+  )
+  await user.selectOptions(within(panel).getByRole('combobox', { name: '输出格式' }), 'wav')
+  await user.click(within(panel).getByRole('button', { name: '生成音频，预计成本 1' }))
+
+  expect(onGenerateAudio).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: 'audio',
+      modelProviderId: 'ark-tts',
+      prompt: '清晨薄雾中的古桥旁白',
+      format: 'wav',
+      sampleRate: 24000,
+    }),
+    '清晨薄雾中的古桥旁白',
+  )
+})
+
 test('offers waveform selection, preview speed, and real WAV processing for audio assets', async () => {
   const user = userEvent.setup()
   const onProcessAudio = vi.fn(async () => undefined)
