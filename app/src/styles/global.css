@@ -4991,6 +4991,55 @@ select {
   height: 16px;
 }
 
+.image-parameter-picker__ratio-icon[data-orientation='adaptive'] {
+  width: 18px;
+  height: 12px;
+  border-style: dashed;
+  border-radius: var(--radius-pill);
+}
+
+.image-parameter-picker__ratio-icon[data-orientation='custom'] {
+  width: 16px;
+  height: 16px;
+  border-style: dashed;
+}
+
+.image-parameter-picker__custom-size > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.image-parameter-picker__custom-size label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.image-parameter-picker__custom-size input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--neutral-white-a13);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  background: var(--neutral-white-a03);
+}
+
+.image-parameter-picker__custom-size small,
+.image-parameter-picker__size-summary,
+.image-parameter-picker__size-error {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.image-parameter-picker__size-error {
+  color: var(--status-error);
+}
+
 .model-provider-badge {
   display: inline-flex;
   width: max-content;

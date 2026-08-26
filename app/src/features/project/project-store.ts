@@ -784,8 +784,44 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             changes.aspectRatio === undefined
               ? current.aspectRatio
               : changes.aspectRatio,
+          customWidth:
+            changes.customWidth === undefined
+              ? current.customWidth
+              : changes.customWidth,
+          customHeight:
+            changes.customHeight === undefined
+              ? current.customHeight
+              : changes.customHeight,
           count: changes.count === undefined ? current.count : changes.count,
         }
+        const providerParameterKeys = [
+          'pValue',
+          'stylization',
+          'weirdness',
+          'diversity',
+          'editStrength',
+          'autoLink',
+          'quality',
+          'resolution',
+          'aspectRatio',
+          'customWidth',
+          'customHeight',
+          'count',
+        ] as const satisfies ReadonlyArray<keyof ImageGenerationSettings>
+        const providerParameterChanges: Record<
+          string,
+          string | number | boolean
+        > = {}
+        for (const key of providerParameterKeys) {
+          if (changes[key] !== undefined) {
+            providerParameterChanges[key] = next[key]
+          }
+        }
+        const generationParametersChanged =
+          source.generationConfig?.targetKind === 'image' &&
+          Object.entries(providerParameterChanges).some(
+            ([key, value]) => source.generationConfig?.parameters?.[key] !== value,
+          )
         if (
           current.prompt === next.prompt &&
           current.pValue === next.pValue &&
@@ -797,7 +833,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           current.quality === next.quality &&
           current.resolution === next.resolution &&
           current.aspectRatio === next.aspectRatio &&
-          current.count === next.count
+          current.customWidth === next.customWidth &&
+          current.customHeight === next.customHeight &&
+          current.count === next.count &&
+          !generationParametersChanged
         ) {
           return project
         }
@@ -805,7 +844,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         return withUpdatedTimestamp({
           ...project,
           nodes: project.nodes.map((node) =>
-            node.id === nodeId ? { ...node, imageGeneration: next } : node,
+            node.id === nodeId
+              ? {
+                  ...node,
+                  imageGeneration: next,
+                  generationConfig:
+                    node.generationConfig?.targetKind === 'image'
+                      ? {
+                          ...node.generationConfig,
+                          parameters: {
+                            ...node.generationConfig.parameters,
+                            ...providerParameterChanges,
+                          },
+                        }
+                      : node.generationConfig,
+                }
+              : node,
           ),
         })
       })

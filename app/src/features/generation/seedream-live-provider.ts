@@ -4,6 +4,11 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import {
+  customImageSizeLimits,
+  resolveSeedreamImageSize,
+  seedreamAspectRatioOptions,
+} from './image-size'
 
 const configurationError = 'Seedream 开发验证配置未完成'
 const defaultApiBase = 'https://ark.cn-beijing.volces.com/api/v3'
@@ -33,37 +38,14 @@ interface SeedreamErrorResponse {
   }
 }
 
-const imageSizes = {
-  '1K': {
-    '1:1': '1024x1024',
-    '16:9': '1344x768',
-    '9:16': '768x1344',
-    '2:3': '832x1248',
-    '3:2': '1248x832',
-  },
-  '2K': {
-    '1:1': '2048x2048',
-    '16:9': '2560x1440',
-    '9:16': '1440x2560',
-    '2:3': '1664x2496',
-    '3:2': '2496x1664',
-  },
-  '4K': {
-    '1:1': '4096x4096',
-    '16:9': '4096x2304',
-    '9:16': '2304x4096',
-    '2:3': '2730x4096',
-    '3:2': '4096x2730',
-  },
-} as const
-
-type SeedreamResolution = keyof typeof imageSizes
-type SeedreamAspectRatio = keyof (typeof imageSizes)['2K']
-
 function envValue(name: string) {
   const env = import.meta.env as Record<string, string | undefined>
   const value = env[name]
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function generationModeEnabled(mode: string, expected: string) {
+  return mode.split(',').some((value) => value.trim() === expected)
 }
 
 function normalizedBaseUrl(apiBase: string) {
@@ -107,17 +89,10 @@ async function assertSuccessfulResponse(response: Response) {
   throw new Error(`Seedream 请求失败（${response.status}）`)
 }
 
-function resolutionSetting(value: unknown): SeedreamResolution {
-  return value === '1K' || value === '4K' ? value : '2K'
-}
-
-function aspectRatioSetting(value: unknown): SeedreamAspectRatio {
-  return value === '1:1' ||
-    value === '9:16' ||
-    value === '2:3' ||
-    value === '3:2'
-    ? value
-    : '16:9'
+function imageSizeSetting(
+  parameters: Record<string, string | number | boolean> | undefined,
+) {
+  return resolveSeedreamImageSize(parameters).apiValue
 }
 
 function booleanSetting(value: unknown, fallback: boolean) {
@@ -164,24 +139,29 @@ function referenceUrl(reference: GenerationReference) {
 
 function liveResult(
   request: GenerationRequest,
-  output: SeedreamOutput,
+  outputs: SeedreamOutput[],
 ): GenerationResult {
-  const assetId = crypto.randomUUID()
-  const dimensions = outputSize(output.size)
-  return {
-    persistence: 'ephemeral',
-    asset: {
-      id: assetId,
-      kind: 'image',
+  const assets = outputs.map((output) => {
+    const dimensions = outputSize(output.size)
+    return {
+      id: crypto.randomUUID(),
+      kind: 'image' as const,
       url: httpsResultUrl(output.url),
       mimeType: 'image/png',
       ...(dimensions ?? {}),
-    },
+    }
+  })
+  const asset = assets[0]
+  if (!asset) throw new Error('Seedream 未返回图片结果')
+  return {
+    persistence: 'ephemeral',
+    asset,
+    assets,
     version: {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       prompt: request.prompt,
-      assetId,
+      assetId: asset.id,
     },
   }
 }
@@ -193,7 +173,9 @@ export function createSeedreamLiveProvider(
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_SEEDREAM_MODEL_ID')
-  const enabled = Boolean(mode === 'seedream-direct-dev' && apiKey)
+  const enabled = Boolean(
+    generationModeEnabled(mode, 'seedream-direct-dev') && apiKey,
+  )
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
   const resolvedModelId = modelId || defaultModelId
@@ -210,14 +192,32 @@ export function createSeedreamLiveProvider(
       aspectRatio: {
         type: 'enum',
         defaultValue: '16:9',
-        options: ['1:1', '16:9', '9:16', '2:3', '3:2'],
+        options: [
+          ...seedreamAspectRatioOptions,
+          '自适应',
+          '自定义',
+        ],
       },
       resolution: {
         type: 'enum',
         defaultValue: '2K',
-        options: ['1K', '2K', '4K'],
+        options: ['1K', '1.5K', '2K'],
       },
-      count: { type: 'enum', defaultValue: '1', options: ['1'] },
+      count: { type: 'enum', defaultValue: '1', options: ['1', '2', '4'] },
+      customWidth: {
+        type: 'number',
+        defaultValue: 2048,
+        min: customImageSizeLimits.inputMin,
+        max: customImageSizeLimits.inputMax,
+        step: 1,
+      },
+      customHeight: {
+        type: 'number',
+        defaultValue: 2048,
+        min: customImageSizeLimits.inputMin,
+        max: customImageSizeLimits.inputMax,
+        step: 1,
+      },
       editStrength: {
         type: 'number',
         defaultValue: 0.5,
@@ -238,41 +238,41 @@ export function createSeedreamLiveProvider(
       const prompt = request.prompt.trim()
       if (!prompt) throw new Error('Seedream 生图需要提示词')
       const count = Number(request.parameters?.count ?? 1)
-      if (count !== 1) throw new Error('Seedream 首次验证仅支持生成 1 张图片')
+      if (count !== 1 && count !== 2 && count !== 4) {
+        throw new Error('Seedream 生成数量仅支持 1、2 或 4 张')
+      }
 
-      const resolution = resolutionSetting(request.parameters?.resolution)
-      const aspectRatio = aspectRatioSetting(request.parameters?.aspectRatio)
       const references = request.referenceAssets.map(referenceUrl)
       const body = {
         model: resolvedModelId,
         prompt,
         ...(references.length ? { image: references } : {}),
-        size: imageSizes[resolution][aspectRatio],
-        sequential_image_generation: 'disabled',
-        stream: false,
+        size: imageSizeSetting(request.parameters),
         response_format: 'url',
         output_format: 'png',
         watermark: booleanSetting(request.parameters?.watermark, false),
       }
 
       context.onProgress?.(10)
-      const response = await fetchFn(createUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: context.signal,
-      })
-      await assertSuccessfulResponse(response)
-      context.onProgress?.(85)
-      const responseBody = await readJson(response) as SeedreamResponse
-      const output = Array.isArray(responseBody.data)
-        ? responseBody.data[0]
-        : undefined
-      if (!output) throw new Error('Seedream 未返回图片结果')
-      const result = liveResult(request, output)
+      const outputs: SeedreamOutput[] = []
+      for (let index = 0; index < count; index += 1) {
+        context.signal.throwIfAborted()
+        const response = await fetchFn(createUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal: context.signal,
+        })
+        await assertSuccessfulResponse(response)
+        const responseBody = await readJson(response) as SeedreamResponse
+        if (Array.isArray(responseBody.data)) outputs.push(...responseBody.data)
+        context.onProgress?.(10 + Math.round(((index + 1) / count) * 75))
+      }
+      if (!outputs.length) throw new Error('Seedream 未返回图片结果')
+      const result = liveResult(request, outputs)
       context.onProgress?.(100)
       return result
     },

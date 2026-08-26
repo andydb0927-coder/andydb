@@ -56,6 +56,10 @@ function envValue(name: string) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+function generationModeEnabled(mode: string, expected: string) {
+  return mode.split(',').some((value) => value.trim() === expected)
+}
+
 function waitForPoll(delayMs: number, signal: AbortSignal) {
   signal.throwIfAborted()
   if (delayMs <= 0) return Promise.resolve()
@@ -168,7 +172,7 @@ export function createKlingLiveProvider(
   const apiBase = options.apiBase ?? envValue('VITE_KLING_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_KLING_MODEL_ID')
   const enabled = Boolean(
-    mode === 'kling-direct-dev' &&
+    generationModeEnabled(mode, 'kling-direct-dev') &&
       apiKey &&
       apiBase &&
       modelId,

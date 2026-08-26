@@ -1512,6 +1512,68 @@ test('narrows image and video parameters when switching Liblib catalog models', 
   await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('30 秒')
 })
 
+test('shows the exact Seedream size and all four fixture-intercepted live results', async ({ page }) => {
+  let requestCount = 0
+  await page.route(
+    'https://fixture.seedream.invalid/api/v3/images/generations',
+    async (route) => {
+      requestCount += 1
+      const requestBody = route.request().postDataJSON() as Record<string, unknown>
+      expect(requestBody.size).toBe('1344x3136')
+      expect(requestBody).not.toHaveProperty('count')
+      expect(requestBody).not.toHaveProperty('quality')
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          model: 'doubao-seedream-5-0-260128',
+          data: [{
+            url: `https://media.fixture.invalid/seedream-e2e-${requestCount}.png`,
+            size: '1344x3136',
+          }],
+        }),
+      })
+    },
+  )
+  await page.route('https://media.fixture.invalid/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'image/png', body: '' })
+  })
+
+  await createCinematicProject(page)
+  await openAddNodeAtBlank(page, '图片')
+  const panel = page.getByRole('region', { name: '图片 01 生成参数' })
+  await panel.getByRole('combobox', { name: '图片模型' }).selectOption(
+    'seedream-5-pro-api',
+  )
+  await panel.getByRole('textbox', { name: '提示词' }).fill(
+    '雨夜街道上的电影感人像',
+  )
+  await panel.getByRole('button', { name: '图片生成参数' }).click()
+  const parameters = panel.getByRole('dialog', { name: '图片生成参数' })
+  await parameters.getByRole('button', { name: '9:21' }).click()
+  await parameters.getByRole('button', { name: '4张' }).click()
+
+  const parameterTrigger = panel.getByRole('button', { name: '图片生成参数' })
+  await expect(parameterTrigger).toContainText('1344×3136 · 2K · 4张')
+  await expect(panel.getByText('预计成本 72')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await panel.getByRole('button', { name: '生成图片，预计成本 72' }).click()
+  const confirmation = page.getByRole('alertdialog', { name: '确认真实图片生成' })
+  await expect(confirmation.getByText('总成本 72 积分')).toBeVisible()
+  await confirmation.getByRole('button', { name: '确认生成 4 张图片' }).click()
+
+  await expect.poll(() => requestCount).toBe(4)
+  const imageNode = page.locator('.react-flow__node').filter({
+    has: page.getByRole('button', { name: '图片 01', exact: true }),
+  })
+  const resultTrigger = imageNode.getByRole('button', { name: '查看 4 张结果' })
+  await expect(resultTrigger).toHaveText('4张')
+  await resultTrigger.click()
+  await expect(
+    page.getByRole('region', { name: '图片 01 的 4 张结果' }).getByRole('img'),
+  ).toHaveCount(4)
+})
+
 test('matches Liblib result action policies and exposes the inline video player', async ({ page }) => {
   await createCinematicProject(page)
   await page.getByRole('button', { name: '适配画布' }).click()

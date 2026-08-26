@@ -26,8 +26,17 @@ export interface GenerationUsage {
 export interface GenerationResult {
   version: NodeVersion
   asset: Asset
+  /**
+   * Ordered output set for providers that return more than one result. The
+   * first item is always the backwards-compatible primary `asset`.
+   */
+  assets?: Asset[]
   usage?: GenerationUsage
   persistence?: 'project' | 'ephemeral'
+}
+
+export function generationResultAssets(result: GenerationResult) {
+  return result.assets?.length ? result.assets : [result.asset]
 }
 
 export interface GenerationDispatchMetadata {

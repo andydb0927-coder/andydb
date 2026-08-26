@@ -66,7 +66,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onStartImageReferenceSelection?(trigger: HTMLButtonElement): void
   onEndImageReferenceSelection?(returnToNode: boolean): void
   onImportImageReference?(file: File): void
-  onLocalImageGenerate?(): void
+  onLocalImageGenerate?(prompt: string): void
   onCreateImageToolNode?(tool: string): void
   onUpdateImageTool?(changes: Partial<ImageToolConfig>): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void

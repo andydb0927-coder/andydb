@@ -441,6 +441,8 @@ describe('project store history and persistence', () => {
       quality: '高画质',
       resolution: '4K',
       aspectRatio: '9:16',
+      customWidth: 2048,
+      customHeight: 2048,
       count: 2,
     })
 
@@ -458,6 +460,8 @@ describe('project store history and persistence', () => {
       quality: '高画质',
       resolution: '4K',
       aspectRatio: '9:16',
+      customWidth: 2048,
+      customHeight: 2048,
       count: 2,
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
@@ -478,6 +482,8 @@ describe('project store history and persistence', () => {
       quality: '高画质',
       resolution: '4K',
       aspectRatio: '9:16',
+      customWidth: 2048,
+      customHeight: 2048,
       count: 2,
     })
 

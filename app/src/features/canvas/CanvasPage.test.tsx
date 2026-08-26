@@ -27,6 +27,7 @@ import {
 } from '../generation/fixtures/kling-min-loop.fixture'
 import {
   seedreamMinLoopConfigFixture,
+  seedreamMinLoopMultiOutputFixture,
   seedreamMinLoopSuccessFixture,
 } from '../generation/fixtures/seedream-min-loop.fixture'
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
@@ -1292,6 +1293,7 @@ describe('creative canvas', () => {
     await user.click(
       screen.getByRole('button', { name: '生成图片，预计成本 18' }),
     )
+    await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
 
     await waitFor(() => {
       expect(
@@ -1304,6 +1306,251 @@ describe('creative canvas', () => {
     expect(
       ephemeralGenerationResultStore.get('project-canvas', 'seedream-image'),
     ).toMatchObject({ persistence: 'ephemeral' })
+  })
+
+  test('submits the current image prompt to Seedream after editing the composer', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.intent = ''
+    project.nodes = [
+      ...project.nodes,
+      {
+        id: 'seedream-edited-prompt',
+        kind: 'image',
+        title: 'Seedream 编辑提示词',
+        position: { x: 1560, y: 120 },
+        versions: [{
+          id: 'version-seedream-edited-prompt',
+          createdAt: project.createdAt,
+          prompt: '',
+        }],
+        activeVersionId: 'version-seedream-edited-prompt',
+        sourceChanged: false,
+        modelProviderId: 'seedream-5-pro-api',
+        imageGeneration: {
+          ...defaultImageGenerationSettings,
+          prompt: '',
+          aspectRatio: '16:9',
+          resolution: '2K',
+          count: 1,
+        },
+        generationConfig: {
+          targetKind: 'image',
+          providerId: 'seedream-5-pro-api',
+          parameters: {
+            aspectRatio: '16:9',
+            resolution: '2K',
+            count: 1,
+          },
+          referenceAssets: [],
+        },
+      },
+    ]
+    act(() => activate(project))
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(seedreamMinLoopSuccessFixture)))
+    const providerRegistry = createDefaultProviderRegistry({
+      seedream: { ...seedreamMinLoopConfigFixture, fetchFn },
+    })
+
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: new RegistryGenerationAdapter(providerRegistry),
+      providerRegistry,
+      ephemeralGenerationResultStore: new EphemeralGenerationResultStore(),
+    })
+    await user.click(screen.getByRole('button', { name: 'Seedream 编辑提示词' }))
+    await user.type(
+      screen.getByRole('textbox', { name: '提示词' }),
+      '白色陶瓷杯产品摄影',
+    )
+    await user.click(
+      screen.getByRole('button', { name: '生成图片，预计成本 18' }),
+    )
+    await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
+
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledOnce())
+    const requestBody = JSON.parse(
+      String(fetchFn.mock.calls[0]?.[1]?.body),
+    ) as { prompt?: string }
+    expect(requestBody.prompt).toBe('白色陶瓷杯产品摄影')
+  })
+
+  test('persists a custom Seedream size and submits the chosen dimensions', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = [
+      ...project.nodes,
+      {
+        id: 'seedream-custom-size',
+        kind: 'image',
+        title: 'Seedream 自定义尺寸',
+        position: { x: 1560, y: 120 },
+        versions: [{
+          id: 'version-seedream-custom-size',
+          createdAt: project.createdAt,
+          prompt: '红色漆面香水瓶产品摄影',
+        }],
+        activeVersionId: 'version-seedream-custom-size',
+        sourceChanged: false,
+        modelProviderId: 'seedream-5-pro-api',
+        imageGeneration: {
+          ...defaultImageGenerationSettings,
+          prompt: '红色漆面香水瓶产品摄影',
+          aspectRatio: '16:9',
+          resolution: '2K',
+          count: 1,
+        },
+        generationConfig: {
+          targetKind: 'image',
+          providerId: 'seedream-5-pro-api',
+          parameters: {
+            aspectRatio: '16:9',
+            resolution: '2K',
+            count: 1,
+          },
+          referenceAssets: [],
+        },
+      },
+    ]
+    act(() => activate(project))
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(seedreamMinLoopSuccessFixture)))
+    const providerRegistry = createDefaultProviderRegistry({
+      seedream: { ...seedreamMinLoopConfigFixture, fetchFn },
+    })
+
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      generationAdapter: new RegistryGenerationAdapter(providerRegistry),
+      providerRegistry,
+      ephemeralGenerationResultStore: new EphemeralGenerationResultStore(),
+    })
+    await user.click(screen.getByRole('button', { name: 'Seedream 自定义尺寸' }))
+    await user.click(screen.getByRole('button', { name: '图片生成参数' }))
+    await user.click(screen.getByRole('button', { name: '自定义' }))
+
+    const width = screen.getByRole('spinbutton', { name: '自定义宽度' })
+    const height = screen.getByRole('spinbutton', { name: '自定义高度' })
+    await user.clear(width)
+    await user.type(width, '1600')
+    await user.clear(height)
+    await user.type(height, '2000')
+
+    expect(screen.getByRole('button', { name: '图片生成参数' })).toHaveTextContent(
+      '1600×2000 · 2K · 1张',
+    )
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(
+        ({ id }) => id === 'seedream-custom-size',
+      ),
+    ).toMatchObject({
+      imageGeneration: {
+        aspectRatio: '自定义',
+        customWidth: 1600,
+        customHeight: 2000,
+      },
+      generationConfig: {
+        parameters: {
+          aspectRatio: '自定义',
+          customWidth: 1600,
+          customHeight: 2000,
+        },
+      },
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: '生成图片，预计成本 18' }),
+    )
+    await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledOnce())
+    const requestBody = JSON.parse(
+      String(fetchFn.mock.calls[0]?.[1]?.body),
+    ) as { size?: string }
+    expect(requestBody.size).toBe('1600x2000')
+  })
+
+  test('shows all four intercepted Seedream results in the node grid without persistence', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes = [
+      ...project.nodes,
+      {
+        id: 'seedream-four-images',
+        kind: 'image',
+        title: 'Seedream 四图',
+        position: { x: 1560, y: 120 },
+        versions: [{
+          id: 'version-seedream-four-images',
+          createdAt: project.createdAt,
+          prompt: '同一款香水瓶的四种棚拍构图',
+        }],
+        activeVersionId: 'version-seedream-four-images',
+        sourceChanged: false,
+        modelProviderId: 'seedream-5-pro-api',
+        imageGeneration: {
+          ...defaultImageGenerationSettings,
+          prompt: '同一款香水瓶的四种棚拍构图',
+          aspectRatio: '9:21',
+          resolution: '2K',
+          count: 4,
+        },
+        generationConfig: {
+          targetKind: 'image',
+          providerId: 'seedream-5-pro-api',
+          parameters: {
+            aspectRatio: '9:21',
+            resolution: '2K',
+            count: 4,
+          },
+          referenceAssets: [],
+        },
+      },
+    ]
+    const before = structuredClone(project)
+    act(() => activate(project))
+    const fetchFn = vi.fn<typeof fetch>().mockImplementation(async () => {
+      const index = fetchFn.mock.calls.length
+      return new Response(JSON.stringify({
+        ...seedreamMinLoopMultiOutputFixture,
+        data: [{
+          url: `https://media.fixture.invalid/seedream-four-${index}.png`,
+          size: '1344x3136',
+        }],
+      }))
+    })
+    const providerRegistry = createDefaultProviderRegistry({
+      seedream: { ...seedreamMinLoopConfigFixture, fetchFn },
+    })
+    const ephemeralGenerationResultStore = new EphemeralGenerationResultStore()
+    const save = vi.fn().mockResolvedValue(undefined)
+
+    renderCanvas({
+      repository: { load: async () => undefined, save },
+      generationAdapter: new RegistryGenerationAdapter(providerRegistry),
+      providerRegistry,
+      ephemeralGenerationResultStore,
+    })
+    await user.click(screen.getByRole('button', { name: 'Seedream 四图' }))
+    expect(screen.getByRole('button', { name: '图片生成参数' })).toHaveTextContent(
+      '1344×3136 · 2K · 4张',
+    )
+    await user.click(
+      screen.getByRole('button', { name: '生成图片，预计成本 72' }),
+    )
+    const confirmation = screen.getByRole('alertdialog', { name: '确认真实图片生成' })
+    expect(within(confirmation).getByText('总成本 72 积分')).toBeVisible()
+    await user.click(within(confirmation).getByRole('button', { name: '确认生成 4 张图片' }))
+
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(4))
+    const resultTrigger = await screen.findByRole('button', { name: '查看 4 张结果' })
+    await user.click(resultTrigger)
+    const grid = screen.getByRole('region', { name: 'Seedream 四图 的 4 张结果' })
+    expect(within(grid).getAllByRole('img')).toHaveLength(4)
+    expect(useProjectStore.getState().activeProject).toEqual(before)
+    expect(save).not.toHaveBeenCalled()
   })
 
   test('requires explicit LibTV confirmation and Cancel creates no job', async () => {
@@ -3221,6 +3468,8 @@ describe('creative canvas', () => {
         quality: '标准画质',
         resolution: '2K',
         aspectRatio: '16:9',
+        customWidth: 2048,
+        customHeight: 2048,
         count: 1,
       },
     }

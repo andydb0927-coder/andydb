@@ -34,6 +34,11 @@ import type {
   ModelParameterName,
   ModelProvider,
 } from '../../generation/model-provider-registry'
+import {
+  customImageSizeError,
+  resolveSeedreamImageSize,
+  simplifiedImageRatio,
+} from '../../generation/image-size'
 import type { CreativeNodeData } from '../node-types'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 
@@ -185,6 +190,8 @@ type ImageParameterKey =
   | 'resolution'
   | 'aspectRatio'
   | 'count'
+  | 'customWidth'
+  | 'customHeight'
   | 'editStrength'
 
 function imageEnumOptions(
@@ -223,6 +230,16 @@ function normalizedImageSettings(
   const editStrengthCandidate = Number(
     generationParameters?.editStrength ?? imageGeneration?.editStrength,
   )
+  const numberValue = (
+    name: 'customWidth' | 'customHeight',
+    fallback: number,
+  ) => {
+    const definition = provider.parameterSchema[name]
+    const candidate = Number(generationParameters?.[name] ?? imageGeneration?.[name])
+    return definition?.type === 'number' && Number.isFinite(candidate)
+      ? candidate
+      : Number(defaults[name] ?? fallback)
+  }
 
   return {
     ...defaultImageGenerationSettings,
@@ -239,6 +256,14 @@ function normalizedImageSettings(
       'aspectRatio',
       defaultImageGenerationSettings.aspectRatio,
     ) as ImageGenerationSettings['aspectRatio'],
+    customWidth: numberValue(
+      'customWidth',
+      defaultImageGenerationSettings.customWidth,
+    ),
+    customHeight: numberValue(
+      'customHeight',
+      defaultImageGenerationSettings.customHeight,
+    ),
     count,
     editStrength:
       editStrengthDefinition?.type === 'number'
@@ -479,6 +504,11 @@ function ImageParameterPicker({
   const aspectRatioOptions = imageEnumOptions(provider, 'aspectRatio')
   const countOptions = imageEnumOptions(provider, 'count').map(Number)
   const editStrength = provider.parameterSchema.editStrength
+  const customWidth = provider.parameterSchema.customWidth
+  const customHeight = provider.parameterSchema.customHeight
+  const customSizeErrorMessage = settings.aspectRatio === '自定义'
+    ? customImageSizeError(settings.customWidth, settings.customHeight)
+    : undefined
 
   return (
     <div
@@ -517,7 +547,15 @@ function ImageParameterPicker({
           {aspectRatioOptions.map((option) => {
             const [width, height] = option.split(':').map(Number)
             const orientation =
-              width === height ? 'square' : width > height ? 'landscape' : 'portrait'
+              option === '自适应'
+                ? 'adaptive'
+                : option === '自定义'
+                  ? 'custom'
+                  : width === height
+                    ? 'square'
+                    : width > height
+                      ? 'landscape'
+                      : 'portrait'
             return optionButton(
               'aspectRatio',
               option as ImageGenerationSettings['aspectRatio'],
@@ -534,6 +572,55 @@ function ImageParameterPicker({
           })}
         </div>
       </fieldset> : null}
+      {settings.aspectRatio === '自定义' &&
+      customWidth?.type === 'number' &&
+      customHeight?.type === 'number' ? (
+        <fieldset className="image-parameter-picker__custom-size">
+          <legend>自定义尺寸</legend>
+          <div>
+            <label>
+              宽度
+              <input
+                type="number"
+                aria-label="自定义宽度"
+                min={customWidth.min}
+                max={customWidth.max}
+                step={customWidth.step}
+                value={settings.customWidth || ''}
+                onChange={(event) =>
+                  onChange('customWidth', event.currentTarget.valueAsNumber || 0)
+                }
+              />
+            </label>
+            <span aria-hidden="true">×</span>
+            <label>
+              高度
+              <input
+                type="number"
+                aria-label="自定义高度"
+                min={customHeight.min}
+                max={customHeight.max}
+                step={customHeight.step}
+                value={settings.customHeight || ''}
+                onChange={(event) =>
+                  onChange('customHeight', event.currentTarget.valueAsNumber || 0)
+                }
+              />
+            </label>
+          </div>
+          {customSizeErrorMessage ? (
+            <p role="status" className="image-parameter-picker__size-error">
+              {customSizeErrorMessage}
+            </p>
+          ) : (
+            <p role="status" className="image-parameter-picker__size-summary">
+              当前比例 {simplifiedImageRatio(settings.customWidth, settings.customHeight)} ·{' '}
+              {settings.customWidth} × {settings.customHeight}
+            </p>
+          )}
+          <small>自定义尺寸会覆盖上方清晰度档位。</small>
+        </fieldset>
+      ) : null}
       {countOptions.length ? <fieldset>
         <legend>生成数量</legend>
         <div className="image-parameter-picker__three-column">
@@ -681,6 +768,7 @@ export function ImageGenerationPanel({
   const [parametersOpen, setParametersOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<string>()
+  const [liveConfirmationOpen, setLiveConfirmationOpen] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
   )
@@ -693,6 +781,7 @@ export function ImageGenerationPanel({
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
   const parameterTriggerRef = useRef<HTMLButtonElement>(null)
   const templateTriggerRef = useRef<HTMLButtonElement>(null)
+  const generateTriggerRef = useRef<HTMLButtonElement>(null)
   const incomingReferenceCount =
     data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
   const hasMedia = Boolean(data.asset || incomingReferenceCount)
@@ -719,17 +808,38 @@ export function ImageGenerationPanel({
       generationParameters,
     ),
   )
+  const customSizeErrorMessage = settings.aspectRatio === '自定义'
+    ? customImageSizeError(settings.customWidth, settings.customHeight)
+    : undefined
+  const isLiveSeedream = selectedProvider.id === 'seedream-5-pro-api'
+  const seedreamSize = isLiveSeedream && !customSizeErrorMessage
+    ? resolveSeedreamImageSize(settings as unknown as Record<
+        string,
+        string | number | boolean
+      >)
+    : undefined
+  const aspectRatioSummary = seedreamSize?.label ?? (
+    settings.aspectRatio === '自定义'
+      ? `${settings.customWidth}×${settings.customHeight}`
+      : settings.aspectRatio
+  )
   const parameterSummary = [
-    selectedProvider.parameterSchema.aspectRatio ? settings.aspectRatio : undefined,
+    selectedProvider.parameterSchema.aspectRatio ? aspectRatioSummary : undefined,
     selectedProvider.parameterSchema.quality ? settings.quality : undefined,
     selectedProvider.parameterSchema.resolution ? settings.resolution : undefined,
     selectedProvider.parameterSchema.count ? `${settings.count}张` : undefined,
   ].filter(Boolean).join(' · ')
   const cost = selectedProvider.pricing.amount * settings.count
   const providerEnabled = isProviderEnabled(selectedProvider)
-  const eligible = Boolean(prompt.trim() || hasMedia) && cost > 0 && providerEnabled
+  const eligible =
+    Boolean(prompt.trim() || hasMedia) &&
+    cost > 0 &&
+    providerEnabled &&
+    !customSizeErrorMessage
   const generationUnavailableReason = !providerEnabled
     ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
+    : customSizeErrorMessage
+      ? customSizeErrorMessage
     : !prompt.trim() && !hasMedia
       ? '请输入提示词或添加参考媒体后再生成。'
       : undefined
@@ -747,7 +857,12 @@ export function ImageGenerationPanel({
     setParametersOpen(false)
     setTemplatesOpen(false)
     setPendingTemplate(undefined)
+    setLiveConfirmationOpen(false)
   }, [data.node.id])
+
+  useEffect(() => {
+    setLiveConfirmationOpen(false)
+  }, [selectedProvider.id])
 
   useEffect(() => {
     if (!primaryActions.includes('mark')) setMarking(false)
@@ -778,6 +893,19 @@ export function ImageGenerationPanel({
     window.addEventListener('keydown', handleEscape, true)
     return () => window.removeEventListener('keydown', handleEscape, true)
   }, [pendingTemplate])
+
+  useEffect(() => {
+    if (!liveConfirmationOpen) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setLiveConfirmationOpen(false)
+      queueMicrotask(() => generateTriggerRef.current?.focus())
+    }
+    window.addEventListener('keydown', handleEscape, true)
+    return () => window.removeEventListener('keydown', handleEscape, true)
+  }, [liveConfirmationOpen])
 
   useEffect(() => {
     const nextPrompt = imageGeneration?.prompt ?? activeVersion?.prompt ?? ''
@@ -838,6 +966,17 @@ export function ImageGenerationPanel({
     queueMicrotask(() => templateTriggerRef.current?.focus())
   }
 
+  const closeLiveConfirmation = () => {
+    setLiveConfirmationOpen(false)
+    queueMicrotask(() => generateTriggerRef.current?.focus())
+  }
+
+  const submitGeneration = () => {
+    const currentPrompt = promptDraftRef.current
+    data.onUpdateImageGenerationSettings?.({ prompt: currentPrompt })
+    data.onLocalImageGenerate?.(currentPrompt)
+  }
+
   return (
     <section
       className={`image-generation-panel nodrag${
@@ -853,6 +992,7 @@ export function ImageGenerationPanel({
       >
         {primaryActions.includes('reference') ? (
           <button
+            ref={generateTriggerRef}
             type="button"
             aria-pressed={data.imageReferenceSelecting}
             onClick={(event) => {
@@ -1054,7 +1194,13 @@ export function ImageGenerationPanel({
             aria-describedby={generationUnavailableReason ? 'image-generation-reason' : undefined}
             title={submitTitle}
             disabled={!eligible}
-            onClick={() => data.onLocalImageGenerate?.()}
+            onClick={() => {
+              if (selectedProvider.kind === 'live') {
+                setLiveConfirmationOpen(true)
+                return
+              }
+              submitGeneration()
+            }}
           >
             <ArrowUp aria-hidden="true" />
             <span className="visually-hidden">生成</span>
@@ -1206,6 +1352,41 @@ export function ImageGenerationPanel({
                 }}
               >
                 确认添加
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+      {liveConfirmationOpen ? createPortal(
+        <div className="image-result-confirm nodrag">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="确认真实图片生成"
+          >
+            <button
+              type="button"
+              aria-label="关闭真实图片生成确认"
+              onClick={closeLiveConfirmation}
+            >
+              <X aria-hidden="true" />
+            </button>
+            <h2>确认真实图片生成</h2>
+            <p>{settings.count} 张 × {selectedProvider.pricing.amount} 积分</p>
+            <p>总成本 {cost} 积分</p>
+            <p>将串行调用 Seedream {settings.count} 次；结果仅在当前页面临时保存。</p>
+            <div>
+              <button type="button" onClick={closeLiveConfirmation}>取消</button>
+              <button
+                type="button"
+                aria-label={`确认生成 ${settings.count} 张图片`}
+                onClick={() => {
+                  setLiveConfirmationOpen(false)
+                  submitGeneration()
+                }}
+              >
+                确认生成
               </button>
             </div>
           </div>
@@ -1413,7 +1594,12 @@ export function ImageToolDetails({ data }: { data: CreativeNodeData }) {
           type="button"
           aria-label={`生成高清图片，预计成本 ${config.cost}`}
           title="本地演示，不连接真实生成"
-          onClick={() => data.onLocalImageGenerate?.()}
+          onClick={() => {
+            const activePrompt = data.node.versions.find(
+              (version) => version.id === data.node.activeVersionId,
+            )?.prompt ?? ''
+            data.onLocalImageGenerate?.(activePrompt)
+          }}
         >
           <ArrowUp aria-hidden="true" />
           <span className="visually-hidden">生成高清图片</span>

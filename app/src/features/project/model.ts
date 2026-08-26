@@ -84,8 +84,10 @@ export interface ImageGenerationSettings {
   autoLink: boolean
   editStrength: number
   quality: '低画质' | '标准画质' | '高画质'
-  resolution: '1K' | '2K' | '4K' | '自适应'
+  resolution: '1K' | '1.5K' | '2K' | '4K' | '自适应'
   aspectRatio:
+    | '自适应'
+    | '自定义'
     | '1:1'
     | '1:2'
     | '2:1'
@@ -99,6 +101,8 @@ export interface ImageGenerationSettings {
     | '4:5'
     | '21:9'
     | '9:21'
+  customWidth: number
+  customHeight: number
   count: 1 | 2 | 4
 }
 
@@ -126,6 +130,8 @@ export const defaultImageGenerationSettings: ImageGenerationSettings = {
   quality: '标准画质',
   resolution: '2K',
   aspectRatio: '16:9',
+  customWidth: 2048,
+  customHeight: 2048,
   count: 1,
 }
 

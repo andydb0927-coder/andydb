@@ -26,9 +26,7 @@ export const seedreamMinLoopGenerationRequestFixture: GenerationRequest = {
 export const seedreamMinLoopCreateRequestFixture = {
   model: 'doubao-seedream-5-0-260128',
   prompt: '雨夜街道上的电影感人像，霓虹灯倒映在湿润路面',
-  size: '2560x1440',
-  sequential_image_generation: 'disabled',
-  stream: false,
+  size: '2816x1584',
   response_format: 'url',
   output_format: 'png',
   watermark: false,
@@ -40,13 +38,26 @@ export const seedreamMinLoopSuccessFixture = {
   data: [
     {
       url: 'https://media.fixture.invalid/seedream-result.png',
-      size: '2560x1440',
+      size: '2816x1584',
     },
   ],
   usage: {
     generated_images: 1,
     output_tokens: 4_096,
     total_tokens: 4_096,
+  },
+} as const
+
+export const seedreamMinLoopMultiOutputFixture = {
+  ...seedreamMinLoopSuccessFixture,
+  data: [1, 2, 3, 4].map((index) => ({
+    url: `https://media.fixture.invalid/seedream-result-${index}.png`,
+    size: '2816x1584',
+  })),
+  usage: {
+    generated_images: 4,
+    output_tokens: 16_384,
+    total_tokens: 16_384,
   },
 } as const
 
@@ -94,5 +105,5 @@ export const seedreamMinLoopEmptyResultFixture = {
 
 export const seedreamMinLoopInvalidUrlFixture = {
   ...seedreamMinLoopSuccessFixture,
-  data: [{ url: 'javascript:alert(1)', size: '2560x1440' }],
+  data: [{ url: 'javascript:alert(1)', size: '2816x1584' }],
 } as const

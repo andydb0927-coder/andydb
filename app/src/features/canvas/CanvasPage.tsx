@@ -46,9 +46,10 @@ import {
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
-import type {
-  GenerationAdapter,
-  GenerationRequest,
+import {
+  generationResultAssets,
+  type GenerationAdapter,
+  type GenerationRequest,
 } from '../generation/generation-adapter'
 import { GenerationConfirmationDialog } from '../generation/GenerationConfirmationDialog'
 import { GenerationQueue } from '../generation/generation-queue'
@@ -396,6 +397,8 @@ function buildGenerationRequest(
               ['count', normalizedImageSettings.count],
               ['editStrength', normalizedImageSettings.editStrength],
               ['autoLink', normalizedImageSettings.autoLink],
+              ['customWidth', normalizedImageSettings.customWidth],
+              ['customHeight', normalizedImageSettings.customHeight],
             ] as const
           ).flatMap(([name, value]) => {
             const definition = registeredProvider.parameterSchema[name]
@@ -1702,18 +1705,30 @@ export function CanvasPage({
       const persistedAsset = project.assets.find(
         (candidate) => candidate.id === activeVersion?.assetId,
       )
-      const ephemeralAsset = ephemeralGenerationResults.get(
+      const ephemeralResult = ephemeralGenerationResults.get(
         JSON.stringify([project.id, node.id]),
-      )?.asset
+      )
+      const ephemeralAsset = ephemeralResult?.asset
       const asset = ephemeralAsset ?? persistedAsset
       const job = selectNodeGenerationJob(node, project.jobs)
       const selected = selectedNodeIds.has(node.id)
-      const imageResults = node.imageResults?.flatMap((result) => {
+      const persistedImageResults = node.imageResults?.flatMap((result) => {
         const resultAsset = project.assets.find(({ id }) => id === result.assetId)
         return resultAsset?.kind === 'image'
           ? [{ id: result.id, asset: resultAsset }]
           : []
-      })
+      }) ?? []
+      const ephemeralImageResults = ephemeralResult
+        ? generationResultAssets(ephemeralResult).flatMap((resultAsset) =>
+            resultAsset.kind === 'image'
+              ? [{ id: `ephemeral-${resultAsset.id}`, asset: resultAsset }]
+              : [],
+          )
+        : []
+      const imageResults = [
+        ...persistedImageResults,
+        ...ephemeralImageResults,
+      ]
       const incomingMediaReferences = project.edges
         .filter(({ targetNodeId }) => targetNodeId === node.id)
         .flatMap(({ sourceNodeId }) => {
@@ -1902,7 +1917,8 @@ export function CanvasPage({
               )
             }
           },
-          onLocalImageGenerate: () => handleAction(node.id, 'generate'),
+          onLocalImageGenerate: (prompt) =>
+            handleAction(node.id, 'generate', undefined, prompt),
           onCreateImageToolNode: (tool) =>
             createImageToolNode(node.id, tool),
           onUpdateImageTool: (changes) => {

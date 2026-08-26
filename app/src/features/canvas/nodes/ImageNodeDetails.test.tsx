@@ -386,7 +386,7 @@ test('groups image models and narrows Style Image V8.2 editing parameters', asyn
   expect(within(dialog).getByRole('slider', { name: '编辑强度' })).toHaveValue('0.6')
 })
 
-test('exposes an enabled Seedream 5.0 Pro live provider with narrowed parameters and truthful submit state', () => {
+test('exposes an enabled Seedream 5.0 Pro live provider with real dimensions and truthful submit state', () => {
   const providerRegistry = createDefaultProviderRegistry({
     seedream: {
       mode: 'seedream-direct-dev',
@@ -421,10 +421,136 @@ test('exposes an enabled Seedream 5.0 Pro live provider with narrowed parameters
   expect(model).toHaveValue('seedream-5-pro-api')
   expect(liveOption).toBeEnabled()
   expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
-  expect(within(panel).getByText('16:9 · 2K · 1张')).toBeVisible()
+  expect(within(panel).getByText('2816×1584 · 2K · 1张')).toBeVisible()
   expect(
     within(panel).getByRole('button', { name: '生成图片，预计成本 18' }),
   ).toHaveAttribute('title', '调用真实 Seedream API；临时结果刷新后失效')
+})
+
+test('confirms the multiplied live Seedream cost before submitting four serial images', async () => {
+  const user = userEvent.setup()
+  const providerRegistry = createDefaultProviderRegistry({
+    seedream: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-api-key',
+    },
+  })
+  const data = makeData({
+    providerRegistry,
+    node: {
+      ...makeData().node,
+      modelProviderId: 'seedream-5-pro-api',
+      generationConfig: {
+        targetKind: 'image',
+        providerId: 'seedream-5-pro-api',
+        parameters: {
+          aspectRatio: '5:4',
+          resolution: '2K',
+          count: 1,
+        },
+        referenceAssets: [],
+      },
+    },
+  })
+
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  await user.click(within(panel).getByRole('button', { name: '图片生成参数' }))
+  const parameterDialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
+  const ratio = within(parameterDialog).getByRole('group', { name: '比例' })
+  const count = within(parameterDialog).getByRole('group', { name: '生成数量' })
+
+  expect(within(ratio).getAllByRole('button')).toHaveLength(15)
+  expect(within(count).getAllByRole('button')).toHaveLength(3)
+  await user.click(within(count).getByRole('button', { name: '4张' }))
+  expect(within(panel).getByText('预计成本 72')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '图片生成参数' })).toHaveTextContent(
+    '2280×1824 · 2K · 4张',
+  )
+
+  await user.click(within(panel).getByRole('button', { name: '生成图片，预计成本 72' }))
+  expect(data.onLocalImageGenerate).not.toHaveBeenCalled()
+  const confirmation = screen.getByRole('alertdialog', { name: '确认真实图片生成' })
+  expect(within(confirmation).getByText('4 张 × 18 积分')).toBeVisible()
+  expect(within(confirmation).getByText('总成本 72 积分')).toBeVisible()
+  await user.click(within(confirmation).getByRole('button', { name: '确认生成 4 张图片' }))
+  expect(data.onLocalImageGenerate).toHaveBeenCalledWith('雾中茶山')
+})
+
+test('supports adaptive and validated custom Seedream output sizes', async () => {
+  const user = userEvent.setup()
+  const providerRegistry = createDefaultProviderRegistry({
+    seedream: {
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-api-key',
+    },
+  })
+  const data = makeData({
+    providerRegistry,
+    node: {
+      ...makeData().node,
+      modelProviderId: 'seedream-5-pro-api',
+      generationConfig: {
+        targetKind: 'image',
+        providerId: 'seedream-5-pro-api',
+        parameters: {
+          aspectRatio: '16:9',
+          resolution: '2K',
+          count: 1,
+        },
+        referenceAssets: [],
+      },
+    },
+  })
+
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  await user.click(within(panel).getByRole('button', { name: '图片生成参数' }))
+  const dialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
+  const ratio = within(dialog).getByRole('group', { name: '比例' })
+
+  expect(within(ratio).getByRole('button', { name: '自适应' })).toBeVisible()
+  expect(
+    within(within(dialog).getByRole('group', { name: '清晰度' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['1K', '1.5K', '2K'])
+  for (const option of ['1:2', '2:1', '4:3', '3:4', '5:4', '4:5', '21:9', '9:21']) {
+    expect(within(ratio).getByRole('button', { name: option })).toBeVisible()
+  }
+  await user.click(within(ratio).getByRole('button', { name: '自定义' }))
+  const width = within(dialog).getByRole('spinbutton', { name: '自定义宽度' })
+  const height = within(dialog).getByRole('spinbutton', { name: '自定义高度' })
+  expect(width).toHaveValue(2048)
+  expect(height).toHaveValue(2048)
+
+  await user.clear(width)
+  await user.type(width, '512')
+  await user.clear(height)
+  await user.type(height, '512')
+  expect(
+    within(dialog).getByText('自定义尺寸总像素需在 921,600–4,624,220 之间。'),
+  ).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '生成图片，预计成本 18' })).toBeDisabled()
+
+  await user.clear(width)
+  await user.type(width, '1600')
+  await user.clear(height)
+  await user.type(height, '2000')
+  expect(within(dialog).getByText('当前比例 4:5 · 1600 × 2000')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '生成图片，预计成本 18' })).toBeEnabled()
+  expect(within(panel).getByRole('button', { name: '图片生成参数' })).toHaveTextContent(
+    '1600×2000 · 2K · 1张',
+  )
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    aspectRatio: '自定义',
+  })
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    customWidth: 1600,
+  })
+  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
+    customHeight: 2000,
+  })
 })
 
 test('opens a searchable three-tab style gallery with ten categories and complete cards', async () => {
@@ -501,7 +627,43 @@ test('requires prompt or media and a visible cost before local image submission'
   })
   expect(submit).toBeEnabled()
   await user.click(submit)
-  expect(data.onLocalImageGenerate).toHaveBeenCalledOnce()
+  expect(data.onLocalImageGenerate).toHaveBeenCalledWith('雨夜角色特写')
+})
+
+test('flushes the current prompt before generating without requiring blur', async () => {
+  const user = userEvent.setup()
+  const data = makeData({
+    asset: undefined,
+    node: {
+      ...makeData().node,
+      versions: [
+        {
+          id: 'blank-version',
+          createdAt: '2026-08-14T00:00:00.000Z',
+          prompt: '',
+        },
+      ],
+      activeVersionId: 'blank-version',
+    },
+  })
+  const updateSettings = vi.mocked(data.onUpdateImageGenerationSettings!)
+  const generateImage = vi.mocked(data.onLocalImageGenerate!)
+
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
+  const prompt = within(panel).getByLabelText('提示词')
+  await user.type(prompt, '白色陶瓷杯产品摄影')
+  await user.click(within(panel).getByRole('button', {
+    name: '生成图片，预计成本 18',
+  }))
+
+  expect(updateSettings).toHaveBeenCalledWith({
+    prompt: '白色陶瓷杯产品摄影',
+  })
+  expect(updateSettings.mock.invocationCallOrder[0]).toBeLessThan(
+    generateImage.mock.invocationCallOrder[0],
+  )
+  expect(generateImage).toHaveBeenCalledWith('白色陶瓷杯产品摄影')
 })
 
 test('exposes canvas reference mode controls without creating an edge locally', async () => {

@@ -37,6 +37,8 @@ export type ModelParameterName =
   | 'onlineSearch'
   | 'materialValidation'
   | 'editStrength'
+  | 'customWidth'
+  | 'customHeight'
   | 'multiShot'
   | 'autoLink'
 
