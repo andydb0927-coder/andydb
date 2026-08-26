@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 
 import { withAppBase } from '../../app/public-url'
 import type { Asset, CanvasNode, VideoDerivedTool } from '../project/model'
+import type { VideoSegmentOptions } from '../media/browser-media-processing'
 
 type VideoMediaSurface =
   | 'clip'
@@ -35,6 +36,8 @@ interface VideoMediaContextBarProps {
   asset: Asset
   onCreateToolNode?(tool: VideoDerivedTool): void
   onSubmitDraft?(tool: string): void
+  onProcessVideo?(options: VideoSegmentOptions): Promise<void> | void
+  onExtractAudio?(): Promise<void> | void
 }
 
 function DerivedToolConfirmation({
@@ -68,11 +71,13 @@ function ClipEditor({
 }: {
   asset: Asset
   onClose(): void
-  onSubmit(): void
+  onSubmit(options: VideoSegmentOptions): void
 }) {
   const [snap, setSnap] = useState(false)
   const [loop, setLoop] = useState(true)
-  const [selection, setSelection] = useState(1.01)
+  const duration = Math.max(0.25, asset.durationSeconds ?? 3)
+  const [startSeconds, setStartSeconds] = useState(0)
+  const [endSeconds, setEndSeconds] = useState(duration)
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="剪辑内联编辑器">
       <header><div><span>节点内草稿</span><h2>剪辑</h2></div><button type="button" aria-label="关闭剪辑内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
@@ -80,29 +85,35 @@ function ClipEditor({
       <div className="video-clip-frames" aria-label="12 张缩略帧">
         {Array.from({ length: 12 }, (_, index) => <img key={index} src={withAppBase('/demo/shot-river.png')} alt={`剪辑帧 ${index + 1}`} />)}
       </div>
-      <label>选区<input type="range" min="0.25" max="3" step="0.01" value={selection} onChange={(event) => setSelection(Number(event.target.value))} /></label>
-      <div className="video-inline-editor__readout"><span>0:00–0:03</span><strong>{selection.toFixed(2)} s</strong></div>
+      <label>入点<input aria-label="视频入点" type="range" min="0" max={Math.max(0, endSeconds - 0.1)} step={snap ? 1 : 0.01} value={startSeconds} onChange={(event) => setStartSeconds(Number(event.target.value))} /></label>
+      <label>出点<input aria-label="视频出点" type="range" min={Math.min(duration, startSeconds + 0.1)} max={duration} step={snap ? 1 : 0.01} value={endSeconds} onChange={(event) => setEndSeconds(Number(event.target.value))} /></label>
+      <div className="video-inline-editor__readout"><span>{startSeconds.toFixed(2)}–{endSeconds.toFixed(2)} s</span><strong>{Math.max(0, endSeconds - startSeconds).toFixed(2)} s</strong></div>
       <div className="video-inline-editor__toggles">
         <button type="button" aria-label="整数秒吸附" aria-pressed={snap} onClick={() => setSnap((value) => !value)}>整数秒吸附</button>
         <button type="button" aria-label="选区循环播放" aria-pressed={loop} onClick={() => setLoop((value) => !value)}>选区循环播放</button>
       </div>
-      <footer><button type="button" onClick={() => { setSelection(1.01); setSnap(false); setLoop(true) }}>取消 / 重置</button><button type="button" onClick={onSubmit}>确认剪辑</button></footer>
+      <footer><button type="button" onClick={() => { setStartSeconds(0); setEndSeconds(duration); setSnap(false); setLoop(true) }}>取消 / 重置</button><button type="button" onClick={() => onSubmit({ startSeconds, endSeconds })}>确认剪辑并导出 WebM</button></footer>
     </section>
   )
 }
 
-function CropEditor({ asset, onClose, onSubmit }: { asset: Asset; onClose(): void; onSubmit(): void }) {
+function CropEditor({ asset, onClose, onSubmit }: { asset: Asset; onClose(): void; onSubmit(options: VideoSegmentOptions): void }) {
+  const [width, setWidth] = useState(80)
+  const [height, setHeight] = useState(80)
+  const duration = Math.max(0.25, asset.durationSeconds ?? 3)
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="裁剪内联编辑器">
       <header><div><span>节点内草稿</span><h2>裁剪</h2></div><button type="button" aria-label="关闭裁剪内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
       <div className="video-crop-stage">
         <video src={asset.url} poster={withAppBase('/demo/shot-river.png')} muted preload="metadata" />
         <div className="video-crop-box">
-          {cropHandles.map((handle) => <button key={handle} type="button" aria-label={`裁剪控制点 ${handle}`} data-position={handle} />)}
+          {cropHandles.map((handle) => <span key={handle} aria-label={`裁剪控制点 ${handle}`} data-position={handle} />)}
         </div>
       </div>
-      <strong>1024 × 576</strong>
-      <footer><button type="button" onClick={onClose}>退出裁剪</button><button type="button" onClick={onSubmit}>生成裁剪</button></footer>
+      <label>裁剪宽度<input aria-label="裁剪宽度" type="range" min="20" max="100" value={width} onChange={(event) => setWidth(Number(event.currentTarget.value))} /></label>
+      <label>裁剪高度<input aria-label="裁剪高度" type="range" min="20" max="100" value={height} onChange={(event) => setHeight(Number(event.currentTarget.value))} /></label>
+      <strong>{Math.round((asset.width ?? 1280) * width / 100)} × {Math.round((asset.height ?? 720) * height / 100)}</strong>
+      <footer><button type="button" onClick={onClose}>退出裁剪</button><button type="button" onClick={() => onSubmit({ startSeconds: 0, endSeconds: duration, crop: { x: (100 - width) / 200, y: (100 - height) / 200, width: width / 100, height: height / 100 } })}>生成裁剪并导出 WebM</button></footer>
     </section>
   )
 }
@@ -154,6 +165,8 @@ export function VideoMediaContextBar({
   asset,
   onCreateToolNode,
   onSubmitDraft,
+  onProcessVideo,
+  onExtractAudio,
 }: VideoMediaContextBarProps) {
   const [surface, setSurface] = useState<VideoMediaSurface>()
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
@@ -187,30 +200,27 @@ export function VideoMediaContextBar({
   return (
     <>
       <div className="selection-context-bar selection-context-bar--video floating-panel" role="toolbar" aria-label="视频媒体处理工具">
-        <button type="button" disabled title="剪辑暂未开放" aria-describedby="video-clip-reason"><Scissors aria-hidden="true" />剪辑</button>
+        <button type="button" onClick={() => setSurface('clip')}><Scissors aria-hidden="true" />剪辑</button>
         <button type="button" disabled title="片段重拍暂未开放" aria-describedby="video-reshoot-reason">片段重拍</button>
-        <button type="button" disabled title="裁剪暂未开放" aria-describedby="video-crop-reason">裁剪</button>
+        <button type="button" onClick={() => setSurface('crop')}>裁剪</button>
         <button type="button" onClick={() => setPendingTool('视频高清')}><ScanLine aria-hidden="true" />高清</button>
         <button type="button" onClick={() => setPendingTool('逐帧拉片')}><Film aria-hidden="true" />逐帧拉片</button>
         <button type="button" disabled title="智能续写暂未开放" aria-describedby="video-extend-reason">智能续写</button>
         <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="智能去字幕暂未开放" aria-describedby="video-subtitle-reason"><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
-        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="音频分离暂未开放" aria-describedby="video-audio-reason">音频分离<ChevronDown aria-hidden="true" /></button>
+        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'audio-menu'} onClick={() => setSurface('audio-menu')}>音频分离<ChevronDown aria-hidden="true" /></button>
         <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="画面编辑暂未开放" aria-describedby="video-picture-reason"><Sparkles aria-hidden="true" />画面编辑<ChevronDown aria-hidden="true" /></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
       <div className="video-disabled-reasons visually-hidden" role="note" aria-label="视频工具禁用原因">
-        <span id="video-clip-reason">剪辑暂未开放：尚未接入可导出的剪辑结果。</span>
         <span id="video-reshoot-reason">片段重拍暂未开放：尚未接入媒体重拍模型。</span>
-        <span id="video-crop-reason">裁剪暂未开放：尚未接入可持久化的视频裁剪结果。</span>
         <span id="video-extend-reason">智能续写暂未开放：尚未接入续写模型能力。</span>
         <span id="video-subtitle-reason">智能去字幕暂未开放：尚未接入可持久化的擦除结果。</span>
-        <span id="video-audio-reason">音频分离暂未开放：尚未接入音轨提取与文件导出。</span>
         <span id="video-picture-reason">画面编辑暂未开放：尚未接入主体编辑结果。</span>
       </div>
 
-      {surface === 'clip' ? <ClipEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={() => submitDraft('剪辑')} /> : null}
-      {surface === 'crop' ? <CropEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={() => submitDraft('裁剪')} /> : null}
+      {surface === 'clip' ? <ClipEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={(options) => { void onProcessVideo?.(options); setSurface(undefined) }} /> : null}
+      {surface === 'crop' ? <CropEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={(options) => { void onProcessVideo?.(options); setSurface(undefined) }} /> : null}
 
       {surface === 'subtitle-menu' ? (
         <div className="video-tool-menu" role="menu" aria-label="智能去字幕">
@@ -223,8 +233,8 @@ export function VideoMediaContextBar({
 
       {surface === 'audio-menu' ? (
         <div className="video-tool-menu video-tool-menu--with-reasons" role="menu" aria-label="音频分离">
-          <div><button type="button" role="menuitem" disabled>人声分离</button><span>当前视频无音轨，无法使用人声分离</span></div>
-          <div><button type="button" role="menuitem" disabled>音视频分离</button><span>当前视频无音轨，无法分离音视频</span></div>
+          <div><button type="button" role="menuitem" disabled aria-describedby="voice-separation-reason">人声分离</button><span id="voice-separation-reason">人声/伴奏分轨需要独立模型，暂未开放。</span></div>
+          <div><button type="button" role="menuitem" onClick={() => { void onExtractAudio?.(); setSurface(undefined) }}>音视频分离</button><span>读取当前视频音轨并导出 WAV，同时保存到资产库。</span></div>
         </div>
       ) : null}
 

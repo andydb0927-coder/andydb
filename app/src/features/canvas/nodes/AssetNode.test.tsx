@@ -298,6 +298,7 @@ function renderSpecializedNode(
   kind: 'text' | 'script' | 'storyboard' | 'video',
   details: TestNodeDetails,
   contextual = true,
+  options: Partial<CreativeNodeData> = {},
 ) {
   const onUpdateNodeDetails = vi.fn()
   const onCreateTextToVideoPreset = vi.fn()
@@ -331,6 +332,7 @@ function renderSpecializedNode(
     onDelete: vi.fn(),
     onUpdateNodeDetails,
     onCreateTextToVideoPreset,
+    ...options,
   } as unknown as CreativeNodeData
   const flowNode: CreativeFlowNode = {
     id: node.id,
@@ -627,6 +629,42 @@ test('switches audio model tiers with model-driven defaults and estimated cost',
   )
   expect(within(panel).getByText('预计成本 8')).toBeVisible()
   expect(within(panel).getByText('本地演示')).toBeVisible()
+})
+
+test('offers waveform selection, preview speed, and real WAV processing for audio assets', async () => {
+  const user = userEvent.setup()
+  const onProcessAudio = vi.fn(async () => undefined)
+  const details = {
+    type: 'audio',
+    durationSeconds: 12,
+    voice: '温暖女声',
+    speed: 1,
+    volume: 80,
+    trimStartSeconds: 1,
+    trimEndSeconds: 10,
+    playbackRate: 1.5,
+  }
+  renderSpecializedNode('音频 01', 'text', details, true, {
+    asset: {
+      id: 'audio-asset',
+      kind: 'audio',
+      url: 'data:audio/wav;base64,UklGRg==',
+      mimeType: 'audio/wav',
+      durationSeconds: 12,
+    },
+    onProcessAudio,
+  })
+  const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
+  expect(within(panel).getByRole('img', { name: '真实音频波形' })).toBeVisible()
+  expect(within(panel).getByLabelText('音频入点')).toHaveValue('1')
+  expect(within(panel).getByLabelText('音频出点')).toHaveValue('10')
+  expect(within(panel).getByLabelText('音频变速')).toHaveValue('1.5')
+  await user.click(within(panel).getByRole('button', { name: '截取并导出 WAV' }))
+  expect(onProcessAudio).toHaveBeenCalledWith({
+    startSeconds: 1,
+    endSeconds: 10,
+    playbackRate: 1.5,
+  })
 })
 
 test('adds, sorts, and removes director shots with camera hints', async () => {

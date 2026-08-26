@@ -8,7 +8,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type {
   AudioNodeDetails,
@@ -28,6 +28,7 @@ import {
   type ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { extractAudioToWav } from '../../media/browser-media-processing'
 
 const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
   text: '文本',
@@ -455,6 +456,38 @@ function AudioDetails({
   const [variantId, setVariantId] = useState(
     modelProviderVariant(provider, details.modelVariant)?.id ?? '',
   )
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [waveform, setWaveform] = useState<number[]>([])
+  const [processingStatus, setProcessingStatus] = useState('')
+  const startSeconds = details.trimStartSeconds ?? 0
+  const endSeconds = details.trimEndSeconds ?? details.durationSeconds
+  const playbackRate = details.playbackRate ?? 1
+
+  useEffect(() => {
+    if (data.asset?.kind !== 'audio') return
+    let active = true
+    setProcessingStatus('正在读取真实音频波形…')
+    extractAudioToWav(data.asset.url)
+      .then((result) => {
+        if (!active) return
+        setWaveform(result.waveform ?? [])
+        if (details.durationSeconds <= 0 && (result.durationSeconds ?? 0) > 0) {
+          onUpdate({
+            ...details,
+            durationSeconds: result.durationSeconds!,
+            trimStartSeconds: 0,
+            trimEndSeconds: result.durationSeconds!,
+            playbackRate: details.playbackRate ?? 1,
+          })
+        }
+        setProcessingStatus('')
+      })
+      .catch((error) => {
+        if (!active) return
+        setProcessingStatus(error instanceof Error ? error.message : '无法读取音频波形。')
+      })
+    return () => { active = false }
+  }, [data.asset?.id, data.asset?.kind, data.asset?.url])
 
   const selectVariant = (nextVariantId: string) => {
     setVariantId(nextVariantId)
@@ -494,6 +527,25 @@ function AudioDetails({
         <label><span>语速</span><input type="number" aria-label="语速" min="0.5" max="2" step="0.1" value={details.speed} onChange={(event) => onUpdate({ ...details, speed: Math.min(2, Math.max(0.5, Number(event.currentTarget.value) || 0.5)) })} /></label>
         <label><span>音量</span><input type="number" aria-label="音量" min="0" max="100" step="1" value={details.volume} onChange={(event) => onUpdate({ ...details, volume: Math.min(100, Math.max(0, Number(event.currentTarget.value) || 0)) })} /></label>
       </div>
+      {data.asset?.kind === 'audio' ? (
+        <section className="audio-processing" aria-label="音频截取与变速">
+          <div className="audio-processing__waveform" role="img" aria-label="真实音频波形">
+            {(waveform.length ? waveform : Array.from({ length: 48 }, () => 0.08)).map((level, index) => (
+              <span key={index} style={{ height: `${Math.max(8, level * 100)}%` }} />
+            ))}
+          </div>
+          <label>入点<input aria-label="音频入点" type="range" min="0" max={Math.max(0, endSeconds - 0.05)} step="0.01" value={startSeconds} onChange={(event) => onUpdate({ ...details, trimStartSeconds: Number(event.currentTarget.value) })} /></label>
+          <label>出点<input aria-label="音频出点" type="range" min={Math.min(details.durationSeconds, startSeconds + 0.05)} max={details.durationSeconds} step="0.01" value={endSeconds} onChange={(event) => onUpdate({ ...details, trimEndSeconds: Number(event.currentTarget.value) })} /></label>
+          <label>变速<input aria-label="音频变速" type="range" min="0.5" max="2" step="0.1" value={playbackRate} onChange={(event) => onUpdate({ ...details, playbackRate: Number(event.currentTarget.value) })} /></label>
+          <p>{startSeconds.toFixed(2)}–{endSeconds.toFixed(2)} 秒 · {playbackRate.toFixed(1)}x</p>
+          <audio ref={audioRef} src={data.asset.url} preload="metadata" onTimeUpdate={(event) => { if (event.currentTarget.currentTime >= endSeconds) event.currentTarget.pause() }} />
+          <div>
+            <button type="button" onClick={() => { const player = audioRef.current; if (!player) return; player.currentTime = startSeconds; player.playbackRate = playbackRate; void player.play() }}>试听选区</button>
+            <button type="button" onClick={() => void data.onProcessAudio?.({ startSeconds, endSeconds, playbackRate })}>截取并导出 WAV</button>
+          </div>
+          {processingStatus ? <p role="status">{processingStatus}</p> : null}
+        </section>
+      ) : null}
     </>
   )
 }

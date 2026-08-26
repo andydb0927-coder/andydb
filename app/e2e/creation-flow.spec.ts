@@ -91,6 +91,60 @@ async function openUploadAtBlank(page: import('@playwright/test').Page) {
   return fileChooser
 }
 
+function makeWavFixture(durationSeconds = 1) {
+  const sampleRate = 8000
+  const samples = sampleRate * durationSeconds
+  const bytes = Buffer.alloc(44 + samples * 2)
+  bytes.write('RIFF', 0)
+  bytes.writeUInt32LE(36 + samples * 2, 4)
+  bytes.write('WAVEfmt ', 8)
+  bytes.writeUInt32LE(16, 16)
+  bytes.writeUInt16LE(1, 20)
+  bytes.writeUInt16LE(1, 22)
+  bytes.writeUInt32LE(sampleRate, 24)
+  bytes.writeUInt32LE(sampleRate * 2, 28)
+  bytes.writeUInt16LE(2, 32)
+  bytes.writeUInt16LE(16, 34)
+  bytes.write('data', 36)
+  bytes.writeUInt32LE(samples * 2, 40)
+  for (let index = 0; index < samples; index += 1) {
+    bytes.writeInt16LE(Math.round(Math.sin(index / 18) * 9000), 44 + index * 2)
+  }
+  return bytes
+}
+
+async function makeWebmFixture(page: import('@playwright/test').Page) {
+  const base64 = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 320
+    canvas.height = 180
+    const context = canvas.getContext('2d')!
+    const stream = canvas.captureStream(12)
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
+    const chunks: Blob[] = []
+    recorder.ondataavailable = (event) => chunks.push(event.data)
+    const stopped = new Promise<void>((resolve) => { recorder.onstop = () => resolve() })
+    recorder.start(50)
+    for (let frame = 0; frame < 8; frame += 1) {
+      context.fillStyle = frame % 2 ? '#d94d3d' : '#e2b45f'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.fillStyle = '#111'
+      context.font = '48px sans-serif'
+      context.fillText(String(frame + 1), 140, 110)
+      await new Promise((resolve) => setTimeout(resolve, 80))
+    }
+    recorder.stop()
+    await stopped
+    stream.getTracks().forEach((track) => track.stop())
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result).split(',')[1])
+      reader.readAsDataURL(new Blob(chunks, { type: 'video/webm' }))
+    })
+  })
+  return Buffer.from(base64, 'base64')
+}
+
 test('creator completes the minimum short-film loop', async ({ page }) => {
   await createCinematicProject(page)
 
@@ -528,14 +582,12 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
 
   const mediaTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
   await expect(mediaTools.getByRole('button')).toHaveCount(11)
-  await expect(mediaTools.getByRole('button', { name: '剪辑' })).toBeDisabled()
-  await expect(mediaTools.getByRole('button', { name: '剪辑' })).toHaveAttribute(
-    'title',
-    '剪辑暂未开放',
-  )
-  await expect(page.getByRole('note', { name: '视频工具禁用原因' })).toContainText(
-    '尚未接入可导出的剪辑结果',
-  )
+  await expect(mediaTools.getByRole('button', { name: '剪辑' })).toBeEnabled()
+  await mediaTools.getByRole('button', { name: '剪辑' }).click()
+  const clipEditor = page.getByRole('dialog', { name: '剪辑内联编辑器' })
+  await expect(clipEditor.getByRole('img')).toHaveCount(12)
+  await expect(clipEditor.getByRole('button', { name: '确认剪辑并导出 WebM' })).toBeEnabled()
+  await clipEditor.getByRole('button', { name: '关闭剪辑内联编辑器' }).click()
 
   const initialNodeCount = await page.locator('.react-flow__node').count()
   await mediaTools.getByRole('button', { name: '高清' }).click()
@@ -560,8 +612,8 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   })
   await expect(frameConfirmation).toContainText('将添加工具节点')
   await frameConfirmation.getByRole('button', { name: '确认添加' }).click()
-  await expect(page.getByRole('button', { name: '截图', exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: '截图参数' })).toContainText('当前帧截图')
+  await expect(frameConfirmation).toBeHidden()
+  await expect(page.getByRole('button', { name: '截图', exact: true })).toHaveCount(0)
 })
 
 test('keyboard and list view preserve core actions in a strict small layout', async ({
@@ -1620,12 +1672,11 @@ test('matches Liblib result action policies and exposes the inline video player'
   await expect(imageActions.getByRole('button', { name: '图片高清' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '查看 4 张结果' })).toHaveText('4张')
   const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
-  for (const label of ['九宫格', '宫格切分', '标注']) {
-    await expect(imageTools.getByRole('button', { name: label })).toBeDisabled()
+  await expect(imageTools.getByRole('button', { name: '九宫格' })).toBeDisabled()
+  for (const label of ['宫格切分', '标注', '旋转与镜像']) {
+    await expect(imageTools.getByRole('button', { name: label })).toBeEnabled()
   }
   await expect(page.getByText(/九宫格暂未开放/)).toBeAttached()
-  await expect(page.getByText(/宫格切分暂未开放/)).toBeAttached()
-  await expect(page.getByText(/图片标注暂未开放/)).toBeAttached()
 
   await imagePanel
     .getByRole('combobox', { name: '图片模型' })
@@ -1653,13 +1704,60 @@ test('matches Liblib result action policies and exposes the inline video player'
   const videoActions = videoPanel.getByRole('toolbar', { name: '视频主操作' })
   await expect(videoActions.getByRole('button', { name: '主体' })).toBeVisible()
   const videoTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
-  for (const label of ['片段重拍', '智能续写', '音频分离']) {
+  for (const label of ['片段重拍', '智能续写']) {
     await expect(videoTools.getByRole('button', { name: label })).toBeDisabled()
+  }
+  for (const label of ['剪辑', '裁剪', '音频分离']) {
+    await expect(videoTools.getByRole('button', { name: label })).toBeEnabled()
   }
   const disabledReasons = page.getByRole('note', { name: '视频工具禁用原因' })
   await expect(disabledReasons).toContainText('片段重拍暂未开放')
   await expect(disabledReasons).toContainText('智能续写暂未开放')
-  await expect(disabledReasons).toContainText('音频分离暂未开放')
+})
+
+test('persists image mirror and annotations, then creates real 2x2 slices and a storyboard group', async ({ page }) => {
+  await createCinematicProject(page)
+  await page.getByRole('button', { name: '适配画布' }).click()
+  const scene = page.getByRole('button', { name: '场景设定', exact: true })
+  await scene.click()
+  const node = page.locator('.react-flow__node').filter({ has: scene })
+  const tools = page.getByRole('toolbar', { name: '图片创作工具' })
+
+  await tools.getByRole('button', { name: '旋转与镜像' }).click()
+  await page.getByRole('menuitem', { name: '水平镜像' }).click()
+  await expect(node.locator('img.creative-node__media')).toHaveCSS('transform', /matrix\(-1/)
+
+  await tools.getByRole('button', { name: '标注' }).click()
+  const editor = page.getByRole('dialog', { name: '标注编辑器' })
+  await editor.getByRole('button', { name: '矩形' }).click()
+  const canvas = editor.getByLabel('图片标注画布')
+  const box = await canvas.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + 30, box!.y + 30)
+  await page.mouse.down()
+  await page.mouse.move(box!.x + 150, box!.y + 110)
+  await page.mouse.up()
+  await editor.getByRole('button', { name: '保存标注' }).click()
+  await expect(node.getByLabel('1 个图片标注')).toBeVisible()
+
+  await tools.getByRole('button', { name: '宫格切分' }).click()
+  await page.getByRole('menuitem', { name: '4 宫格（2×2）' }).click()
+  await expect(page.getByRole('button', { name: '场景设定 切片 1', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '场景设定 切片 4', exact: true })).toBeVisible()
+  await expect(page.getByText(/4 个独立切片资产与节点，并完成编组/)).toBeVisible()
+  const export4K = page.getByRole('button', { name: '导出分镜组 4K' })
+  await expect(export4K).toBeVisible()
+  const download = page.waitForEvent('download')
+  await export4K.click()
+  expect((await download).suggestedFilename()).toMatch(/-4K\.png$/)
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+  await page.reload()
+  const reloadedScene = page.locator('.react-flow__node').filter({
+    has: page.getByRole('button', { name: '场景设定', exact: true }),
+  })
+  await expect(reloadedScene.getByLabel('1 个图片标注')).toBeVisible()
+  await expect(page.getByRole('button', { name: '场景设定 切片 1', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '场景设定 切片 4', exact: true })).toBeVisible()
 })
 
 test('imports image, video, and audio assets, previews them, and reloads every media node', async ({ page }) => {
@@ -1667,21 +1765,58 @@ test('imports image, video, and audio assets, previews them, and reloads every m
 
   const fixtures = [
     { name: 'p0-image.png', mimeType: 'image/png', buffer: Buffer.from('image-fixture') },
-    { name: 'p0-video.mp4', mimeType: 'video/mp4', buffer: Buffer.from('video-fixture') },
-    { name: 'p0-audio.wav', mimeType: 'audio/wav', buffer: Buffer.from('audio-fixture') },
+    { name: 'p0-video.webm', mimeType: 'video/webm', buffer: await makeWebmFixture(page) },
+    { name: 'p0-audio.wav', mimeType: 'audio/wav', buffer: makeWavFixture() },
   ]
   for (const fixture of fixtures) {
     const chooser = await openUploadAtBlank(page)
     await chooser.setFiles(fixture)
     await expect(page.getByRole('button', { name: fixture.name, exact: true })).toBeVisible()
   }
+  await page.getByRole('button', { name: '适配画布' }).click()
 
-  await expect(page.getByRole('group', { name: 'p0-video.mp4 播放器' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'p0-video.webm 播放器' })).toBeVisible()
   await expect(page.getByLabel('播放p0-audio.wav')).toBeVisible()
+  await page.getByRole('button', { name: 'p0-video.webm', exact: true }).evaluate(
+    (button) => (button as HTMLButtonElement).click(),
+  )
+  const videoTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
+  await videoTools.getByRole('button', { name: '剪辑' }).click()
+  await expect(page.getByRole('dialog', { name: '剪辑内联编辑器' })).toBeVisible()
+  await page.getByRole('button', { name: '确认剪辑并导出 WebM' }).click()
+  await expect(page.getByRole('button', { name: 'p0-video.webm 截取', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'p0-video.webm', exact: true }).evaluate(
+    (button) => (button as HTMLButtonElement).click(),
+  )
+  await videoTools.getByRole('button', { name: '裁剪' }).click()
+  await expect(page.getByRole('dialog', { name: '裁剪内联编辑器' })).toBeVisible()
+  await page.getByRole('button', { name: '生成裁剪并导出 WebM' }).click()
+  await expect(page.getByRole('button', { name: 'p0-video.webm 裁剪', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'p0-video.webm', exact: true }).evaluate(
+    (button) => (button as HTMLButtonElement).click(),
+  )
+  const frameTools = page.getByRole('toolbar', { name: '帧操作' })
+  await frameTools.getByRole('button', { name: '截取首帧' }).click()
+  await page.getByRole('button', { name: '确认添加' }).click()
+  await expect(page.getByRole('button', { name: 'p0-video.webm · 截取首帧', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'p0-audio.wav', exact: true }).evaluate(
+    (button) => (button as HTMLButtonElement).click(),
+  )
+  const audioPanel = page.getByRole('region', { name: 'p0-audio.wav 音频参数' })
+  await expect(audioPanel.getByRole('img', { name: '真实音频波形' })).toBeVisible()
+  await expect(audioPanel.getByLabel('音频入点')).toBeVisible()
+  await expect(audioPanel.getByLabel('音频出点')).toBeVisible()
+  await expect(audioPanel.getByLabel('音频变速')).toBeVisible()
+  await expect(audioPanel.getByRole('button', { name: '截取并导出 WAV' })).toBeEnabled()
+  await audioPanel.getByRole('button', { name: '截取并导出 WAV' }).evaluate(
+    (button) => (button as HTMLButtonElement).click(),
+  )
+  await expect(page.getByRole('button', { name: 'p0-audio.wav 1.0x', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '资产管理', exact: true }).click()
   const library = page.getByRole('dialog', { name: '资产管理' })
-  await expect(library.getByLabel('预览p0-video.mp4')).toBeVisible()
-  await expect(library.getByLabel('预览p0-audio.wav')).toBeVisible()
+  await expect(library.getByLabel('预览p0-video.webm', { exact: true })).toBeVisible()
+  await expect(library.getByLabel('预览p0-audio.wav', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '关闭资产管理面板' }).click()
 
   await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
@@ -1693,7 +1828,7 @@ test('imports image, video, and audio assets, previews them, and reloads every m
   await page.getByRole('button', { name: '资产管理', exact: true }).click()
   for (const fixture of fixtures) {
     await expect(
-      page.getByRole('article', { name: `素材 ${fixture.name}` }),
+      page.getByRole('article', { name: `素材 ${fixture.name}`, exact: true }),
     ).toBeVisible()
   }
 })

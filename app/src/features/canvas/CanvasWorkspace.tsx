@@ -1,5 +1,4 @@
 import {
-  Brush,
   Bot,
   Check,
   ChevronDown,
@@ -13,14 +12,10 @@ import {
   Map,
   Maximize2,
   Pencil,
-  Redo2,
   RotateCw,
   Rotate3D,
   ScanLine,
   Sparkles,
-  Square,
-  Type,
-  Undo2,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -29,9 +24,12 @@ import type { GenerationProviderPreferenceStore } from '../generation/generation
 import type { AssetLibraryRepository } from '../assets/asset-library-repository'
 import type {
   CanvasNode,
+  ImageAnnotation,
   Project,
   VideoDerivedTool,
 } from '../project/model'
+import type { ImageGridSize } from '../media/browser-media-processing'
+import type { VideoSegmentOptions } from '../media/browser-media-processing'
 import { CanvasGenerationSettings } from './CanvasGenerationSettings'
 import {
   AssetLibraryPanel,
@@ -45,6 +43,7 @@ import {
 } from './CanvasResourcePanels'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
 import { VideoMediaContextBar } from './VideoContextTools'
+import { ImageAnnotationEditor } from './ImageAnnotationEditor'
 import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
@@ -645,14 +644,6 @@ const nineGridTemplates = [
   '画面推演 - 5 秒前',
 ] as const
 
-const splitOptions = [
-  '4 宫格（2×2）',
-  '9 宫格（3×3）',
-  '16 宫格（4×4）',
-  '25 宫格（5×5）',
-  '自定义',
-] as const
-
 const anglePresets = [
   '自定义',
   '鱼眼视角',
@@ -670,6 +661,7 @@ type ImageToolSurface =
   | 'nine-grid'
   | 'split'
   | 'annotation'
+  | 'transform'
   | 'preview'
 
 function activeImageAsset(project: Project, node: CanvasNode) {
@@ -705,7 +697,12 @@ interface SelectionContextBarProps {
   onCreateToolNode(tool: string): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onSubmitVideoDraft?(tool: string): void
+  onProcessVideo?(nodeId: string, options: VideoSegmentOptions): Promise<void> | void
+  onExtractVideoAudio?(nodeId: string): Promise<void> | void
   onRotateImage(nodeId: string): void
+  onMirrorImage?(nodeId: string, axis: 'horizontal' | 'vertical'): void
+  onSplitImage?(nodeId: string, grid: ImageGridSize, group: boolean): Promise<void> | void
+  onSaveImageAnnotations?(nodeId: string, annotations: ImageAnnotation[]): void
 }
 
 export function SelectionContextBar({
@@ -714,12 +711,19 @@ export function SelectionContextBar({
   onCreateToolNode,
   onCreateVideoToolNode,
   onSubmitVideoDraft,
+  onProcessVideo,
+  onExtractVideoAudio,
   onRotateImage,
+  onMirrorImage,
+  onSplitImage,
+  onSaveImageAnnotations,
 }: SelectionContextBarProps) {
   const [surface, setSurface] = useState<ImageToolSurface>()
   const [pendingTool, setPendingTool] = useState<string>()
   const [previewIndex, setPreviewIndex] = useState(0)
   const [lightingDirty, setLightingDirty] = useState(false)
+  const [splitGroup, setSplitGroup] = useState(true)
+  const [splitBusy, setSplitBusy] = useState(false)
   useEffect(() => {
     setSurface(undefined)
     setPendingTool(undefined)
@@ -744,6 +748,8 @@ export function SelectionContextBar({
         asset={asset}
         onCreateToolNode={onCreateVideoToolNode}
         onSubmitDraft={onSubmitVideoDraft}
+        onProcessVideo={(options) => onProcessVideo?.(node.id, options)}
+        onExtractAudio={() => onExtractVideoAudio?.(node.id)}
       />
     )
   }
@@ -818,20 +824,17 @@ export function SelectionContextBar({
         <button
           type="button"
           aria-haspopup="menu"
-          aria-expanded="false"
-          aria-describedby="image-split-disabled-reason"
+          aria-expanded={surface === 'split'}
           data-compact="false"
-          disabled
+          onClick={() => setSurface('split')}
         >
           <Grid3X3 aria-hidden="true" />宫格切分<ChevronDown aria-hidden="true" />
         </button>
-        <button type="button" data-compact="true" aria-label="标注" title="标注（暂未开放）" aria-describedby="image-annotation-disabled-reason" disabled><Pencil aria-hidden="true" /><span className="visually-hidden">标注</span></button>
-        <button type="button" data-compact="true" aria-label="旋转" title="旋转" onClick={() => onRotateImage(node.id)}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转</span></button>
+        <button type="button" data-compact="true" aria-label="标注" title="标注" onClick={() => setSurface('annotation')}><Pencil aria-hidden="true" /><span className="visually-hidden">标注</span></button>
+        <button type="button" data-compact="true" aria-label="旋转与镜像" title="旋转与镜像" aria-haspopup="menu" aria-expanded={surface === 'transform'} onClick={() => setSurface('transform')}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转与镜像</span></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
         <span id="nine-grid-disabled-reason" className="visually-hidden">九宫格暂未开放：尚未接入可保存的模板处理结果。</span>
-        <span id="image-split-disabled-reason" className="visually-hidden">宫格切分暂未开放：尚未接入可下载的切分结果。</span>
-        <span id="image-annotation-disabled-reason" className="visually-hidden">图片标注暂未开放：尚未接入可持久化的标注图层。</span>
       </div>
 
       {surface === 'portrait' ? (
@@ -851,8 +854,35 @@ export function SelectionContextBar({
 
       {surface === 'split' ? (
         <div className="image-tool-menu" role="menu" aria-label="宫格切分规格">
-          {splitOptions.map((option) => <button key={option} type="button" role="menuitem" disabled aria-describedby="image-split-disabled-reason">{option}</button>)}
-          <p id="image-split-disabled-reason" className="image-tool-disabled-reason">规格未验证切分输出，本地演示不执行。</p>
+          {([2, 3] as const).map((grid) => (
+            <button
+              key={grid}
+              type="button"
+              role="menuitem"
+              disabled={splitBusy}
+              onClick={async () => {
+                setSplitBusy(true)
+                try {
+                  await onSplitImage?.(node.id, grid, splitGroup)
+                  setSurface(undefined)
+                } finally {
+                  setSplitBusy(false)
+                }
+              }}
+            >
+              {grid === 2 ? '4 宫格（2×2）' : '9 宫格（3×3）'}
+            </button>
+          ))}
+          <label><input type="checkbox" checked={splitGroup} onChange={(event) => setSplitGroup(event.currentTarget.checked)} />切分后自动编组</label>
+          <p>将读取当前图片像素并创建 {splitGroup ? '独立资产、图片节点与分组' : '独立资产和图片节点'}。</p>
+        </div>
+      ) : null}
+
+      {surface === 'transform' ? (
+        <div className="image-tool-menu" role="menu" aria-label="图片旋转与镜像">
+          <button type="button" role="menuitem" onClick={() => { onRotateImage(node.id); setSurface(undefined) }}>顺时针旋转</button>
+          <button type="button" role="menuitem" onClick={() => { onMirrorImage?.(node.id, 'horizontal'); setSurface(undefined) }}>水平镜像</button>
+          <button type="button" role="menuitem" onClick={() => { onMirrorImage?.(node.id, 'vertical'); setSurface(undefined) }}>垂直镜像</button>
         </div>
       ) : null}
 
@@ -901,18 +931,16 @@ export function SelectionContextBar({
 
       {surface === 'annotation' ? (
         <ImageToolDialog title="标注编辑器" onClose={() => setSurface(undefined)}>
-          <div className="annotation-tools" role="toolbar" aria-label="标注工具">
-            <button type="button" aria-label="画笔" aria-pressed="true"><Brush aria-hidden="true" /></button>
-            <button type="button" aria-label="框注"><Square aria-hidden="true" /></button>
-            <button type="button" aria-label="文字"><Type aria-hidden="true" /></button>
-            <label aria-label="颜色"><input type="color" defaultValue="#ff0000" /></label>
-            <label aria-label="线宽"><input type="range" min="1" max="40" step="1" defaultValue="4" /></label>
-            <button type="button" aria-label="撤销" disabled aria-describedby="image-annotation-disabled-reason"><Undo2 aria-hidden="true" /></button>
-            <button type="button" aria-label="重做" disabled aria-describedby="image-annotation-disabled-reason"><Redo2 aria-hidden="true" /></button>
-          </div>
-          <div className="annotation-preview"><img src={asset.url} alt="标注预览" /></div>
-          <p id="image-annotation-disabled-reason" className="image-tool-disabled-reason">尚未创建标注，撤销、重做与保存均不可用。</p>
-          <button type="button" disabled aria-describedby="image-annotation-disabled-reason">保存标注</button>
+          <ImageAnnotationEditor
+            sourceUrl={asset.url}
+            width={asset.width}
+            height={asset.height}
+            annotations={node.imageAnnotations ?? []}
+            onSave={(annotations) => {
+              onSaveImageAnnotations?.(node.id, annotations)
+              setSurface(undefined)
+            }}
+          />
         </ImageToolDialog>
       ) : null}
 

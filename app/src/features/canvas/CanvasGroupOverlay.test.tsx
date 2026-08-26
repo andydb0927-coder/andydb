@@ -86,3 +86,20 @@ test('treats a marquee selection as an unpersisted combination until the user gr
   await user.click(screen.getByRole('button', { name: '打组' }))
   expect(onGroup).toHaveBeenCalledOnce()
 })
+
+test('offers a real 4K export action only for persisted storyboard groups', async () => {
+  const user = userEvent.setup()
+  const onExportStoryboard = vi.fn(async () => undefined)
+  render(
+    <CanvasGroupOverlay
+      group={{ ...group, kind: 'storyboard' }}
+      bounds={{ x: 20, y: 40, width: 600, height: 360 }}
+      selected
+      onSelect={vi.fn()}
+      onUngroup={vi.fn()}
+      onExportStoryboard={onExportStoryboard}
+    />,
+  )
+  await user.click(screen.getByRole('button', { name: '导出分镜组 4K' }))
+  expect(onExportStoryboard).toHaveBeenCalledOnce()
+})

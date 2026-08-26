@@ -79,6 +79,7 @@ import {
   type CanvasGroup,
   type CreativeCardKind,
   type GenerationJob,
+  type ImageAnnotation,
   type Project,
   type VideoDerivedTool,
 } from '../project/model'
@@ -98,6 +99,17 @@ import {
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { downloadBlob } from '../timeline/timeline-export'
+import {
+  captureVideoFrame,
+  extractAudioToWav,
+  recordVideoSegment,
+  renderStoryboardGroup4K,
+  splitImageToGrid,
+  type AudioSliceOptions,
+  type ImageGridSize,
+  type ProcessedMedia,
+  type VideoSegmentOptions,
+} from '../media/browser-media-processing'
 import { createTimelineProject } from '../timeline/timeline-project'
 import { TimelineRepository, type TimelineProjectRepository } from '../timeline/timeline-repository'
 import {
@@ -226,6 +238,32 @@ function buildMediaAssetCreation(
         : {}),
     },
     ...(alreadyInProject ? {} : { asset: libraryRecordToAsset(record) }),
+  }
+}
+
+function activeNodeAsset(project: Project, nodeId: string) {
+  const node = project.nodes.find(({ id }) => id === nodeId)
+  const version = node?.versions.find(({ id }) => id === node.activeVersionId)
+  return project.assets.find(({ id }) => id === version?.assetId)
+}
+
+function processedMediaRecord(
+  media: ProcessedMedia,
+  name: string,
+  kind: LibraryAssetRecord['kind'],
+): LibraryAssetRecord {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    kind,
+    mimeType: media.mimeType,
+    url: media.dataUrl,
+    createdAt: new Date().toISOString(),
+    source: 'project',
+    folderId: 'project',
+    width: media.width,
+    height: media.height,
+    durationSeconds: media.durationSeconds,
   }
 }
 type CanvasPublicationRepository = Pick<
@@ -671,6 +709,10 @@ export function CanvasPage({
     (state) => state.updateActiveNodePrompt,
   )
   const rotateImageNode = useProjectStore((state) => state.rotateImageNode)
+  const mirrorImageNode = useProjectStore((state) => state.mirrorImageNode)
+  const updateImageAnnotations = useProjectStore(
+    (state) => state.updateImageAnnotations,
+  )
   const createCanvasContent = useProjectStore(
     (state) => state.createCanvasContent,
   )
@@ -1663,6 +1705,218 @@ export function CanvasPage({
     [createConnectedCanvasContent, projectId, selectOnlyNode],
   )
 
+  const saveProcessedAsset = useCallback(
+    async (
+      sourceNodeId: string,
+      media: ProcessedMedia,
+      kind: LibraryAssetRecord['kind'],
+      title: string,
+      positionOffset: { x: number; y: number },
+      metadata?: Partial<CanvasCreation['node']>,
+    ) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === sourceNodeId)
+      if (!currentProject || currentProject.id !== projectId || !sourceNode) {
+        throw new Error('当前项目或来源节点不存在。')
+      }
+      const record = processedMediaRecord(media, title, kind)
+      const creation = buildMediaAssetCreation(currentProject, record, {
+        x: sourceNode.position.x + positionOffset.x,
+        y: sourceNode.position.y + positionOffset.y,
+      })
+      creation.node = { ...creation.node, ...metadata }
+      if (!createConnectedCanvasContent(sourceNodeId, creation, crypto.randomUUID())) {
+        // Some derived-media pairs (for example image → image grid slices)
+        // are intentionally not valid dependency edges. The processed asset is
+        // still a first-class canvas result and must not be discarded.
+        createCanvasContent(creation)
+      }
+      await libraryRepository.save?.(record)
+      return creation.node.id
+    },
+    [createCanvasContent, createConnectedCanvasContent, libraryRepository, projectId],
+  )
+
+  const splitImageNode = useCallback(
+    async (nodeId: string, grid: ImageGridSize, group: boolean) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
+      if (!currentProject || currentProject.id !== projectId || !sourceNode || sourceAsset?.kind !== 'image') {
+        setGenerationFeedback('当前节点没有可切分的图片结果。')
+        return
+      }
+      setGenerationFeedback(`正在读取图片像素并生成 ${grid}×${grid} 切片…`)
+      try {
+        const results = await splitImageToGrid(sourceAsset.url, grid)
+        const createdIds: string[] = []
+        for (const [index, result] of results.entries()) {
+          const column = index % grid
+          const row = Math.floor(index / grid)
+          createdIds.push(await saveProcessedAsset(
+            nodeId,
+            result,
+            'image',
+            `${sourceNode.title} 切片 ${index + 1}`,
+            { x: 420 + column * 340, y: row * 260 },
+          ))
+        }
+        if (group && createdIds.length >= 2) groupNodes(createdIds, 'storyboard')
+        setSelectedNodeIds(new Set(createdIds))
+        setPrimaryNodeId(createdIds.at(-1))
+        setGenerationFeedback(`已从真实图片生成 ${createdIds.length} 个独立切片资产与节点${group ? '，并完成编组' : ''}。`)
+      } catch (error) {
+        setGenerationFeedback(error instanceof Error ? error.message : '图片切分失败。')
+      }
+    },
+    [groupNodes, projectId, saveProcessedAsset],
+  )
+
+  const saveImageAnnotations = useCallback(
+    (nodeId: string, annotations: ImageAnnotation[]) => {
+      updateImageAnnotations(nodeId, annotations)
+      setGenerationFeedback(`已保存 ${annotations.length} 个可编辑图片标注，工作流 JSON 将携带标注数据。`)
+    },
+    [updateImageAnnotations],
+  )
+
+  const mirrorImage = useCallback(
+    (nodeId: string, axis: 'horizontal' | 'vertical') => {
+      mirrorImageNode(nodeId, axis)
+      setGenerationFeedback(`已${axis === 'horizontal' ? '水平' : '垂直'}镜像图片，变换已持久化。`)
+    },
+    [mirrorImageNode],
+  )
+
+  const captureRealVideoFrame = useCallback(
+    async (
+      nodeId: string,
+      tool: Extract<VideoDerivedTool, '截取首帧' | '截取尾帧' | '截取当前帧'>,
+      video: HTMLVideoElement,
+      seconds: number,
+    ) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      if (!sourceNode) return
+      setGenerationFeedback(`正在解码“${sourceNode.title}”的${tool}…`)
+      try {
+        const result = await captureVideoFrame(video, seconds)
+        const createdId = await saveProcessedAsset(
+          nodeId,
+          result,
+          'image',
+          `${sourceNode.title} · ${tool}`,
+          { x: 420, y: 80 },
+          { videoTool: { kind: 'frame-capture', frame: tool.replace('截取', '') as '首帧' | '尾帧' | '当前帧' } },
+        )
+        selectOnlyNode(createdId)
+        setGenerationFeedback(`已从视频真实像素截取${tool.replace('截取', '')}，并写入资产库。`)
+      } catch (error) {
+        setGenerationFeedback(error instanceof Error ? error.message : '视频截帧失败。')
+      }
+    },
+    [saveProcessedAsset, selectOnlyNode],
+  )
+
+  const processVideoNode = useCallback(
+    async (nodeId: string, options: VideoSegmentOptions) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
+      if (!sourceNode || sourceAsset?.kind !== 'video') return
+      setGenerationFeedback('正在浏览器内逐帧绘制并编码 WebM…')
+      try {
+        const result = await recordVideoSegment(sourceAsset.url, options)
+        const createdId = await saveProcessedAsset(
+          nodeId,
+          result,
+          'video',
+          `${sourceNode.title}${options.crop ? ' 裁剪' : ' 截取'}`,
+          { x: 420, y: 120 },
+        )
+        selectOnlyNode(createdId)
+        setGenerationFeedback(`已完成${options.crop ? '帧级裁剪' : '选区截取'}并导出 WebM，结果已入资产库。`)
+      } catch (error) {
+        setGenerationFeedback(error instanceof Error ? error.message : '视频处理失败。')
+      }
+    },
+    [saveProcessedAsset, selectOnlyNode],
+  )
+
+  const extractVideoAudio = useCallback(
+    async (nodeId: string) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
+      if (!sourceNode || sourceAsset?.kind !== 'video') return
+      setGenerationFeedback('正在解码视频音轨并生成 WAV…')
+      try {
+        const result = await extractAudioToWav(sourceAsset.url)
+        const createdId = await saveProcessedAsset(
+          nodeId,
+          result,
+          'audio',
+          `${sourceNode.title} 音轨`,
+          { x: 420, y: 160 },
+        )
+        selectOnlyNode(createdId)
+        setGenerationFeedback('已提取真实音轨，可试听、下载并已写入资产库。')
+      } catch (error) {
+        setGenerationFeedback(error instanceof Error ? error.message : '音视频分离失败。')
+      }
+    },
+    [saveProcessedAsset, selectOnlyNode],
+  )
+
+  const processAudioNode = useCallback(
+    async (nodeId: string, options: AudioSliceOptions) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
+      if (!sourceNode || sourceAsset?.kind !== 'audio') return
+      setGenerationFeedback('正在截取并重采样真实音频…')
+      try {
+        const result = await extractAudioToWav(sourceAsset.url, options)
+        const createdId = await saveProcessedAsset(
+          nodeId,
+          result,
+          'audio',
+          `${sourceNode.title} ${options.playbackRate.toFixed(1)}x`,
+          { x: 420, y: 200 },
+        )
+        selectOnlyNode(createdId)
+        setGenerationFeedback('已导出截取/变速 WAV，结果已写入资产库。')
+      } catch (error) {
+        setGenerationFeedback(error instanceof Error ? error.message : '音频处理失败。')
+      }
+    },
+    [saveProcessedAsset, selectOnlyNode],
+  )
+
+  const exportStoryboardGroup4K = useCallback(async (group: CanvasGroup) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const sources = group.nodeIds.flatMap((nodeId) => {
+      const node = currentProject.nodes.find(({ id }) => id === nodeId)
+      const asset = activeNodeAsset(currentProject, nodeId)
+      return node && asset?.kind === 'image'
+        ? [{ url: asset.url, title: node.title, subtitle: node.storyboardDialogue }]
+        : []
+    })
+    if (!sources.length) {
+      setGroupFeedback('分镜组中没有可导出的图片结果。')
+      return
+    }
+    setGroupFeedback(`正在以 4096px 宽度排版 ${sources.length} 个分镜…`)
+    try {
+      const blob = await renderStoryboardGroup4K(sources)
+      downloadBlob(blob, `${currentProject.title}-${group.title}-4K.png`)
+      setGroupFeedback(`已导出 ${sources.length} 个分镜的 4096px 宽 4K 排版图。`)
+    } catch (error) {
+      setGroupFeedback(error instanceof Error ? error.message : '分镜组 4K 导出失败。')
+    }
+  }, [projectId])
+
   const createImageToolNode = useCallback(
     (sourceNodeId: string, tool: string) => {
       const currentProject = useProjectStore.getState().activeProject
@@ -2029,6 +2283,15 @@ export function CanvasPage({
           },
           onCreateVideoToolNode: (tool) =>
             createVideoToolNode(node.id, tool),
+          onCaptureVideoFrame: (tool, video, seconds) =>
+            captureRealVideoFrame(node.id, tool, video, seconds),
+          onProcessVideo: (options) => processVideoNode(node.id, options),
+          onExtractVideoAudio: () => extractVideoAudio(node.id),
+          onProcessAudio: (options) => processAudioNode(node.id, options),
+          onSplitImage: (grid, group) => splitImageNode(node.id, grid, group),
+          onSaveImageAnnotations: (annotations) =>
+            saveImageAnnotations(node.id, annotations),
+          onMirrorImage: (axis) => mirrorImage(node.id, axis),
           onLocalVideoGenerate: (prompt) => {
             updateActiveNodePrompt(node.id, prompt)
             handleAction(node.id, 'generate', undefined, prompt)
@@ -2147,6 +2410,13 @@ export function CanvasPage({
     updateNode,
     createVideoToolNode,
     createImageToolNode,
+    captureRealVideoFrame,
+    extractVideoAudio,
+    mirrorImage,
+    processAudioNode,
+    processVideoNode,
+    saveImageAnnotations,
+    splitImageNode,
   ])
 
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -4886,6 +5156,9 @@ export function CanvasPage({
                   duplicateCanvasGroup(selectionGroupOverlay.group)
                 }
                 onFeedback={setGroupFeedback}
+                onExportStoryboard={() =>
+                  exportStoryboardGroup4K(selectionGroupOverlay.group)
+                }
                 onContinue={(trigger) => {
                   const triggerBounds = trigger.getBoundingClientRect()
                   const point = canvasPoint(
@@ -4907,6 +5180,7 @@ export function CanvasPage({
                 onArrange={(mode) => arrangeCanvasGroup(group, mode)}
                 onDuplicate={() => duplicateCanvasGroup(group)}
                 onFeedback={setGroupFeedback}
+                onExportStoryboard={() => exportStoryboardGroup4K(group)}
                 onContinue={(trigger) => {
                   const triggerBounds = trigger.getBoundingClientRect()
                   const point = canvasPoint(
@@ -5036,7 +5310,14 @@ export function CanvasPage({
             onCreateVideoToolNode={(tool) => {
               if (primaryNodeId) createVideoToolNode(primaryNodeId, tool)
             }}
+            onProcessVideo={(nodeId, options) => processVideoNode(nodeId, options)}
+            onExtractVideoAudio={(nodeId) => extractVideoAudio(nodeId)}
             onRotateImage={rotateImageNode}
+            onMirrorImage={(nodeId, axis) => mirrorImage(nodeId, axis)}
+            onSplitImage={(nodeId, grid, group) => splitImageNode(nodeId, grid, group)}
+            onSaveImageAnnotations={(nodeId, annotations) =>
+              saveImageAnnotations(nodeId, annotations)
+            }
           />
         ) : null}
         {canvasHint ? (

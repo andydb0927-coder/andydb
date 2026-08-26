@@ -3,6 +3,7 @@ import {
   Columns3,
   Copy,
   CopyPlus,
+  Download,
   Group,
   LayoutGrid,
   MessageSquare,
@@ -29,6 +30,7 @@ interface CanvasGroupOverlayProps {
   onDuplicate?(): void
   onContinue?(trigger: HTMLButtonElement): void
   onFeedback?(message: string): void
+  onExportStoryboard?(): Promise<void> | void
 }
 
 export function CanvasGroupOverlay({
@@ -43,6 +45,7 @@ export function CanvasGroupOverlay({
   onDuplicate,
   onContinue,
   onFeedback,
+  onExportStoryboard,
 }: CanvasGroupOverlayProps) {
   const [arrangeOpen, setArrangeOpen] = useState(false)
 
@@ -100,6 +103,11 @@ export function CanvasGroupOverlay({
       <button type="button" aria-label="添加到 Chat" onClick={() => onFeedback?.('已将组合添加到本地 Chat 上下文。')}>
         <MessageSquare aria-hidden="true" />添加到 Chat
       </button>
+      {group.kind === 'storyboard' ? (
+        <button type="button" aria-label="导出分镜组 4K" onClick={() => void onExportStoryboard?.()}>
+          <Download aria-hidden="true" />导出分镜组 4K
+        </button>
+      ) : null}
     </div>
   ) : null
 

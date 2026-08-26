@@ -76,6 +76,29 @@ describe('workflow JSON', () => {
     )
   })
 
+  test('keeps mirror and structured annotation layers in workflow JSON', () => {
+    const project = makeProjectFixture()
+    project.nodes[0] = {
+      ...project.nodes[0],
+      mirrorHorizontal: true,
+      mirrorVertical: false,
+      imageAnnotations: [
+        {
+          id: 'annotation-1',
+          kind: 'arrow',
+          color: '#ff3b30',
+          lineWidth: 4,
+          start: { x: 0.1, y: 0.2 },
+          end: { x: 0.8, y: 0.7 },
+        },
+      ],
+    }
+
+    const exported = createWorkflowSnapshot(project).project.nodes[0]
+    expect(exported.mirrorHorizontal).toBe(true)
+    expect(exported.imageAnnotations).toEqual(project.nodes[0].imageAnnotations)
+  })
+
   test('reports duplicate titles and rejects missing graph references', () => {
     const current = makeProjectFixture()
     const imported = {

@@ -14071,7 +14071,7 @@ select {
   box-shadow: 0 0 0 999px rgb(0 0 0 / 45%);
 }
 
-.video-crop-box button {
+.video-crop-box span {
   position: absolute;
   width: 14px;
   min-height: 14px;
@@ -14080,14 +14080,14 @@ select {
   border-radius: 50%;
   background: white;
 }
-.video-crop-box button[data-position='西北'] { top: -7px; left: -7px; }
-.video-crop-box button[data-position='北'] { top: -7px; left: 50%; }
-.video-crop-box button[data-position='东北'] { top: -7px; right: -7px; }
-.video-crop-box button[data-position='东'] { top: 50%; right: -7px; }
-.video-crop-box button[data-position='东南'] { right: -7px; bottom: -7px; }
-.video-crop-box button[data-position='南'] { bottom: -7px; left: 50%; }
-.video-crop-box button[data-position='西南'] { bottom: -7px; left: -7px; }
-.video-crop-box button[data-position='西'] { top: 50%; left: -7px; }
+.video-crop-box span[data-position='西北'] { top: -7px; left: -7px; }
+.video-crop-box span[data-position='北'] { top: -7px; left: 50%; }
+.video-crop-box span[data-position='东北'] { top: -7px; right: -7px; }
+.video-crop-box span[data-position='东'] { top: 50%; right: -7px; }
+.video-crop-box span[data-position='东南'] { right: -7px; bottom: -7px; }
+.video-crop-box span[data-position='南'] { bottom: -7px; left: 50%; }
+.video-crop-box span[data-position='西南'] { bottom: -7px; left: -7px; }
+.video-crop-box span[data-position='西'] { top: 50%; left: -7px; }
 
 .video-tool-menu {
   position: absolute;
@@ -14277,6 +14277,72 @@ select {
 .annotation-tools label { display: inline-flex; width: auto; }
 .annotation-preview { overflow: hidden; border-radius: var(--radius-menu); }
 .annotation-preview img { display: block; width: 100%; max-height: 220px; object-fit: contain; }
+
+.canvas-tool-config:has(.image-annotation-editor) {
+  width: min(860px, calc(100vw - 48px));
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+}
+
+.image-annotation-editor {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.image-annotation-editor canvas {
+  display: block;
+  width: 100%;
+  max-height: 56vh;
+  border: 1px solid var(--neutral-white-a13);
+  border-radius: var(--radius-card);
+  object-fit: contain;
+  background: #090a0d;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.image-annotation-editor__text,
+.image-annotation-editor footer,
+.audio-processing,
+.audio-processing > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.image-annotation-editor footer { justify-content: space-between; }
+
+.creative-node__annotation-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.audio-processing {
+  align-items: stretch;
+  flex-direction: column;
+  padding: var(--space-3);
+  border: 1px solid var(--neutral-white-a10);
+  border-radius: var(--radius-card);
+  background: var(--neutral-white-a04);
+}
+
+.audio-processing__waveform {
+  height: 72px;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+.audio-processing__waveform span {
+  min-width: 2px;
+  flex: 1;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--brand-secondary), var(--brand-primary));
+}
 
 .image-preview-dialog {
   position: fixed; z-index: 130; inset: 0; display: grid; place-items: center;

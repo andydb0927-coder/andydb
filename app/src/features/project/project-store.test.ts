@@ -667,6 +667,48 @@ describe('project store history and persistence', () => {
     ).toBeUndefined()
   })
 
+  test('persists image mirrors and structured annotations as undoable node data', () => {
+    useProjectStore.getState().mirrorImageNode('shot-1', 'horizontal')
+    useProjectStore.getState().mirrorImageNode('shot-1', 'vertical')
+    useProjectStore.getState().updateImageAnnotations('shot-1', [
+      {
+        id: 'annotation-1',
+        kind: 'rectangle',
+        color: '#ff3b30',
+        lineWidth: 4,
+        start: { x: 0.1, y: 0.2 },
+        end: { x: 0.6, y: 0.7 },
+      },
+      {
+        id: 'annotation-2',
+        kind: 'text',
+        color: '#ffffff',
+        lineWidth: 2,
+        point: { x: 0.2, y: 0.3 },
+        text: '主体',
+      },
+    ])
+
+    const node = useProjectStore.getState().activeProject?.nodes.find(
+      ({ id }) => id === 'shot-1',
+    )
+    expect(node).toMatchObject({
+      mirrorHorizontal: true,
+      mirrorVertical: true,
+      imageAnnotations: [
+        expect.objectContaining({ kind: 'rectangle' }),
+        expect.objectContaining({ kind: 'text', text: '主体' }),
+      ],
+    })
+    expect(useProjectStore.getState().past).toHaveLength(3)
+
+    useProjectStore.getState().undo()
+    expect(
+      useProjectStore.getState().activeProject?.nodes.find(({ id }) => id === 'shot-1')
+        ?.imageAnnotations,
+    ).toBeUndefined()
+  })
+
   test('renames the active project in one undoable history entry', () => {
     const original = useProjectStore.getState().activeProject!
 

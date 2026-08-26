@@ -75,6 +75,33 @@ export interface ImageResult {
   assetId: string
 }
 
+export interface ImageAnnotationPoint {
+  x: number
+  y: number
+}
+
+interface ImageAnnotationBase {
+  id: string
+  color: string
+  lineWidth: number
+}
+
+export type ImageAnnotation =
+  | (ImageAnnotationBase & {
+      kind: 'rectangle' | 'ellipse' | 'arrow'
+      start: ImageAnnotationPoint
+      end: ImageAnnotationPoint
+    })
+  | (ImageAnnotationBase & {
+      kind: 'brush'
+      points: ImageAnnotationPoint[]
+    })
+  | (ImageAnnotationBase & {
+      kind: 'text'
+      point: ImageAnnotationPoint
+      text: string
+    })
+
 export interface ImageGenerationSettings {
   prompt: string
   pValue: string
@@ -222,6 +249,9 @@ export interface AudioNodeDetails {
   volume: number
   modelProviderId?: string
   modelVariant?: string
+  trimStartSeconds?: number
+  trimEndSeconds?: number
+  playbackRate?: number
 }
 
 export interface DirectorShot {
@@ -287,6 +317,9 @@ export interface CanvasNode {
   activeResultId?: string
   imageGeneration?: ImageGenerationSettings
   rotationQuarterTurns?: number
+  mirrorHorizontal?: boolean
+  mirrorVertical?: boolean
+  imageAnnotations?: ImageAnnotation[]
   imageTool?: ImageToolConfig
   videoTool?: VideoToolConfig
   effectTool?: EffectToolConfig

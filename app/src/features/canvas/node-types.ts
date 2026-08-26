@@ -7,10 +7,16 @@ import type {
   EffectToolConfig,
   GenerationJob,
   ImageGenerationSettings,
+  ImageAnnotation,
   ImageToolConfig,
   NodeKind,
   VideoDerivedTool,
 } from '../project/model'
+import type {
+  AudioSliceOptions,
+  ImageGridSize,
+  VideoSegmentOptions,
+} from '../media/browser-media-processing'
 import type { ProviderRegistry } from '../generation/model-provider-registry'
 import { AssetNode } from './nodes/AssetNode'
 import { CreativeCardNode } from './nodes/CreativeCardNode'
@@ -70,6 +76,17 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onCreateImageToolNode?(tool: string): void
   onUpdateImageTool?(changes: Partial<ImageToolConfig>): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
+  onCaptureVideoFrame?(
+    tool: Extract<VideoDerivedTool, '截取首帧' | '截取尾帧' | '截取当前帧'>,
+    video: HTMLVideoElement,
+    seconds: number,
+  ): Promise<void> | void
+  onProcessVideo?(options: VideoSegmentOptions): Promise<void> | void
+  onExtractVideoAudio?(): Promise<void> | void
+  onProcessAudio?(options: AudioSliceOptions): Promise<void> | void
+  onSplitImage?(grid: ImageGridSize, group: boolean): Promise<void> | void
+  onSaveImageAnnotations?(annotations: ImageAnnotation[]): void
+  onMirrorImage?(axis: 'horizontal' | 'vertical'): void
   onLocalVideoGenerate?(prompt: string): void
   onCreateTextToVideoPreset?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void

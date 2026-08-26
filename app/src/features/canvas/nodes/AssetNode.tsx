@@ -50,6 +50,8 @@ import type {
 } from '../../project/model'
 import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
+import { imageMirrorTransform } from '../../media/browser-media-processing'
+import { ImageAnnotationOverlay } from '../ImageAnnotationEditor'
 import {
   ImageGenerationPanel,
   ImageResults,
@@ -666,7 +668,13 @@ export function CreativeNodeShell({
                 src={asset.url}
                 alt=""
                 className="creative-node__media"
-                style={{ transform: `rotate(${(node.rotationQuarterTurns ?? 0) * 90}deg)` }}
+                style={{
+                  transform: imageMirrorTransform(
+                    node.rotationQuarterTurns,
+                    node.mirrorHorizontal,
+                    node.mirrorVertical,
+                  ),
+                }}
               />
             ) : liblibMediaNode ? (
               <span className="creative-node__media-placeholder">
@@ -676,6 +684,9 @@ export function CreativeNodeShell({
                 </span>
               </span>
             ) : null)}
+          {imageMedia ? (
+            <ImageAnnotationOverlay annotations={node.imageAnnotations ?? []} />
+          ) : null}
           {imageMedia && asset.width && asset.height ? (
             <span className="creative-node__dimensions">{asset.width} × {asset.height}</span>
           ) : null}
@@ -946,7 +957,19 @@ export function CreativeNodeShell({
               <button
                 type="button"
                 onClick={() => {
-                  data.onCreateVideoToolNode?.(pendingVideoFrame)
+                  const video = videoRef.current
+                  const seconds = pendingVideoFrame === '截取首帧'
+                    ? 0
+                    : pendingVideoFrame === '截取尾帧'
+                      ? Math.max(0, videoDuration - 0.001)
+                      : videoCurrentTime
+                  if (video) {
+                    void data.onCaptureVideoFrame?.(
+                      pendingVideoFrame as Extract<VideoDerivedTool, '截取首帧' | '截取尾帧' | '截取当前帧'>,
+                      video,
+                      seconds,
+                    )
+                  }
                   setPendingVideoFrame(undefined)
                 }}
               >

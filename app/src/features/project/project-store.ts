@@ -9,6 +9,7 @@ import {
   type DependencyEdge,
   type GenerationJob,
   type ImageGenerationSettings,
+  type ImageAnnotation,
   type ImageToolConfig,
   type NodeVersion,
   type Project,
@@ -41,7 +42,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -88,6 +89,8 @@ interface ProjectStore {
     changes: Partial<ImageGenerationSettings>,
   ) => void
   rotateImageNode: (nodeId: string) => void
+  mirrorImageNode: (nodeId: string, axis: 'horizontal' | 'vertical') => void
+  updateImageAnnotations: (nodeId: string, annotations: ImageAnnotation[]) => void
   groupNodes: (
     nodeIds: Iterable<string>,
     kind?: NonNullable<CanvasGroup['kind']>,
@@ -562,6 +565,30 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.imageGeneration === undefined
                     ? {}
                     : { imageGeneration: { ...changes.imageGeneration } }),
+                  ...(changes.rotationQuarterTurns === undefined
+                    ? {}
+                    : { rotationQuarterTurns: changes.rotationQuarterTurns }),
+                  ...(changes.mirrorHorizontal === undefined
+                    ? {}
+                    : { mirrorHorizontal: changes.mirrorHorizontal }),
+                  ...(changes.mirrorVertical === undefined
+                    ? {}
+                    : { mirrorVertical: changes.mirrorVertical }),
+                  ...(changes.imageAnnotations === undefined
+                    ? {}
+                    : {
+                        imageAnnotations: changes.imageAnnotations.map((annotation) =>
+                          annotation.kind === 'brush'
+                            ? { ...annotation, points: annotation.points.map((point) => ({ ...point })) }
+                            : annotation.kind === 'text'
+                              ? { ...annotation, point: { ...annotation.point } }
+                              : {
+                                  ...annotation,
+                                  start: { ...annotation.start },
+                                  end: { ...annotation.end },
+                                },
+                        ),
+                      }),
                   ...(changes.imageTool === undefined
                     ? {}
                     : { imageTool: { ...changes.imageTool } as ImageToolConfig }),
@@ -901,6 +928,41 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ),
         })
       })
+    },
+
+    mirrorImageNode: (nodeId, axis) => {
+      commit((project) => {
+        const source = project.nodes.find(({ id }) => id === nodeId)
+        if (!source) return project
+        const activeVersion = source.versions.find(
+          ({ id }) => id === source.activeVersionId,
+        )
+        const asset = project.assets.find(({ id }) => id === activeVersion?.assetId)
+        if (asset?.kind !== 'image') return project
+        const downstream = findDownstream(project, nodeId)
+        return withUpdatedTimestamp({
+          ...project,
+          nodes: project.nodes.map((node) => {
+            if (node.id === nodeId) {
+              return axis === 'horizontal'
+                ? { ...node, mirrorHorizontal: !node.mirrorHorizontal }
+                : { ...node, mirrorVertical: !node.mirrorVertical }
+            }
+            return downstream.nodeIds.has(node.id)
+              ? { ...node, sourceChanged: true }
+              : node
+          }),
+          edges: project.edges.map((edge) =>
+            downstream.edgeIds.has(edge.id)
+              ? { ...edge, sourceChanged: true }
+              : edge,
+          ),
+        })
+      })
+    },
+
+    updateImageAnnotations: (nodeId, annotations) => {
+      get().updateNode(nodeId, { imageAnnotations: annotations })
     },
 
     groupNodes: (nodeIds, kind = 'standard') => {

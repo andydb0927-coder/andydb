@@ -331,7 +331,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   rerender(
     <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={onCreateToolNode} onRotateImage={vi.fn()} />,
   )
-  for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分', '标注', '旋转', '下载', '预览']) {
+  for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分', '标注', '旋转与镜像', '下载', '预览']) {
     expect(screen.getByRole('button', { name: label })).toBeVisible()
   }
   const imageToolbar = screen.getByRole('toolbar', { name: '图片创作工具' })
@@ -350,7 +350,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   for (const label of ['人像质感调节', '全景', '多角度', '打光', '九宫格', '高清', '宫格切分']) {
     expect(within(imageToolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'false')
   }
-  for (const label of ['标注', '旋转', '下载', '预览']) {
+  for (const label of ['标注', '旋转与镜像', '下载', '预览']) {
     expect(within(imageToolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'true')
   }
 
@@ -366,7 +366,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   expect(onCreateToolNode).toHaveBeenCalledWith('人像调节')
 })
 
-test('keeps multi-angle and lighting changes in drafts and explains unavailable annotation', async () => {
+test('keeps multi-angle and lighting changes in drafts and opens the persistent annotation editor', async () => {
   const user = userEvent.setup()
   const onCreateToolNode = vi.fn()
   render(
@@ -394,24 +394,49 @@ test('keeps multi-angle and lighting changes in drafts and explains unavailable 
   expect(within(lighting).getByText('调整任一参数后才可生成。')).toBeVisible()
   await user.keyboard('{Escape}')
 
-  expect(screen.getByRole('button', { name: '标注' })).toBeDisabled()
-  expect(screen.getByText(/图片标注暂未开放/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '标注' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '标注' }))
+  expect(screen.getByRole('dialog', { name: '标注编辑器' })).toBeVisible()
+  for (const tool of ['矩形', '圆形', '箭头', '画笔', '文本标注']) {
+    expect(screen.getByRole('button', { name: tool })).toBeVisible()
+  }
   expect(onCreateToolNode).not.toHaveBeenCalled()
 })
 
-test('marks nine-grid and split unavailable and keeps canvas-image preview functional', async () => {
+test('keeps nine-grid unavailable, performs real grid split, and keeps preview functional', async () => {
   const user = userEvent.setup()
+  const onSplitImage = vi.fn(async () => undefined)
   render(
-    <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} />,
+    <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} onSplitImage={onSplitImage} />,
   )
 
   expect(screen.getByRole('button', { name: '九宫格' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: '宫格切分' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '宫格切分' })).toBeEnabled()
   expect(screen.getByText(/九宫格暂未开放/)).toBeInTheDocument()
-  expect(screen.getByText(/宫格切分暂未开放/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '宫格切分' }))
+  expect(screen.getByRole('menu', { name: '宫格切分规格' })).toBeVisible()
+  await user.click(screen.getByRole('menuitem', { name: '4 宫格（2×2）' }))
+  expect(onSplitImage).toHaveBeenCalledWith('image-node', 2, true)
 
   await user.click(screen.getByRole('button', { name: '预览' }))
   expect(screen.getByRole('dialog', { name: '画布图片预览' })).toBeVisible()
+})
+
+test('exposes persistent horizontal and vertical image mirror actions', async () => {
+  const user = userEvent.setup()
+  const onMirrorImage = vi.fn()
+  render(
+    <SelectionContextBar
+      project={project}
+      node={project.nodes[1]}
+      onCreateToolNode={vi.fn()}
+      onRotateImage={vi.fn()}
+      onMirrorImage={onMirrorImage}
+    />,
+  )
+  await user.click(screen.getByRole('button', { name: '旋转与镜像' }))
+  await user.click(screen.getByRole('menuitem', { name: '水平镜像' }))
+  expect(onMirrorImage).toHaveBeenCalledWith('image-node', 'horizontal')
 })
 
 test('offers the exact eleven video media actions with visible disabled reasons', () => {
@@ -450,37 +475,43 @@ test('offers the exact eleven video media actions with visible disabled reasons'
   for (const label of ['下载', '预览']) {
     expect(within(toolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'true')
   }
-  for (const label of ['剪辑', '片段重拍', '裁剪', '智能续写', '智能去字幕', '音频分离', '画面编辑']) {
+  for (const label of ['片段重拍', '智能续写', '智能去字幕', '画面编辑']) {
     expect(within(toolbar).getByRole('button', { name: label })).toBeDisabled()
   }
   expect(screen.getByText(/片段重拍暂未开放/)).toBeVisible()
   expect(screen.getByText(/智能续写暂未开放/)).toBeVisible()
-  expect(screen.getByText(/音频分离暂未开放/)).toBeVisible()
+  for (const label of ['剪辑', '裁剪', '音频分离']) {
+    expect(within(toolbar).getByRole('button', { name: label })).toBeEnabled()
+  }
 })
 
-test('prevents clip and crop fake completion with explicit unavailable reasons', () => {
-  const onSubmitVideoDraft = vi.fn()
+test('submits clip and crop as browser media-processing jobs', async () => {
+  const user = userEvent.setup()
+  const onProcessVideo = vi.fn(async (_options: unknown) => undefined)
   render(
     <SelectionContextBar
       project={project}
       node={project.nodes[2]}
       onCreateToolNode={vi.fn()}
       onCreateVideoToolNode={vi.fn()}
-      onSubmitVideoDraft={onSubmitVideoDraft}
+      onProcessVideo={(_nodeId, options) => onProcessVideo(options)}
       onRotateImage={vi.fn()}
     />,
   )
 
-  expect(screen.getByRole('button', { name: '剪辑' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: '裁剪' })).toBeDisabled()
-  expect(screen.getByText(/剪辑暂未开放/)).toBeVisible()
-  expect(screen.getByText(/裁剪暂未开放/)).toBeVisible()
-  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '剪辑' }))
+  expect(screen.getByRole('dialog', { name: '剪辑内联编辑器' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: '确认剪辑并导出 WebM' }))
+  expect(onProcessVideo).toHaveBeenCalledWith(expect.objectContaining({ startSeconds: 0, endSeconds: 5 }))
+  await user.click(screen.getByRole('button', { name: '裁剪' }))
+  await user.click(screen.getByRole('button', { name: '生成裁剪并导出 WebM' }))
+  expect(onProcessVideo).toHaveBeenLastCalledWith(expect.objectContaining({ crop: expect.any(Object) }))
 })
 
-test('confirms derived video nodes and disables unfinished media processing actions', async () => {
+test('confirms derived video nodes, extracts audio, and keeps remaining unfinished actions disabled', async () => {
   const user = userEvent.setup()
   const onCreateVideoToolNode = vi.fn()
+  const onExtractVideoAudio = vi.fn(async () => undefined)
   render(
     <SelectionContextBar
       project={project}
@@ -488,6 +519,7 @@ test('confirms derived video nodes and disables unfinished media processing acti
       onCreateToolNode={vi.fn()}
       onCreateVideoToolNode={onCreateVideoToolNode}
       onSubmitVideoDraft={vi.fn()}
+      onExtractVideoAudio={() => onExtractVideoAudio()}
       onRotateImage={vi.fn()}
     />,
   )
@@ -501,7 +533,10 @@ test('confirms derived video nodes and disables unfinished media processing acti
   await user.click(within(confirmation).getByRole('button', { name: '确认添加' }))
   expect(onCreateVideoToolNode).toHaveBeenCalledWith('视频高清')
 
-  for (const label of ['智能去字幕', '音频分离', '画面编辑']) {
+  await user.click(screen.getByRole('button', { name: '音频分离' }))
+  await user.click(screen.getByRole('menuitem', { name: '音视频分离' }))
+  expect(onExtractVideoAudio).toHaveBeenCalledOnce()
+  for (const label of ['智能去字幕', '画面编辑']) {
     expect(screen.getByRole('button', { name: label })).toBeDisabled()
   }
 })
