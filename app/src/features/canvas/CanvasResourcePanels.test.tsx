@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
+import type { LibraryAssetRecord } from '../assets/library-model'
 import {
   AssetLibraryPanel,
   CharacterLibraryPanel,
@@ -92,7 +93,36 @@ test('offers the exact 17 effect templates and inserts the chosen effect', async
 test('searches, filters, renames, moves, deletes and sends library assets', async () => {
   const user = userEvent.setup()
   const onInsert = vi.fn()
-  render(<AssetLibraryPanel project={project} onInsert={onInsert} />)
+  let records: LibraryAssetRecord[] = project.assets.map((asset, index) => ({
+    ...asset,
+    name: index === 0 ? '雨夜长街' : '追逐片段',
+    createdAt: project.createdAt,
+    source: 'project' as const,
+    folderId: 'project' as const,
+  }))
+  const repository = {
+    list: vi.fn(async () => records),
+    rename: vi.fn(async (assetId: string, name: string) => {
+      records = records.map((record) => record.id === assetId ? { ...record, name } : record)
+      return records.find(({ id }) => id === assetId)!
+    }),
+    move: vi.fn(async (assetId: string, folderId: 'project' | 'generated' | 'inspiration') => {
+      records = records.map((record) => record.id === assetId ? { ...record, folderId } : record)
+      return records.find(({ id }) => id === assetId)!
+    }),
+    deleteAsset: vi.fn(async (assetId: string) => {
+      records = records.filter(({ id }) => id !== assetId)
+      return { status: 'deleted' as const, projectIds: [], nodeTitles: [] }
+    }),
+  }
+  render(
+    <AssetLibraryPanel
+      project={project}
+      repository={repository}
+      onInsert={onInsert}
+      onRemoveProjectAsset={vi.fn()}
+    />,
+  )
 
   const dialog = screen.getByRole('dialog', { name: '资产管理' })
   expect(within(dialog).getByRole('tree', { name: '文件夹' })).toBeVisible()
@@ -109,6 +139,7 @@ test('searches, filters, renames, moves, deletes and sends library assets', asyn
   const rename = within(rain).getByRole('textbox', { name: '重命名雨夜长街' })
   await user.clear(rename)
   await user.type(rename, '蓝调雨夜{Enter}')
+  expect(repository.rename).toHaveBeenCalledWith('asset-rain', '蓝调雨夜')
   expect(within(dialog).getByRole('article', { name: '素材 蓝调雨夜' })).toBeVisible()
 
   const renamed = within(dialog).getByRole('article', { name: '素材 蓝调雨夜' })
@@ -117,6 +148,7 @@ test('searches, filters, renames, moves, deletes and sends library assets', asyn
   expect(within(menu).getByRole('menuitem', { name: '重命名' })).toBeVisible()
   await user.click(within(menu).getByRole('menuitem', { name: '移动到' }))
   await user.click(screen.getByRole('menuitem', { name: '灵感收集' }))
+  expect(repository.move).toHaveBeenCalledWith('asset-rain', 'inspiration')
   expect(within(renamed).getByText(/灵感收集/)).toBeVisible()
 
   await user.pointer({ target: renamed, keys: '[MouseRight]' })
@@ -131,7 +163,37 @@ test('searches, filters, renames, moves, deletes and sends library assets', asyn
 
   await user.pointer({ target: renamed, keys: '[MouseRight]' })
   await user.click(screen.getByRole('menuitem', { name: '删除' }))
+  expect(repository.deleteAsset).toHaveBeenCalledWith('asset-rain')
   expect(within(dialog).queryByRole('article', { name: '素材 蓝调雨夜' })).not.toBeInTheDocument()
+})
+
+test('previews persisted video and audio assets with native controls', async () => {
+  const records = [
+    {
+      id: 'library-video', name: '雨夜片段', kind: 'video' as const,
+      mimeType: 'video/mp4', url: 'data:video/mp4;base64,AAAA',
+      createdAt: project.createdAt, source: 'upload' as const, folderId: 'inspiration' as const,
+    },
+    {
+      id: 'library-audio', name: '环境声', kind: 'audio' as const,
+      mimeType: 'audio/mpeg', url: 'data:audio/mpeg;base64,AAAA',
+      createdAt: project.createdAt, source: 'upload' as const, folderId: 'inspiration' as const,
+    },
+  ]
+  render(
+    <AssetLibraryPanel
+      project={{ ...project, assets: [], nodes: [] }}
+      repository={{
+        list: async () => records,
+        rename: vi.fn(), move: vi.fn(), deleteAsset: vi.fn(),
+      }}
+      onInsert={vi.fn()}
+      onRemoveProjectAsset={vi.fn()}
+    />,
+  )
+
+  expect(await screen.findByLabelText('预览雨夜片段')).toBeInstanceOf(HTMLVideoElement)
+  expect(screen.getByLabelText('预览环境声')).toBeInstanceOf(HTMLAudioElement)
 })
 
 test('offers style and effect library entries as canvas reference nodes', async () => {

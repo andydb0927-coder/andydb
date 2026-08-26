@@ -25,4 +25,12 @@ describe('local asset import', () => {
       readAssetFileAsDataUrl(new File(['audio-bytes'], 'sound.mp3', { type: 'audio/mpeg' })),
     ).resolves.toMatch(/^data:audio\/mpeg;base64,/)
   })
+
+  test.each([
+    ['image', 'still.png', 'image/png'],
+    ['video', 'clip.mp4', 'video/mp4'],
+    ['audio', 'voice.mp3', 'audio/mpeg'],
+  ])('accepts %s uploads for local preview and storage', (_kind, name, type) => {
+    expect(() => validateAssetFile(new File(['media'], name, { type }))).not.toThrow()
+  })
 })

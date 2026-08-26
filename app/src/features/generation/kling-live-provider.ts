@@ -167,7 +167,7 @@ function liveResult(
 ): GenerationResult {
   const assetId = crypto.randomUUID()
   return {
-    persistence: 'ephemeral',
+    persistence: 'project',
     asset: {
       id: assetId,
       kind: 'video',

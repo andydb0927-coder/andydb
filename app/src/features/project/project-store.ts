@@ -20,12 +20,16 @@ import {
   validateImageReferenceConnection,
 } from './dependency-policy'
 import { ProjectRepository } from './project-repository'
-import type { GenerationResult } from '../generation/generation-adapter'
+import {
+  generationResultAssets,
+  type GenerationResult,
+} from '../generation/generation-adapter'
 import { reorderTimeline as reorderTimelineItems } from '../timeline/timeline-model'
 import {
   updateCreativeCardProject,
   type CreativeCardDraft,
 } from './creative-card'
+import { detachLibraryAssetFromProject } from '../assets/library-model'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -103,6 +107,7 @@ interface ProjectStore {
   ) => void
   updateGenerationJob: (projectId: string, job: GenerationJob) => void
   deleteGenerationJobs: (jobIds: Iterable<string>) => string[]
+  removeAssetReferences: (assetId: string) => void
   applyGenerationSuccess: (
     projectId: string,
     job: GenerationJob,
@@ -1286,6 +1291,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       return deletedIds
     },
 
+    removeAssetReferences: (assetId) => {
+      commit((project) => detachLibraryAssetFromProject(project, assetId))
+    },
+
     applyGenerationSuccess: (projectId, job, result) => {
       const project = get().projectsById[projectId]
       if (!project || job.projectId !== projectId) {
@@ -1311,7 +1320,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       if (activeVersion?.generationJobId !== job.id) {
         throw new Error('Stale generation result')
       }
-      if (project.assets.some((asset) => asset.id === result.asset.id)) {
+      const generatedAssets = generationResultAssets(result)
+      const generatedAssetIds = new Set(generatedAssets.map(({ id }) => id))
+      if (generatedAssetIds.size !== generatedAssets.length) {
+        throw new Error('Generation asset IDs must be unique')
+      }
+      if (project.assets.some((asset) => generatedAssetIds.has(asset.id))) {
         throw new Error('Generation asset ID collision')
       }
       if (
@@ -1329,10 +1343,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
 
       const version: NodeVersion = result.version
-      const assets = [...project.assets, result.asset]
+      const assets = [...project.assets, ...generatedAssets]
       let next: Project
 
       if (job.operation === 'regenerate') {
+        const imageResults = generatedAssets
+          .filter(({ kind }) => kind === 'image')
+          .map(({ id: assetId }) => ({ id: crypto.randomUUID(), assetId }))
         const nextProject = withUpdatedTimestamp({
           ...project,
           assets,
@@ -1344,6 +1361,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   versions: [...node.versions, version],
                   activeVersionId: version.id,
                   sourceChanged: false,
+                  ...(imageResults.length
+                    ? {
+                        imageResults,
+                        activeResultId: imageResults[0].id,
+                      }
+                    : {}),
                   ...(job.generationConfig
                     ? { generationConfig: cloneGenerationConfig(job) }
                     : {}),

@@ -26,6 +26,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
+import type { AssetLibraryRepository } from '../assets/asset-library-repository'
 import type {
   CanvasNode,
   Project,
@@ -354,11 +355,13 @@ interface WorkspaceSidePanelProps {
   panel: WorkspacePanel
   project: Project
   generationPreferenceStore?: GenerationProviderPreferenceStore
+  assetRepository: Pick<AssetLibraryRepository, 'list' | 'rename' | 'move' | 'deleteAsset'>
   historyInsertionMode?: boolean
   onClose(): void
   onApplyCharacters?(characters: CharacterProfile[]): void
   onDeleteHistoryJobs?(jobIds: string[]): void
   onInsertAsset?(asset: WorkspaceAsset): void
+  onRemoveProjectAsset?(assetId: string): void
   onInsertEffect?(template: EffectTemplate): void
   onInsertMaterial?(entry: MaterialLibraryEntry): void
   onInsertHistoryResult?(jobId: string): void
@@ -370,11 +373,13 @@ export function WorkspaceSidePanel({
   panel,
   project,
   generationPreferenceStore,
+  assetRepository,
   historyInsertionMode = false,
   onClose,
   onApplyCharacters,
   onDeleteHistoryJobs,
   onInsertAsset,
+  onRemoveProjectAsset,
   onInsertEffect,
   onInsertMaterial,
   onInsertHistoryResult,
@@ -443,7 +448,12 @@ export function WorkspaceSidePanel({
       ) : null}
 
       {panel === 'assets' ? (
-        <AssetLibraryPanel project={project} onInsert={(asset) => onInsertAsset?.(asset)} />
+        <AssetLibraryPanel
+          project={project}
+          repository={assetRepository}
+          onInsert={(asset) => onInsertAsset?.(asset)}
+          onRemoveProjectAsset={(assetId) => onRemoveProjectAsset?.(assetId)}
+        />
       ) : null}
 
       {panel === 'library' ? (
@@ -797,9 +807,10 @@ export function SelectionContextBar({
         <button
           type="button"
           aria-haspopup="menu"
-          aria-expanded={surface === 'nine-grid'}
+          aria-expanded="false"
+          aria-describedby="nine-grid-disabled-reason"
           data-compact="false"
-          onClick={() => setSurface('nine-grid')}
+          disabled
         >
           <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" />
         </button>
@@ -807,16 +818,20 @@ export function SelectionContextBar({
         <button
           type="button"
           aria-haspopup="menu"
-          aria-expanded={surface === 'split'}
+          aria-expanded="false"
+          aria-describedby="image-split-disabled-reason"
           data-compact="false"
-          onClick={() => setSurface('split')}
+          disabled
         >
           <Grid3X3 aria-hidden="true" />宫格切分<ChevronDown aria-hidden="true" />
         </button>
-        <button type="button" data-compact="true" aria-label="标注" title="标注" onClick={() => setSurface('annotation')}><Pencil aria-hidden="true" /><span className="visually-hidden">标注</span></button>
+        <button type="button" data-compact="true" aria-label="标注" title="标注（暂未开放）" aria-describedby="image-annotation-disabled-reason" disabled><Pencil aria-hidden="true" /><span className="visually-hidden">标注</span></button>
         <button type="button" data-compact="true" aria-label="旋转" title="旋转" onClick={() => onRotateImage(node.id)}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转</span></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
+        <span id="nine-grid-disabled-reason" className="visually-hidden">九宫格暂未开放：尚未接入可保存的模板处理结果。</span>
+        <span id="image-split-disabled-reason" className="visually-hidden">宫格切分暂未开放：尚未接入可下载的切分结果。</span>
+        <span id="image-annotation-disabled-reason" className="visually-hidden">图片标注暂未开放：尚未接入可持久化的标注图层。</span>
       </div>
 
       {surface === 'portrait' ? (

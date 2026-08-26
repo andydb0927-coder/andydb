@@ -187,21 +187,26 @@ export function VideoMediaContextBar({
   return (
     <>
       <div className="selection-context-bar selection-context-bar--video floating-panel" role="toolbar" aria-label="视频媒体处理工具">
-        <button type="button" onClick={() => setSurface('clip')}><Scissors aria-hidden="true" />剪辑</button>
-        <button type="button" disabled aria-describedby="video-reshoot-reason">片段重拍</button>
-        <button type="button" onClick={() => setSurface('crop')}>裁剪</button>
+        <button type="button" disabled title="剪辑暂未开放" aria-describedby="video-clip-reason"><Scissors aria-hidden="true" />剪辑</button>
+        <button type="button" disabled title="片段重拍暂未开放" aria-describedby="video-reshoot-reason">片段重拍</button>
+        <button type="button" disabled title="裁剪暂未开放" aria-describedby="video-crop-reason">裁剪</button>
         <button type="button" onClick={() => setPendingTool('视频高清')}><ScanLine aria-hidden="true" />高清</button>
         <button type="button" onClick={() => setPendingTool('逐帧拉片')}><Film aria-hidden="true" />逐帧拉片</button>
-        <button type="button" disabled aria-describedby="video-extend-reason">智能续写</button>
-        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'subtitle-menu'} onClick={() => setSurface('subtitle-menu')}><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
-        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'audio-menu'} onClick={() => setSurface('audio-menu')}>音频分离<ChevronDown aria-hidden="true" /></button>
-        <button type="button" aria-haspopup="menu" aria-expanded={surface === 'picture-menu'} onClick={() => setSurface('picture-menu')}><Sparkles aria-hidden="true" />画面编辑<ChevronDown aria-hidden="true" /></button>
+        <button type="button" disabled title="智能续写暂未开放" aria-describedby="video-extend-reason">智能续写</button>
+        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="智能去字幕暂未开放" aria-describedby="video-subtitle-reason"><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
+        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="音频分离暂未开放" aria-describedby="video-audio-reason">音频分离<ChevronDown aria-hidden="true" /></button>
+        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="画面编辑暂未开放" aria-describedby="video-picture-reason"><Sparkles aria-hidden="true" />画面编辑<ChevronDown aria-hidden="true" /></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
-      <div className="video-disabled-reasons" role="note" aria-label="视频工具禁用原因">
-        <span id="video-reshoot-reason">片段重拍：当前仅支持时长不少于 4 秒的视频。</span>
-        <span id="video-extend-reason">智能续写：当前本地演示未配置续写模型能力。</span>
+      <div className="video-disabled-reasons visually-hidden" role="note" aria-label="视频工具禁用原因">
+        <span id="video-clip-reason">剪辑暂未开放：尚未接入可导出的剪辑结果。</span>
+        <span id="video-reshoot-reason">片段重拍暂未开放：尚未接入媒体重拍模型。</span>
+        <span id="video-crop-reason">裁剪暂未开放：尚未接入可持久化的视频裁剪结果。</span>
+        <span id="video-extend-reason">智能续写暂未开放：尚未接入续写模型能力。</span>
+        <span id="video-subtitle-reason">智能去字幕暂未开放：尚未接入可持久化的擦除结果。</span>
+        <span id="video-audio-reason">音频分离暂未开放：尚未接入音轨提取与文件导出。</span>
+        <span id="video-picture-reason">画面编辑暂未开放：尚未接入主体编辑结果。</span>
       </div>
 
       {surface === 'clip' ? <ClipEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={() => submitDraft('剪辑')} /> : null}

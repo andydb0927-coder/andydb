@@ -233,7 +233,7 @@ function liveResult(
   const asset = assets[0]
   if (!asset) throw new Error('Seedream 未返回图片结果')
   return {
-    persistence: 'ephemeral',
+    persistence: 'project',
     asset,
     assets,
     version: {

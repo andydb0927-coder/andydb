@@ -457,6 +457,7 @@ export function CreativeNodeShell({
     node.videoTool === undefined &&
     specializedDetails === undefined
   const videoMedia = asset?.kind === 'video' && node.kind === 'video'
+  const audioMedia = asset?.kind === 'audio' && specializedDetails?.type === 'audio'
   const liblibMediaNode = imageGenerationNode || videoGenerationNode || imageToolNode
   const textGenerationNode = specializedDetails?.type === 'text'
   const manualTextNode = textGenerationNode && specializedDetails.editorMode === 'manual'
@@ -701,6 +702,15 @@ export function CreativeNodeShell({
             <StatusText status="idle">就绪</StatusText>
           )}
         </button>
+        {audioMedia ? (
+          <audio
+            className="creative-node__audio-player nodrag nowheel"
+            aria-label={`播放${node.title}`}
+            src={asset.url}
+            controls
+            preload="metadata"
+          />
+        ) : null}
         {videoMedia ? (
           <>
             <div

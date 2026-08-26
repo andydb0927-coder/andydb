@@ -847,7 +847,7 @@ export function ImageGenerationPanel({
       ? '请输入提示词或添加参考媒体后再生成。'
       : undefined
   const submitTitle = selectedProvider.kind === 'live'
-    ? `调用真实 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} API；临时结果刷新后失效`
+    ? `调用真实 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} API；结果将保存到项目与生成历史`
     : selectedProvider.kind === 'placeholder'
       ? selectedProvider.disabledReason ?? '模型待接入'
       : '本地演示，不连接真实生成'
@@ -1386,7 +1386,7 @@ export function ImageGenerationPanel({
                 : selectedProvider.sizePolicy?.multiImageStrategy === 'batch'
                   ? `将批量请求 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName} ${settings.count} 张`
                   : `将调用 ${selectedProvider.apiDisplayName ?? selectedProvider.modelName}`}
-              ；结果仅在当前页面临时保存。
+              ；结果将写入节点版本、项目资产与生成历史。
             </p>
             <div>
               <button type="button" onClick={closeLiveConfirmation}>取消</button>

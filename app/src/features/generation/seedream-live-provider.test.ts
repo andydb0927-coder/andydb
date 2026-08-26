@@ -33,7 +33,7 @@ function createProvider(fetchFn: typeof fetch, overrides = {}) {
 }
 
 describe('Seedream live provider', () => {
-  test('maps a text-to-image request to the official synchronous API and returns an ephemeral image', async () => {
+  test('maps a text-to-image request to the official synchronous API and returns a project image', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockImplementation(async () => jsonResponse(seedreamMinLoopSuccessFixture))
@@ -68,7 +68,7 @@ describe('Seedream live provider', () => {
       }),
     )
     expect(result).toMatchObject({
-      persistence: 'ephemeral',
+      persistence: 'project',
       asset: {
         kind: 'image',
         url: 'https://media.fixture.invalid/seedream-result.png',

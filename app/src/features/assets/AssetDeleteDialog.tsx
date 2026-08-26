@@ -4,6 +4,7 @@ export interface AssetDeleteDialogProps {
   assetName: string
   busy: boolean
   returnFocusTo: HTMLElement
+  impact?: { projectIds: string[]; nodeTitles: string[] }
   onCancel(): void
   onConfirm(): void
 }
@@ -12,6 +13,7 @@ export function AssetDeleteDialog({
   assetName,
   busy,
   returnFocusTo,
+  impact,
   onCancel,
   onConfirm,
 }: AssetDeleteDialogProps) {
@@ -56,8 +58,11 @@ export function AssetDeleteDialog({
       >
         <h2 id="asset-delete-title">删除素材 {assetName}</h2>
         <p id="asset-delete-impact">
-          仅未被任何项目、版本或任务引用的本地目录素材可以删除。
-          此操作不会删除远程资源。
+          {impact ? (
+            <>该素材被 {impact.projectIds.length} 个项目引用{impact.nodeTitles.length ? `，关联节点：${impact.nodeTitles.join('、')}` : ''}。继续将移除这些节点、版本和任务中的素材引用；远程资源不会被删除。</>
+          ) : (
+            <>该素材没有项目引用。此操作不会删除远程资源。</>
+          )}
         </p>
         <div className="canvas-dialog__actions">
           <button ref={cancelRef} type="button" disabled={busy} onClick={cancel}>

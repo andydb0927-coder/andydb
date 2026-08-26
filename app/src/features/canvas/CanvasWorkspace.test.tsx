@@ -95,6 +95,19 @@ const project: Project = {
   exportJobs: [],
 }
 
+const assetRepository = {
+  list: vi.fn(async () => project.assets.map((asset) => ({
+    ...asset,
+    name: project.nodes.find((node) => node.versions.some(({ assetId }) => assetId === asset.id))?.title ?? asset.id,
+    createdAt: project.createdAt,
+    source: 'project' as const,
+    folderId: 'project' as const,
+  }))),
+  rename: vi.fn(),
+  move: vi.fn(),
+  deleteAsset: vi.fn(),
+}
+
 test('groups project nodes into storyboard sections, saves dialogue, and reports totals', async () => {
   const user = userEvent.setup()
   const onOpenNode = vi.fn()
@@ -210,19 +223,19 @@ test('refreshes a saved storyboard dialogue after project history changes', asyn
 
 test('shows local assets, generation history and the complete four-group shortcut reference', () => {
   const { rerender } = render(
-    <WorkspaceSidePanel panel="assets" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
+    <WorkspaceSidePanel assetRepository={assetRepository} panel="assets" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
   expect(screen.getByRole('complementary', { name: '资产管理' })).toHaveTextContent('角色图')
 
   rerender(
-    <WorkspaceSidePanel panel="history" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
+    <WorkspaceSidePanel assetRepository={assetRepository} panel="history" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
   expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('已完成')
   expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('Mock Studio · Kling O3')
   expect(screen.getByRole('complementary', { name: '历史' })).toHaveTextContent('消耗 24 积分')
 
   rerender(
-    <WorkspaceSidePanel panel="shortcuts" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
+    <WorkspaceSidePanel assetRepository={assetRepository} panel="shortcuts" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />,
   )
   const panel = screen.getByRole('complementary', { name: '快捷键' })
   for (const group of ['创作', '缩放', '移动画布', '其他']) {
@@ -259,7 +272,7 @@ test('shows local assets, generation history and the complete four-group shortcu
 test('shows the compact four-category tutorial drawer and links to the full tutorial center', () => {
   render(
     <MemoryRouter>
-      <WorkspaceSidePanel panel="help" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />
+      <WorkspaceSidePanel assetRepository={assetRepository} panel="help" project={project} onClose={vi.fn()} onSelectNode={vi.fn()} />
     </MemoryRouter>,
   )
 
@@ -353,7 +366,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   expect(onCreateToolNode).toHaveBeenCalledWith('人像调节')
 })
 
-test('keeps multi-angle, lighting, and annotation changes in drafts until submit', async () => {
+test('keeps multi-angle and lighting changes in drafts and explains unavailable annotation', async () => {
   const user = userEvent.setup()
   const onCreateToolNode = vi.fn()
   render(
@@ -381,42 +394,21 @@ test('keeps multi-angle, lighting, and annotation changes in drafts until submit
   expect(within(lighting).getByText('调整任一参数后才可生成。')).toBeVisible()
   await user.keyboard('{Escape}')
 
-  await user.click(screen.getByRole('button', { name: '标注' }))
-  const annotation = screen.getByRole('dialog', { name: '标注编辑器' })
-  for (const tool of ['画笔', '框注', '文字', '颜色', '线宽', '撤销', '重做']) {
-    expect(within(annotation).getByLabelText(tool)).toBeVisible()
-  }
-  expect(within(annotation).getByRole('button', { name: '保存标注' })).toBeDisabled()
-  expect(
-    within(annotation).getByText('尚未创建标注，撤销、重做与保存均不可用。'),
-  ).toBeVisible()
-  await user.keyboard('{Escape}')
+  expect(screen.getByRole('button', { name: '标注' })).toBeDisabled()
+  expect(screen.getByText(/图片标注暂未开放/)).toBeInTheDocument()
   expect(onCreateToolNode).not.toHaveBeenCalled()
 })
 
-test('opens the verified nine-grid, split, and canvas-image preview read-only surfaces', async () => {
+test('marks nine-grid and split unavailable and keeps canvas-image preview functional', async () => {
   const user = userEvent.setup()
   render(
     <SelectionContextBar project={project} node={project.nodes[1]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} />,
   )
 
-  await user.click(screen.getByRole('button', { name: '九宫格' }))
-  const templates = screen.getByRole('menu', { name: '九宫格模板' })
-  expect(within(templates).getAllByRole('menuitem')).toHaveLength(11)
-  expect(
-    within(templates).getByText('规格仅核对至菜单层，本地演示不执行模板。'),
-  ).toBeVisible()
-  await user.keyboard('{Escape}')
-
-  await user.click(screen.getByRole('button', { name: '宫格切分' }))
-  const split = screen.getByRole('menu', { name: '宫格切分规格' })
-  for (const option of ['4 宫格（2×2）', '9 宫格（3×3）', '16 宫格（4×4）', '25 宫格（5×5）', '自定义']) {
-    expect(within(split).getByRole('menuitem', { name: option })).toBeVisible()
-  }
-  expect(
-    within(split).getByText('规格未验证切分输出，本地演示不执行。'),
-  ).toBeVisible()
-  await user.keyboard('{Escape}')
+  expect(screen.getByRole('button', { name: '九宫格' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '宫格切分' })).toBeDisabled()
+  expect(screen.getByText(/九宫格暂未开放/)).toBeInTheDocument()
+  expect(screen.getByText(/宫格切分暂未开放/)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: '预览' }))
   expect(screen.getByRole('dialog', { name: '画布图片预览' })).toBeVisible()
@@ -458,14 +450,15 @@ test('offers the exact eleven video media actions with visible disabled reasons'
   for (const label of ['下载', '预览']) {
     expect(within(toolbar).getByRole('button', { name: label })).toHaveAttribute('data-compact', 'true')
   }
-  expect(within(toolbar).getByRole('button', { name: '片段重拍' })).toBeDisabled()
-  expect(within(toolbar).getByRole('button', { name: '智能续写' })).toBeDisabled()
-  expect(screen.getByText(/当前仅支持时长不少于 4 秒/)).toBeVisible()
-  expect(screen.getByText(/当前本地演示未配置续写模型能力/)).toBeVisible()
+  for (const label of ['剪辑', '片段重拍', '裁剪', '智能续写', '智能去字幕', '音频分离', '画面编辑']) {
+    expect(within(toolbar).getByRole('button', { name: label })).toBeDisabled()
+  }
+  expect(screen.getByText(/片段重拍暂未开放/)).toBeVisible()
+  expect(screen.getByText(/智能续写暂未开放/)).toBeVisible()
+  expect(screen.getByText(/音频分离暂未开放/)).toBeVisible()
 })
 
-test('keeps clip and crop edits in node-local drafts until an explicit submit', async () => {
-  const user = userEvent.setup()
+test('prevents clip and crop fake completion with explicit unavailable reasons', () => {
   const onSubmitVideoDraft = vi.fn()
   render(
     <SelectionContextBar
@@ -478,29 +471,14 @@ test('keeps clip and crop edits in node-local drafts until an explicit submit', 
     />,
   )
 
-  await user.click(screen.getByRole('button', { name: '剪辑' }))
-  const clip = screen.getByRole('dialog', { name: '剪辑内联编辑器' })
-  expect(within(clip).getAllByRole('img', { name: /剪辑帧/ })).toHaveLength(12)
-  expect(within(clip).getByRole('button', { name: '整数秒吸附' })).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  )
-  expect(within(clip).getByRole('button', { name: '选区循环播放' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
-  await user.keyboard('{Escape}')
-  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
-
-  await user.click(screen.getByRole('button', { name: '裁剪' }))
-  const crop = screen.getByRole('dialog', { name: '裁剪内联编辑器' })
-  expect(within(crop).getAllByRole('button', { name: /裁剪控制点/ })).toHaveLength(8)
-  expect(within(crop).getByText('1024 × 576')).toBeVisible()
-  await user.keyboard('{Escape}')
+  expect(screen.getByRole('button', { name: '剪辑' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '裁剪' })).toBeDisabled()
+  expect(screen.getByText(/剪辑暂未开放/)).toBeVisible()
+  expect(screen.getByText(/裁剪暂未开放/)).toBeVisible()
   expect(onSubmitVideoDraft).not.toHaveBeenCalled()
 })
 
-test('confirms derived video nodes and exposes subtitle, audio, and picture-edit menus', async () => {
+test('confirms derived video nodes and disables unfinished media processing actions', async () => {
   const user = userEvent.setup()
   const onCreateVideoToolNode = vi.fn()
   render(
@@ -523,28 +501,12 @@ test('confirms derived video nodes and exposes subtitle, audio, and picture-edit
   await user.click(within(confirmation).getByRole('button', { name: '确认添加' }))
   expect(onCreateVideoToolNode).toHaveBeenCalledWith('视频高清')
 
-  await user.click(screen.getByRole('button', { name: '智能去字幕' }))
-  const subtitle = screen.getByRole('menu', { name: '智能去字幕' })
-  expect(within(subtitle).getByRole('menuitem', { name: '智能擦除' })).toBeVisible()
-  expect(within(subtitle).getByRole('menuitem', { name: '框选擦除' })).toBeVisible()
-  await user.keyboard('{Escape}')
-
-  await user.click(screen.getByRole('button', { name: '音频分离' }))
-  const audio = screen.getByRole('menu', { name: '音频分离' })
-  expect(within(audio).getByRole('menuitem', { name: '人声分离' })).toBeDisabled()
-  expect(within(audio).getByText('当前视频无音轨，无法使用人声分离')).toBeVisible()
-  expect(within(audio).getByText('当前视频无音轨，无法分离音视频')).toBeVisible()
-  await user.keyboard('{Escape}')
-
-  await user.click(screen.getByRole('button', { name: '画面编辑' }))
-  const picture = screen.getByRole('menu', { name: '画面编辑' })
-  for (const label of ['主体消除', '主体修改', '主体替换', '智能抠像']) {
-    expect(within(picture).getByRole('menuitem', { name: label })).toBeVisible()
+  for (const label of ['智能去字幕', '音频分离', '画面编辑']) {
+    expect(screen.getByRole('button', { name: label })).toBeDisabled()
   }
 })
 
-test('keeps subtitle, subject editing, and keying as escapable node-local drafts', async () => {
-  const user = userEvent.setup()
+test('does not expose unfinished subtitle, subject editing, or keying drafts', () => {
   const onSubmitVideoDraft = vi.fn()
   render(
     <SelectionContextBar
@@ -557,29 +519,8 @@ test('keeps subtitle, subject editing, and keying as escapable node-local drafts
     />,
   )
 
-  await user.click(screen.getByRole('button', { name: '智能去字幕' }))
-  await user.click(screen.getByRole('menuitem', { name: '框选擦除' }))
-  const erase = screen.getByRole('dialog', { name: '框选擦除编辑器' })
-  expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeDisabled()
-  expect(within(erase).getByText('请先框选字幕区域。')).toBeVisible()
-  await user.click(within(erase).getByRole('button', { name: '框选区域' }))
-  expect(within(erase).getByRole('button', { name: '提交框选擦除' })).toBeEnabled()
-  await user.keyboard('{Escape}')
-  expect(onSubmitVideoDraft).not.toHaveBeenCalled()
-
-  await user.click(screen.getByRole('button', { name: '画面编辑' }))
-  await user.click(screen.getByRole('menuitem', { name: '主体消除' }))
-  const subject = screen.getByRole('dialog', { name: '主体消除编辑器' })
-  expect(within(subject).getByText('已选择主体 (0/4)')).toBeVisible()
-  expect(within(subject).getByRole('toolbar', { name: '主体标注工具' })).toBeVisible()
-  expect(within(subject).getByRole('button', { name: '确定' })).toBeDisabled()
-  expect(within(subject).getByText('请先选择并标注主体。')).toBeVisible()
-  await user.keyboard('{Escape}')
-
-  await user.click(screen.getByRole('button', { name: '画面编辑' }))
-  await user.click(screen.getByRole('menuitem', { name: '智能抠像' }))
-  const keying = screen.getByRole('dialog', { name: '智能抠像编辑器' })
-  expect(within(keying).getByText('预计成本 1')).toBeVisible()
-  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: /擦除|主体|抠像/ })).not.toBeInTheDocument()
+  expect(screen.getByText(/智能去字幕暂未开放/)).toBeVisible()
+  expect(screen.getByText(/画面编辑暂未开放/)).toBeVisible()
   expect(onSubmitVideoDraft).not.toHaveBeenCalled()
 })

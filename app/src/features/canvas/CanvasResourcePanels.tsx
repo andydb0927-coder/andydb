@@ -2,18 +2,25 @@ import {
   Check,
   ChevronRight,
   Eye,
-  Film,
   Folder,
   MoreHorizontal,
   Search,
   Send,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import { withAppBase } from '../../app/public-url'
+import { AssetDeleteDialog } from '../assets/AssetDeleteDialog'
+import type {
+  DeleteLibraryAssetResult,
+} from '../assets/asset-library-repository'
+import type { AssetLibraryRepository } from '../assets/asset-library-repository'
+import type {
+  LibraryAssetFolderId,
+  LibraryAssetRecord,
+} from '../assets/library-model'
 import type { Asset, Project } from '../project/model'
 
 export interface EffectTemplate {
@@ -119,7 +126,7 @@ export interface WorkspaceAsset {
   width?: number
   height?: number
   durationSeconds?: number
-  folderId: 'project' | 'generated' | 'inspiration'
+  folderId: LibraryAssetFolderId
   folderName: string
   existingProjectAsset: boolean
 }
@@ -265,6 +272,26 @@ function assetsFromProject(project: Project): WorkspaceAsset[] {
   return [...rows, ...demos.filter(({ url }) => !urls.has(url))]
 }
 
+const assetFolderNames: Record<LibraryAssetFolderId, string> = {
+  project: '当前项目',
+  generated: '生成结果',
+  inspiration: '灵感收集',
+}
+
+function workspaceAssetFromRecord(
+  record: LibraryAssetRecord,
+  project: Project,
+): WorkspaceAsset {
+  const generated = record.source === 'generated'
+  const folderId = record.folderId ?? (generated ? 'generated' : 'project')
+  return {
+    ...record,
+    folderId,
+    folderName: assetFolderNames[folderId],
+    existingProjectAsset: project.assets.some(({ id }) => id === record.id),
+  }
+}
+
 type AssetContextState = {
   assetId: string
   x: number
@@ -274,10 +301,14 @@ type AssetContextState = {
 
 export function AssetLibraryPanel({
   project,
+  repository,
   onInsert,
+  onRemoveProjectAsset,
 }: {
   project: Project
+  repository: Pick<AssetLibraryRepository, 'list' | 'rename' | 'move' | 'deleteAsset'>
   onInsert(asset: WorkspaceAsset): void
+  onRemoveProjectAsset(assetId: string): void
 }) {
   const [assets, setAssets] = useState(() => assetsFromProject(project))
   const [query, setQuery] = useState('')
@@ -286,6 +317,33 @@ export function AssetLibraryPanel({
   const [editingId, setEditingId] = useState<string>()
   const [draftName, setDraftName] = useState('')
   const [context, setContext] = useState<AssetContextState>()
+  const [feedback, setFeedback] = useState('')
+  const [pendingDelete, setPendingDelete] = useState<{
+    asset: WorkspaceAsset
+    trigger: HTMLElement
+    impact: Extract<DeleteLibraryAssetResult, { status: 'referenced' }>
+  }>()
+  const [deleteBusy, setDeleteBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void repository.list().then((records) => {
+      if (cancelled) return
+      const persisted = records.map((record) =>
+        workspaceAssetFromRecord(record, project),
+      )
+      const persistedIds = new Set(persisted.map(({ id }) => id))
+      const fallbacks = assetsFromProject(project).filter(
+        ({ id }) => !persistedIds.has(id),
+      )
+      setAssets([...persisted, ...fallbacks])
+    }).catch(() => {
+      if (!cancelled) setFeedback('资产读取失败，请稍后重试。')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [project, repository])
 
   useEffect(() => {
     if (!context) return
@@ -315,12 +373,18 @@ export function AssetLibraryPanel({
     asset.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
   )
 
-  const renameAsset = (assetId: string) => {
+  const renameAsset = async (assetId: string) => {
     const name = draftName.trim()
     if (name) {
-      setAssets((current) =>
-        current.map((asset) => asset.id === assetId ? { ...asset, name } : asset),
-      )
+      try {
+        const record = await repository.rename(assetId, name)
+        setAssets((current) => current.map((asset) =>
+          asset.id === assetId ? { ...asset, name: record.name } : asset,
+        ))
+        setFeedback(`已重命名为${record.name}。`)
+      } catch (error) {
+        setFeedback(error instanceof Error ? error.message : '重命名失败。')
+      }
     }
     setEditingId(undefined)
     setDraftName('')
@@ -330,18 +394,37 @@ export function AssetLibraryPanel({
     setDraftName(asset.name)
     setContext(undefined)
   }
-  const moveAsset = (assetId: string, target: WorkspaceAsset['folderId']) => {
-    const folderNames = {
-      project: '当前项目',
-      generated: '生成结果',
-      inspiration: '灵感收集',
-    }
-    setAssets((current) => current.map((asset) =>
-      asset.id === assetId
-        ? { ...asset, folderId: target, folderName: folderNames[target] }
-        : asset,
-    ))
+  const moveAsset = async (assetId: string, target: WorkspaceAsset['folderId']) => {
     setContext(undefined)
+    try {
+      const record = await repository.move(assetId, target)
+      const folderId = record.folderId ?? target
+      setAssets((current) => current.map((asset) =>
+        asset.id === assetId
+          ? { ...asset, folderId, folderName: assetFolderNames[folderId] }
+          : asset,
+      ))
+      setFeedback(`已移动到${assetFolderNames[folderId]}。`)
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : '移动失败。')
+    }
+  }
+
+  const removeAsset = async (asset: WorkspaceAsset, trigger: HTMLElement) => {
+    setContext(undefined)
+    try {
+      const result = await repository.deleteAsset(asset.id)
+      if (result.status === 'referenced') {
+        setPendingDelete({ asset, trigger, impact: result })
+        return
+      }
+      if (result.status === 'deleted' || result.status === 'missing') {
+        setAssets((current) => current.filter(({ id }) => id !== asset.id))
+        setFeedback(result.status === 'deleted' ? '素材已删除。' : '素材已不存在。')
+      }
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : '删除失败。')
+    }
   }
 
   return (
@@ -397,7 +480,13 @@ export function AssetLibraryPanel({
               }}
             >
               <span className="asset-library__preview">
-                {asset.kind === 'image' ? <img src={asset.url} alt="" /> : asset.kind === 'video' ? <Film aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
+                {asset.kind === 'image' ? (
+                  <img src={asset.url} alt="" />
+                ) : asset.kind === 'video' ? (
+                  <video aria-label={`预览${asset.name}`} src={asset.url} controls preload="metadata" />
+                ) : (
+                  <audio aria-label={`预览${asset.name}`} src={asset.url} controls preload="metadata" />
+                )}
               </span>
               <div>
                 {editingId === asset.id ? (
@@ -408,7 +497,7 @@ export function AssetLibraryPanel({
                     onChange={(event) => setDraftName(event.target.value)}
                     onBlur={() => renameAsset(asset.id)}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter') renameAsset(asset.id)
+                      if (event.key === 'Enter') void renameAsset(asset.id)
                       if (event.key === 'Escape') setEditingId(undefined)
                     }}
                   />
@@ -447,22 +536,47 @@ export function AssetLibraryPanel({
                   ['generated', '生成结果'],
                   ['inspiration', '灵感收集'],
                 ] as const).map(([id, name]) => (
-                  <button key={id} type="button" role="menuitem" onClick={() => moveAsset(asset.id, id)}>{name}</button>
+                  <button key={id} type="button" role="menuitem" onClick={() => void moveAsset(asset.id, id)}>{name}</button>
                 ))}
               </>
             ) : (
               <>
                 <button type="button" role="menuitem" onClick={() => startRename(asset)}>重命名</button>
                 <button type="button" role="menuitem" onClick={() => setContext({ ...context, moving: true })}>移动到<ChevronRight aria-hidden="true" /></button>
-                <button type="button" role="menuitem" onClick={() => {
-                  setAssets((current) => current.filter(({ id }) => id !== asset.id))
-                  setContext(undefined)
-                }}><Trash2 aria-hidden="true" />删除</button>
+                <button type="button" role="menuitem" onClick={(event) => void removeAsset(asset, event.currentTarget)}><Trash2 aria-hidden="true" />删除</button>
               </>
             )}
           </div>
         )
       })() : null}
+      {feedback ? <p className="resource-panel__feedback" role="status">{feedback}</p> : null}
+      {pendingDelete ? (
+        <AssetDeleteDialog
+          assetName={pendingDelete.asset.name}
+          busy={deleteBusy}
+          returnFocusTo={pendingDelete.trigger}
+          impact={{
+            projectIds: pendingDelete.impact.projectIds,
+            nodeTitles: pendingDelete.impact.nodeTitles ?? [],
+          }}
+          onCancel={() => setPendingDelete(undefined)}
+          onConfirm={() => {
+            setDeleteBusy(true)
+            void repository.deleteAsset(pendingDelete.asset.id, { detachReferences: true })
+              .then((result) => {
+                if (result.status !== 'deleted') throw new Error('素材删除未完成。')
+                onRemoveProjectAsset(pendingDelete.asset.id)
+                setAssets((current) => current.filter(({ id }) => id !== pendingDelete.asset.id))
+                setFeedback('素材及其项目引用已删除。')
+                setPendingDelete(undefined)
+              })
+              .catch((error) => {
+                setFeedback(error instanceof Error ? error.message : '删除失败。')
+              })
+              .finally(() => setDeleteBusy(false))
+          }}
+        />
+      ) : null}
     </div>
   )
 }

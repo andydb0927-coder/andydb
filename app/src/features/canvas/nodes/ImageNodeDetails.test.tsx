@@ -424,7 +424,7 @@ test('exposes an enabled Seedream 5.0 Pro live provider with real dimensions and
   expect(within(panel).getByText('2816×1584 · 2K · 1张')).toBeVisible()
   expect(
     within(panel).getByRole('button', { name: '生成图片，预计成本 18' }),
-  ).toHaveAttribute('title', '调用真实 Seedream API；临时结果刷新后失效')
+  ).toHaveAttribute('title', '调用真实 Seedream API；结果将保存到项目与生成历史')
 })
 
 test('confirms the multiplied live Seedream cost before submitting four serial images', async () => {

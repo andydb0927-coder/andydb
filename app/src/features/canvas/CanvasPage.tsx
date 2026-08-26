@@ -34,7 +34,16 @@ import { CommunityRepository, type CommunityWorkRepository } from '../community/
 import { PublishWorkDialog, type PublishWorkFormValue } from '../community/PublishWorkDialog'
 import { collectPublishCoverOptions, copyPublishedWorkShareLink } from '../community/publication'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
-import { deriveLibraryRecord } from '../assets/library-model'
+import {
+  deriveLibraryRecord,
+  libraryRecordToAsset,
+  type LibraryAssetRecord,
+} from '../assets/library-model'
+import {
+  AssetImportError,
+  readAssetFileAsDataUrl,
+  validateAssetFile,
+} from '../assets/asset-import'
 import type { DirectorCommand } from '../director/director-command'
 import {
   defaultVideoGenerationMode,
@@ -156,7 +165,6 @@ import {
 } from './node-types'
 import { NodeListView } from './NodeListView'
 import {
-  ACCEPTED_IMAGE_TYPES,
   ImagePreparationError,
   prepareImageFile,
 } from './image-file'
@@ -178,6 +186,48 @@ import {
 import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
+
+function buildMediaAssetCreation(
+  project: Project,
+  record: LibraryAssetRecord,
+  position: CanvasNodePosition,
+): CanvasCreation {
+  const nodeId = crypto.randomUUID()
+  const versionId = crypto.randomUUID()
+  const title = record.name.trim().slice(0, 80) || `素材 ${project.nodes.length + 1}`
+  const alreadyInProject = project.assets.some(({ id }) => id === record.id)
+
+  return {
+    node: {
+      id: nodeId,
+      kind: record.kind === 'video' ? 'video' : record.kind === 'image' ? 'image' : 'text',
+      title,
+      position,
+      versions: [{
+        id: versionId,
+        createdAt: new Date().toISOString(),
+        prompt: title,
+        assetId: record.id,
+      }],
+      activeVersionId: versionId,
+      sourceChanged: false,
+      ...(record.kind === 'audio'
+        ? {
+            details: {
+              type: 'audio' as const,
+              durationSeconds: record.durationSeconds ?? 0,
+              voice: '温暖女声' as const,
+              speed: 1,
+              volume: 80,
+              modelProviderId: 'mock-audio',
+              modelVariant: 'ambience',
+            },
+          }
+        : {}),
+    },
+    ...(alreadyInProject ? {} : { asset: libraryRecordToAsset(record) }),
+  }
+}
 type CanvasPublicationRepository = Pick<
   CommunityWorkRepository,
   'publish' | 'findByProjectId'
@@ -539,7 +589,7 @@ function findCanvasNodeControl(
 export interface CanvasPageProps {
   repository?: CanvasRepository
   libraryRepository?: Pick<AssetLibraryRepository, 'list'> &
-    Partial<Pick<AssetLibraryRepository, 'save'>>
+    Partial<Pick<AssetLibraryRepository, 'save' | 'importFile' | 'rename' | 'move' | 'deleteAsset'>>
   generationAdapter?: GenerationAdapter
   providerRegistry?: ProviderRegistry
   ephemeralGenerationResultStore?: EphemeralGenerationResultStore
@@ -574,6 +624,26 @@ export function CanvasPage({
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
+  const workspaceAssetRepository = useMemo(
+    () => ({
+      list: () => libraryRepository.list(),
+      rename: (assetId: string, name: string) =>
+        libraryRepository.rename
+          ? libraryRepository.rename(assetId, name)
+          : defaultLibraryRepository.rename(assetId, name),
+      move: (assetId: string, folderId: 'project' | 'generated' | 'inspiration') =>
+        libraryRepository.move
+          ? libraryRepository.move(assetId, folderId)
+          : defaultLibraryRepository.move(assetId, folderId),
+      deleteAsset: (
+        assetId: string,
+        options?: { detachReferences?: boolean },
+      ) => libraryRepository.deleteAsset
+        ? libraryRepository.deleteAsset(assetId, options)
+        : defaultLibraryRepository.deleteAsset(assetId, options),
+    }),
+    [libraryRepository],
+  )
   const publishCoverOptions = useMemo(
     () => project ? collectPublishCoverOptions(project) : [],
     [project],
@@ -615,6 +685,9 @@ export function CanvasPage({
   )
   const deleteGenerationJobs = useProjectStore(
     (state) => state.deleteGenerationJobs,
+  )
+  const removeAssetReferences = useProjectStore(
+    (state) => state.removeAssetReferences,
   )
   const updateCreativeCard = useProjectStore(
     (state) => state.updateCreativeCard,
@@ -851,6 +924,11 @@ export function CanvasPage({
         },
         onJobChange(job) {
           if (job.projectId !== projectId) return
+          if (job.status !== 'succeeded') {
+            useProjectStore
+              .getState()
+              .updateGenerationJob(job.projectId!, job)
+          }
           const jobProviderId =
             job.providerId ?? job.generationConfig?.providerId
           const liveProvider = jobProviderId
@@ -875,11 +953,6 @@ export function CanvasPage({
             }
             return
           }
-          if (job.status !== 'succeeded') {
-            useProjectStore
-              .getState()
-              .updateGenerationJob(job.projectId!, job)
-          }
         },
         onSuccess(job, result) {
           if (job.projectId !== projectId) {
@@ -902,6 +975,17 @@ export function CanvasPage({
           useProjectStore
             .getState()
             .applyGenerationSuccess(job.projectId!, job, result)
+          const completedProvider = job.providerId
+            ? providerRegistry.list().find(({ id }) => id === job.providerId)
+            : undefined
+          if (completedProvider?.kind === 'live') {
+            const providerLabel = job.providerId === 'kling-api'
+              ? '可灵'
+              : completedProvider.modelName
+            setGenerationFeedback(
+              `${providerLabel}结果已保存到项目与生成历史。`,
+            )
+          }
           if (job.operation !== 'generate-video') return
 
           const state = useProjectStore.getState()
@@ -920,6 +1004,7 @@ export function CanvasPage({
       ephemeralGenerationResultStore,
       generationAdapter,
       projectId,
+      providerRegistry,
       selectOnlyNode,
     ],
   )
@@ -3726,6 +3811,22 @@ export function CanvasPage({
     ),
   )
 
+  const saveContextAssetToLibrary = useCallback(() => {
+    const currentProject = useProjectStore.getState().activeProject
+    setContextMenu(undefined)
+    if (!contextNode || !contextNodeAsset || !currentProject || !libraryRepository.save) {
+      setGenerationFeedback('当前节点没有可保存的媒体结果。')
+      return
+    }
+    void libraryRepository.save(
+      deriveLibraryRecord(currentProject, contextNodeAsset),
+    ).then(() => {
+      setGenerationFeedback(`已将“${contextNode.title}”保存到资产管理。`)
+    }).catch(() => {
+      setGenerationFeedback(`“${contextNode.title}”保存失败，请稍后重试。`)
+    })
+  }, [contextNode, contextNodeAsset, libraryRepository])
+
   const beginContextUpload = useCallback(() => {
     const source = contextMenu
     if (!source) return
@@ -3880,42 +3981,45 @@ export function CanvasPage({
       }
 
       try {
-        const image = await prepareImageFile(file)
-        const title = file.name.trim().slice(0, 40) || nextNodeTitle(currentProject, 'image')
-        const creation = buildCanvasCreation(currentProject, {
-          kind: 'image',
-          title,
-          content: title,
-          image,
-          position: placement.position,
-        })
+        let record: LibraryAssetRecord
+        if (libraryRepository.importFile) {
+          record = (await libraryRepository.importFile(file)).record
+        } else {
+          validateAssetFile(file)
+          record = {
+            id: crypto.randomUUID(),
+            name: file.name,
+            kind: file.type.split('/')[0] as LibraryAssetRecord['kind'],
+            mimeType: file.type,
+            url: await readAssetFileAsDataUrl(file),
+            createdAt: new Date().toISOString(),
+            source: 'upload',
+            folderId: 'project',
+            byteSize: file.size,
+          }
+          await libraryRepository.save?.(record)
+        }
+        const creation = buildMediaAssetCreation(
+          currentProject,
+          record,
+          placement.position,
+        )
+        const title = creation.node.title
         createdNodeFocusRef.current = creation.node.id
         setFocusRequestVersion((version) => version + 1)
         createCanvasContent(creation)
         selectOnlyNode(creation.node.id)
         setContextUploadPlacement(undefined)
         input.value = ''
-        setGenerationFeedback(`已导入“${title}”并创建图片节点。`)
-
-        const save = libraryRepository.save
-        if (creation.asset && save) {
-          const expandedProject = useProjectStore.getState().activeProject
-          if (expandedProject) {
-            void save.call(
-              libraryRepository,
-              deriveLibraryRecord(expandedProject, creation.asset),
-            ).catch(() => {
-              setGenerationFeedback(`“${title}”已加入画布，但保存到本地素材库失败。`)
-            })
-          }
-        }
+        const kindCopy = record.kind === 'image' ? '图片' : record.kind === 'video' ? '视频' : '音频'
+        setGenerationFeedback(`已导入“${title}”并创建${kindCopy}节点，素材已保存到资产管理。`)
       } catch (error) {
         input.value = ''
         setContextUploadPlacement(undefined)
         setGenerationFeedback(
-          error instanceof ImagePreparationError
+          error instanceof AssetImportError || error instanceof ImagePreparationError
             ? error.message
-            : '无法读取图片，请重新选择。',
+            : '无法读取素材，请重新选择。',
         )
         queueMicrotask(() => placement.returnFocusTo?.focus())
       }
@@ -4278,36 +4382,24 @@ export function CanvasPage({
   const insertWorkspaceAsset = (record: WorkspaceAsset) => {
     const currentProject = useProjectStore.getState().activeProject
     if (!currentProject || currentProject.id !== projectId) return
-    const assetId = record.existingProjectAsset ? record.id : crypto.randomUUID()
-    const versionId = crypto.randomUUID()
-    const nodeId = crypto.randomUUID()
-    const creation: CanvasCreation = {
-      node: {
-        id: nodeId,
-        kind: record.kind === 'video' ? 'video' : record.kind === 'image' ? 'image' : 'text',
-        title: record.name,
-        position: canvasCenterPosition(),
-        versions: [{
-          id: versionId,
-          createdAt: new Date().toISOString(),
-          prompt: `来自素材库：${record.name}`,
-          assetId,
-        }],
-        activeVersionId: versionId,
-        sourceChanged: false,
+    const creation = buildMediaAssetCreation(
+      currentProject,
+      {
+        id: record.id,
+        name: record.name,
+        kind: record.kind,
+        url: record.url,
+        mimeType: record.mimeType,
+        createdAt: new Date().toISOString(),
+        source: 'project',
+        folderId: record.folderId,
+        width: record.width,
+        height: record.height,
+        durationSeconds: record.durationSeconds,
       },
-      ...(record.existingProjectAsset ? {} : {
-        asset: {
-          id: assetId,
-          kind: record.kind,
-          url: record.url,
-          mimeType: record.mimeType,
-          width: record.width,
-          height: record.height,
-          durationSeconds: record.durationSeconds,
-        },
-      }),
-    }
+      canvasCenterPosition(),
+    )
+    const nodeId = creation.node.id
     createCanvasContent(creation)
     selectOnlyNode(nodeId)
     createdNodeFocusRef.current = nodeId
@@ -4869,7 +4961,7 @@ export function CanvasPage({
             canRedo={canRedo}
             canPaste={Boolean(canvasClipboard?.projectId === project.id)}
             canSaveToAssets={Boolean(
-              contextNode && (contextMenu.targetNodeId || contextNodeAsset),
+              contextNode && contextNodeAsset,
             )}
             onUpload={beginContextUpload}
             onAddNode={createContextNode}
@@ -4882,12 +4974,7 @@ export function CanvasPage({
               redo()
             }}
             onPaste={pasteContextNodes}
-            onSaveToAssets={() => {
-              setContextMenu(undefined)
-              if (contextNode) {
-                setGenerationFeedback(`已将“${contextNode.title}”保存到本地资产。`)
-              }
-            }}
+            onSaveToAssets={saveContextAssetToLibrary}
             onComplianceCheck={() => {
               setContextMenu(undefined)
               if (contextNode) {
@@ -4914,8 +5001,8 @@ export function CanvasPage({
           ref={contextUploadInputRef}
           className="canvas-context-upload-input"
           type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-          aria-label="上传画布图片"
+          accept="image/*,video/*,audio/*"
+          aria-label="上传画布素材"
           onChange={(event) => void handleContextUpload(event)}
         />
         {nodeTypePicker && project ? (
@@ -4949,11 +5036,6 @@ export function CanvasPage({
             onCreateVideoToolNode={(tool) => {
               if (primaryNodeId) createVideoToolNode(primaryNodeId, tool)
             }}
-            onSubmitVideoDraft={(tool) =>
-              setGenerationFeedback(
-                `“${tool}”参数已在本地确认；未连接真实媒体处理。`,
-              )
-            }
             onRotateImage={rotateImageNode}
           />
         ) : null}
@@ -5037,6 +5119,7 @@ export function CanvasPage({
         ) : null}
         {workspacePanel && project ? (
           <WorkspaceSidePanel
+            assetRepository={workspaceAssetRepository}
             generationPreferenceStore={generationPreferenceStore}
             panel={workspacePanel}
             project={project}
@@ -5045,6 +5128,7 @@ export function CanvasPage({
             onApplyCharacters={applyCharactersToCanvas}
             onDeleteHistoryJobs={deleteHistoryJobs}
             onInsertAsset={insertWorkspaceAsset}
+            onRemoveProjectAsset={removeAssetReferences}
             onInsertEffect={insertEffectTemplate}
             onInsertMaterial={insertMaterialReference}
             onInsertHistoryResult={useHistoryResult}

@@ -37,7 +37,7 @@ function createProvider(fetchFn: typeof fetch, overrides = {}) {
 }
 
 describe('kling live provider', () => {
-  test('maps the internal request to one create call, polls, and returns an ephemeral video result', async () => {
+  test('maps the internal request to one create call, polls, and returns a project video result', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(klingMinLoopCreateSuccessFixture))
@@ -77,7 +77,7 @@ describe('kling live provider', () => {
       headers: expect.objectContaining({ Authorization: 'Bearer fixture-api-key' }),
     })
     expect(result).toMatchObject({
-      persistence: 'ephemeral',
+      persistence: 'project',
       asset: {
         kind: 'video',
         url: 'https://media.fixture.invalid/kling-result.mp4',

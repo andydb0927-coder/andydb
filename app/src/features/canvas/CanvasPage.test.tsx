@@ -1168,7 +1168,7 @@ describe('creative canvas', () => {
     expect(start.mock.calls[0]?.[0].parameters).not.toHaveProperty('quality')
   })
 
-  test('shows a live result from memory without persisting jobs, assets, or versions', async () => {
+  test('persists a Kling live result into project versions, assets, and generation history', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     project.nodes = project.nodes.map((node) =>
@@ -1195,7 +1195,6 @@ describe('creative canvas', () => {
           }
         : node,
     )
-    const before = structuredClone(project)
     act(() => activate(project))
     const fetchFn = vi
       .fn<typeof fetch>()
@@ -1230,14 +1229,24 @@ describe('creative canvas', () => {
         'https://media.fixture.invalid/kling-result.mp4',
       )
     })
-    expect(useProjectStore.getState().activeProject).toEqual(before)
-    expect(save).not.toHaveBeenCalled()
-    expect(
-      ephemeralGenerationResultStore.get('project-canvas', 'video'),
-    ).toMatchObject({ persistence: 'ephemeral' })
+    await waitFor(() => expect(save).toHaveBeenCalled())
+    const persisted = useProjectStore.getState().activeProject!
+    expect(persisted.assets).toContainEqual(
+      expect.objectContaining({
+        kind: 'video',
+        url: 'https://media.fixture.invalid/kling-result.mp4',
+      }),
+    )
+    expect(persisted.jobs).toContainEqual(
+      expect.objectContaining({ status: 'succeeded', providerId: 'kling-api' }),
+    )
+    expect(persisted.nodes.find(({ id }) => id === 'video')?.versions).toContainEqual(
+      expect.objectContaining({ generationJobId: expect.any(String), assetId: expect.any(String) }),
+    )
+    expect(ephemeralGenerationResultStore.get('project-canvas', 'video')).toBeUndefined()
   })
 
-  test('shows a real Seedream image from memory without persisting the temporary URL', async () => {
+  test('persists a Seedream live image into project versions, assets, and generation history', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     const liveImage: Project['nodes'][number] = {
@@ -1272,7 +1281,6 @@ describe('creative canvas', () => {
       },
     }
     project.nodes = [...project.nodes, liveImage]
-    const before = structuredClone(project)
     act(() => activate(project))
     const fetchFn = vi
       .fn<typeof fetch>()
@@ -1300,12 +1308,19 @@ describe('creative canvas', () => {
         document.querySelector('img[src="https://media.fixture.invalid/seedream-result.png"]'),
       ).toBeInTheDocument()
     })
-    expect(screen.getByText('Seedream 5.0 Pro临时结果已显示，刷新页面后失效。')).toBeVisible()
-    expect(useProjectStore.getState().activeProject).toEqual(before)
-    expect(save).not.toHaveBeenCalled()
-    expect(
-      ephemeralGenerationResultStore.get('project-canvas', 'seedream-image'),
-    ).toMatchObject({ persistence: 'ephemeral' })
+    await waitFor(() => expect(save).toHaveBeenCalled())
+    expect(screen.getByText('Seedream 5.0 Pro结果已保存到项目与生成历史。')).toBeVisible()
+    const persisted = useProjectStore.getState().activeProject!
+    expect(persisted.assets).toContainEqual(
+      expect.objectContaining({
+        kind: 'image',
+        url: 'https://media.fixture.invalid/seedream-result.png',
+      }),
+    )
+    expect(persisted.jobs).toContainEqual(
+      expect.objectContaining({ status: 'succeeded', providerId: 'seedream-5-pro-api' }),
+    )
+    expect(ephemeralGenerationResultStore.get('project-canvas', 'seedream-image')).toBeUndefined()
   })
 
   test('submits the current image prompt to Seedream after editing the composer', async () => {
@@ -1472,7 +1487,7 @@ describe('creative canvas', () => {
     expect(requestBody.size).toBe('1600x2000')
   })
 
-  test('shows all four intercepted Seedream results in the node grid without persistence', async () => {
+  test('persists all four intercepted Seedream results in the node grid and generation history', async () => {
     const user = userEvent.setup()
     const project = makeCanvasProject()
     project.nodes = [
@@ -1509,7 +1524,6 @@ describe('creative canvas', () => {
         },
       },
     ]
-    const before = structuredClone(project)
     act(() => activate(project))
     const fetchFn = vi.fn<typeof fetch>().mockImplementation(async () => {
       const index = fetchFn.mock.calls.length
@@ -1549,8 +1563,21 @@ describe('creative canvas', () => {
     await user.click(resultTrigger)
     const grid = screen.getByRole('region', { name: 'Seedream 四图 的 4 张结果' })
     expect(within(grid).getAllByRole('img')).toHaveLength(4)
-    expect(useProjectStore.getState().activeProject).toEqual(before)
-    expect(save).not.toHaveBeenCalled()
+    const persisted = useProjectStore.getState().activeProject!
+    const node = persisted.nodes.find(({ id }) => id === 'seedream-four-images')
+    expect(node?.imageResults).toHaveLength(4)
+    expect(node?.versions.at(-1)).toMatchObject({
+      assetId: node?.imageResults?.[0].assetId,
+      generationJobId: expect.any(String),
+    })
+    expect(persisted.assets.filter(({ id }) => node?.imageResults?.some(({ assetId }) => assetId === id))).toHaveLength(4)
+    expect(persisted.jobs.at(-1)).toMatchObject({
+      status: 'succeeded',
+      assetId: node?.imageResults?.[0].assetId,
+      providerId: 'seedream-5-pro-api',
+    })
+    expect(ephemeralGenerationResultStore.get(project.id, node!.id)).toBeUndefined()
+    await waitFor(() => expect(save).toHaveBeenCalled())
   })
 
   test('requires explicit LibTV confirmation and Cancel creates no job', async () => {
@@ -1834,11 +1861,18 @@ describe('creative canvas', () => {
       initializeFlow({ x: 612, y: 428 })
       chooseContextUpload(360, 280)
       await user.upload(
-        screen.getByLabelText('上传画布图片'),
+        screen.getByLabelText('上传画布素材'),
         new File(['durable-image-bytes'], 'durable.png', {
           type: 'image/png',
         }),
       )
+      await waitFor(() => {
+        expect(
+          useProjectStore.getState().activeProject?.nodes.some(
+            ({ title }) => title === 'durable.png',
+          ),
+        ).toBe(true)
+      })
       await waitFor(() => {
         expect(useProjectStore.getState().saveStatus).toBe('saved')
       })
@@ -4043,13 +4077,15 @@ describe('creative canvas', () => {
     let picker = screen.getByRole('dialog', { name: '选择节点类型' })
     await user.click(within(picker).getByRole('button', { name: '上传' }))
     await user.upload(
-      screen.getByLabelText('上传画布图片'),
+      screen.getByLabelText('上传画布素材'),
       new File(['image'], 'double-click.png', { type: 'image/png' }),
     )
-    expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
-      kind: 'image',
-      title: 'double-click.png',
-      position: { x: 612, y: 428 },
+    await waitFor(() => {
+      expect(useProjectStore.getState().activeProject?.nodes.at(-1)).toMatchObject({
+        kind: 'image',
+        title: 'double-click.png',
+        position: { x: 612, y: 428 },
+      })
     })
 
     doubleClickPane(460, 340)
@@ -4497,7 +4533,7 @@ describe('creative canvas', () => {
 
     chooseContextUpload(240, 360)
     await user.upload(
-      screen.getByLabelText('上传画布图片'),
+      screen.getByLabelText('上传画布素材'),
       new File(['image'], 'reference.png', { type: 'image/png' }),
     )
 
@@ -4517,6 +4553,39 @@ describe('creative canvas', () => {
       name: 'reference.png',
       kind: 'image',
     })
+  })
+
+  test('imports video and audio assets and creates matching playable nodes', async () => {
+    const user = userEvent.setup()
+    const save = vi.fn().mockResolvedValue(undefined)
+    renderCanvas({ libraryRepository: { list: vi.fn().mockResolvedValue([]), save } })
+    initializeFlow({ x: 280, y: 380 })
+
+    chooseContextUpload(280, 380)
+    await user.upload(
+      screen.getByLabelText('上传画布素材'),
+      new File(['video'], 'rain.mp4', { type: 'video/mp4' }),
+    )
+    chooseContextUpload(360, 460)
+    await user.upload(
+      screen.getByLabelText('上传画布素材'),
+      new File(['audio'], 'rain.mp3', { type: 'audio/mpeg' }),
+    )
+
+    const active = useProjectStore.getState().activeProject!
+    expect(active.nodes.find(({ title }) => title === 'rain.mp4')).toMatchObject({
+      kind: 'video',
+      position: { x: 280, y: 380 },
+    })
+    expect(active.nodes.find(({ title }) => title === 'rain.mp3')).toMatchObject({
+      kind: 'text',
+      position: { x: 280, y: 380 },
+      details: { type: 'audio', modelProviderId: 'mock-audio' },
+    })
+    expect(active.assets.map(({ kind }) => kind)).toEqual(
+      expect.arrayContaining(['video', 'audio']),
+    )
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2))
   })
 
   test('closes an expanded context submenu without history and returns focus to the canvas', async () => {

@@ -528,12 +528,14 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
 
   const mediaTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
   await expect(mediaTools.getByRole('button')).toHaveCount(11)
-  await expect(page.getByText(/当前仅支持时长不少于 4 秒/)).toBeVisible()
-  await mediaTools.getByRole('button', { name: '剪辑' }).click()
-  const clip = page.getByRole('dialog', { name: '剪辑内联编辑器' })
-  await expect(clip.getByRole('img', { name: '剪辑帧 12' })).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(clip).toHaveCount(0)
+  await expect(mediaTools.getByRole('button', { name: '剪辑' })).toBeDisabled()
+  await expect(mediaTools.getByRole('button', { name: '剪辑' })).toHaveAttribute(
+    'title',
+    '剪辑暂未开放',
+  )
+  await expect(page.getByRole('note', { name: '视频工具禁用原因' })).toContainText(
+    '尚未接入可导出的剪辑结果',
+  )
 
   const initialNodeCount = await page.locator('.react-flow__node').count()
   await mediaTools.getByRole('button', { name: '高清' }).click()
@@ -1122,6 +1124,9 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
     '删除 ⌘⌫',
     '复制到剪贴板',
   ])
+  await nodeMenu.getByRole('menuitem', { name: '保存到我的资产' }).click()
+  await expect(page.getByRole('status')).toContainText('保存到资产管理')
+  await imageNode.click({ button: 'right' })
   await nodeMenu.getByRole('menuitem', { name: '合规校验' }).click()
   await expect(page.getByRole('status')).toContainText('已通过本地演示合规校验')
 
@@ -1275,6 +1280,16 @@ test('inserts local effects, managed assets, and filtered characters from the do
   await expect(renamedAsset).toContainText('灵感收集')
   await renamedAsset.getByRole('button', { name: '发送角色参考库到画布' }).click()
   await expect(page.getByRole('button', { name: '角色参考库', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '资产管理', exact: true }).click()
+  const reopenedAssets = page.getByRole('dialog', { name: '资产管理' })
+  const persistedAsset = reopenedAssets.getByRole('article', { name: '素材 角色参考库' })
+  await expect(persistedAsset).toContainText('灵感收集')
+  await persistedAsset.getByRole('button', { name: '更多角色参考库操作' }).click()
+  await page.getByRole('menu', { name: '素材操作' }).getByRole('menuitem', { name: '删除' }).click()
+  const impact = page.getByRole('dialog', { name: '删除素材 角色参考库' })
+  await expect(impact).toContainText('关联节点')
+  await impact.getByRole('button', { name: '取消' }).click()
+  await page.getByRole('button', { name: '关闭资产管理面板' }).click()
 
   await page.getByRole('button', { name: '素材库' }).click()
   const materials = page.getByRole('dialog', { name: '素材库' })
@@ -1572,6 +1587,20 @@ test('shows the exact Seedream size and all four fixture-intercepted live result
   await expect(
     page.getByRole('region', { name: '图片 01 的 4 张结果' }).getByRole('img'),
   ).toHaveCount(4)
+
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  const reloadedImageNode = page.locator('.react-flow__node').filter({
+    has: page.getByRole('button', { name: '图片 01', exact: true }),
+  })
+  await expect(reloadedImageNode.getByRole('button', { name: '查看 4 张结果' })).toHaveText('4张')
+  await page.getByRole('button', { name: '历史记录' }).click()
+  const history = page.getByRole('complementary', { name: '历史' })
+  const historyRecord = history.getByRole('article', { name: '历史任务 图片 01' })
+  await expect(historyRecord).toBeVisible()
+  await expect(historyRecord.getByRole('button', { name: '下载 图片 01' })).toBeEnabled()
+  await expect(historyRecord.getByRole('button', { name: '使用 图片 01' })).toBeEnabled()
 })
 
 test('matches Liblib result action policies and exposes the inline video player', async ({ page }) => {
@@ -1590,6 +1619,13 @@ test('matches Liblib result action policies and exposes the inline video player'
   ])
   await expect(imageActions.getByRole('button', { name: '图片高清' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '查看 4 张结果' })).toHaveText('4张')
+  const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
+  for (const label of ['九宫格', '宫格切分', '标注']) {
+    await expect(imageTools.getByRole('button', { name: label })).toBeDisabled()
+  }
+  await expect(page.getByText(/九宫格暂未开放/)).toBeAttached()
+  await expect(page.getByText(/宫格切分暂未开放/)).toBeAttached()
+  await expect(page.getByText(/图片标注暂未开放/)).toBeAttached()
 
   await imagePanel
     .getByRole('combobox', { name: '图片模型' })
@@ -1616,4 +1652,48 @@ test('matches Liblib result action policies and exposes the inline video player'
   const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
   const videoActions = videoPanel.getByRole('toolbar', { name: '视频主操作' })
   await expect(videoActions.getByRole('button', { name: '主体' })).toBeVisible()
+  const videoTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
+  for (const label of ['片段重拍', '智能续写', '音频分离']) {
+    await expect(videoTools.getByRole('button', { name: label })).toBeDisabled()
+  }
+  const disabledReasons = page.getByRole('note', { name: '视频工具禁用原因' })
+  await expect(disabledReasons).toContainText('片段重拍暂未开放')
+  await expect(disabledReasons).toContainText('智能续写暂未开放')
+  await expect(disabledReasons).toContainText('音频分离暂未开放')
+})
+
+test('imports image, video, and audio assets, previews them, and reloads every media node', async ({ page }) => {
+  await createCinematicProject(page)
+
+  const fixtures = [
+    { name: 'p0-image.png', mimeType: 'image/png', buffer: Buffer.from('image-fixture') },
+    { name: 'p0-video.mp4', mimeType: 'video/mp4', buffer: Buffer.from('video-fixture') },
+    { name: 'p0-audio.wav', mimeType: 'audio/wav', buffer: Buffer.from('audio-fixture') },
+  ]
+  for (const fixture of fixtures) {
+    const chooser = await openUploadAtBlank(page)
+    await chooser.setFiles(fixture)
+    await expect(page.getByRole('button', { name: fixture.name, exact: true })).toBeVisible()
+  }
+
+  await expect(page.getByRole('group', { name: 'p0-video.mp4 播放器' })).toBeVisible()
+  await expect(page.getByLabel('播放p0-audio.wav')).toBeVisible()
+  await page.getByRole('button', { name: '资产管理', exact: true }).click()
+  const library = page.getByRole('dialog', { name: '资产管理' })
+  await expect(library.getByLabel('预览p0-video.mp4')).toBeVisible()
+  await expect(library.getByLabel('预览p0-audio.wav')).toBeVisible()
+  await page.getByRole('button', { name: '关闭资产管理面板' }).click()
+
+  await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  for (const fixture of fixtures) {
+    await expect(page.getByRole('button', { name: fixture.name, exact: true })).toBeVisible()
+  }
+  await page.getByRole('button', { name: '资产管理', exact: true }).click()
+  for (const fixture of fixtures) {
+    await expect(
+      page.getByRole('article', { name: `素材 ${fixture.name}` }),
+    ).toBeVisible()
+  }
 })

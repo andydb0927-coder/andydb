@@ -121,6 +121,69 @@ describe('asset library repository', () => {
     })
   })
 
+  test('indexes every multi-image result as a generated library asset with a stable result name', async () => {
+    const { library, projects } = createRepositories()
+    const fixture = makeProjectFixture()
+    const resultAssets = [1, 2, 3, 4].map((number) => ({
+      id: `asset-live-result-${number}`,
+      kind: 'image' as const,
+      mimeType: 'image/png',
+      url: `https://media.fixture.invalid/live-result-${number}.png`,
+      width: 1344,
+      height: 3136,
+    }))
+    const node = {
+      ...fixture.nodes[0],
+      title: 'Seedream 四图',
+      versions: [
+        ...fixture.nodes[0].versions,
+        {
+          id: 'version-live-results',
+          createdAt: fixture.createdAt,
+          prompt: '四张结果',
+          assetId: resultAssets[0].id,
+          generationJobId: 'job-live-results',
+        },
+      ],
+      activeVersionId: 'version-live-results',
+      imageResults: resultAssets.map((asset, index) => ({
+        id: `result-${index + 1}`,
+        assetId: asset.id,
+      })),
+      activeResultId: 'result-1',
+    }
+    await projects.save({
+      ...fixture,
+      assets: [...fixture.assets, ...resultAssets],
+      nodes: [node, ...fixture.nodes.slice(1)],
+      jobs: [
+        ...fixture.jobs,
+        {
+          id: 'job-live-results',
+          projectId: fixture.id,
+          nodeId: node.id,
+          prompt: '四张结果',
+          status: 'succeeded' as const,
+          progress: 100,
+          createdAt: fixture.createdAt,
+          updatedAt: fixture.createdAt,
+          attempt: 1,
+          sequence: 1,
+          operation: 'regenerate' as const,
+          assetId: resultAssets[0].id,
+        },
+      ],
+    })
+
+    for (let index = 0; index < resultAssets.length; index += 1) {
+      await expect(library.load(resultAssets[index].id)).resolves.toMatchObject({
+        name: `Seedream 四图 · 结果 ${index + 1}`,
+        source: 'generated',
+        folderId: 'generated',
+      })
+    }
+  })
+
   test('deletes an unreferenced library record and treats a repeated delete as missing', async () => {
     const { library } = createRepositories()
     const record = (await library.importFile(
@@ -184,5 +247,52 @@ describe('asset library repository', () => {
       projectIds: [project.id],
     })
     await expect(library.load(record.id)).resolves.toEqual(record)
+  })
+
+  test('persists asset names and folders across repository instances', async () => {
+    const databaseName = `wireless-canvas-library-${crypto.randomUUID()}`
+    databaseNames.push(databaseName)
+    const first = new AssetLibraryRepository(new WirelessCanvasDatabase(databaseName))
+    const record = (await first.importFile(
+      new File(['video-bytes'], 'camera.mp4', { type: 'video/mp4' }),
+    )).record
+
+    await first.rename(record.id, '主镜头')
+    await first.move(record.id, 'generated')
+
+    const reopened = new AssetLibraryRepository(new WirelessCanvasDatabase(databaseName))
+    await expect(reopened.load(record.id)).resolves.toMatchObject({
+      name: '主镜头',
+      folderId: 'generated',
+      kind: 'video',
+    })
+  })
+
+  test('requires impact confirmation before deleting a referenced asset and detaches every reference after confirmation', async () => {
+    const { library, projects } = createRepositories()
+    const project = makeProjectFixture()
+    const assetId = project.assets[0].id
+    await projects.save(project)
+
+    await expect(library.deleteAsset(assetId)).resolves.toEqual({
+      status: 'referenced',
+      projectIds: [project.id],
+      nodeTitles: ['河岸寻人'],
+    })
+
+    await expect(
+      library.deleteAsset(assetId, { detachReferences: true }),
+    ).resolves.toEqual({
+      status: 'deleted',
+      projectIds: [project.id],
+      nodeTitles: ['河岸寻人'],
+    })
+    await expect(library.load(assetId)).resolves.toBeUndefined()
+    const reloaded = await projects.load(project.id)
+    expect(reloaded?.assets.some(({ id }) => id === assetId)).toBe(false)
+    expect(
+      reloaded?.nodes.flatMap(({ versions }) => versions).some(({ assetId: id }) => id === assetId),
+    ).toBe(false)
+    expect(reloaded?.jobs.some(({ assetId: id }) => id === assetId)).toBe(false)
   })
 })

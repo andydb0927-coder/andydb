@@ -1,6 +1,7 @@
 import type { Asset, Project } from '../project/model'
 
 export type LibraryAssetSource = 'upload' | 'generated' | 'project' | 'built-in'
+export type LibraryAssetFolderId = 'project' | 'generated' | 'inspiration'
 
 export interface LibraryAssetRecord {
   id: string
@@ -10,6 +11,7 @@ export interface LibraryAssetRecord {
   url: string
   createdAt: string
   source: 'upload' | 'generated' | 'project' | 'built-in'
+  folderId?: LibraryAssetFolderId
   fingerprint?: string
   byteSize?: number
   width?: number
@@ -34,20 +36,97 @@ export function deriveLibraryRecord(
   asset: Asset,
 ): LibraryAssetRecord {
   const owningNode = project.nodes.find((node) =>
-    node.versions.some((version) => version.assetId === asset.id),
+    node.versions.some((version) => version.assetId === asset.id) ||
+    node.imageResults?.some((result) => result.assetId === asset.id),
   )
   const version = owningNode?.versions.find(
     (candidate) => candidate.assetId === asset.id,
   )
+  const resultIndex = owningNode?.imageResults?.findIndex(
+    (result) => result.assetId === asset.id,
+  ) ?? -1
+  const generated =
+    project.jobs.some((job) => job.assetId === asset.id) ||
+    Boolean(
+      owningNode &&
+      resultIndex >= 0 &&
+      owningNode.versions.some((candidate) => candidate.generationJobId),
+    )
+  const name = owningNode?.title.trim()
 
   return {
     ...asset,
-    name: owningNode?.title.trim() || asset.id,
+    name: name
+      ? resultIndex >= 0 && (owningNode?.imageResults?.length ?? 0) > 1
+        ? `${name} · 结果 ${resultIndex + 1}`
+        : name
+      : asset.id,
     createdAt: version?.createdAt ?? project.createdAt,
     source: asset.url.includes('/demo/')
       ? 'built-in'
-      : project.jobs.some((job) => job.assetId === asset.id)
+      : generated
         ? 'generated'
         : 'project',
+    folderId: generated
+      ? 'generated'
+      : 'project',
+  }
+}
+
+export function detachLibraryAssetFromProject(
+  project: Project,
+  assetId: string,
+): Project {
+  const referenced =
+    project.assets.some((asset) => asset.id === assetId) ||
+    project.nodes.some(
+      (node) =>
+        node.card?.imageAssetId === assetId ||
+        node.versions.some((version) => version.assetId === assetId) ||
+        node.imageResults?.some((result) => result.assetId === assetId),
+    ) ||
+    project.jobs.some((job) => job.assetId === assetId) ||
+    project.exportJobs.some((job) => job.assetId === assetId)
+
+  if (!referenced) return project
+
+  const timestamp = new Date().toISOString()
+
+  return {
+    ...project,
+    updatedAt: timestamp,
+    assets: project.assets.filter((asset) => asset.id !== assetId),
+    nodes: project.nodes.map((node) => {
+      const versions = node.versions.map((version) =>
+        version.assetId === assetId
+          ? { ...version, assetId: undefined }
+          : version,
+      )
+      const imageResults = node.imageResults?.filter(
+        (result) => result.assetId !== assetId,
+      )
+      const activeResultId = imageResults?.some(
+        (result) => result.id === node.activeResultId,
+      )
+        ? node.activeResultId
+        : imageResults?.[0]?.id
+
+      return {
+        ...node,
+        card:
+          node.card?.imageAssetId === assetId
+            ? { ...node.card, imageAssetId: undefined }
+            : node.card,
+        versions,
+        imageResults,
+        activeResultId,
+      }
+    }),
+    jobs: project.jobs.map((job) =>
+      job.assetId === assetId ? { ...job, assetId: undefined } : job,
+    ),
+    exportJobs: project.exportJobs.map((job) =>
+      job.assetId === assetId ? { ...job, assetId: undefined } : job,
+    ),
   }
 }
