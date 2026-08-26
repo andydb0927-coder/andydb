@@ -32,6 +32,7 @@ import {
   providerOptionLabel,
 } from '../../generation/model-provider-registry'
 import type {
+  ManagedAiPlaceholderId,
   ModelParameterName,
   ModelProvider,
 } from '../../generation/model-provider-registry'
@@ -40,7 +41,9 @@ import {
   simplifiedImageRatio,
 } from '../../generation/image-size-resolver'
 import type { CreativeNodeData } from '../node-types'
+import { AiPlaceholderBadge, AiPlaceholderNotice } from '../AiPlaceholderNotice'
 import { PromptAssist } from '../PromptAssist'
+import { imageAiPlaceholderForLabel } from '../prompt-assist'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 
 function downloadUrl(url: string, filename: string) {
@@ -725,6 +728,7 @@ function ImageTemplatePicker({
                     <button
                       key={item.label}
                       type="button"
+                      aria-label={item.label}
                       onClick={() => onSelect(item.label)}
                     >
                       <span className="image-template-picker__icon">
@@ -737,6 +741,9 @@ function ImageTemplatePicker({
                         ) : null}
                       </span>
                       <span>{item.label}</span>
+                      {imageAiPlaceholderForLabel(item.label) ? (
+                        <AiPlaceholderBadge compact />
+                      ) : null}
                     </button>
                   ))}
                 </div>
@@ -770,6 +777,11 @@ export function ImageGenerationPanel({
   const [parametersOpen, setParametersOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<string>()
+  const [pendingAiTemplate, setPendingAiTemplate] = useState<{
+    label: string
+    providerId: ManagedAiPlaceholderId
+    promptText: string
+  }>()
   const [liveConfirmationOpen, setLiveConfirmationOpen] = useState(false)
   const activeVersion = data.node.versions.find(
     ({ id }) => id === data.node.activeVersionId,
@@ -861,6 +873,7 @@ export function ImageGenerationPanel({
     setParametersOpen(false)
     setTemplatesOpen(false)
     setPendingTemplate(undefined)
+    setPendingAiTemplate(undefined)
     setLiveConfirmationOpen(false)
   }, [data.node.id])
 
@@ -967,6 +980,11 @@ export function ImageGenerationPanel({
 
   const closeTemplateConfirmation = () => {
     setPendingTemplate(undefined)
+    queueMicrotask(() => templateTriggerRef.current?.focus())
+  }
+
+  const closeAiTemplate = () => {
+    setPendingAiTemplate(undefined)
     queueMicrotask(() => templateTriggerRef.current?.focus())
   }
 
@@ -1123,6 +1141,7 @@ export function ImageGenerationPanel({
       <PromptAssist
         context="image"
         prompt={prompt}
+        providerRegistry={providerRegistry}
         autoLinkEnabled={settings.autoLink}
         candidates={data.autoLinkCandidates ?? []}
         linkedNodeIds={data.linkedAutoLinkNodeIds ?? []}
@@ -1251,7 +1270,12 @@ export function ImageGenerationPanel({
           triggerRef={templateTriggerRef}
           onSelect={(template) => {
             setTemplatesOpen(false)
-            setPendingTemplate(template)
+            const aiPreset = imageAiPlaceholderForLabel(template)
+            if (aiPreset) {
+              setPendingAiTemplate({ label: template, ...aiPreset })
+            } else {
+              setPendingTemplate(template)
+            }
           }}
           onClose={closeTemplates}
         />
@@ -1466,6 +1490,21 @@ export function ImageGenerationPanel({
           </div>
         </div>,
         document.body,
+      ) : null}
+      {pendingAiTemplate ? (
+        <AiPlaceholderNotice
+          provider={providerRegistry.require(pendingAiTemplate.providerId)}
+          prompt={pendingAiTemplate.promptText}
+          onCopy={(templatePrompt) => {
+            const currentPrompt = promptDraftRef.current.trim()
+            applyPrompt(
+              currentPrompt
+                ? `${currentPrompt}\n${templatePrompt}`
+                : templatePrompt,
+            )
+          }}
+          onClose={closeAiTemplate}
+        />
       ) : null}
     </section>
   )

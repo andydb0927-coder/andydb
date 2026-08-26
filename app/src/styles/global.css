@@ -2325,6 +2325,140 @@ select {
   }
 }
 
+/* Managed AI placeholders: one visual and interaction contract for unavailable services. */
+.ai-placeholder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--status-progress) 52%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--status-progress);
+  background: color-mix(in srgb, var(--status-progress) 10%, transparent);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ai-placeholder-badge[data-compact] {
+  gap: 2px;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+
+.ai-placeholder-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.ai-placeholder-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgb(0 0 0 / 66%);
+  backdrop-filter: blur(8px);
+}
+
+.ai-placeholder-dialog {
+  width: min(520px, calc(100vw - 32px));
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
+  background: var(--surface-panel-strong);
+  box-shadow: var(--shadow-overlay);
+}
+
+.ai-placeholder-dialog > header,
+.ai-placeholder-dialog > header > div,
+.ai-placeholder-dialog > footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-placeholder-dialog > header {
+  justify-content: space-between;
+}
+
+.ai-placeholder-dialog h2,
+.ai-placeholder-dialog p {
+  margin: 0;
+}
+
+.ai-placeholder-dialog__prompt {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.ai-placeholder-dialog button,
+.specialized-node-details__placeholder-action button,
+.specialized-node-details__placeholder-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.prompt-assist__optimizer {
+  position: absolute;
+  right: 52px;
+  top: 4px;
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  color: var(--text-secondary);
+  background: var(--surface-control);
+}
+
+.prompt-assist__optimizer > svg {
+  width: 15px;
+  height: 15px;
+}
+
+.prompt-assist__status {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  margin: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--status-success);
+  border-radius: var(--radius-button);
+  background: var(--surface-panel-strong);
+  color: var(--status-success);
+  white-space: nowrap;
+}
+
+.specialized-node-details__placeholder-action,
+.specialized-node-details__placeholder-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-control);
+}
+
+.specialized-node-details__placeholder-action small,
+.specialized-node-details__placeholder-actions small {
+  flex-basis: 100%;
+  color: var(--text-muted);
+}
+
 .canvas-page {
   min-height: 100vh;
   background: var(--surface-canvas);
@@ -14848,6 +14982,7 @@ select {
   justify-content: flex-end;
   gap: 2px;
   padding: var(--space-2);
+  pointer-events: none;
   transform: none;
 }
 
@@ -14855,6 +14990,7 @@ select {
   min-height: 32px;
   gap: var(--space-1);
   padding: 0 var(--space-2);
+  pointer-events: auto;
   font-size: 0.6875rem;
 }
 

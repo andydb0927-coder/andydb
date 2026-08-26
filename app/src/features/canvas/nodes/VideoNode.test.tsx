@@ -550,4 +550,6 @@ test('renders exact local configurations for video upscale and frame analysis no
   for (const dimension of ['分镜', '动态', '音乐']) {
     expect(within(analysisPanel).getByLabelText(dimension)).toBeChecked()
   }
+  expect(within(analysisPanel).getByRole('button', { name: '开始拉片' })).toBeDisabled()
+  expect(within(analysisPanel).getByText(/待接入逐帧拉片分析服务/)).toBeVisible()
 })

@@ -448,10 +448,47 @@ describe('model provider registry', () => {
       kind: 'placeholder',
       capabilities: ['panorama-720'],
       selectorVisible: false,
-      disabledReason: '待接入720全景生成',
+      disabledReason: '待接入720全景生成服务',
     })
     expect(registry.matching(['text-to-image']).map(({ id }) => id)).not.toContain(
       'panorama-720-api',
+    )
+  })
+
+  test('registers the complete managed AI placeholder catalog with unified reasons and costs', () => {
+    const registry = createDefaultProviderRegistry()
+    const expected = [
+      ['panorama-720-api', '720全景生成', 'panorama-720', 36],
+      ['multi-camera-grid-api', '多机位九宫格生成', 'multi-camera-grid', 48],
+      ['plot-four-grid-api', '剧情推演四宫格', 'plot-four-grid', 28],
+      ['storyboard-25-grid-api', '25宫格连贯分镜', 'storyboard-continuity', 90],
+      ['cinematic-lighting-api', '电影级光影矫正', 'cinematic-lighting', 12],
+      ['vocal-background-separation-api', '人声/背景音分离', 'audio-source-separation', 8],
+      ['audio-sentence-segmentation-api', '音频智能断句切分', 'audio-sentence-segmentation', 4],
+      ['seedance-prompt-optimization-api', 'Seedance提示词优化', 'prompt-optimization', 2],
+      ['deep-motion-capture-api', '深度动作捕捉', 'motion-capture', 30],
+      ['smart-edit-api', '智能剪辑粗剪/混剪', 'smart-edit', 20],
+      ['frame-analysis-api', '逐帧拉片分析', 'frame-analysis', 15],
+    ] as const
+
+    expect(
+      expected.map(([id]) => registry.require(id)).map((provider) => ({
+        id: provider.id,
+        kind: provider.kind,
+        selectorVisible: provider.selectorVisible,
+        disabledReason: provider.disabledReason,
+        capabilities: provider.capabilities,
+        cost: provider.pricing.amount,
+      })),
+    ).toEqual(
+      expected.map(([id, feature, capability, cost]) => ({
+        id,
+        kind: 'placeholder',
+        selectorVisible: false,
+        disabledReason: `待接入${feature}服务`,
+        capabilities: [capability],
+        cost,
+      })),
     )
   })
 

@@ -159,7 +159,7 @@ test('opens the complete Liblib image parameter picker and persists its live sum
   expect(trigger).toHaveFocus()
 })
 
-test('opens the grouped Liblib image template catalog and confirms a local derived node', async () => {
+test('opens the grouped Liblib image template catalog and guards AI templates behind placeholders', async () => {
   const user = userEvent.setup()
   const data = makeData()
   render(<ImageGenerationPanel {...panelProps(data)} />)
@@ -175,19 +175,19 @@ test('opens the grouped Liblib image template catalog and confirms a local deriv
   expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual([
     '调度故事板',
     '故事板',
-    '25宫格连贯分镜',
-    '剧情推演四宫格',
+    '25宫格连贯分镜待接入',
+    '剧情推演四宫格待接入',
     '画面推演 - 3秒后',
     '画面推演 - 5秒前',
     '人像质感调节',
-    '电影级光影校正',
-    '720全景',
-    '多机位九宫格',
-    '角色脸部三视图',
-    '角色设定图',
-    '角色三视图',
-    '场景设定图',
-    '产品设定图',
+    '电影级光影校正待接入',
+    '720全景待接入',
+    '多机位九宫格待接入',
+    '角色脸部三视图待接入',
+    '角色设定图待接入',
+    '角色三视图待接入',
+    '场景设定图待接入',
+    '产品设定图待接入',
   ])
 
   await user.keyboard('{Escape}')
@@ -202,12 +202,12 @@ test('opens the grouped Liblib image template catalog and confirms a local deriv
     within(panoramaCatalog).getByRole('button', { name: '720全景' }),
   )
   const confirmation = screen.getByRole('alertdialog', {
-    name: '添加720全景工具节点',
+    name: '720全景生成功能待接入',
   })
-  expect(confirmation).toHaveTextContent('将添加工具节点')
-  expect(confirmation).toHaveTextContent('不会立即消耗积分')
+  expect(confirmation).toHaveTextContent('待接入720全景生成服务')
+  expect(confirmation).toHaveTextContent('预计成本 36 积分')
   expect(data.onCreateImageToolNode).not.toHaveBeenCalled()
-  await user.click(within(confirmation).getByRole('button', { name: '取消' }))
+  await user.click(within(confirmation).getByRole('button', { name: '关闭' }))
   expect(trigger).toHaveFocus()
 
   await user.click(trigger)

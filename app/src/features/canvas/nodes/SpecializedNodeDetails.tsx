@@ -32,6 +32,7 @@ import {
   type ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
 import { createDefaultDirectorScene } from '../director-3d-scene'
 import { extractAudioToWav } from '../../media/browser-media-processing'
 
@@ -48,6 +49,15 @@ const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
   'frame-analysis': '逐帧拉片',
   'smart-edit': '智能剪辑',
 }
+
+const audioSentencePlaceholder = defaultProviderRegistry.require(
+  'audio-sentence-segmentation-api',
+)
+const deepMotionPlaceholder = defaultProviderRegistry.require(
+  'deep-motion-capture-api',
+)
+const smartEditPlaceholder = defaultProviderRegistry.require('smart-edit-api')
+const frameAnalysisPlaceholder = defaultProviderRegistry.require('frame-analysis-api')
 
 function countCharacters(value: string) {
   return Array.from(value).length
@@ -786,6 +796,18 @@ function AudioDetails({
         <span>目标时长（秒）</span>
         <input type="number" aria-label="目标时长" min="1" max="120" step="1" value={durationDraft} onChange={(event) => { const value = Math.min(120, Math.max(1, Number(event.currentTarget.value) || 1)); setDurationDraft(value); onUpdate({ ...details, durationSeconds: value }) }} />
       </label>
+      <div className="specialized-node-details__placeholder-action">
+        <button
+          type="button"
+          disabled
+          aria-describedby="audio-sentence-placeholder-reason"
+        >
+          音频智能断句切分<AiPlaceholderBadge compact />
+        </button>
+        <small id="audio-sentence-placeholder-reason">
+          {audioSentencePlaceholder.disabledReason}，预计成本 {audioSentencePlaceholder.pricing.amount} 积分。
+        </small>
+      </div>
       <button
         type="button"
         className="specialized-node-details__primary"
@@ -906,6 +928,14 @@ function DirectorDetails({
       >
         <Plus aria-hidden="true" />新增分镜
       </button>
+      <div className="specialized-node-details__placeholder-action">
+        <button type="button" disabled aria-describedby="motion-capture-placeholder-reason">
+          深度动作捕捉<AiPlaceholderBadge compact />
+        </button>
+        <small id="motion-capture-placeholder-reason">
+          {deepMotionPlaceholder.disabledReason}，预计成本 {deepMotionPlaceholder.pricing.amount} 积分。
+        </small>
+      </div>
       <Suspense fallback={<p role="status">正在加载 3D 视口…</p>}>
         <Director3DViewport
           title={data.node.title}
@@ -944,6 +974,16 @@ function SmartEditDetails({
 
   return (
     <>
+      <div className="specialized-node-details__placeholder-actions" aria-label="智能剪辑 AI 能力">
+        {['智能粗剪', '智能混剪'].map((label) => (
+          <button key={label} type="button" disabled aria-describedby="smart-edit-placeholder-reason">
+            {label}<AiPlaceholderBadge compact />
+          </button>
+        ))}
+        <small id="smart-edit-placeholder-reason">
+          {smartEditPlaceholder.disabledReason}，预计成本 {smartEditPlaceholder.pricing.amount} 积分。
+        </small>
+      </div>
       <ul className="specialized-node-details__tracks" aria-label="剪辑轨道">
         {details.tracks.map((track, index) => (
           <li key={track.id}>
@@ -986,7 +1026,6 @@ function SmartEditDetails({
 
 export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }) {
   const details = data.node.details
-  const [demoStatus, setDemoStatus] = useState('')
   if (!details) return null
   const update = (next: CanvasNodeDetails) => data.onUpdateNodeDetails?.(next)
 
@@ -1047,10 +1086,12 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
           <button
             type="button"
             className="specialized-node-details__primary"
-            disabled={!Object.values(details.dimensions).some(Boolean)}
-            onClick={() => setDemoStatus('演示分析已完成，未调用真实模型。')}
-          >开始拉片（演示）</button>
-          {demoStatus ? <p role="status">{demoStatus}</p> : null}
+            disabled
+            aria-describedby="frame-analysis-placeholder-reason"
+          >开始拉片<AiPlaceholderBadge compact /></button>
+          <p id="frame-analysis-placeholder-reason">
+            {frameAnalysisPlaceholder.disabledReason}，预计成本 {frameAnalysisPlaceholder.pricing.amount} 积分。
+          </p>
         </>
       ) : null}
 

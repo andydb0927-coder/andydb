@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
+import { defaultProviderRegistry } from '../generation/model-provider-registry'
 import type { AssetLibraryRepository } from '../assets/asset-library-repository'
 import type {
   CanvasNode,
@@ -48,6 +49,7 @@ import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
 import { PanoramaViewer } from './PanoramaViewer'
 import type { SubjectAsset } from '../subjects/subject-model'
 import type { SubjectRepository } from '../subjects/subject-repository'
+import { AiPlaceholderBadge } from './AiPlaceholderNotice'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -656,6 +658,9 @@ const nineGridTemplates = [
   '画面推演 - 5 秒前',
 ] as const
 
+const panoramaGenerationPlaceholder = defaultProviderRegistry.require('panorama-720-api')
+const nineGridGenerationPlaceholder = defaultProviderRegistry.require('multi-camera-grid-api')
+
 const anglePresets = [
   '自定义',
   '鱼眼视角',
@@ -814,12 +819,13 @@ export function SelectionContextBar({
         </button>
         <button
           type="button"
-          title="基于当前场景创建720°全景图"
+          title={panoramaGenerationPlaceholder.disabledReason}
+          aria-describedby="panorama-generation-disabled-reason"
           data-compact="false"
-          onClick={() => requestToolNode('全景')}
+          disabled
         >
           <span className="image-context-action__panorama-icon" aria-hidden="true">720</span>
-          全景
+          全景<AiPlaceholderBadge compact />
         </button>
         <button
           type="button"
@@ -841,7 +847,7 @@ export function SelectionContextBar({
           data-compact="false"
           disabled
         >
-          <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" />
+          <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" /><AiPlaceholderBadge compact />
         </button>
         <button type="button" data-compact="false" onClick={() => requestToolNode('高清')}><ScanLine aria-hidden="true" />高清</button>
         <button
@@ -857,7 +863,8 @@ export function SelectionContextBar({
         <button type="button" data-compact="true" aria-label="旋转与镜像" title="旋转与镜像" aria-haspopup="menu" aria-expanded={surface === 'transform'} onClick={() => setSurface('transform')}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转与镜像</span></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
-        <span id="nine-grid-disabled-reason" className="visually-hidden">九宫格暂未开放：尚未接入可保存的模板处理结果。</span>
+        <span id="panorama-generation-disabled-reason" className="visually-hidden">{panoramaGenerationPlaceholder.disabledReason}</span>
+        <span id="nine-grid-disabled-reason" className="visually-hidden">{nineGridGenerationPlaceholder.disabledReason}</span>
       </div>
 
       {surface === 'portrait' ? (

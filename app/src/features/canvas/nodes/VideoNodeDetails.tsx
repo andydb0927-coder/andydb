@@ -27,6 +27,7 @@ import type {
   VideoGenerationMode,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
 import { PromptAssist } from '../PromptAssist'
 
 type VideoSurface =
@@ -81,6 +82,8 @@ const characterSamples = [
   '古风男主',
   '古风女主',
 ] as const
+
+const frameAnalysisPlaceholder = defaultProviderRegistry.require('frame-analysis-api')
 
 function enumOptions(
   provider: ModelProvider,
@@ -396,6 +399,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
       <PromptAssist
         context="video"
         prompt={prompt}
+        providerRegistry={providerRegistry}
         autoLinkEnabled={parameterBoolean(parameters, 'autoLink', true)}
         candidates={data.autoLinkCandidates ?? []}
         linkedNodeIds={data.linkedAutoLinkNodeIds ?? []}
@@ -585,7 +589,12 @@ export function VideoToolDetails({ data }: { data: CreativeNodeData }) {
         <p>00:03 · 1280×720</p>
         <button type="button">替换素材</button>
         {config.dimensions.map((dimension) => <label key={dimension}><input type="checkbox" defaultChecked />{dimension}</label>)}
-        <button type="button" title="本地演示，不连接真实分析">开始拉片</button>
+        <button type="button" disabled aria-describedby="video-frame-analysis-placeholder-reason">
+          开始拉片<AiPlaceholderBadge compact />
+        </button>
+        <p id="video-frame-analysis-placeholder-reason">
+          {frameAnalysisPlaceholder.disabledReason}，预计成本 {frameAnalysisPlaceholder.pricing.amount} 积分。
+        </p>
       </section>
     )
   }

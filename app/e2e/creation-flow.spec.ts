@@ -528,7 +528,7 @@ test('persists image parameters and creates a canvas-selected media reference', 
   ).toBeVisible()
 })
 
-test('opens the Liblib image template catalog and inserts one confirmed tool node', async ({
+test('guards AI image templates and still inserts a confirmed local tool node', async ({
   page,
 }) => {
   await createCinematicProject(page)
@@ -543,14 +543,18 @@ test('opens the Liblib image template catalog and inserts one confirmed tool nod
   await expect(catalog.getByRole('button')).toHaveCount(15)
   await catalog.getByRole('button', { name: '720全景' }).click()
   const confirmation = page.getByRole('alertdialog', {
-    name: '添加720全景工具节点',
+    name: '720全景生成功能待接入',
   })
-  await expect(confirmation).toContainText('不会立即消耗积分')
-  await confirmation.getByRole('button', { name: '确认添加720全景工具节点' }).click()
+  await expect(confirmation).toContainText('待接入720全景生成服务')
+  await expect(confirmation).toContainText('预计成本 36 积分')
+  await confirmation.getByRole('button', { name: '关闭' }).click()
 
-  await expect(page.getByRole('button', { name: '720全景', exact: true })).toBeVisible()
+  await trigger.click()
+  await panel.getByRole('dialog', { name: '图片创作模板' }).getByRole('button', { name: '调度故事板' }).click()
+  await page.getByRole('button', { name: '确认添加调度故事板工具节点' }).click()
+  await expect(page.getByRole('button', { name: '调度故事板', exact: true })).toBeVisible()
   await expect(
-    page.getByLabel('场景设定 → 720全景', { exact: true }),
+    page.getByLabel('场景设定 → 调度故事板', { exact: true }),
   ).toBeVisible()
 })
 
@@ -567,7 +571,10 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
   await expect(video).toBeVisible()
   const generation = page.getByRole('region', { name: '视频 01 生成参数' })
   await expect(generation).toBeVisible()
-  await expect(generation.getByLabel('提示词')).toHaveAttribute('maxlength', '2000')
+  await expect(generation.getByRole('textbox', { name: '提示词' })).toHaveAttribute(
+    'maxlength',
+    '2000',
+  )
   await expect(generation.getByLabel('模型', { exact: true })).toHaveValue(
     'mock-seedance-25',
   )
@@ -1491,6 +1498,8 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await directorObjectTree.getByRole('textbox', { name: '立方体 01名称' }).fill('主场景方桌')
   await directorPanel.getByRole('button', { name: '顶部视图' }).click()
   await expect(directorPanel.getByRole('button', { name: '顶部视图' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(directorPanel.getByRole('button', { name: '深度动作捕捉' })).toBeDisabled()
+  await expect(directorPanel).toContainText('待接入深度动作捕捉服务')
   await directorPanel.getByRole('button', { name: '上移人物入画' }).click()
   await directorPanel.getByRole('button', { name: '新增分镜' }).click()
   await expect(shotList.getByRole('listitem')).toHaveCount(3)
@@ -1502,13 +1511,15 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   const analysisPanel = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
   await expect(analysisPanel).toContainText('尚未绑定视频')
   await analysisPanel.getByRole('checkbox', { name: '音乐维度' }).uncheck()
-  await analysisPanel.getByRole('button', { name: '开始拉片（演示）' }).click()
-  await expect(analysisPanel.getByRole('status')).toContainText('未调用真实模型')
+  await expect(analysisPanel.getByRole('button', { name: '开始拉片' })).toBeDisabled()
+  await expect(analysisPanel).toContainText('待接入逐帧拉片分析服务')
 
   await openAddNodeAtBlank(page, '智能剪辑 Beta')
   const smartEditPanel = page.getByRole('region', { name: '智能剪辑 01 智能剪辑参数' })
   await expect(smartEditPanel.getByRole('list', { name: '剪辑轨道' }).getByRole('listitem')).toHaveCount(3)
   await expect(smartEditPanel.getByRole('list', { name: '片段列表' }).getByRole('listitem')).toHaveCount(2)
+  await expect(smartEditPanel.getByRole('button', { name: '智能粗剪' })).toBeDisabled()
+  await expect(smartEditPanel.getByRole('button', { name: '智能混剪' })).toBeDisabled()
   await smartEditPanel.getByRole('spinbutton', { name: '片段 02时长' }).fill('5')
   await expect(smartEditPanel.getByText('导出时长 00:09')).toBeVisible()
 
@@ -1698,7 +1709,7 @@ test('matches Liblib result action policies and exposes the inline video player'
   for (const label of ['宫格切分', '标注', '旋转与镜像']) {
     await expect(imageTools.getByRole('button', { name: label })).toBeEnabled()
   }
-  await expect(page.getByText(/九宫格暂未开放/)).toBeAttached()
+  await expect(page.getByText(/待接入多机位九宫格生成服务/)).toBeAttached()
 
   await imagePanel
     .getByRole('combobox', { name: '图片模型' })

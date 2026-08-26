@@ -1,7 +1,13 @@
-import { Command, Link2 } from 'lucide-react'
+import { Command, Link2, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import type { ImageGenerationSettings, NodeKind } from '../project/model'
+import {
+  defaultProviderRegistry,
+  type ProviderRegistry,
+} from '../generation/model-provider-registry'
+import { AiPlaceholderBadge, AiPlaceholderNotice } from './AiPlaceholderNotice'
+import { optimizePromptLocally } from './local-prompt-optimizer'
 import {
   executePromptCommand,
   filterPromptCommands,
@@ -10,6 +16,7 @@ import {
   promptCommandSectionLabels,
   slashQuery,
   type AutoLinkCandidate,
+  type PromptCommand,
   type PromptCommandContext,
 } from './prompt-assist'
 
@@ -19,6 +26,7 @@ interface PromptAssistProps {
   autoLinkEnabled: boolean
   candidates: AutoLinkCandidate[]
   linkedNodeIds: string[]
+  providerRegistry?: ProviderRegistry
   onPromptChange(prompt: string): void
   onImageSettings?(settings: Partial<ImageGenerationSettings>): void
   onVideoParameters?(parameters: Record<string, string | number | boolean>): void
@@ -32,6 +40,7 @@ export function PromptAssist({
   autoLinkEnabled,
   candidates,
   linkedNodeIds,
+  providerRegistry = defaultProviderRegistry,
   onPromptChange,
   onImageSettings,
   onVideoParameters,
@@ -42,7 +51,9 @@ export function PromptAssist({
   const [forcedOpen, setForcedOpen] = useState(false)
   const [commandIndex, setCommandIndex] = useState(0)
   const [autoLinkIndex, setAutoLinkIndex] = useState(0)
-  const commandOpen = forcedOpen || detectedQuery !== undefined
+  const [pendingAiCommand, setPendingAiCommand] = useState<PromptCommand>()
+  const [optimizeStatus, setOptimizeStatus] = useState('')
+  const commandOpen = !pendingAiCommand && (forcedOpen || detectedQuery !== undefined)
   const commands = useMemo(
     () => filterPromptCommands(context, detectedQuery ?? ''),
     [context, detectedQuery],
@@ -60,12 +71,24 @@ export function PromptAssist({
   const runCommand = (index: number) => {
     const command = commands[index]
     if (!command) return
+    if (command.aiProviderId) {
+      setPendingAiCommand(command)
+      setForcedOpen(false)
+      return
+    }
     const result = executePromptCommand(command, prompt)
     onPromptChange(result.prompt)
     if (result.imageSettings) onImageSettings?.(result.imageSettings)
     if (result.videoParameters) onVideoParameters?.(result.videoParameters)
     if (result.createNodeKind) onCreateNode?.(result.createNodeKind)
     setForcedOpen(false)
+  }
+
+  const closeAiNotice = () => {
+    setPendingAiCommand(undefined)
+    if (detectedQuery !== undefined) {
+      onPromptChange(prompt.slice(0, prompt.lastIndexOf('/')))
+    }
   }
 
   const applyAutoLink = (index: number) => {
@@ -121,6 +144,21 @@ export function PromptAssist({
         onClick={() => setForcedOpen((open) => !open)}
       >
         <Command aria-hidden="true" />/
+      </button>
+      <button
+        type="button"
+        className="prompt-assist__optimizer"
+        aria-label="本地优化提示词"
+        disabled={!prompt.trim()}
+        title="本地规则立即可用；待接入Seedance提示词优化服务"
+        onClick={() => {
+          const optimized = optimizePromptLocally(prompt, context)
+          if (!optimized) return
+          onPromptChange(optimized)
+          setOptimizeStatus('本地规则优化完成；真实 AI 优化待接入。')
+        }}
+      >
+        <Sparkles aria-hidden="true" />优化<AiPlaceholderBadge compact />
       </button>
       {commandOpen ? (
         <section className="prompt-command-panel" role="dialog" aria-label="Slash 命令面板">
@@ -180,6 +218,18 @@ export function PromptAssist({
             ))}
           </div>
         </section>
+      ) : null}
+      {optimizeStatus ? <p className="prompt-assist__status" role="status">{optimizeStatus}</p> : null}
+      {pendingAiCommand?.aiProviderId ? (
+        <AiPlaceholderNotice
+          provider={providerRegistry.require(pendingAiCommand.aiProviderId)}
+          prompt={pendingAiCommand.promptText ?? ''}
+          onCopy={() => {
+            const result = executePromptCommand(pendingAiCommand, prompt)
+            onPromptChange(result.prompt)
+          }}
+          onClose={closeAiNotice}
+        />
       ) : null}
     </div>
   )

@@ -32,6 +32,20 @@ describe('prompt slash commands', () => {
       '保留/旧词 最后竖屏电影构图',
     )
   })
+
+  test('registers the five image AI presets as guarded placeholder commands', () => {
+    const aiCommands = promptCommandsFor('image').filter(
+      ({ aiProviderId }) => aiProviderId,
+    )
+    expect(aiCommands.map(({ slash }) => slash)).toEqual([
+      '九宫格',
+      '四宫格',
+      '25宫格',
+      '光影',
+      '设定图',
+    ])
+    expect(aiCommands.every(({ promptText }) => Boolean(promptText))).toBe(true)
+  })
 })
 
 describe('local AutoLink retrieval', () => {

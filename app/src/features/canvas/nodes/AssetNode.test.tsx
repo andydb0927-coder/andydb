@@ -695,6 +695,8 @@ test('shows persistent audio duration, voice, speed, and volume controls', async
   const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', details)
   const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
   expect(within(panel).getByText('00:12')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '音频智能断句切分' })).toBeDisabled()
+  expect(within(panel).getByText(/待接入音频智能断句切分服务/)).toBeVisible()
   await user.selectOptions(within(panel).getByRole('combobox', { name: '音色' }), '沉稳男声')
   await user.clear(within(panel).getByRole('spinbutton', { name: '语速' }))
   await user.type(within(panel).getByRole('spinbutton', { name: '语速' }), '1.2')
@@ -840,6 +842,8 @@ test('adds, sorts, and removes director shots with camera hints', async () => {
   const { onUpdateNodeDetails } = renderSpecializedNode('导演台 01', 'script', details)
   const panel = screen.getByRole('region', { name: '导演台 01 导演台参数' })
   expect(within(panel).getByRole('list', { name: '分镜编排列表' })).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '深度动作捕捉' })).toBeDisabled()
+  expect(within(panel).getByText(/待接入深度动作捕捉服务/)).toBeVisible()
   expect(within(panel).getByRole('textbox', { name: '远景建立机位提示' })).toHaveValue('稳定机位')
   await user.click(within(panel).getByRole('button', { name: '上移人物入画' }))
   expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({
@@ -861,7 +865,7 @@ test('adds, sorts, and removes director shots with camera hints', async () => {
   })
 })
 
-test('configures frame analysis dimensions and starts only a demo analysis', async () => {
+test('configures frame analysis dimensions while exposing the managed AI placeholder', async () => {
   const user = userEvent.setup()
   const details = {
     type: 'frame-analysis',
@@ -886,8 +890,8 @@ test('configures frame analysis dimensions and starts only a demo analysis', asy
     ...details,
     dimensions: { ...details.dimensions, music: false },
   })
-  await user.click(within(panel).getByRole('button', { name: '开始拉片（演示）' }))
-  expect(within(panel).getByRole('status')).toHaveTextContent('演示分析已完成')
+  expect(within(panel).getByRole('button', { name: '开始拉片' })).toBeDisabled()
+  expect(within(panel).getByText(/待接入逐帧拉片分析服务/)).toBeVisible()
 })
 
 test('shows smart-edit tracks, clips, and export duration', () => {
@@ -908,4 +912,7 @@ test('shows smart-edit tracks, clips, and export duration', () => {
   expect(within(panel).getByRole('list', { name: '剪辑轨道' })).toHaveTextContent('主视频轨')
   expect(within(panel).getByRole('textbox', { name: '片段 02名称' })).toHaveValue('片段 02')
   expect(within(panel).getByText('导出时长 00:07')).toBeVisible()
+  expect(within(panel).getByRole('button', { name: '智能粗剪' })).toBeDisabled()
+  expect(within(panel).getByRole('button', { name: '智能混剪' })).toBeDisabled()
+  expect(within(panel).getByText(/待接入智能剪辑粗剪\/混剪服务/)).toBeVisible()
 })

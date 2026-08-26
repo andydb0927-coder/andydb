@@ -14,6 +14,8 @@ import { useEffect, useState } from 'react'
 import { withAppBase } from '../../app/public-url'
 import type { Asset, CanvasNode, VideoDerivedTool } from '../project/model'
 import type { VideoSegmentOptions } from '../media/browser-media-processing'
+import { defaultProviderRegistry } from '../generation/model-provider-registry'
+import { AiPlaceholderBadge } from './AiPlaceholderNotice'
 
 type VideoMediaSurface =
   | 'clip'
@@ -30,6 +32,9 @@ type VideoMediaSurface =
   | 'preview'
 
 const cropHandles = ['西北', '北', '东北', '东', '东南', '南', '西南', '西'] as const
+const vocalSeparationPlaceholder = defaultProviderRegistry.require(
+  'vocal-background-separation-api',
+)
 
 interface VideoMediaContextBarProps {
   node: CanvasNode
@@ -233,7 +238,7 @@ export function VideoMediaContextBar({
 
       {surface === 'audio-menu' ? (
         <div className="video-tool-menu video-tool-menu--with-reasons" role="menu" aria-label="音频分离">
-          <div><button type="button" role="menuitem" disabled aria-describedby="voice-separation-reason">人声分离</button><span id="voice-separation-reason">人声/伴奏分轨需要独立模型，暂未开放。</span></div>
+          <div><button type="button" role="menuitem" disabled aria-describedby="voice-separation-reason">人声分离<AiPlaceholderBadge compact /></button><span id="voice-separation-reason">{vocalSeparationPlaceholder.disabledReason}，预计成本 {vocalSeparationPlaceholder.pricing.amount} 积分。</span></div>
           <div><button type="button" role="menuitem" onClick={() => { void onExtractAudio?.(); setSurface(undefined) }}>音视频分离</button><span>读取当前视频音轨并导出 WAV，同时保存到资产库。</span></div>
         </div>
       ) : null}

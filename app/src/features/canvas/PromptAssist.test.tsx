@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, test, vi } from 'vitest'
@@ -96,5 +96,35 @@ describe('prompt assist UI', () => {
     await user.keyboard('{Escape}')
     expect(input).toHaveValue('风景 ')
     expect(screen.queryByRole('dialog', { name: 'Slash 命令面板' })).not.toBeInTheDocument()
+  })
+
+  test('explains AI slash presets before copying their prompt into the image node', async () => {
+    const user = userEvent.setup()
+    render(<Harness initialPrompt="古城 /九宫格" />)
+
+    await user.click(screen.getByRole('option', { name: /九宫格分镜预设/ }))
+    const dialog = screen.getByRole('alertdialog', { name: '多机位九宫格生成功能待接入' })
+    expect(dialog).toHaveTextContent('待接入多机位九宫格生成服务')
+    expect(dialog).toHaveTextContent('预计成本 48 积分')
+    await user.click(within(dialog).getByRole('button', { name: '复制提示词到图片节点' }))
+
+    expect(
+      (screen.getByRole('textbox', { name: '测试提示词' }) as HTMLTextAreaElement).value,
+    ).toContain('同一主体')
+    expect(screen.getByRole('status')).toHaveTextContent('已复制提示词')
+  })
+
+  test('optimizes the current prompt with deterministic local rules', async () => {
+    const user = userEvent.setup()
+    render(<Harness initialPrompt="清晨薄雾中的古桥" />)
+
+    const optimize = screen.getByRole('button', { name: '本地优化提示词' })
+    expect(optimize).toHaveTextContent('待接入')
+    await user.click(optimize)
+
+    expect(
+      (screen.getByRole('textbox', { name: '测试提示词' }) as HTMLTextAreaElement).value,
+    ).toContain('镜头：')
+    expect(screen.getByRole('status')).toHaveTextContent('本地规则优化完成')
   })
 })

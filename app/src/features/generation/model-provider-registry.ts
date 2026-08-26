@@ -51,6 +51,17 @@ export type ModelCapability =
   | 'image-to-video'
   | 'audio'
   | 'panorama-720'
+  | 'multi-camera-grid'
+  | 'plot-four-grid'
+  | 'storyboard-continuity'
+  | 'cinematic-lighting'
+  | 'audio-source-separation'
+  | 'audio-sentence-segmentation'
+  | 'prompt-optimization'
+  | 'motion-capture'
+  | 'smart-edit'
+  | 'frame-analysis'
+  | 'setting-image'
 
 export interface ModelProviderPricing {
   amount: number
@@ -166,6 +177,17 @@ const capabilityCopy: Record<ModelCapability, string> = {
   'image-to-video': '图生视频',
   audio: '音频',
   'panorama-720': '720全景生成',
+  'multi-camera-grid': '多机位九宫格生成',
+  'plot-four-grid': '剧情推演四宫格',
+  'storyboard-continuity': '25宫格连贯分镜',
+  'cinematic-lighting': '电影级光影矫正',
+  'audio-source-separation': '人声/背景音分离',
+  'audio-sentence-segmentation': '音频智能断句切分',
+  'prompt-optimization': 'Seedance提示词优化',
+  'motion-capture': '深度动作捕捉',
+  'smart-edit': '智能剪辑粗剪/混剪',
+  'frame-analysis': '逐帧拉片分析',
+  'setting-image': '设定图生成',
 }
 
 function generationCapability(request: GenerationRequest): ModelCapability {
@@ -935,7 +957,9 @@ function videoCatalogProvider(entry: LiblibModelCatalogEntry) {
 function placeholderProvider(config: ProviderManifestCore): ModelProvider {
   const unavailable = async (context: ProviderExecutionContext) => {
     context.signal.throwIfAborted()
-    throw new Error(`${config.name} API 尚未配置；当前仅提供接口占位。`)
+    throw new Error(
+      config.disabledReason ?? `${config.name} API 尚未配置；当前仅提供接口占位。`,
+    )
   }
   const { parameters, ...manifest } = config
   return {
@@ -946,6 +970,51 @@ function placeholderProvider(config: ProviderManifestCore): ModelProvider {
     generate: (_request, context) => unavailable(context),
     export: (_request, context) => unavailable(context),
   }
+}
+
+export const managedAiPlaceholderCatalog = [
+  { id: 'panorama-720-api', name: '720全景', modelName: '720全景生成', capability: 'panorama-720', cost: 36, disabledReason: '待接入720全景生成服务' },
+  { id: 'multi-camera-grid-api', name: '多机位九宫格', modelName: '多机位九宫格生成', capability: 'multi-camera-grid', cost: 48, disabledReason: '待接入多机位九宫格生成服务' },
+  { id: 'plot-four-grid-api', name: '剧情推演四宫格', modelName: '剧情推演四宫格', capability: 'plot-four-grid', cost: 28, disabledReason: '待接入剧情推演四宫格服务' },
+  { id: 'storyboard-25-grid-api', name: '25宫格连贯分镜', modelName: '25宫格连贯分镜', capability: 'storyboard-continuity', cost: 90, disabledReason: '待接入25宫格连贯分镜服务' },
+  { id: 'cinematic-lighting-api', name: '电影级光影矫正', modelName: '电影级光影矫正', capability: 'cinematic-lighting', cost: 12, disabledReason: '待接入电影级光影矫正服务' },
+  { id: 'vocal-background-separation-api', name: '人声/背景音分离', modelName: '人声/背景音分离', capability: 'audio-source-separation', cost: 8, disabledReason: '待接入人声/背景音分离服务' },
+  { id: 'audio-sentence-segmentation-api', name: '音频智能断句切分', modelName: '音频智能断句切分', capability: 'audio-sentence-segmentation', cost: 4, disabledReason: '待接入音频智能断句切分服务' },
+  { id: 'seedance-prompt-optimization-api', name: 'Seedance提示词优化', modelName: 'Seedance提示词优化', capability: 'prompt-optimization', cost: 2, disabledReason: '待接入Seedance提示词优化服务' },
+  { id: 'deep-motion-capture-api', name: '深度动作捕捉', modelName: '深度动作捕捉', capability: 'motion-capture', cost: 30, disabledReason: '待接入深度动作捕捉服务' },
+  { id: 'smart-edit-api', name: '智能剪辑', modelName: '智能剪辑粗剪/混剪', capability: 'smart-edit', cost: 20, disabledReason: '待接入智能剪辑粗剪/混剪服务' },
+  { id: 'frame-analysis-api', name: '逐帧拉片', modelName: '逐帧拉片分析', capability: 'frame-analysis', cost: 15, disabledReason: '待接入逐帧拉片分析服务' },
+  { id: 'setting-image-api', name: '设定图', modelName: '设定图生成', capability: 'setting-image', cost: 24, disabledReason: '待接入设定图生成服务' },
+] as const satisfies readonly {
+  id: string
+  name: string
+  modelName: string
+  capability: ModelCapability
+  cost: number
+  disabledReason: string
+}[]
+
+export type ManagedAiPlaceholderId =
+  (typeof managedAiPlaceholderCatalog)[number]['id']
+
+function managedAiPlaceholderProviders() {
+  return managedAiPlaceholderCatalog.map((definition) =>
+    placeholderProvider({
+      id: definition.id,
+      name: definition.name,
+      modelName: definition.modelName,
+      selectorVisible: false,
+      disabledReason: definition.disabledReason,
+      capabilities: [definition.capability],
+      parameters: {},
+      pricing: {
+        amount: definition.cost,
+        currency: 'credits',
+        unit: 'generation',
+      },
+      officialApiEndpoint: `pending://${definition.id}`,
+    }),
+  )
 }
 
 export interface DefaultProviderRegistryOptions {
@@ -1079,17 +1148,7 @@ export function createDefaultProviderRegistry(
     }),
     createArkTtsProvider(options.arkTts),
     createArkAudioGenProvider(options.arkAudio),
-    placeholderProvider({
-      id: 'panorama-720-api',
-      name: '720全景',
-      modelName: '720全景生成',
-      selectorVisible: false,
-      disabledReason: '待接入720全景生成',
-      capabilities: ['panorama-720'],
-      parameters: {},
-      pricing: { amount: 0, currency: 'credits', unit: 'generation' },
-      officialApiEndpoint: 'pending://panorama-720',
-    }),
+    ...managedAiPlaceholderProviders(),
     placeholderProvider({
       id: 'tongyi-api',
       name: '通义万相',
