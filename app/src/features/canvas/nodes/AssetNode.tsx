@@ -609,6 +609,7 @@ export function CreativeNodeShell({
           imageMedia ? ' creative-node--image-media' : ''
         }${videoMedia ? ' creative-node--video-media' : ''}${
           specializedDetails ? ' creative-node--specialized' : ''
+        }${specializedDetails?.type === 'director' ? ' creative-node--director' : ''
         }${liblibMediaNode ? ' creative-node--liblib-media' : ''}${
           textGenerationNode ? ' creative-node--liblib-text' : ''
         }${manualTextNode ? ' creative-node--manual-text' : ''}${

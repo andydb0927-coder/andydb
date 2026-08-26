@@ -8,7 +8,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import type {
   AudioNodeDetails,
@@ -32,7 +32,13 @@ import {
   type ModelProvider,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
+import { createDefaultDirectorScene } from '../director-3d-scene'
 import { extractAudioToWav } from '../../media/browser-media-processing'
+
+const Director3DViewport = lazy(async () => {
+  const module = await import('../Director3DViewport')
+  return { default: module.Director3DViewport }
+})
 
 const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
   text: '文本',
@@ -816,12 +822,15 @@ function AudioDetails({
 }
 
 function DirectorDetails({
+  data,
   details,
   onUpdate,
 }: {
+  data: CreativeNodeData
   details: DirectorNodeDetails
   onUpdate(details: DirectorNodeDetails): void
 }) {
+  const scene3d = details.scene3d ?? createDefaultDirectorScene()
   const updateShot = (
     shotId: string,
     changes: Partial<DirectorNodeDetails['shots'][number]>,
@@ -897,6 +906,14 @@ function DirectorDetails({
       >
         <Plus aria-hidden="true" />新增分镜
       </button>
+      <Suspense fallback={<p role="status">正在加载 3D 视口…</p>}>
+        <Director3DViewport
+          title={data.node.title}
+          scene={scene3d}
+          onChange={(nextScene) => onUpdate({ ...details, scene3d: nextScene })}
+          onExportViews={(blob) => data.onExportDirectorViews?.(blob)}
+        />
+      </Suspense>
     </>
   )
 }
@@ -975,7 +992,7 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
 
   return (
     <section
-      className={`specialized-node-details nodrag nowheel${details.type === 'text' ? ' specialized-node-details--text' : ''}`}
+      className={`specialized-node-details nodrag nowheel${details.type === 'text' ? ' specialized-node-details--text' : ''}${details.type === 'director' ? ' specialized-node-details--director' : ''}`}
       role="region"
       aria-label={`${data.node.title} ${panelTypeCopy[details.type]}参数`}
     >
@@ -993,7 +1010,7 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
         <AudioDetails data={data} details={details} onUpdate={update} />
       ) : null}
 
-      {details.type === 'director' ? <DirectorDetails details={details} onUpdate={update} /> : null}
+      {details.type === 'director' ? <DirectorDetails data={data} details={details} onUpdate={update} /> : null}
 
       {details.type === 'frame-analysis' ? (
         <>

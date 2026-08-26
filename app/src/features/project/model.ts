@@ -265,9 +265,50 @@ export interface DirectorShot {
   cameraHint: string
 }
 
+export type Director3DObjectKind =
+  | 'cube'
+  | 'sphere'
+  | 'cylinder'
+  | 'plane'
+  | 'humanoid'
+
+export type Director3DVector = [number, number, number]
+
+export interface Director3DObject {
+  id: string
+  name: string
+  kind: Director3DObjectKind
+  color: string
+  position: Director3DVector
+  rotation: Director3DVector
+  scale: Director3DVector
+}
+
+export type DirectorCameraProjection = 'perspective' | 'orthographic'
+export type DirectorCameraView = 'top' | 'front' | 'side' | 'free'
+
+export interface DirectorCameraState {
+  projection: DirectorCameraProjection
+  view: DirectorCameraView
+  position: Director3DVector
+  target: Director3DVector
+  zoom: number
+}
+
+export interface Director3DSceneState {
+  objects: Director3DObject[]
+  camera: DirectorCameraState
+}
+
+export interface DirectorTrajectory {
+  points: Director3DVector[]
+}
+
 export interface DirectorNodeDetails {
   type: 'director'
   shots: DirectorShot[]
+  scene3d?: Director3DSceneState
+  trajectory?: DirectorTrajectory
 }
 
 export interface FrameAnalysisNodeDetails {

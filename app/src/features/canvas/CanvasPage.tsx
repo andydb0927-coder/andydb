@@ -106,11 +106,13 @@ import {
   recordVideoSegment,
   renderStoryboardGroup4K,
   splitImageToGrid,
+  blobToDataUrl,
   type AudioSliceOptions,
   type ImageGridSize,
   type ProcessedMedia,
   type VideoSegmentOptions,
 } from '../media/browser-media-processing'
+import { createDefaultDirectorScene } from './director-3d-scene'
 import { createTimelineProject } from '../timeline/timeline-project'
 import { TimelineRepository, type TimelineProjectRepository } from '../timeline/timeline-repository'
 import {
@@ -1979,6 +1981,29 @@ export function CanvasPage({
     [createCanvasContent, createConnectedCanvasContent, libraryRepository, projectId],
   )
 
+  const exportDirectorViews = useCallback(
+    async (nodeId: string, blob: Blob) => {
+      const currentProject = useProjectStore.getState().activeProject
+      const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
+      if (!sourceNode) throw new Error('导演台节点不存在，无法保存四视图。')
+      const createdId = await saveProcessedAsset(
+        nodeId,
+        {
+          dataUrl: await blobToDataUrl(blob),
+          mimeType: 'image/png',
+          width: 1280,
+          height: 720,
+        },
+        'image',
+        `${sourceNode.title} 四视图`,
+        { x: 520, y: 120 },
+      )
+      selectOnlyNode(createdId)
+      setGenerationFeedback('导演台四视图 PNG 已生成图片节点并写入资产库。')
+    },
+    [saveProcessedAsset, selectOnlyNode],
+  )
+
   const splitImageNode = useCallback(
     async (nodeId: string, grid: ImageGridSize, group: boolean) => {
       const currentProject = useProjectStore.getState().activeProject
@@ -2725,6 +2750,7 @@ export function CanvasPage({
           onUpdateNodeDetails: (details) => {
             updateNode(node.id, { details })
           },
+          onExportDirectorViews: (blob) => exportDirectorViews(node.id, blob),
           onGenerateText: (details, prompt) => {
             const selectedProvider = providerRegistry.list().find(
               ({ id }) => id === details.modelProviderId,
@@ -2825,6 +2851,7 @@ export function CanvasPage({
     processVideoNode,
     saveImageAnnotations,
     splitImageNode,
+    exportDirectorViews,
   ])
 
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -3518,6 +3545,8 @@ export function CanvasPage({
                       cameraHint: '中景滑轨前推，保持视线高度',
                     },
                   ],
+                  scene3d: createDefaultDirectorScene(),
+                  trajectory: { points: [] },
                 }
               : {
                   type: 'script',
