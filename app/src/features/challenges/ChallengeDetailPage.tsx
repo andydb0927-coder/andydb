@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
+import { buildDemoWorks } from '../community/demo-works'
 import { getCreatorChallenge, type ChallengeStatus } from './challenge-catalog'
 
 const statusLabels: Record<ChallengeStatus, string> = {
@@ -32,7 +33,7 @@ export function ChallengeDetailPage() {
     )
   }
 
-  const [startsAt] = challenge.period.split(' — ')
+  const exampleWorks = buildDemoWorks().slice(0, 3)
 
   return (
     <main className="platform-page challenge-detail-page">
@@ -47,7 +48,7 @@ export function ChallengeDetailPage() {
             <h1>{challenge.title}</h1>
             <p className="challenge-detail-page__lead">{challenge.summary}</p>
           </div>
-          <Link className="challenge-detail-page__create focus-visible" to="/projects/new">
+          <Link className="challenge-detail-page__create focus-visible" to={`/projects/new?challenge=${challenge.id}`}>
             <Sparkles aria-hidden="true" />去创作
           </Link>
           <dl className="challenge-detail-page__meta" aria-label="活动状态与日期">
@@ -72,11 +73,15 @@ export function ChallengeDetailPage() {
         <div className="challenge-detail-page__sections">
           <section className="challenge-detail-section" aria-labelledby="activity-calendar-heading" role="region">
             <p className="platform-page__eyebrow">ACTIVITY CALENDAR</p>
-            <h2 id="activity-calendar-heading">活动日历</h2>
+            <h2 id="activity-calendar-heading">赛事时间线</h2>
             <ol className="challenge-calendar">
-              <li><strong>作品准备</strong><span>{startsAt} 起</span></li>
-              <li><strong>本地整理</strong><span>在活动周期内整理作品与创作过程</span></li>
-              <li><strong>结果记录</strong><span>演示目录中的状态仅用于页面预览</span></li>
+              {challenge.timeline.map((entry) => (
+                <li key={entry.title}>
+                  <strong>{entry.title}</strong>
+                  <span>{entry.date}</span>
+                  <p>{entry.description}</p>
+                </li>
+              ))}
             </ol>
           </section>
 
@@ -85,10 +90,24 @@ export function ChallengeDetailPage() {
             <p className="platform-page__eyebrow">CREATIVE TRACKS</p>
             <h2 id="activity-track-heading">活动赛道</h2>
             <div className="challenge-track-grid">
-              <article><span>01</span><h3>叙事短片</h3><p>用完整镜头语言呈现原创故事。</p></article>
-              <article><span>02</span><h3>视觉实验</h3><p>探索生成影像、风格与声音的边界。</p></article>
-              <article><span>03</span><h3>Skill 工作流</h3><p>整理可复用的创作方法与作品结果。</p></article>
+              {challenge.tracks.map((track, index) => (
+                <article key={track.title}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <h3>{track.title}</h3><p>{track.description}</p>
+                </article>
+              ))}
             </div>
+          </section>
+
+          <hr className="challenge-detail-section__divider" />
+          <section className="challenge-detail-section" aria-labelledby="activity-rules-heading" role="region">
+            <p className="platform-page__eyebrow">RULES</p>
+            <h2 id="activity-rules-heading">赛制规则</h2>
+            <ol className="challenge-rule-list">
+              {challenge.rules.map((rule, index) => (
+                <li key={rule}><span>{String(index + 1).padStart(2, '0')}</span><p>{rule}</p></li>
+              ))}
+            </ol>
           </section>
 
           <hr className="challenge-detail-section__divider" />
@@ -118,9 +137,11 @@ export function ChallengeDetailPage() {
               本地目录记录的演示奖项为 {challenge.prize}；以下分级仅用于呈现页面结构。
             </p>
             <div className="challenge-award-grid">
-              <article data-tier="gold"><Trophy aria-hidden="true" /><h3>最佳导演奖</h3><p>关注叙事调度、镜头设计与整体完成度。</p></article>
-              <article data-tier="silver"><Trophy aria-hidden="true" /><h3>最佳视觉奖</h3><p>关注视觉语言、风格一致性与技术表达。</p></article>
-              <article data-tier="bronze"><Trophy aria-hidden="true" /><h3>新锐创作者奖</h3><p>关注原创思路、成长潜力与创作过程。</p></article>
+              {challenge.awards.map((award, index) => (
+                <article key={award.title} data-tier={['gold', 'silver', 'bronze'][index] ?? 'bronze'}>
+                  <Trophy aria-hidden="true" /><h3>{award.title}</h3><p>{award.description}</p>
+                </article>
+              ))}
             </div>
           </section>
 
@@ -136,6 +157,22 @@ export function ChallengeDetailPage() {
             <p className="challenge-detail-page__disclaimer">
               评审条目是本地产品演示说明，不构成真实赛事规则或评选承诺。
             </p>
+          </section>
+
+          <hr className="challenge-detail-section__divider" />
+          <section className="challenge-detail-section" aria-labelledby="activity-examples-heading" role="region">
+            <p className="platform-page__eyebrow">EXAMPLE WORKS</p>
+            <h2 id="activity-examples-heading">示例作品</h2>
+            <p className="challenge-detail-section__lead">以下使用本地已发布作品演示赛事作品卡片，不代表真实参赛结果。</p>
+            <div className="challenge-example-grid">
+              {exampleWorks.map((work) => (
+                <article key={work.id}>
+                  <img src={work.coverUrl} alt="" />
+                  <div><strong>{work.title}</strong><span>{work.author}</span></div>
+                  <Link to={`/detail/${work.id}`} aria-label={`查看示例作品：${work.title}`}>查看作品</Link>
+                </article>
+              ))}
+            </div>
           </section>
         </div>
       </article>

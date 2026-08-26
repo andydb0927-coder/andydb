@@ -46,6 +46,8 @@ import { VideoMediaContextBar } from './VideoContextTools'
 import { ImageAnnotationEditor } from './ImageAnnotationEditor'
 import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
 import { PanoramaViewer } from './PanoramaViewer'
+import type { SubjectAsset } from '../subjects/subject-model'
+import type { SubjectRepository } from '../subjects/subject-repository'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -356,9 +358,11 @@ interface WorkspaceSidePanelProps {
   project: Project
   generationPreferenceStore?: GenerationProviderPreferenceStore
   assetRepository: Pick<AssetLibraryRepository, 'list' | 'rename' | 'move' | 'deleteAsset'>
+  subjectRepository?: Pick<SubjectRepository, 'list' | 'update' | 'delete'>
   historyInsertionMode?: boolean
   onClose(): void
   onApplyCharacters?(characters: CharacterProfile[]): void
+  onApplySubject?(subject: SubjectAsset): void
   onDeleteHistoryJobs?(jobIds: string[]): void
   onInsertAsset?(asset: WorkspaceAsset): void
   onRemoveProjectAsset?(assetId: string): void
@@ -374,9 +378,11 @@ export function WorkspaceSidePanel({
   project,
   generationPreferenceStore,
   assetRepository,
+  subjectRepository,
   historyInsertionMode = false,
   onClose,
   onApplyCharacters,
+  onApplySubject,
   onDeleteHistoryJobs,
   onInsertAsset,
   onRemoveProjectAsset,
@@ -461,7 +467,12 @@ export function WorkspaceSidePanel({
       ) : null}
 
       {panel === 'characters' ? (
-        <CharacterLibraryPanel onApply={(characters) => onApplyCharacters?.(characters)} />
+        <CharacterLibraryPanel
+          currentProjectId={project.id}
+          subjectRepository={subjectRepository}
+          onApply={(characters) => onApplyCharacters?.(characters)}
+          onApplySubject={(subject) => onApplySubject?.(subject)}
+        />
       ) : null}
 
       {panel === 'history' ? (

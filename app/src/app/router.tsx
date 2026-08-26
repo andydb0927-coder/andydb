@@ -41,6 +41,9 @@ const PublishedWorkViewPage = lazy(() =>
 const TutorialCenterPage = lazy(() =>
   import('../features/tutorials/TutorialCenterPage').then((m) => ({ default: m.TutorialCenterPage })),
 )
+const TutorialDetailPage = lazy(() =>
+  import('../features/tutorials/TutorialDetailPage').then((m) => ({ default: m.TutorialDetailPage })),
+)
 const CreationProcessPage = lazy(() =>
   import('../features/community/CreationProcessPage').then((m) => ({ default: m.CreationProcessPage })),
 )
@@ -66,6 +69,7 @@ export const routes: RouteObject[] = [
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/works', element: withSuspense(<PublishedWorksPage />) },
       { path: '/tutorials', element: withSuspense(<TutorialCenterPage />) },
+      { path: '/tutorials/:tutorialId', element: withSuspense(<TutorialDetailPage />) },
       { path: '/agents', element: withSuspense(<AgentsPage />) },
       { path: '/challenges', element: withSuspense(<ChallengesPage />) },
       { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },

@@ -14,6 +14,7 @@ import type {
   ProjectFolder,
   ProjectLocation,
 } from '../projects/project-space-model'
+import type { SubjectAsset } from '../subjects/subject-model'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -26,6 +27,7 @@ export class WirelessCanvasDatabase extends Dexie {
   homeContent!: Table<HomeContentRecord, string>
   projectFolders!: Table<ProjectFolder, string>
   projectLocations!: Table<ProjectLocation, string>
+  subjects!: Table<SubjectAsset, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -89,6 +91,20 @@ export class WirelessCanvasDatabase extends Dexie {
       homeContent: 'id, kind, category, order',
       projectFolders: 'id, &normalizedName, updatedAt',
       projectLocations: 'projectId, folderId, updatedAt',
+    })
+    this.version(10).stores({
+      projects: 'id, updatedAt',
+      libraryAssets: 'id, createdAt, kind, source, name, &fingerprint',
+      workflowRuns: 'id, projectId, updatedAt, status',
+      timelineProjects: 'id, projectId, updatedAt',
+      publishedWorks: 'id, &projectId, status, publishedAt, updatedAt',
+      collaborators: 'id, projectId, role, updatedAt',
+      changeComments: 'id, projectId, targetType, targetId, status, createdAt',
+      membership: 'id, plan, status, updatedAt',
+      homeContent: 'id, kind, category, order',
+      projectFolders: 'id, &normalizedName, updatedAt',
+      projectLocations: 'projectId, folderId, updatedAt',
+      subjects: 'id, name, sourceProjectId, updatedAt',
     })
   }
 }

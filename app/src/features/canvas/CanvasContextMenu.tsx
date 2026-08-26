@@ -74,6 +74,7 @@ export interface CanvasContextMenuProps {
   canRedo: boolean
   canPaste: boolean
   canSaveToAssets: boolean
+  canCreateSubject: boolean
   canExecuteGroup: boolean
   onUpload(): void
   onAddNode(type: ContextQuickNodeType): void
@@ -119,6 +120,7 @@ export function CanvasContextMenu({
   canRedo,
   canPaste,
   canSaveToAssets,
+  canCreateSubject,
   canExecuteGroup,
   onUpload,
   onAddNode,
@@ -213,7 +215,13 @@ export function CanvasContextMenu({
           <button type="button" role="menuitem" disabled={!canSaveToAssets} onClick={onSaveToAssets}>
             <Save aria-hidden="true" />保存到我的资产
           </button>
-          <button type="button" role="menuitem" onClick={onCreateSubject}>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canCreateSubject}
+            title={canCreateSubject ? undefined : '需要图片节点结果或上传图'}
+            onClick={onCreateSubject}
+          >
             <UserRoundPlus aria-hidden="true" />创建主体
           </button>
           <button type="button" role="menuitem" onClick={onCopyNode}>

@@ -22,6 +22,7 @@ import {
   useSyncExternalStore,
   type ChangeEvent,
   type CSSProperties,
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
@@ -75,6 +76,7 @@ import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
 import {
   defaultImageGenerationSettings,
+  type Asset,
   type CanvasCreation,
   type CanvasGroup,
   type CreativeCardKind,
@@ -84,6 +86,9 @@ import {
   type Project,
   type VideoDerivedTool,
 } from '../project/model'
+import { CreateSubjectDialog, type CreateSubjectFormValue } from '../subjects/CreateSubjectDialog'
+import type { SubjectAsset } from '../subjects/subject-model'
+import { SubjectRepository } from '../subjects/subject-repository'
 import {
   buildCreativeCardCreation,
   isCreativeCardKind,
@@ -167,6 +172,7 @@ import type {
   MaterialLibraryEntry,
   WorkspaceAsset,
 } from './CanvasResourcePanels'
+import { SUBJECT_DRAG_MIME } from './CanvasResourcePanels'
 import {
   findSelectedCanvasGroup,
   measureCanvasGroup,
@@ -362,6 +368,13 @@ interface EditingCard {
   returnFocusTo?: HTMLElement
 }
 
+interface PendingSubjectCreation {
+  sourceNodeId: string
+  sourceTitle: string
+  asset: Asset
+  returnFocusTo?: HTMLElement
+}
+
 interface WorkflowBatchRuntime {
   id: string
   storeBatchId: string
@@ -407,6 +420,7 @@ const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
 const defaultCommunityRepository = new CommunityRepository(defaultDatabase)
 const defaultTimelineRepository = new TimelineRepository(defaultDatabase)
+const defaultSubjectRepository = new SubjectRepository(defaultDatabase)
 const browserGenerationPreferenceStore =
   createGenerationProviderPreferenceStore()
 const defaultGenerationAdapter = new RuntimeGenerationAdapter(
@@ -703,6 +717,7 @@ export interface CanvasPageProps {
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
   communityRepository?: CanvasPublicationRepository
   timelineRepository?: Pick<TimelineProjectRepository, 'load'>
+  subjectRepository?: Pick<SubjectRepository, 'create' | 'get' | 'list' | 'update' | 'delete'>
 }
 
 export function CanvasPage({
@@ -715,6 +730,7 @@ export function CanvasPage({
   collaborationRepository = defaultCollaborationRepository,
   communityRepository = defaultCommunityRepository,
   timelineRepository = defaultTimelineRepository,
+  subjectRepository = defaultSubjectRepository,
 }: CanvasPageProps) {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
@@ -882,6 +898,9 @@ export function CanvasPage({
   const [historyPlacement, setHistoryPlacement] =
     useState<ContextResourcePlacement>()
   const [editingCard, setEditingCard] = useState<EditingCard>()
+  const [pendingSubjectCreation, setPendingSubjectCreation] = useState<PendingSubjectCreation>()
+  const [subjectCreationBusy, setSubjectCreationBusy] = useState(false)
+  const [subjectCreationError, setSubjectCreationError] = useState<string>()
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
@@ -4672,31 +4691,49 @@ export function CanvasPage({
     const source = contextMenu
     const currentProject = useProjectStore.getState().activeProject
     const sourceNode = currentProject?.nodes.find(({ id }) => id === source?.targetNodeId)
-    if (!source || !currentProject || !sourceNode) return
-    const nodeId = crypto.randomUUID()
-    const versionId = crypto.randomUUID()
-    const title = `${sourceNode.title} 主体`
-    createCanvasContent({
-      node: {
-        id: nodeId,
-        kind: 'character',
-        title,
-        position: { x: sourceNode.position.x + 340, y: sourceNode.position.y },
-        versions: [{
-          id: versionId,
-          createdAt: new Date().toISOString(),
-          prompt: `从“${sourceNode.title}”创建的主体参考`,
-        }],
-        activeVersionId: versionId,
-        sourceChanged: false,
-      },
+    const sourceAsset = sourceNode ? activeNodeAsset(currentProject!, sourceNode.id) : undefined
+    if (!source || !currentProject || !sourceNode || sourceAsset?.kind !== 'image') {
+      setContextMenu(undefined)
+      setGenerationFeedback('请先选择带图片结果或上传图的节点。')
+      return
+    }
+    setPendingSubjectCreation({
+      sourceNodeId: sourceNode.id,
+      sourceTitle: sourceNode.title,
+      asset: sourceAsset,
+      returnFocusTo: source.returnFocusTo,
     })
-    selectOnlyNode(nodeId)
-    createdNodeFocusRef.current = nodeId
-    setFocusRequestVersion((version) => version + 1)
+    setSubjectCreationError(undefined)
     setContextMenu(undefined)
-    setGenerationFeedback(`已从“${sourceNode.title}”创建主体节点。`)
-  }, [contextMenu, createCanvasContent, selectOnlyNode])
+  }, [contextMenu])
+
+  const closeSubjectCreation = useCallback(() => {
+    const returnFocusTo = pendingSubjectCreation?.returnFocusTo
+    setPendingSubjectCreation(undefined)
+    setSubjectCreationError(undefined)
+    queueMicrotask(() => returnFocusTo?.focus())
+  }, [pendingSubjectCreation])
+
+  const saveSubject = useCallback((value: CreateSubjectFormValue) => {
+    const pending = pendingSubjectCreation
+    const currentProject = useProjectStore.getState().activeProject
+    if (!pending || !currentProject || currentProject.id !== projectId) return
+    setSubjectCreationBusy(true)
+    setSubjectCreationError(undefined)
+    void subjectRepository.create({
+      ...value,
+      coverUrl: pending.asset.url,
+      sampleImages: [pending.asset.url],
+      sourceAssetId: pending.asset.id,
+      sourceProjectId: currentProject.id,
+    }).then((subject) => {
+      setPendingSubjectCreation(undefined)
+      setGenerationFeedback(`主体“${subject.name}”已保存，可跨项目复用。`)
+      setWorkspacePanel('characters')
+    }).catch((error) => {
+      setSubjectCreationError(error instanceof Error ? error.message : '主体保存失败。')
+    }).finally(() => setSubjectCreationBusy(false))
+  }, [pendingSubjectCreation, projectId, subjectRepository])
 
   const copyContextNodeToSystemClipboard = useCallback(() => {
     if (!contextNode || !project) return
@@ -5281,6 +5318,58 @@ export function CanvasPage({
     setGenerationFeedback(`已应用 ${characters.length} 个角色到画布。`)
   }
 
+  const insertSubjectReference = useCallback((
+    subject: SubjectAsset,
+    position = canvasCenterPosition(),
+  ) => {
+    const currentProject = useProjectStore.getState().activeProject
+    if (!currentProject || currentProject.id !== projectId) return
+    const nodeId = crypto.randomUUID()
+    const assetId = crypto.randomUUID()
+    const versionId = crypto.randomUUID()
+    createCanvasContent({
+      node: {
+        id: nodeId,
+        kind: 'character',
+        title: subject.name,
+        position,
+        subjectId: subject.id,
+        versions: [{
+          id: versionId,
+          createdAt: new Date().toISOString(),
+          prompt: [subject.description, ...subject.tags].filter(Boolean).join('；'),
+          assetId,
+        }],
+        activeVersionId: versionId,
+        sourceChanged: false,
+      },
+      asset: {
+        id: assetId,
+        kind: 'image',
+        url: subject.coverUrl,
+        mimeType: 'image/png',
+      },
+    })
+    selectOnlyNode(nodeId)
+    createdNodeFocusRef.current = nodeId
+    setFocusRequestVersion((version) => version + 1)
+    setWorkspacePanel(undefined)
+    setGenerationFeedback(`已将主体“${subject.name}”作为引用节点放入画布。`)
+  }, [canvasCenterPosition, createCanvasContent, projectId, selectOnlyNode])
+
+  const dropSubjectOnCanvas = useCallback((event: ReactDragEvent) => {
+    const subjectId = event.dataTransfer.getData(SUBJECT_DRAG_MIME)
+    if (!subjectId || !flowInstance) return
+    event.preventDefault()
+    const position = flowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    })
+    void subjectRepository.get(subjectId).then((subject) => {
+      if (subject) insertSubjectReference(subject, position)
+    })
+  }, [flowInstance, insertSubjectReference, subjectRepository])
+
   const closeAgent = () => {
     setAgentOpen(false)
     queueMicrotask(() => {
@@ -5594,6 +5683,16 @@ export function CanvasPage({
           onSubmit={(value) => void publishWork(value)}
         />
       ) : null}
+      {pendingSubjectCreation ? (
+        <CreateSubjectDialog
+          sourceTitle={pendingSubjectCreation.sourceTitle}
+          coverUrl={pendingSubjectCreation.asset.url}
+          busy={subjectCreationBusy}
+          error={subjectCreationError}
+          onCancel={closeSubjectCreation}
+          onSubmit={saveSubject}
+        />
+      ) : null}
       <div
         ref={viewportRef}
         className="canvas-page__viewport"
@@ -5633,6 +5732,13 @@ export function CanvasPage({
           onPaneClick={handlePaneClick}
           onPaneContextMenu={handlePaneContextMenu}
           onNodeContextMenu={handleNodeContextMenu}
+          onDragOver={(event) => {
+            if (event.dataTransfer.types.includes(SUBJECT_DRAG_MIME)) {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'copy'
+            }
+          }}
+          onDrop={dropSubjectOnCanvas}
           onEdgeClick={(event, edge) => {
             setSelectedEdgeIds((current) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey) {
@@ -5789,6 +5895,7 @@ export function CanvasPage({
             canSaveToAssets={Boolean(
               contextNode && contextNodeAsset,
             )}
+            canCreateSubject={contextNodeAsset?.kind === 'image'}
             canExecuteGroup={Boolean(project.nodes.some(isWorkflowGeneratableNode))}
             onUpload={beginContextUpload}
             onAddNode={createContextNode}
@@ -5988,12 +6095,14 @@ export function CanvasPage({
         {workspacePanel && project ? (
           <WorkspaceSidePanel
             assetRepository={workspaceAssetRepository}
+            subjectRepository={subjectRepository}
             generationPreferenceStore={generationPreferenceStore}
             panel={workspacePanel}
             project={project}
             historyInsertionMode={Boolean(historyPlacement)}
             onClose={closeWorkspacePanel}
             onApplyCharacters={applyCharactersToCanvas}
+            onApplySubject={insertSubjectReference}
             onDeleteHistoryJobs={deleteHistoryJobs}
             onInsertAsset={insertWorkspaceAsset}
             onRemoveProjectAsset={removeAssetReferences}

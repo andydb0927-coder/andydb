@@ -371,6 +371,7 @@ export interface CanvasNode {
   effectTool?: EffectToolConfig
   details?: CanvasNodeDetails
   generationConfig?: GenerationConfiguration
+  subjectId?: string
 }
 
 export interface CanvasGroup {
@@ -481,6 +482,8 @@ export interface Project {
   groups?: CanvasGroup[]
   canvases?: ProjectCanvas[]
   activeCanvasId?: string
+  challengeId?: string
+  challengeTags?: string[]
 }
 
 export function createProject(title: string, intent: string): Project {

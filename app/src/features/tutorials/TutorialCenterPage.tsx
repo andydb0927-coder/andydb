@@ -57,6 +57,13 @@ export function TutorialCenterPage() {
                     <ol>
                       {lesson.steps.map((step) => <li key={step}>{step}</li>)}
                     </ol>
+                    <Link
+                      className="tutorial-lesson__link focus-visible"
+                      to={`/tutorials/${lesson.id}`}
+                      aria-label={`查看教程：${lesson.title}`}
+                    >
+                      查看完整教程 <ArrowRight aria-hidden="true" />
+                    </Link>
                   </article>
                 ))}
               </div>

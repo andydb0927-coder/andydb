@@ -117,6 +117,16 @@ interface FlowPropsFixture {
     clientY: number
     preventDefault(): void
   }): void
+  onDragOver?(event: {
+    dataTransfer: { types: string[]; dropEffect: string }
+    preventDefault(): void
+  }): void
+  onDrop?(event: {
+    clientX: number
+    clientY: number
+    dataTransfer: { getData(type: string): string }
+    preventDefault(): void
+  }): void
   onNodeClick?(
     event: { target?: EventTarget | null },
     node: FlowNodeFixture,
@@ -4110,6 +4120,47 @@ describe('creative canvas', () => {
     )
   })
 
+  test('drops a reusable local subject at the pointer position', async () => {
+    const subject = {
+      id: 'subject-shared',
+      name: '跨项目旅人',
+      description: '深色风衣',
+      tags: ['主角'],
+      coverUrl: 'data:image/png;base64,subject',
+      sampleImages: ['data:image/png;base64,subject'],
+      sourceProjectId: 'another-project',
+      createdAt: '2026-08-27T08:00:00.000Z',
+      updatedAt: '2026-08-27T08:00:00.000Z',
+    }
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      subjectRepository: {
+        create: vi.fn(),
+        get: vi.fn(async () => subject),
+        list: vi.fn(async () => [subject]),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+    })
+    initializeFlow({ x: 612, y: 428 })
+
+    act(() => latestFlowProps?.onDrop?.({
+      clientX: 500,
+      clientY: 360,
+      preventDefault: vi.fn(),
+      dataTransfer: { getData: () => 'subject-shared' },
+    }))
+
+    await waitFor(() => expect(
+      useProjectStore.getState().activeProject?.nodes.at(-1),
+    ).toMatchObject({
+      title: '跨项目旅人',
+      kind: 'character',
+      subjectId: 'subject-shared',
+      position: { x: 612, y: 428 },
+    }))
+  })
+
   test('opens the blank-canvas context menu and returns focus after Escape', async () => {
     const user = userEvent.setup()
     renderCanvas()
@@ -4375,7 +4426,22 @@ describe('creative canvas', () => {
 
   test('executes node compliance, copy, paste, duplicate, subject and system-copy commands', async () => {
     const user = userEvent.setup()
-    renderCanvas()
+    const createSubject = vi.fn(async (input) => ({
+      ...input,
+      id: 'subject-character',
+      createdAt: '2026-08-27T08:00:00.000Z',
+      updatedAt: '2026-08-27T08:00:00.000Z',
+    }))
+    renderCanvas({
+      repository: noOpCanvasRepository,
+      subjectRepository: {
+        create: createSubject,
+        get: vi.fn(async () => undefined),
+        list: vi.fn(async () => []),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+    })
     initializeFlow({ x: 820, y: 460 })
     const initialCount = useProjectStore.getState().activeProject!.nodes.length
 
@@ -4397,10 +4463,16 @@ describe('creative canvas', () => {
 
     contextMenuNode('character')
     await user.click(screen.getByRole('menuitem', { name: '创建主体' }))
-    expect(useProjectStore.getState().activeProject!.nodes.at(-1)).toMatchObject({
-      kind: 'character',
-      title: '角色参考 主体',
-    })
+    const subjectDialog = screen.getByRole('dialog', { name: '创建本地主体' })
+    await user.clear(within(subjectDialog).getByLabelText('主体名称'))
+    await user.type(within(subjectDialog).getByLabelText('主体名称'), '林渊主体')
+    await user.click(within(subjectDialog).getByRole('button', { name: '保存到主体库' }))
+    await waitFor(() => expect(createSubject).toHaveBeenCalledWith(expect.objectContaining({
+      name: '林渊主体',
+      sourceAssetId: 'asset-character',
+      sourceProjectId: 'project-canvas',
+    })))
+    expect(screen.getByText('主体“林渊主体”已保存，可跨项目复用。')).toBeVisible()
 
     contextMenuNode('character')
     await user.click(screen.getByRole('menuitem', { name: '复制到剪贴板' }))

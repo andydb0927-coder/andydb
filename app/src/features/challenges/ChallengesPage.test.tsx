@@ -45,18 +45,24 @@ describe('creator challenges', () => {
     )
 
     expect(screen.getByRole('heading', { name: '光影接力导演挑战' })).toBeVisible()
-    expect(screen.getByRole('link', { name: '去创作' })).toHaveAttribute('href', '/projects/new')
+    expect(screen.getByRole('link', { name: '去创作' })).toHaveAttribute(
+      'href',
+      '/projects/new?challenge=director-master',
+    )
     expect(screen.getByText('进行中')).toBeVisible()
     expect(screen.getByText('2026.08.01 — 2026.09.30')).toBeVisible()
     expect(screen.getByText('1,286 人参与')).toBeVisible()
     expect(screen.getByText('本页使用本地演示目录，不代表真实报名、评审或线上提交。')).toBeVisible()
-    expect(screen.getByRole('region', { name: '活动日历' })).toBeVisible()
+    expect(screen.getByRole('region', { name: '赛事时间线' })).toBeVisible()
     expect(screen.getByRole('region', { name: '活动赛道' })).toBeVisible()
+    expect(screen.getByRole('region', { name: '赛制规则' })).toBeVisible()
     expect(screen.getByRole('region', { name: '参赛指引' })).toBeVisible()
     expect(screen.getByRole('region', { name: '奖项说明' })).toBeVisible()
     expect(screen.getByRole('region', { name: '评审说明' })).toBeVisible()
-    expect(screen.getAllByRole('separator')).toHaveLength(4)
+    expect(screen.getByRole('region', { name: '示例作品' })).toBeVisible()
+    expect(screen.getAllByRole('separator')).toHaveLength(6)
     expect(screen.getByText('最佳导演奖')).toBeVisible()
+    expect(screen.getAllByRole('link', { name: /查看示例作品/ })).toHaveLength(3)
     expect(screen.queryByRole('region', { name: '挑战赛概要' })).not.toBeInTheDocument()
     expect(screen.queryByRole('img', { name: '光影接力导演挑战 封面' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回挑战赛' })).toHaveAttribute('href', '/challenges')

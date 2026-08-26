@@ -26,4 +26,8 @@ test('keeps every lesson actionable with three to six ordered steps', () => {
     expect(steps.length).toBeGreaterThanOrEqual(3)
     expect(steps.length).toBeLessThanOrEqual(6)
   }
+  expect(screen.getByRole('link', { name: '查看教程：添加创作节点' })).toHaveAttribute(
+    'href',
+    '/tutorials/add-node',
+  )
 })

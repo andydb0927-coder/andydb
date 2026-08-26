@@ -15,6 +15,7 @@ it.each([
   ['/agents', 'Skill 全开，故事走起'],
   ['/challenges', '创作者挑战赛'],
   ['/activity/director-master', '光影接力导演挑战'],
+  ['/tutorials/add-node', '添加创作节点'],
   ['/project/demo-project', '项目画布'],
   ['/project/demo-project/preview', '成片预览'],
 ])('renders %s', async (path, heading) => {
@@ -41,10 +42,11 @@ it('removes the redundant full-page feature domains from the route table', () =>
   ]))
 })
 
-it('registers the activity, immersive detail and read-only process routes', () => {
+it('registers activity, tutorial detail, immersive detail and read-only process routes', () => {
   const paths = allRoutePaths()
   expect(paths).toEqual(expect.arrayContaining([
     '/activity/:challengeId',
+    '/tutorials/:tutorialId',
     '/detail/:workId',
     '/detail/:workId/process',
   ]))

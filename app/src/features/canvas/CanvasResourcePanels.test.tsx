@@ -4,6 +4,7 @@ import { expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
 import type { LibraryAssetRecord } from '../assets/library-model'
+import type { SubjectAsset } from '../subjects/subject-model'
 import {
   AssetLibraryPanel,
   CharacterLibraryPanel,
@@ -235,4 +236,57 @@ test('filters character cards, previews four images and applies selected charact
   expect(onApply).toHaveBeenCalledWith([
     expect.objectContaining({ id: 'cheng-ye', name: '程野' }),
   ])
+})
+
+test('shows, edits, deletes and reuses locally persisted subjects', async () => {
+  const user = userEvent.setup()
+  let subjects: SubjectAsset[] = [{
+    id: 'subject-rain',
+    name: '雨夜旅人',
+    description: '黑色风衣与冷色轮廓光',
+    tags: ['主角', '雨夜'],
+    coverUrl: 'data:image/png;base64,subject',
+    sampleImages: ['data:image/png;base64,subject'],
+    sourceProjectId: 'another-project',
+    createdAt: '2026-08-27T08:00:00.000Z',
+    updatedAt: '2026-08-27T08:00:00.000Z',
+  }]
+  const repository = {
+    list: vi.fn(async () => subjects),
+    update: vi.fn(async (id: string, changes: Pick<SubjectAsset, 'name' | 'description' | 'tags'>) => {
+      subjects = subjects.map((subject) => subject.id === id ? { ...subject, ...changes } : subject)
+      return subjects[0]
+    }),
+    delete: vi.fn(async (id: string) => {
+      subjects = subjects.filter((subject) => subject.id !== id)
+      return true
+    }),
+  }
+  const onApplySubject = vi.fn()
+  render(
+    <CharacterLibraryPanel
+      onApply={vi.fn()}
+      onApplySubject={onApplySubject}
+      subjectRepository={repository}
+    />,
+  )
+
+  const local = await screen.findByRole('region', { name: '本地主体' })
+  const card = within(local).getByRole('article', { name: '主体 雨夜旅人' })
+  expect(card).toHaveAttribute('draggable', 'true')
+  expect(within(card).getByText('来自其他项目')).toBeVisible()
+  await user.click(within(card).getByRole('button', { name: '使用雨夜旅人' }))
+  expect(onApplySubject).toHaveBeenCalledWith(expect.objectContaining({ id: 'subject-rain' }))
+
+  await user.click(within(card).getByRole('button', { name: '编辑雨夜旅人' }))
+  await user.clear(screen.getByLabelText('编辑主体名称'))
+  await user.type(screen.getByLabelText('编辑主体名称'), '雨夜主角')
+  await user.click(screen.getByRole('button', { name: '保存主体修改' }))
+  expect(repository.update).toHaveBeenCalledWith('subject-rain', expect.objectContaining({ name: '雨夜主角' }))
+
+  const renamed = await screen.findByRole('article', { name: '主体 雨夜主角' })
+  await user.click(within(renamed).getByRole('button', { name: '删除雨夜主角' }))
+  await user.click(screen.getByRole('button', { name: '确认删除主体' }))
+  expect(repository.delete).toHaveBeenCalledWith('subject-rain')
+  expect(screen.queryByRole('article', { name: '主体 雨夜主角' })).not.toBeInTheDocument()
 })

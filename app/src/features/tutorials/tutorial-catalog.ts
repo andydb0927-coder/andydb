@@ -14,6 +14,15 @@ export interface TutorialCategory {
   lessons: TutorialLesson[]
 }
 
+export interface TutorialLessonLocation {
+  category: TutorialCategory
+  lesson: TutorialLesson
+  categoryIndex: number
+  lessonIndex: number
+  previous?: TutorialLesson
+  next?: TutorialLesson
+}
+
 export const tutorialCategories: TutorialCategory[] = [
   {
     id: 'getting-started',
@@ -172,3 +181,24 @@ export const tutorialCategories: TutorialCategory[] = [
     ],
   },
 ]
+
+export function getTutorialLesson(
+  tutorialId: string | undefined,
+): TutorialLessonLocation | undefined {
+  if (!tutorialId) return undefined
+  const lessons = tutorialCategories.flatMap((category, categoryIndex) =>
+    category.lessons.map((lesson, lessonIndex) => ({
+      category,
+      lesson,
+      categoryIndex,
+      lessonIndex,
+    })),
+  )
+  const index = lessons.findIndex(({ lesson }) => lesson.id === tutorialId)
+  if (index < 0) return undefined
+  return {
+    ...lessons[index],
+    previous: lessons[index - 1]?.lesson,
+    next: lessons[index + 1]?.lesson,
+  }
+}

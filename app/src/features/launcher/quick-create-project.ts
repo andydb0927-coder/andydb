@@ -7,6 +7,7 @@ import {
 } from '../project/project-repository'
 import { buildRecipeProject } from '../project/example-project'
 import { findRecipe, RECIPE_QUERY_PARAM, recipeDefinitions } from '../project/recipe-catalog'
+import { getCreatorChallenge } from '../challenges/challenge-catalog'
 
 type QuickCreateRepository = Pick<ProjectRepository, 'save'>
 
@@ -31,9 +32,9 @@ function formatProjectTimestamp(now: Date): string {
 }
 
 export function buildQuickProject(requestUrl: string, now = new Date()): Project {
-  const recipe = findRecipe(
-    new URL(requestUrl).searchParams.get(RECIPE_QUERY_PARAM),
-  )
+  const searchParams = new URL(requestUrl).searchParams
+  const recipe = findRecipe(searchParams.get(RECIPE_QUERY_PARAM))
+  const challenge = getCreatorChallenge(searchParams.get('challenge') ?? undefined)
   const intent = `从${(recipe ?? recipeDefinitions[0]).title}开始自由创作`
   const project = recipe
     ? buildRecipeProject(intent, recipe)
@@ -42,6 +43,9 @@ export function buildQuickProject(requestUrl: string, now = new Date()): Project
   return {
     ...project,
     title: `未命名项目 · ${formatProjectTimestamp(now)}`,
+    ...(challenge
+      ? { challengeId: challenge.id, challengeTags: [...challenge.tags] }
+      : {}),
   }
 }
 

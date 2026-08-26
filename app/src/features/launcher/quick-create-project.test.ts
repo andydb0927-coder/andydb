@@ -55,4 +55,21 @@ describe('quick project creation', () => {
     expect(projects[1].intent).toBe('从电影感叙事开始自由创作')
     expect(projects[1].nodes).toEqual([])
   })
+
+  test('persists challenge identity and tags when creation starts from an activity', async () => {
+    const repository = {
+      save: vi.fn(async (_project: Project) => undefined),
+    }
+
+    await createQuickProjectRedirect(
+      'http://wireless-canvas.local/projects/new?challenge=director-master',
+      repository,
+      new Date('2026-08-27T08:00:00.000Z'),
+    )
+
+    expect(repository.save.mock.calls[0][0]).toMatchObject({
+      challengeId: 'director-master',
+      challengeTags: ['光影接力导演挑战', '多镜头叙事工作流'],
+    })
+  })
 })

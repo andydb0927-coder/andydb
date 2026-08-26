@@ -15,6 +15,7 @@ function renderMenu(overrides: Partial<Parameters<typeof CanvasContextMenu>[0]> 
     canRedo: false,
     canPaste: false,
     canSaveToAssets: false,
+    canCreateSubject: false,
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onPaste: vi.fn(),
@@ -110,7 +111,7 @@ test('shows the exact node menu operations and dispatches each command', async (
   expect(blank.onDeleteNode).not.toHaveBeenCalled()
 
   document.body.innerHTML = ''
-  const node = renderMenu({ targetNodeTitle: '角色参考' })
+  const node = renderMenu({ targetNodeTitle: '角色参考', canCreateSubject: true })
   const menu = screen.getByRole('menu', { name: '画布快捷菜单' })
   expect(
     within(menu).getAllByRole('menuitem').map((item) => item.textContent?.trim()),
@@ -125,6 +126,7 @@ test('shows the exact node menu operations and dispatches each command', async (
     '复制到剪贴板',
   ])
   expect(within(menu).queryByRole('menuitem', { name: '上传' })).not.toBeInTheDocument()
+  expect(within(menu).getByRole('menuitem', { name: '创建主体' })).toBeEnabled()
   await user.click(within(menu).getByRole('menuitem', { name: '合规校验' }))
   expect(node.onComplianceCheck).toHaveBeenCalledOnce()
 
@@ -132,4 +134,13 @@ test('shows the exact node menu operations and dispatches each command', async (
   const deleteNode = renderMenu({ targetNodeTitle: '角色参考' })
   await user.click(screen.getByRole('menuitem', { name: '删除节点' }))
   expect(deleteNode.onDeleteNode).toHaveBeenCalledOnce()
+})
+
+test('disables subject creation when the selected node has no image result', () => {
+  renderMenu({ targetNodeTitle: '文本节点', canCreateSubject: false })
+  expect(screen.getByRole('menuitem', { name: '创建主体' })).toBeDisabled()
+  expect(screen.getByRole('menuitem', { name: '创建主体' })).toHaveAttribute(
+    'title',
+    '需要图片节点结果或上传图',
+  )
 })
