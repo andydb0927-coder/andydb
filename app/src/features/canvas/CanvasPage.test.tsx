@@ -41,6 +41,7 @@ import {
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
 import { CanvasPage } from './CanvasPage'
+import { createFixtureProviderRegistry, createLifecycleAdapterFixture } from '../../test/provider-fixtures'
 import type { CreativeNodeAction } from './node-types'
 import { sortNodesForList } from './NodeListView'
 import { PreviewPage } from '../timeline/PreviewPage'
@@ -319,10 +320,11 @@ function renderCanvas(
     repository: noOpCanvasRepository,
   },
 ) {
+  const registry = props.providerRegistry ?? createFixtureProviderRegistry()
   return render(
     <MemoryRouter initialEntries={['/project/project-canvas']}>
       <Routes>
-        <Route path="/project/:projectId" element={<CanvasPage {...props} />} />
+        <Route path="/project/:projectId" element={<CanvasPage providerRegistry={registry} generationAdapter={props.generationPreferenceStore ? undefined : createLifecycleAdapterFixture(registry)} {...props} />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -343,6 +345,7 @@ function triggerCanvasNodeAction(
 
 function SwitchingCanvas(props: ComponentProps<typeof CanvasPage>) {
   const { repository, ...canvasProps } = props
+  const registry = props.providerRegistry ?? createFixtureProviderRegistry()
   const navigate = useNavigate()
   return (
     <>
@@ -352,7 +355,7 @@ function SwitchingCanvas(props: ComponentProps<typeof CanvasPage>) {
       <Routes>
         <Route
           path="/project/:projectId"
-          element={<CanvasPage repository={repository} {...canvasProps} />}
+          element={<CanvasPage repository={repository} providerRegistry={registry} generationAdapter={props.generationPreferenceStore ? undefined : createLifecycleAdapterFixture(registry)} {...canvasProps} />}
         />
       </Routes>
     </>
@@ -939,7 +942,7 @@ describe('creative canvas', () => {
     expect(tool).toBeDefined()
     expect(tool).toMatchObject({
       kind: 'image',
-      modelProviderId: 'mock-general-image-pro',
+      modelProviderId: 'seedream-5-pro-api',
       imageTool: {
         kind: 'upscale',
         model: '高清修复',
@@ -1023,7 +1026,7 @@ describe('creative canvas', () => {
         .activeProject?.nodes.find(({ id }) => id === 'blank-image')
       expect(updated?.generationConfig).toMatchObject({
         targetKind: 'image',
-        providerId: 'mock-mj-image',
+        providerId: 'seedream-5-pro-api',
         referenceAssets: [{
           kind: 'image',
           mimeType: 'image/png',
@@ -1086,15 +1089,13 @@ describe('creative canvas', () => {
     expect(video.kind).toBe('video')
     expect(video.generationConfig).toMatchObject({
       targetKind: 'video',
-      providerId: 'mock-seedance-25',
+      providerId: 'seedance-api',
       parameters: {
-        aspectRatio: '16:9',
+        aspectRatio: 'Auto',
         duration: '5',
-        quality: '1080P',
+        quality: '720P',
         sound: true,
         count: '1',
-        onlineSearch: true,
-        materialValidation: true,
         autoLink: true,
       },
       referenceAssets: [{ url: '/demo/shot-rooftop.png' }],
@@ -1145,37 +1146,20 @@ describe('creative canvas', () => {
     )
   })
 
-  test('submits only the selected image model supported parameters', async () => {
+  test('submits only the real image model supported parameters after confirmation', async () => {
     const user = userEvent.setup()
-    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(
-      () => new Promise(() => undefined),
-    )
-    renderCanvas({
-      repository: noOpCanvasRepository,
-      generationAdapter: { start },
-    })
-
+    const start = vi.fn<GenerationAdapter['start']>().mockImplementation(() => new Promise(() => undefined))
+    renderCanvas({ repository: noOpCanvasRepository, generationAdapter: { start } })
     await user.click(screen.getByRole('button', { name: '角色参考' }))
     const panel = screen.getByRole('region', { name: '角色参考 生成参数' })
-    await user.selectOptions(
-      within(panel).getByRole('combobox', { name: '图片模型' }),
-      'mock-style-image-v82',
-    )
-    await user.click(
-      within(panel).getByRole('button', { name: '生成图片，预计成本 60' }),
-    )
-
+    await user.selectOptions(within(panel).getByRole('combobox', { name: '图片模型' }), 'seedream-5-pro-api')
+    await user.click(within(panel).getByRole('button', { name: '生成图片，预计成本 18' }))
+    expect(start).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
-    expect(start.mock.calls[0]?.[0]).toMatchObject({
-      providerId: 'mock-style-image-v82',
-      parameters: {
-        aspectRatio: '16:9',
-        resolution: '自适应',
-        count: '4',
-        editStrength: 0.6,
-      },
-    })
+    expect(start.mock.calls[0]?.[0]).toMatchObject({ providerId: 'seedream-5-pro-api', parameters: { aspectRatio: '16:9', resolution: '2K', count: '1' } })
     expect(start.mock.calls[0]?.[0].parameters).not.toHaveProperty('quality')
+    expect(start.mock.calls[0]?.[0].parameters).toHaveProperty('editStrength', 0.5)
   })
 
   test('persists a Seedance live video into project versions, assets, and generation history', async () => {
@@ -1633,6 +1617,8 @@ describe('creative canvas', () => {
       operation: 'regenerate',
       targetKind: 'image',
       prompt: '分镜 02创作描述',
+      providerId: 'seedream-5-pro-api',
+      parameters: expect.objectContaining({ aspectRatio: '16:9', resolution: '2K', count: '1' }),
       referenceAssets: [
         {
           url: '/demo/shot-rooftop.png',
@@ -3112,7 +3098,7 @@ describe('creative canvas', () => {
           type: 'text' as const,
           content: '高原广告镜头，雪山下的金色麦浪',
           fontStyle: '正文' as const,
-          modelProviderId: 'mock-text-llm',
+          modelProviderId: 'ark-text-llm',
           modelVariant: 'qwen-3-vl-flash',
         },
       }],
@@ -3290,7 +3276,7 @@ describe('creative canvas', () => {
           .activeProject?.jobs.find(({ nodeId }) => nodeId === 'character'),
       ).toMatchObject({
           status: 'running',
-          providerId: 'mock-mj-image',
+          providerId: 'seedream-5-pro-api',
           estimatedCost: 18,
         }),
     )
@@ -3324,12 +3310,11 @@ describe('creative canvas', () => {
       node.id === 'character'
         ? {
             ...node,
-            modelProviderId: 'mock-mj-image',
+            modelProviderId: 'seedream-5-pro-api',
             imageGeneration: {
               ...defaultImageGenerationSettings,
               prompt: '雨夜角色创作描述',
-              quality: '高画质',
-              resolution: '4K',
+              resolution: '2K',
               aspectRatio: '9:16',
               count: 2,
             },
@@ -3349,15 +3334,15 @@ describe('creative canvas', () => {
     await user.click(
       screen.getByRole('button', { name: '生成图片，预计成本 36' }),
     )
+    await user.click(screen.getByRole('button', { name: '确认生成 2 张图片' }))
 
     await waitFor(() => expect(start).toHaveBeenCalledOnce())
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       targetKind: 'image',
-      providerId: 'mock-mj-image',
+      providerId: 'seedream-5-pro-api',
       parameters: {
         aspectRatio: '9:16',
-        quality: '高画质',
-        resolution: '4K',
+        resolution: '2K',
         count: 2,
       },
     })
@@ -3390,7 +3375,7 @@ describe('creative canvas', () => {
     const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
     await user.selectOptions(
       within(panel).getByRole('combobox', { name: '模型' }),
-      'mock-kling-o3',
+      'seedance-api',
     )
 
     expect(
@@ -3398,18 +3383,16 @@ describe('creative canvas', () => {
         .getState()
         .activeProject?.nodes.find(({ id }) => id === 'video'),
     ).toMatchObject({
-      modelProviderId: 'mock-kling-o3',
+      modelProviderId: 'seedance-api',
       generationConfig: {
         targetKind: 'video',
-        providerId: 'mock-kling-o3',
+        providerId: 'seedance-api',
         parameters: {
-          aspectRatio: '16:9',
+          aspectRatio: 'Auto',
           duration: '5',
-          quality: '高清',
+          quality: '720P',
           sound: true,
           count: '1',
-          multiShot: true,
-          materialValidation: true,
           autoLink: true,
         },
       },
@@ -3422,15 +3405,13 @@ describe('creative canvas', () => {
     expect(start.mock.calls[0]?.[0]).toMatchObject({
       nodeId: 'video',
       targetKind: 'video',
-      providerId: 'mock-kling-o3',
+      providerId: 'seedance-api',
       parameters: {
-        aspectRatio: '16:9',
+        aspectRatio: 'Auto',
         duration: '5',
-        quality: '高清',
+        quality: '720P',
         sound: true,
         count: '1',
-        multiShot: true,
-        materialValidation: true,
         autoLink: true,
       },
     })
@@ -3459,7 +3440,7 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     const panel = screen.getByRole('region', { name: '视频片段 生成参数' })
     expect(within(panel).getByRole('combobox', { name: '模型' })).toHaveValue(
-      'mock-seedance-25',
+      'seedance-api',
     )
     expect(
       within(panel).queryByRole('option', { name: /Kling 2\.1/ }),
@@ -3476,9 +3457,9 @@ describe('creative canvas', () => {
         .getState()
         .activeProject?.nodes.find(({ id }) => id === 'video'),
     ).toMatchObject({
-      modelProviderId: 'mock-seedance-25',
+      modelProviderId: 'seedance-api',
       generationConfig: {
-        providerId: 'mock-seedance-25',
+        providerId: 'seedance-api',
         parameters: { duration: '10' },
       },
     })
@@ -3595,7 +3576,7 @@ describe('creative canvas', () => {
             })),
             generationConfig: {
               targetKind: 'video',
-              providerId: 'mock-seedance-25',
+              providerId: 'seedance-api',
               parameters: { generationMode: '文生视频' },
               referenceAssets: [],
             },
@@ -3613,7 +3594,7 @@ describe('creative canvas', () => {
 
     await user.click(screen.getByRole('button', { name: '视频片段' }))
     await user.click(
-      screen.getByRole('button', { name: '生成视频，预计成本 24' }),
+      screen.getByRole('button', { name: '生成视频，预计成本 135' }),
     )
 
     expect(start).not.toHaveBeenCalled()
@@ -4243,7 +4224,7 @@ describe('creative canvas', () => {
       ...job,
       generationConfig: {
         targetKind: 'image' as const,
-        providerId: 'mock-mj-image',
+        providerId: 'seedream-5-pro-api',
         parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
         referenceAssets: [{
           url: '/demo/character-lin-yuan.png',
@@ -4251,8 +4232,8 @@ describe('creative canvas', () => {
           mimeType: 'image/png',
         }],
       },
-      providerId: 'mock-mj-image',
-      providerName: 'Mock Studio',
+      providerId: 'seedream-5-pro-api',
+      providerName: '火山方舟',
       modelName: 'MJ 风格图片',
     }))
     activate(project)
@@ -4289,7 +4270,7 @@ describe('creative canvas', () => {
       projectId: project.id,
       operation: 'regenerate',
       targetKind: 'image',
-      providerId: 'mock-mj-image',
+      providerId: 'seedream-5-pro-api',
       prompt: '分镜 02 创作描述',
       parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
       referenceAssets: [{ url: '/demo/character-lin-yuan.png' }],
@@ -4298,7 +4279,7 @@ describe('creative canvas', () => {
     expect(resentNode).toMatchObject({
       kind: 'image',
       title: '分镜 02 重发',
-      modelProviderId: 'mock-mj-image',
+      modelProviderId: 'seedream-5-pro-api',
       generationConfig: {
         targetKind: 'image',
         parameters: { aspectRatio: '16:9', resolution: '1920×1080' },
@@ -4735,7 +4716,7 @@ describe('creative canvas', () => {
     expect(active.nodes.find(({ title }) => title === 'rain.mp3')).toMatchObject({
       kind: 'text',
       position: { x: 280, y: 380 },
-      details: { type: 'audio', modelProviderId: 'mock-audio' },
+      details: { type: 'audio', modelProviderId: 'ark-tts' },
     })
     expect(active.assets.map(({ kind }) => kind)).toEqual(
       expect.arrayContaining(['video', 'audio']),
@@ -4994,8 +4975,8 @@ describe('canvas top bar', () => {
     await user.click(screen.getByRole('button', { name: 'Agent' }))
     const agent = screen.getByRole('complementary', { name: 'Agent 工作区' })
     expect(within(agent).getByRole('toolbar', { name: 'Agent 对话工具' })).toBeVisible()
-    expect(within(agent).getByRole('combobox', { name: '图片模型' })).toHaveValue('mock-mj-image')
-    expect(within(agent).getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-seedance-25')
+    expect(within(agent).getByRole('combobox', { name: '图片模型' })).toHaveValue('seedream-5-pro-api')
+    expect(within(agent).getByRole('combobox', { name: '视频模型' })).toHaveValue('seedance-api')
 
     await user.click(within(agent).getByRole('button', { name: '添加 @ 引用' }))
     const references = within(agent).getByRole('menu', { name: '可引用的画布上下文' })
@@ -5065,9 +5046,16 @@ describe('canvas top bar', () => {
         ?.storyboardDialogue,
     ).toBe('林渊：跟紧我。')
 
+    const frames: FrameRequestCallback[] = []
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => frames.push(callback))
     await user.click(within(sceneCard).getByRole('button', { name: '定位 场景设定' }))
     expect(screen.getByRole('button', { name: '工作流' })).toHaveAttribute('aria-pressed', 'true')
     expect(latestFlowProps?.nodes.find(({ id }) => id === 'scene')?.selected).toBe(true)
+    // React Flow must measure the newly visible layer before computing its zoom.
+    expect(fitView).not.toHaveBeenCalled()
+    act(() => frames.shift()?.(0))
+    expect(fitView).not.toHaveBeenCalled()
+    act(() => frames.shift()?.(16))
     expect(fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: 'scene' }] }))
   })
 

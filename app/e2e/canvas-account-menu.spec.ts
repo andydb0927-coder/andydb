@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
 test('keeps local settings usable on the compact canvas', async ({ page }) => {
   await page.setViewportSize({ width: 721, height: 778 })

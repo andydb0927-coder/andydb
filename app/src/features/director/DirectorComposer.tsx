@@ -76,12 +76,12 @@ function defaultPreferences(registry: ProviderRegistry): AgentPreferences {
   return {
     version: 1,
     imageProviderId:
-      imageProviders.find(({ id }) => id === 'mock-mj-image')?.id ??
-      imageProviders.find(({ kind }) => kind === 'demo')?.id ??
+      imageProviders.find(({ id }) => id === 'seedream-5-pro-api')?.id ??
+      imageProviders[0]?.id ??
       '',
     videoProviderId:
-      videoProviders.find(({ id }) => id === 'mock-seedance-25')?.id ??
-      videoProviders.find(({ kind }) => kind === 'demo')?.id ??
+      videoProviders.find(({ id }) => id === 'seedance-api')?.id ??
+      videoProviders[0]?.id ??
       '',
     generationMode: 'manual',
     autoGenerate: false,
@@ -101,7 +101,7 @@ function loadPreferences(
   try {
     const parsed = JSON.parse(storage.getItem(PREFERENCES_KEY) ?? 'null') as Partial<AgentPreferences> | null
     if (!parsed || parsed.version !== 1) return fallback
-    const knownProviders = new Set(registry.list().map(({ id }) => id))
+    const knownProviders = new Set(registry.list().filter(({ selectorVisible }) => selectorVisible !== false).map(({ id }) => id))
     return {
       ...fallback,
       imageProviderId:
@@ -189,11 +189,11 @@ export function DirectorComposer({
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const imageProviders = useMemo(
-    () => providerRegistry.matching(['text-to-image', 'image-to-image']),
+    () => providerRegistry.menuProvidersFor(['text-to-image', 'image-to-image']),
     [providerRegistry],
   )
   const videoProviders = useMemo(
-    () => providerRegistry.matching(['text-to-video', 'image-to-video']),
+    () => providerRegistry.menuProvidersFor(['text-to-video', 'image-to-video']),
     [providerRegistry],
   )
   const skills = useMemo<SkillChoice[]>(

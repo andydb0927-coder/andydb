@@ -242,8 +242,7 @@ function buildMediaAssetCreation(
               voice: '温暖女声' as const,
               speed: 1,
               volume: 80,
-              modelProviderId: 'mock-audio',
-              modelVariant: 'ambience',
+              modelProviderId: 'ark-tts',
             },
           }
         : {}),
@@ -500,12 +499,12 @@ function buildGenerationRequest(
             : 'image')
   const defaultProviderId =
     targetKind === 'video'
-      ? 'mock-seedance-25'
+      ? 'seedance-api'
       : targetKind === 'text'
-        ? 'mock-text-llm'
+        ? 'ark-text-llm'
         : targetKind === 'audio'
-          ? 'mock-audio'
-        : undefined
+          ? 'ark-tts'
+        : 'seedream-5-pro-api'
   const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
   const configuredProvider = configuredProviderId
     ? providerRegistry.list().find(({ id }) => id === configuredProviderId)
@@ -561,7 +560,7 @@ function buildGenerationRequest(
       : undefined
   const parameters: Record<string, string | number | boolean> = {
     ...(registeredProvider ? providerDefaultParameters(registeredProvider) : {}),
-    ...savedConfig?.parameters,
+    ...(savedConfig && savedConfig.providerId === registeredProviderId ? savedConfig.parameters : {}),
     ...imageParameters,
   }
   if (targetKind === 'video' && registeredProvider) {
@@ -654,15 +653,8 @@ function isWorkflowGeneratableNode(node: Project['nodes'][number]) {
 }
 
 function forceDemoProvider(request: GenerationRequest): GenerationRequest {
-  const providerId =
-    request.targetKind === 'video'
-      ? 'mock-seedance-25'
-      : request.targetKind === 'text'
-        ? 'mock-text-llm'
-        : request.targetKind === 'audio'
-          ? 'mock-audio'
-          : 'mock-mj-image'
-  return { ...request, providerId }
+  // Batch execution was explicitly demo-only. Never turn it into paid calls.
+  return { ...request, providerId: 'internal-demo' }
 }
 
 function downstreamConsumers(project: Project, nodeId: string) {
@@ -849,6 +841,7 @@ export function CanvasPage({
     useState<NodeMeasurementState>({ measurements: {} })
   const [nodeListOpen, setNodeListOpen] = useState(false)
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('workflow')
+  const [workspaceFocusNodeId, setWorkspaceFocusNodeId] = useState<string>()
   const [workspacePanel, setWorkspacePanel] = useState<WorkspacePanel>()
   const [agentOpen, setAgentOpen] = useState(false)
   const [minimapVisible, setMinimapVisible] = useState(
@@ -1281,6 +1274,11 @@ export function CanvasPage({
       setGenerationFeedback('已有整组执行任务正在进行，请先等待或重试。')
       return
     }
+    const executor = providerRegistry.list().find(({ id }) => id === 'internal-demo')
+    if (!executor || !isProviderEnabled(executor)) {
+      setGenerationFeedback('整组执行仅供开发测试；线上批量生成待接入，不会调用付费 API。')
+      return
+    }
     const plan = createWorkflowBatchPlan(currentProject, group?.nodeIds)
     if (!plan.ok) {
       setGenerationFeedback(plan.reason)
@@ -1314,7 +1312,7 @@ export function CanvasPage({
     })
     setGenerationFeedback(`${label}已通过拓扑校验，开始按依赖顺序执行。`)
     queueMicrotask(() => advanceWorkflowBatchRef.current())
-  }, [beginGenerationBatch, projectId])
+  }, [beginGenerationBatch, projectId, providerRegistry])
 
   const retryWorkflowBatch = useCallback(() => {
     const batch = workflowBatchRef.current
@@ -1350,6 +1348,23 @@ export function CanvasPage({
   }, [flowInstance, focusNodeId, project, selectOnlyNode])
 
   const hasProject = Boolean(project)
+
+  useEffect(() => {
+    if (workspaceMode !== 'workflow' || !flowInstance || !workspaceFocusNodeId) return
+    let innerFrame = 0
+    // The storyboard hides React Flow. Let it measure the visible layer before
+    // fitting; a zero-sized layer can otherwise produce a NaN viewport.
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => {
+        void flowInstance.fitView({ nodes: [{ id: workspaceFocusNodeId }], duration: 260, padding: 0.4 })
+        setWorkspaceFocusNodeId(undefined)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(outerFrame)
+      if (innerFrame) cancelAnimationFrame(innerFrame)
+    }
+  }, [workspaceMode, flowInstance, workspaceFocusNodeId])
 
   useEffect(() => {
     if (!agentOpen || workspaceMode !== 'workflow' || !flowInstance || !hasProject) {
@@ -2260,7 +2275,7 @@ export function CanvasPage({
           ...creation,
           node: {
             ...creation.node,
-            modelProviderId: 'mock-general-image-pro',
+            modelProviderId: 'seedream-5-pro-api',
             imageTool: {
               kind: 'upscale',
               model: '高清修复',
@@ -2278,7 +2293,7 @@ export function CanvasPage({
             },
             generationConfig: {
               targetKind: 'image',
-              providerId: 'mock-general-image-pro',
+              providerId: 'seedream-5-pro-api',
               parameters: {
                 aspectRatio: '16:9',
                 quality: '高画质',
@@ -2502,7 +2517,7 @@ export function CanvasPage({
               providerRegistry
                 .list()
                 .find(({ id }) => id === node.modelProviderId) ??
-              providerRegistry.require('mock-seedance-25')
+              providerRegistry.require('seedance-api')
             if (!isProviderEnabled(provider)) return
             const previousParameters =
               node.generationConfig?.providerId === provider.id
@@ -2550,12 +2565,12 @@ export function CanvasPage({
                 node: {
                   ...creation.node,
                   imageGeneration: { ...defaultImageGenerationSettings },
-                  modelProviderId: 'mock-mj-image',
+                  modelProviderId: 'seedream-5-pro-api',
                 },
               }
             }
             if (kind === 'video') {
-              const provider = providerRegistry.require('mock-seedance-25')
+              const provider = providerRegistry.require('seedance-api')
               creation = {
                 ...creation,
                 node: {
@@ -2610,11 +2625,10 @@ export function CanvasPage({
                 setGenerationFeedback('图生图最多添加 4 张参考图片。')
                 return
               }
-              const providerId =
-                currentNode.generationConfig?.providerId ??
-                currentNode.modelProviderId ??
-                'mock-mj-image'
-              const provider = providerRegistry.require(providerId)
+              const provider = providerRegistry.defaultFor(
+                ['image-to-image'],
+                currentNode.generationConfig?.providerId ?? currentNode.modelProviderId,
+              ) ?? providerRegistry.require('seedream-5-pro-api')
               updateNode(currentNode.id, {
                 modelProviderId: provider.id,
                 generationConfig: {
@@ -2709,7 +2723,7 @@ export function CanvasPage({
               },
             })
             const provider =
-              providerRegistry.list().find(({ id }) => id === 'mock-seedance-25') ??
+              providerRegistry.list().find(({ id }) => id === 'seedance-api') ??
               providerRegistry.matching(['text-to-video']).find(isProviderEnabled)
             const generationMode = provider
               ? resolveVideoGenerationMode(provider, '文生视频')
@@ -3569,8 +3583,7 @@ export function CanvasPage({
                 }
               : {
                   type: 'script',
-                  modelProviderId: 'mock-text-llm',
-                  modelVariant: 'deep-script',
+                  modelProviderId: 'ark-text-llm',
                   outline: '',
                   sceneCount: 5,
                   chapters: [{
@@ -3679,8 +3692,7 @@ export function CanvasPage({
                 type: 'text',
                 content: config.content,
                 fontStyle: '正文',
-                modelProviderId: 'mock-text-llm',
-                modelVariant: 'qwen-3-vl-flash',
+                modelProviderId: 'ark-text-llm',
                 prompt: '',
               },
             },
@@ -3696,8 +3708,7 @@ export function CanvasPage({
                 voice: '温暖女声',
                 speed: 1,
                 volume: 75,
-                modelProviderId: 'mock-audio',
-                modelVariant: 'ambience',
+                modelProviderId: 'ark-tts',
               },
             },
           }
@@ -3757,7 +3768,7 @@ export function CanvasPage({
       if (creation.node.kind === 'video') {
         const provider =
           providerRegistry.list().find(
-            ({ id }) => id === 'mock-seedance-25',
+            ({ id }) => id === 'seedance-api',
           ) ??
           providerRegistry.matching(['text-to-video', 'image-to-video']).find(
             isProviderEnabled,
@@ -5146,13 +5157,7 @@ export function CanvasPage({
     setWorkspacePanel(undefined)
     setSelectedEdgeIds(new Set())
     selectOnlyNode(nodeId)
-    queueMicrotask(() => {
-      void flowInstance?.fitView({
-        nodes: [{ id: nodeId }],
-        duration: 260,
-        padding: 0.4,
-      })
-    })
+    setWorkspaceFocusNodeId(nodeId)
   }
 
   const reorderStoryboardNodes = (sourceNodeId: string, targetNodeId: string) => {

@@ -6,6 +6,7 @@ import { expect, test, vi } from 'vitest'
 import type { CreativeNodeData } from '../node-types'
 import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
 import { ImageGenerationPanel } from './ImageNodeDetails'
+import { createFixtureProviderRegistry } from '../../../test/provider-fixtures'
 
 function panelProps(data: CreativeNodeData) {
   return {
@@ -22,6 +23,7 @@ function makeData(
   overrides: Partial<CreativeNodeData> = {},
 ): CreativeNodeData {
   return {
+    providerRegistry: createFixtureProviderRegistry(),
     node: {
       id: 'image-node',
       kind: 'image',
@@ -88,7 +90,7 @@ test('matches the Liblib image action bar and generation copy without legacy nod
     'aria-placeholder',
     '可直接文字生图，或上传图片输入文字指令对图片进行编辑，如：将背景改为雪夜',
   )
-  expect(within(panel).getByText('16:9 · 标准画质 · 2K · 1张')).toBeVisible()
+  expect(within(panel).getByText('2816×1584 · 2K · 1张')).toBeVisible()
   expect(within(panel).getByRole('combobox', { name: '图片模型' })).toBeVisible()
   expect(within(panel).getByText('预计成本 18')).toBeVisible()
   expect(within(panel).getByRole('button', { name: '生成图片，预计成本 18' })).toBeEnabled()
@@ -106,23 +108,18 @@ test('opens the complete Liblib image parameter picker and persists its live sum
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
   const trigger = within(panel).getByRole('button', { name: '图片生成参数' })
 
-  expect(trigger).toHaveTextContent('16:9 · 标准画质 · 2K · 1张')
+  expect(trigger).toHaveTextContent('2816×1584 · 2K · 1张')
   await user.click(trigger)
 
   const dialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
-  const quality = within(dialog).getByRole('group', { name: '画质' })
+  expect(within(dialog).queryByRole('group', { name: '画质' })).not.toBeInTheDocument()
   const resolution = within(dialog).getByRole('group', { name: '清晰度' })
   const ratio = within(dialog).getByRole('group', { name: '比例' })
   const count = within(dialog).getByRole('group', { name: '生成数量' })
 
-  expect(within(quality).getAllByRole('button')).toHaveLength(3)
   expect(within(resolution).getAllByRole('button')).toHaveLength(3)
-  expect(within(ratio).getAllByRole('button')).toHaveLength(13)
+  expect(within(ratio).getAllByRole('button')).toHaveLength(15)
   expect(within(count).getAllByRole('button')).toHaveLength(3)
-  expect(within(quality).getByRole('button', { name: '标准画质' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
   expect(within(resolution).getByRole('button', { name: '2K' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -136,18 +133,14 @@ test('opens the complete Liblib image parameter picker and persists its live sum
     'true',
   )
 
-  await user.click(within(quality).getByRole('button', { name: '高画质' }))
-  await user.click(within(resolution).getByRole('button', { name: '4K' }))
+  await user.click(within(resolution).getByRole('button', { name: '1.5K' }))
   await user.click(within(ratio).getByRole('button', { name: '9:16' }))
   await user.click(within(count).getByRole('button', { name: '2张' }))
 
-  expect(trigger).toHaveTextContent('9:16 · 高画质 · 4K · 2张')
+  expect(trigger).toHaveTextContent('1152×2048 · 1.5K · 2张')
   expect(within(panel).getByText('预计成本 36')).toBeVisible()
   expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
-    quality: '高画质',
-  })
-  expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
-    resolution: '4K',
+    resolution: '1.5K',
   })
   expect(data.onUpdateImageGenerationSettings).toHaveBeenCalledWith({
     aspectRatio: '9:16',
@@ -248,7 +241,7 @@ test('keeps an already requested upscale confirmation without duplicating the co
   expect(onUpscalePendingChange).toHaveBeenCalledWith(false)
 })
 
-test('narrows Style Image V7 result actions to reference and style', () => {
+test('migrates retired image model selection to the real provider without losing the node', () => {
   const data = makeData({
     node: {
       ...makeData().node,
@@ -266,9 +259,10 @@ test('narrows Style Image V7 result actions to reference and style', () => {
   const actions = screen.getByRole('toolbar', { name: '图片主操作' })
   expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual([
     '参考',
+    '标记',
     '风格',
   ])
-  expect(within(actions).queryByRole('button', { name: '标记' })).not.toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: '图片模型' })).toHaveValue('seedream-5-pro-api')
 })
 
 test('opens and safely exits the local element marking mode', async () => {
@@ -294,15 +288,13 @@ test('exposes the verified MJ image settings with persistent accessible controls
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
 
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
-  expect(model).toHaveValue('mock-mj-image')
-  expect(within(model).getByRole('option', { name: /Lib Image/ })).toBeEnabled()
-  expect(within(model).getAllByRole('option')).toHaveLength(18)
-  expect(within(model).queryByRole('option', { name: /可灵图片/ })).not.toBeInTheDocument()
-  expect(within(model).getByRole('option', { name: /Style Image V8\.2/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Qwen Edit/ })).toBeDisabled()
-  expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
-  await user.selectOptions(model, 'mock-mj-image')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-mj-image')
+  expect(model).toHaveValue('seedream-5-pro-api')
+  expect(within(model).getByRole('option', { name: /Seedream 5\.0 Pro/ })).toBeEnabled()
+  expect(within(model).getAllByRole('option')).toHaveLength(7)
+  expect(within(model).queryByRole('option', { name: /Mock Studio|可灵图片|Lib Image|Qwen/ })).not.toBeInTheDocument()
+  expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
+  await user.selectOptions(model, 'seedream-5-pro-api')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('seedream-5-pro-api')
 
   await user.click(
     within(panel).getByRole('button', { name: '展开高级设置' }),
@@ -336,54 +328,15 @@ test('exposes the verified MJ image settings with persistent accessible controls
   })
 })
 
-test('groups image models and narrows Style Image V8.2 editing parameters', async () => {
-  const user = userEvent.setup()
-  const data = makeData()
-  const view = render(
-    <ImageGenerationPanel {...panelProps(data)} imageToImage />,
-  )
-  const panel = screen.getByRole('region', { name: 'L1 生成参数' })
-  const model = within(panel).getByRole('combobox', { name: '图片模型' })
-
-  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
-    '官方 API 已接（开发直连）',
-    '待接入',
-    '本地演示',
-  ])
-  expect(within(model).getAllByRole('option')).toHaveLength(18)
-  expect(within(model).getByRole('option', { name: /Qwen Edit.*待接入/ })).toBeDisabled()
-  await user.selectOptions(model, 'mock-style-image-v82')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-style-image-v82')
-
-  view.rerender(
-    <ImageGenerationPanel
-      {...panelProps({
-        ...data,
-        node: {
-          ...data.node,
-          modelProviderId: 'mock-style-image-v82',
-          generationConfig: {
-            targetKind: 'image',
-            providerId: 'mock-style-image-v82',
-            parameters: {},
-            referenceAssets: [],
-          },
-        },
-      })}
-      imageToImage
-    />,
-  )
-
-  expect(within(panel).getByText('文生图 / 图生图 / 图片编辑')).toBeVisible()
-  const trigger = within(panel).getByRole('button', { name: '图片生成参数' })
-  expect(trigger).toHaveTextContent('16:9 · 自适应 · 4张')
-  await user.click(trigger)
-  const dialog = within(panel).getByRole('dialog', { name: '图片生成参数' })
-  expect(within(dialog).queryByRole('group', { name: '画质' })).not.toBeInTheDocument()
-  expect(within(within(dialog).getByRole('group', { name: '清晰度' })).getAllByRole('button')).toHaveLength(1)
-  expect(within(within(dialog).getByRole('group', { name: '比例' })).getAllByRole('button')).toHaveLength(1)
-  expect(within(within(dialog).getByRole('group', { name: '生成数量' })).getAllByRole('button')).toHaveLength(1)
-  expect(within(dialog).getByRole('slider', { name: '编辑强度' })).toHaveValue('0.6')
+test('shows the disabled real image provider and pending services when configuration is missing', () => {
+  const data = makeData({ providerRegistry: createDefaultProviderRegistry() })
+  render(<ImageGenerationPanel {...panelProps(data)} imageToImage />)
+  const model = screen.getByRole('combobox', { name: '图片模型' })
+  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual(['官方 API 已接（开发直连）', '待接入'])
+  expect(within(model).getAllByRole('option')).toHaveLength(7)
+  expect(within(model).getByRole('option', { name: /Seedream.*配置未完成/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '生成图片，预计成本 18' })).toBeDisabled()
+  expect(model).not.toHaveTextContent('本地演示')
 })
 
 test('exposes an enabled Seedream 5.0 Pro live provider with real dimensions and truthful submit state', () => {
@@ -627,6 +580,8 @@ test('requires prompt or media and a visible cost before local image submission'
   })
   expect(submit).toBeEnabled()
   await user.click(submit)
+  expect(data.onLocalImageGenerate).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
   expect(data.onLocalImageGenerate).toHaveBeenCalledWith('雨夜角色特写')
 })
 
@@ -657,6 +612,7 @@ test('flushes the current prompt before generating without requiring blur', asyn
     name: '生成图片，预计成本 18',
   }))
 
+  await user.click(screen.getByRole('button', { name: '确认生成 1 张图片' }))
   expect(updateSettings).toHaveBeenCalledWith({
     prompt: '白色陶瓷杯产品摄影',
   })

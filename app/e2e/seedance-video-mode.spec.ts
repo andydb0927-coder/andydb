@@ -1,6 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
-import { runSelectedNodeManagementAction } from './canvas-node-actions'
 
 test('selects the live Seedance 2.0 provider and submits the official task contract', async ({
   page,
@@ -54,10 +53,10 @@ test('selects the live Seedance 2.0 provider and submits the official task contr
     await route.abort('blockedbyclient')
   })
 
-  await page.goto('/projects/new?recipe=cinematic-story')
+  await page.goto('/projects/new')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
-  await page.getByRole('button', { name: '分镜 01', exact: true }).click()
-  await runSelectedNodeManagementAction(page, '生成视频')
+  await page.getByRole('toolbar', { name: '画布模式工具' }).getByRole('button', { name: '添加节点' }).click()
+  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '视频', exact: true }).click()
 
   const panel = page.getByRole('region', { name: '视频 01 生成参数' })
   const model = panel.getByRole('combobox', { name: '模型' })

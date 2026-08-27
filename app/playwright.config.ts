@@ -32,6 +32,6 @@ export default defineConfig({
     : {
         command: `${fixtureGenerationEnvironment} npm run dev -- --host 127.0.0.1 --port ${port}`,
         url: baseURL,
-        reuseExistingServer: true,
+        reuseExistingServer: false,
       },
 })

@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './provider-fixture'
 
 import { runSelectedNodeManagementAction } from './canvas-node-actions'
+import { createFixtureCinematicProject } from './provider-fixture'
 
 async function createCinematicProject(page: import('@playwright/test').Page) {
-  await page.goto('/projects/new?recipe=cinematic-story')
-  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await createFixtureCinematicProject(page)
 }
 
 async function openPreview(page: import('@playwright/test').Page) {
@@ -307,14 +307,14 @@ test('keeps one image node expanded and persists a confirmed main result', async
   const confirmation = page.getByRole('alertdialog', { name: '设为主图' })
   await expect(confirmation).toContainText('下游引用将使用新的主图')
   await confirmation.getByRole('button', { name: '确认设为主图' }).click()
-  await expect(scene.locator('img')).toHaveAttribute('src', '/demo/shot-river.png')
+  await expect(scene.locator('img')).toHaveAttribute('src', 'https://media.fixture.invalid/shot-river.png')
   await expect(page.getByText('已保存', { exact: true }).first()).toBeVisible()
 
   await page.reload()
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
   await expect(
     page.getByRole('button', { name: '场景设定', exact: true }).locator('img'),
-  ).toHaveAttribute('src', '/demo/shot-river.png')
+  ).toHaveAttribute('src', 'https://media.fixture.invalid/shot-river.png')
 })
 
 test('uploads an image-to-image reference, links a canvas reference, and configures a derived upscale node', async ({
@@ -377,7 +377,7 @@ test('uploads an image-to-image reference, links a canvas reference, and configu
   await upscale
     .getByRole('button', { name: '生成高清图片，预计成本 18' })
     .click()
-  await expect(page.getByRole('status')).toContainText('生成任务已提交')
+  await expect(page.getByRole('status')).toContainText(/生成任务已提交|生成中|结果已保存到项目与生成历史/)
 })
 
 test('renames a media node and accepts prompt input from the composer', async ({
@@ -458,14 +458,14 @@ test('persists image parameters and creates a canvas-selected media reference', 
   await scene.click()
   const panel = page.getByRole('region', { name: '场景设定 生成参数' })
   const parameterTrigger = panel.getByRole('button', { name: '图片生成参数' })
-  await expect(parameterTrigger).toContainText('16:9 · 标准画质 · 2K · 1张')
+  await expect(parameterTrigger).toContainText('2816×1584 · 2K · 1张')
   await parameterTrigger.click()
   const parameterDialog = panel.getByRole('dialog', { name: '图片生成参数' })
-  await parameterDialog.getByRole('button', { name: '高画质' }).click()
-  await parameterDialog.getByRole('button', { name: '4K' }).click()
+  await expect(parameterDialog.getByRole('group', { name: '画质' })).toHaveCount(0)
+  await parameterDialog.getByRole('button', { name: '1.5K' }).click()
   await parameterDialog.getByRole('button', { name: '9:16' }).click()
   await parameterDialog.getByRole('button', { name: '2张' }).click()
-  await expect(parameterTrigger).toContainText('9:16 · 高画质 · 4K · 2张')
+  await expect(parameterTrigger).toContainText('1152×2048 · 1.5K · 2张')
   await expect(panel.getByText('预计成本 36')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(parameterTrigger).toBeFocused()
@@ -498,7 +498,7 @@ test('persists image parameters and creates a canvas-selected media reference', 
   })
   await expect(
     reloadedPanel.getByRole('button', { name: '图片生成参数' }),
-  ).toContainText('9:16 · 高画质 · 4K · 2张')
+  ).toContainText('1152×2048 · 1.5K · 2张')
   await expect(reloadedPanel.getByText('预计成本 36')).toBeVisible()
   await reloadedPanel.getByRole('button', { name: '展开高级设置' }).click()
   await expect(reloadedPanel.getByLabel('个性化风格 P 值')).toHaveValue(
@@ -576,17 +576,18 @@ test('keeps video drafts local and inserts confirmed derived nodes atomically', 
     '2000',
   )
   await expect(generation.getByLabel('模型', { exact: true })).toHaveValue(
-    'mock-seedance-25',
+    'seedance-api',
   )
   await expect(
-    generation.getByRole('option', { name: /Mock Studio.*Seedance 2.5.*24 积分\/次.*演示/ }),
+    generation.getByRole('option', { name: /火山方舟.*Seedance 2.0.*135 积分\/次.*开发直连/ }),
   ).toBeEnabled()
-  await expect(generation.getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
+  await expect(generation.getByText('Auto · 5s · 1个 · 720P')).toBeVisible()
   await expect(generation.getByLabel('声音')).toHaveValue('开启')
-  await expect(generation.getByText('预计成本 24')).toBeVisible()
+  await expect(generation.getByText('预计成本 135')).toBeVisible()
+  await page.getByRole('button', { name: 'Zoom Out', exact: true }).click({ clickCount: 2 })
   await generation.getByRole('button', { name: '展开高级设置' }).click()
-  await expect(generation.getByLabel('联网搜索')).toBeChecked()
-  await expect(generation.getByLabel('自动校验素材')).toBeChecked()
+  await expect(generation.getByLabel('联网搜索')).toHaveCount(0)
+  await expect(generation.getByLabel('自动校验素材')).toHaveCount(0)
   await expect(generation.getByLabel('智能引用 AutoLink')).toBeChecked()
   await generation.getByRole('button', { name: '收起高级设置' }).click()
 
@@ -782,7 +783,7 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   await page.keyboard.press('Enter')
   await page.getByRole('button', { name: '历史记录' }).click()
   const history = page.getByRole('complementary', { name: '历史' })
-  await expect(history).toContainText('Mock Studio · Lib Image')
+  await expect(history).toContainText('火山方舟 · Seedream 5.0 Pro')
   await expect(history).toContainText('消耗 18 积分')
   await expect(page.getByText('102 积分', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '关闭历史面板' }).click()
@@ -790,8 +791,8 @@ test('exposes the full shortcut panel and executes guarded canvas keyboard actio
   await page.getByRole('button', { name: 'Agent', exact: true }).click()
   const agentPanel = page.getByRole('complementary', { name: 'Agent 工作区' })
   await expect(agentPanel.getByRole('toolbar', { name: 'Agent 对话工具' })).toBeVisible()
-  await expect(agentPanel.getByRole('combobox', { name: '图片模型' })).toHaveValue('mock-mj-image')
-  await expect(agentPanel.getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-seedance-25')
+  await expect(agentPanel.getByRole('combobox', { name: '图片模型' })).toHaveValue('seedream-5-pro-api')
+  await expect(agentPanel.getByRole('combobox', { name: '视频模型' })).toHaveValue('seedance-api')
   await agentPanel.getByRole('button', { name: '设置' }).click()
   await expect(agentPanel.getByRole('checkbox', { name: '自动生成' })).toBeVisible()
   await expect(agentPanel.getByRole('checkbox', { name: '浏览器通知' })).toBeVisible()
@@ -1456,13 +1457,14 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })
   const textPanel = page.getByRole('region', { name: '文本 01 文本参数' })
   await expect(textPanel).toBeVisible()
-  await textPanel.getByRole('combobox', { name: '文本模型' }).selectOption('deep-script')
-  await expect(textPanel.getByLabel('预计成本 12', { exact: true })).toBeVisible()
+  await textPanel.getByRole('combobox', { name: '文本模型' }).selectOption('ark-text-llm')
+  await expect(textPanel.getByLabel('预计成本 1', { exact: true })).toBeVisible()
   await textPanel.getByRole('textbox', { name: '文本生成提示词' }).fill('雨巷中的河灯旁白')
-  await textPanel.getByRole('button', { name: '生成文本，预计成本 12' }).click()
+  await textPanel.getByRole('button', { name: '生成文本，预计成本 1' }).click()
   await expect(textPanel.getByRole('textbox', { name: '文本内容' })).toHaveValue(/\u96e8\u5df7\u4e2d\u7684\u6cb3\u706f\u65c1\u767d/)
-  await expect(textPanel.getByText('来源模型：GVLM 3.1')).toBeVisible()
+  await expect(textPanel.getByText('来源模型：豆包 Seed 2.1 Pro')).toBeVisible()
   await expect(textPanel.getByRole('status')).toContainText('文本生成任务已提交')
+  await textPanel.getByRole('combobox', { name: '字体样式' }).selectOption('引用')
 
   await openAddNodeAtBlank(page, '脚本')
   await expect(textPanel).toBeHidden()
@@ -1471,18 +1473,18 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await expect(scriptPanel.getByRole('list', { name: '章节列表' })).toBeVisible()
   await scriptPanel.getByRole('textbox', { name: '剧情大纲' }).fill('雨夜重逢后追查失踪真相')
   await scriptPanel.getByRole('spinbutton', { name: '场次数量' }).fill('2')
-  await scriptPanel.getByRole('button', { name: '生成脚本，预计成本 12' }).click()
+  await scriptPanel.getByRole('button', { name: '生成脚本，预计成本 1' }).click()
   await expect(scriptPanel.getByRole('list', { name: '章节列表' }).getByRole('listitem')).toHaveCount(2)
-  await expect(scriptPanel.getByText('来源模型：GVLM 3.1')).toBeVisible()
+  await expect(scriptPanel.getByText('来源模型：豆包 Seed 2.1 Pro')).toBeVisible()
   await expect(scriptPanel.getByText(/共 \d+ 字/)).toBeVisible()
 
   await openAddNodeAtBlank(page, '音频')
   const audioPanel = page.getByRole('region', { name: '音频 01 音频参数' })
   await expect(audioPanel.getByText('00:12')).toBeVisible()
-  await audioPanel.getByRole('combobox', { name: '音频模型' }).selectOption('narration')
-  await expect(audioPanel.getByText('预计成本 8')).toBeVisible()
-  await expect(audioPanel.getByText('00:30')).toBeVisible()
-  await expect(audioPanel.getByRole('combobox', { name: '音色' })).toHaveValue('纪录片旁白')
+  await audioPanel.getByRole('combobox', { name: '音频模型' }).selectOption('ark-audio-gen')
+  await expect(audioPanel.getByText('预计成本 12')).toBeVisible()
+  await expect(audioPanel.getByText('00:12')).toBeVisible()
+  await expect(audioPanel.getByRole('combobox', { name: '音色' })).toHaveValue('温暖女声')
   await audioPanel.getByRole('spinbutton', { name: '语速' }).fill('1.2')
   await audioPanel.getByRole('spinbutton', { name: '音量' }).fill('72')
 
@@ -1587,29 +1589,26 @@ test('creates a connected Liblib text-to-video preset from the text node shortcu
   await expect(page.locator('.react-flow__edge')).toHaveCount(initialEdgeCount + 1)
 })
 
-test('narrows image and video parameters when switching Liblib catalog models', async ({ page }) => {
+test('shows only real image and video models with their supported parameters', async ({ page }) => {
   await createCinematicProject(page)
-
   await openAddNodeAtBlank(page, '图片')
   const imagePanel = page.getByRole('region', { name: '图片 01 生成参数' })
-  await expect(imagePanel.getByRole('option', { name: /可灵图片/ })).toHaveCount(0)
-  await imagePanel.getByRole('combobox', { name: '图片模型' }).selectOption(
-    'mock-style-image-v82',
-  )
-  await expect(imagePanel.getByRole('button', { name: '图片生成参数' })).toContainText(
-    '16:9 · 自适应 · 4张',
-  )
-
+  const imageModel = imagePanel.getByRole('combobox', { name: '图片模型' })
+  await expect(imageModel.locator('optgroup').first().getByRole('option')).toHaveCount(1)
+  await expect(imageModel.locator('optgroup[label="待接入"]').getByRole('option')).toHaveCount(6)
+  await expect(imageModel).not.toContainText('Mock Studio')
+  await expect(imageModel).toHaveValue('seedream-5-pro-api')
+  await expect(imagePanel.getByRole('button', { name: '图片生成参数' })).toContainText('2816×1584 · 2K · 1张')
   await openAddNodeAtBlank(page, '视频')
   const videoPanel = page.getByRole('region', { name: '视频 01 生成参数' })
-  await expect(videoPanel.getByRole('combobox', { name: '模型' })).toHaveValue(
-    'mock-seedance-25',
-  )
-  await expect(videoPanel.getByRole('note', { name: '当前模型说明' })).toContainText(
-    '最长 30 秒音画同步',
-  )
+  const model = videoPanel.getByRole('combobox', { name: '模型' })
+  await expect(model).toHaveValue('seedance-api')
+  await expect(model.locator('optgroup').first().getByRole('option')).toHaveCount(1)
+  await expect(model.locator('optgroup[label="待接入"]').getByRole('option')).toHaveCount(4)
+  await expect(model).not.toContainText('Mock Studio')
   await videoPanel.getByRole('button', { name: '展开完整视频工具' }).click()
-  await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('30 秒')
+  await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('15 秒')
+  await expect(videoPanel.getByRole('combobox', { name: '时长' })).not.toContainText('30 秒')
 })
 
 test('shows the exact Seedream size and all four fixture-intercepted live results', async ({ page }) => {
@@ -1709,16 +1708,10 @@ test('matches Liblib result action policies and exposes the inline video player'
   for (const label of ['宫格切分', '标注', '旋转与镜像']) {
     await expect(imageTools.getByRole('button', { name: label })).toBeEnabled()
   }
-  await expect(page.getByText(/待接入多机位九宫格生成服务/)).toBeAttached()
+  await expect(page.getByText('待接入多机位九宫格生成服务', { exact: true })).toBeAttached()
 
-  await imagePanel
-    .getByRole('combobox', { name: '图片模型' })
-    .selectOption('mock-style-image-v7')
-  await expect(imageActions.getByRole('button')).toHaveCount(2)
-  expect(await imageActions.getByRole('button').allTextContents()).toEqual([
-    '参考',
-    '风格',
-  ])
+  await expect(imagePanel.getByRole('combobox', { name: '图片模型' }).locator('option[value^="mock-"]')).toHaveCount(0)
+  await expect(imageActions.getByRole('button')).toHaveCount(3)
 
   await page.getByRole('button', { name: '分镜 01', exact: true }).click()
   await runSelectedNodeManagementAction(page, '生成视频')

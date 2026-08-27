@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
 function parseRgb(color: string): [number, number, number] {
   const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number)

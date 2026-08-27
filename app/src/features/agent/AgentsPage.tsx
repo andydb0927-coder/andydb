@@ -3,6 +3,7 @@ import { Search, Send, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
+import { defaultProviderRegistry, groupProvidersForMenu, isProviderEnabled, type ProviderRegistry } from '../generation/model-provider-registry'
 import type { Project } from '../project/model'
 import { TimelineRepository } from '../timeline/timeline-repository'
 import type { TimelineProjectRepository } from '../timeline/timeline-repository'
@@ -27,6 +28,7 @@ import {
 type AgentProjectRepository = Pick<ProjectRepository, 'listRecent' | 'save'>
 
 export interface AgentsPageProps {
+  providerRegistry?: ProviderRegistry
   repository?: AgentProjectRepository
   timelineRepository?: Pick<TimelineProjectRepository, 'load'>
   enablementStore?: SkillEnablementStore
@@ -98,6 +100,7 @@ function initialInput(definition: AgentSkillDefinition): AgentSkillInput {
 }
 
 export function AgentsPage({
+  providerRegistry = defaultProviderRegistry,
   repository = defaultRepository,
   timelineRepository = defaultTimelineRepository,
   enablementStore: suppliedEnablementStore,
@@ -123,7 +126,9 @@ export function AgentsPage({
   const [selectedSkillId, setSelectedSkillId] = useState('')
   const [focusRunner, setFocusRunner] = useState(false)
   const [creativePrompt, setCreativePrompt] = useState('')
-  const [selectedModel, setSelectedModel] = useState('seedance-2.5')
+  const [selectedModel, setSelectedModel] = useState<string>()
+  const model = providerRegistry.defaultFor(['text-to-video', 'image-to-video'], selectedModel)
+  const modelGroups = groupProvidersForMenu(providerRegistry.menuProvidersFor(['text-to-video', 'image-to-video']))
   const [generationMode, setGenerationMode] = useState('smart')
   const [runningSkillId, setRunningSkillId] = useState<string>()
   const [result, setResult] = useState<{
@@ -299,10 +304,16 @@ export function AgentsPage({
         <div className="agent-creation-composer__controls">
           <label>
             <span>选择模型</span>
-            <select aria-label="选择模型" value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
-              <option value="seedance-2.5">Seedance 2.5</option>
-              <option value="minimax-h3">MiniMax H3</option>
-              <option value="local-demo">本地演示模型</option>
+            <select aria-label="选择模型" value={model?.id ?? ''} onChange={(event) => setSelectedModel(event.target.value)}>
+              {modelGroups.map((group) => (
+                <optgroup key={group.id} label={group.label}>
+                  {group.providers.map((provider) => (
+                    <option key={provider.id} value={provider.id} disabled={!isProviderEnabled(provider)}>
+                      {provider.name} · {provider.modelName}{provider.disabledReason ? ' · ' + provider.disabledReason : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </label>
           <label>
@@ -315,13 +326,16 @@ export function AgentsPage({
           </label>
           <button
             type="button"
+            disabled={!model || !isProviderEnabled(model)}
+            title={model?.disabledReason}
             onClick={() => setFeedback(creativePrompt.trim()
-              ? `已准备 ${selectedModel} · ${generationMode} 的本地创作任务`
+              ? `已准备 ${model?.modelName} · ${generationMode} 的创作草稿；请在画布提交生成。`
               : '请先描述创作目标')}
           >
             <Send aria-hidden="true" />开始创作
           </button>
         </div>
+        {model?.disabledReason ? <p role="note">{model.disabledReason}</p> : null}
       </section>
 
       <section className="agent-catalog-scope" aria-label="Skill 本地浏览范围">

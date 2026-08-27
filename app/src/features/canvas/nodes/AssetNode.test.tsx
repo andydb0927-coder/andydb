@@ -6,6 +6,7 @@ import { expect, test, vi } from 'vitest'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { AssetNode } from './AssetNode'
 import { createDefaultProviderRegistry } from '../../generation/model-provider-registry'
+import { createFixtureProviderRegistry } from '../../../test/provider-fixtures'
 
 function renderNode(onHandleActivate = vi.fn(), onRenameNode = vi.fn()) {
   const data: CreativeNodeData = {
@@ -189,7 +190,7 @@ test('keeps image nodes folded until they become the current selection', async (
   )
   expect(prompt).toHaveTextContent('雾中茶山')
   const imageModel = within(generation).getByRole('combobox', { name: '图片模型' })
-  expect(imageModel).toHaveValue('mock-mj-image')
+  expect(imageModel).toHaveValue('seedream-5-pro-api')
   expect(within(imageModel).queryByRole('option', { name: /可灵图片/ })).not.toBeInTheDocument()
   expect(within(generation).getByText('预计成本 18')).toBeVisible()
   expect(screen.getByRole('button', { name: '查看 4 张结果' })).toHaveTextContent('4张')
@@ -503,44 +504,20 @@ test('edits manual text inside the compact node with a Liblib formatting toolbar
   )
 })
 
-test('selects a text LLM tier and fills locally generated text with model provenance', async () => {
+test('removes text demo tiers and explains the unavailable real model without fabricating text', async () => {
   const user = userEvent.setup()
-  const details = {
-    type: 'text',
-    content: '',
-    fontStyle: '正文',
-    modelProviderId: 'mock-text-llm',
-    modelVariant: 'basic-copy',
-    prompt: '',
-  }
-  const { onUpdateNodeDetails } = renderSpecializedNode('文本 01', 'text', details)
+  const onGenerateText = vi.fn()
+  renderSpecializedNode('文本 01', 'text', { type: 'text', content: '', fontStyle: '正文', modelProviderId: 'mock-text-llm', prompt: '' }, true, { onGenerateText })
   const panel = screen.getByRole('region', { name: '文本 01 文本参数' })
   const model = within(panel).getByRole('combobox', { name: '文本模型' })
-
-  expect(within(model).getAllByRole('option').map((option) => option.textContent)).toEqual([
-    '豆包 Seed 2.1 Pro · 1 积分 · 火山方舟文本开发验证未启用',
-    'GVLM 3.1 · 12 积分',
-    'CVLM 5.5 · 15 积分',
-    'GVLM 3.1 Flash · 8 积分',
-    'Qwen 3 VL Flash · 1 积分',
-  ])
-  expect(within(panel).getByLabelText('预计成本 8')).toBeVisible()
-  expect(within(panel).getByText('本地演示')).toBeVisible()
-
-  await user.selectOptions(model, 'deep-script')
-  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
-    expect.objectContaining({ modelVariant: 'deep-script', fontStyle: '引用' }),
-  )
+  expect(within(model).getAllByRole('option')).toHaveLength(1)
+  expect(within(model).getByRole('option', { name: /豆包.*未启用/ })).toBeDisabled()
+  expect(model).toHaveValue('ark-text-llm')
   await user.type(within(panel).getByRole('textbox', { name: '文本生成提示词' }), '雨夜重逢宣传文案')
-  await user.click(within(panel).getByRole('button', { name: '生成文本，预计成本 12' }))
-
-  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      content: expect.stringContaining('雨夜重逢宣传文案'),
-      generatedByModel: 'GVLM 3.1',
-    }),
-  )
-  expect(within(panel).getByRole('status')).toHaveTextContent('本地演示生成完成')
+  const generate = within(panel).getByRole('button', { name: '生成文本，预计成本 1' })
+  expect(generate).toBeDisabled()
+  await user.click(generate)
+  expect(onGenerateText).not.toHaveBeenCalled()
 })
 
 test('groups the configured Ark text model as an official API and dispatches real text generation', async () => {
@@ -557,7 +534,7 @@ test('groups the configured Ark text model as an official API and dispatches rea
     type: 'text',
     content: '',
     fontStyle: '正文',
-    modelProviderId: 'mock-text-llm',
+    modelProviderId: 'ark-text-llm',
     modelVariant: 'basic-copy',
     prompt: '',
   }
@@ -654,33 +631,19 @@ test('shows editable script chapters, summaries, and word counts', async () => {
   expect(onUpdateNodeDetails).toHaveBeenCalled()
 })
 
-test('generates a local script draft from outline and scene count', async () => {
+test('preserves script drafting while unconfigured real generation remains disabled', async () => {
   const user = userEvent.setup()
-  const details = {
-    type: 'script',
-    chapters: [],
-    modelProviderId: 'mock-text-llm',
-    modelVariant: 'deep-script',
-    outline: '',
-    sceneCount: 3,
-  }
-  const { onUpdateNodeDetails } = renderSpecializedNode('脚本 01', 'script', details)
+  const onGenerateText = vi.fn()
+  const { onUpdateNodeDetails } = renderSpecializedNode('脚本 01', 'script', { type: 'script', chapters: [], modelProviderId: 'mock-text-llm', outline: '', sceneCount: 3 }, true, { onGenerateText })
   const panel = screen.getByRole('region', { name: '脚本 01 脚本参数' })
-
   await user.type(within(panel).getByRole('textbox', { name: '剧情大纲' }), '一盏河灯引出失踪真相')
   await user.clear(within(panel).getByRole('spinbutton', { name: '场次数量' }))
   await user.type(within(panel).getByRole('spinbutton', { name: '场次数量' }), '2')
-  await user.click(within(panel).getByRole('button', { name: '生成脚本，预计成本 12' }))
-
-  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      generatedByModel: 'GVLM 3.1',
-      chapters: [
-        expect.objectContaining({ title: '场次 01', summary: expect.stringContaining('河灯') }),
-        expect.objectContaining({ title: '场次 02', summary: expect.stringContaining('河灯') }),
-      ],
-    }),
-  )
+  expect(within(panel).getByRole('combobox', { name: '脚本模型' })).toHaveValue('ark-text-llm')
+  expect(within(panel).getByRole('button', { name: '生成脚本，预计成本 1' })).toBeDisabled()
+  expect(within(panel).getByRole('spinbutton', { name: '场次数量' })).toHaveValue(2)
+  expect(onUpdateNodeDetails).not.toHaveBeenCalled()
+  expect(onGenerateText).not.toHaveBeenCalled()
 })
 
 test('shows persistent audio duration, voice, speed, and volume controls', async () => {
@@ -696,39 +659,25 @@ test('shows persistent audio duration, voice, speed, and volume controls', async
   const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
   expect(within(panel).getByText('00:12')).toBeVisible()
   expect(within(panel).getByRole('button', { name: '音频智能断句切分' })).toBeDisabled()
-  expect(within(panel).getByText(/待接入音频智能断句切分服务/)).toBeVisible()
+  expect(within(panel).getByText(/待接入音频智能断句切分服务/, { selector: 'small' })).toBeVisible()
   await user.selectOptions(within(panel).getByRole('combobox', { name: '音色' }), '沉稳男声')
   await user.clear(within(panel).getByRole('spinbutton', { name: '语速' }))
   await user.type(within(panel).getByRole('spinbutton', { name: '语速' }), '1.2')
   expect(onUpdateNodeDetails).toHaveBeenCalled()
 })
 
-test('switches audio model tiers with model-driven defaults and estimated cost', async () => {
+test('switches between real audio providers with manifest defaults and estimated cost', async () => {
   const user = userEvent.setup()
-  const details = {
-    type: 'audio',
-    durationSeconds: 12,
-    voice: '温暖女声',
-    speed: 1,
-    volume: 80,
-    modelProviderId: 'mock-audio',
-    modelVariant: 'ambience',
-  }
-  const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', details)
+  const details = { type: 'audio', durationSeconds: 12, voice: '温暖女声', speed: 1, volume: 80, modelProviderId: 'ark-tts' }
+  const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', details, true, { providerRegistry: createFixtureProviderRegistry() })
   const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
   const model = within(panel).getByRole('combobox', { name: '音频模型' })
-
-  expect(within(panel).getByText('预计成本 4')).toBeVisible()
-  await user.selectOptions(model, 'narration')
-  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      modelVariant: 'narration',
-      voice: '纪录片旁白',
-      durationSeconds: 30,
-    }),
-  )
-  expect(within(panel).getByText('预计成本 8')).toBeVisible()
-  expect(within(panel).getByText('本地演示')).toBeVisible()
+  expect(within(model).getAllByRole('option')).toHaveLength(4)
+  expect(within(panel).getByText('预计成本 1')).toBeVisible()
+  await user.selectOptions(model, 'ark-audio-gen')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(expect.objectContaining({ modelProviderId: 'ark-audio-gen', modelVariant: undefined }))
+  expect(within(panel).getByText('预计成本 12')).toBeVisible()
+  expect(within(panel).queryByText('本地演示')).not.toBeInTheDocument()
 })
 
 test('groups live Ark audio models and dispatches TTS with persisted node parameters', async () => {
@@ -754,7 +703,7 @@ test('groups live Ark audio models and dispatches TTS with persisted node parame
     voice: '温暖女声',
     speed: 1,
     volume: 75,
-    modelProviderId: 'mock-audio',
+    modelProviderId: 'ark-tts',
     modelVariant: 'ambience',
     prompt: '',
     sampleRate: 24000,

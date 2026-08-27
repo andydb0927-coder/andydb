@@ -8,9 +8,11 @@ import { createDefaultProviderRegistry } from '../../generation/model-provider-r
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { VideoNode } from './VideoNode'
 import { VideoToolDetails } from './VideoNodeDetails'
+import { createFixtureProviderRegistry } from '../../../test/provider-fixtures'
 
 function makeData(contextual: boolean): CreativeNodeData {
   return {
+    providerRegistry: createFixtureProviderRegistry(),
     node: {
       id: 'video-node-16',
       kind: 'video',
@@ -146,7 +148,7 @@ test('renders an empty selected video as a Liblib media card with a separate com
   expect(composer.parentElement).toHaveClass('creative-node-composer')
   expect(within(composer).getByRole('toolbar', { name: '视频主操作' })).toBeVisible()
   expect(within(composer).getByLabelText('生成模式')).toHaveValue('全能参考')
-  expect(within(composer).getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
+  expect(within(composer).getByText('Auto · 5s · 1个 · 720P')).toBeVisible()
 })
 
 test('renders the verified video generation controls, disabled modes, and cost', async () => {
@@ -167,32 +169,29 @@ test('renders the verified video generation controls, disabled modes, and cost',
 
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
-  expect(model).toHaveValue('mock-seedance-25')
-  expect(within(model).getAllByRole('option')).toHaveLength(7)
-  expect(within(model).getByRole('option', { name: /Mock Studio.*Seedance 2.5.*演示/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /Mock Studio.*Kling O3.*24 积分\/次.*演示/ })).toBeEnabled()
-  expect(within(model).getByRole('option', { name: /火山方舟.*Seedance 2.0.*配置未完成/ })).toBeDisabled()
-  expect(within(panel).getByText('火山方舟 Seedance 开发验证配置未完成')).toBeVisible()
-  expect(within(panel).getByText('演示', { exact: true })).toBeVisible()
-  await user.selectOptions(model, 'mock-kling-o3')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-kling-o3')
+  expect(model).toHaveValue('seedance-api')
+  expect(within(model).getAllByRole('option')).toHaveLength(5)
+  expect(within(model).getByRole('option', { name: /火山方舟.*Seedance 2.0/ })).toBeEnabled()
+  expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
+  await user.selectOptions(model, 'seedance-api')
+  expect(data.onSelectModelProvider).toHaveBeenCalledWith('seedance-api')
   const mode = within(panel).getByLabelText('生成模式')
   expect(mode).toHaveValue('全能参考')
   expect(within(mode).getByRole('option', { name: '文生视频' })).toBeEnabled()
   expect(within(mode).getByRole('option', { name: '图片参考' })).toBeEnabled()
   await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
   expect(within(panel).queryByText(/当前节点已绑定全能参考配置/)).not.toBeInTheDocument()
-  expect(within(panel).getByLabelText('比例')).toHaveValue('16:9')
+  expect(within(panel).getByLabelText('比例')).toHaveValue('Auto')
   expect(within(panel).getByLabelText('时长')).toHaveValue('5')
   expect(within(panel).getByLabelText('生成数量')).toHaveValue('1')
-  expect(within(panel).getByLabelText('清晰度')).toHaveValue('1080P')
+  expect(within(panel).getByLabelText('清晰度')).toHaveValue('720P')
   expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
   expect(within(panel).getByLabelText('智能分镜')).not.toBeChecked()
-  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
 
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
-  expect(within(panel).getByLabelText('联网搜索')).toBeChecked()
-  expect(within(panel).getByLabelText('自动校验素材')).toBeChecked()
+  expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
+  expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
 })
 
@@ -206,7 +205,7 @@ test('submits the current prompt draft through the video generate button', async
   await user.clear(prompt)
   await user.type(prompt, '雨夜霓虹街道，摄影机缓慢向前推进')
   await user.click(
-    within(panel).getByRole('button', { name: '生成视频，预计成本 24' }),
+    within(panel).getByRole('button', { name: '生成视频，预计成本 135' }),
   )
 
   expect(data.onLocalVideoGenerate).toHaveBeenCalledWith(
@@ -214,38 +213,29 @@ test('submits the current prompt draft through the video generate button', async
   )
 })
 
-test('recomputes video defaults, price, and advanced switches from the selected model', async () => {
+test('migrates a retired video provider to real defaults with its price and supported switches', async () => {
   const user = userEvent.setup()
   const data = makeData(true)
-  const view = render(renderVideo(data))
+  data.node = { ...data.node, modelProviderId: 'mock-kling-o3' }
+  render(renderVideo(data))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
-
-  expect(within(panel).getByText('16:9 · 5s · 1个 · 1080P')).toBeVisible()
-  expect(within(panel).getByLabelText('声音')).toHaveValue('开启')
-  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
-
-  view.rerender(renderVideo({
-    ...data,
-    node: { ...data.node, modelProviderId: 'mock-kling-30' },
-  }))
-
-  expect(within(panel).getByText('16:9 · 5s · 1个 · 高清')).toBeVisible()
-  expect(within(panel).queryByLabelText('声音')).not.toBeInTheDocument()
-  expect(within(panel).getByLabelText('预计成本 24')).toBeVisible()
+  expect(within(panel).getByLabelText('模型')).toHaveValue('seedance-api')
+  expect(within(panel).getByText('Auto · 5s · 1个 · 720P')).toBeVisible()
+  expect(within(panel).getByLabelText('预计成本 135')).toBeVisible()
   await user.click(within(panel).getByRole('button', { name: '展开高级设置' }))
   expect(within(panel).getByLabelText('智能引用 AutoLink')).toBeChecked()
   expect(within(panel).queryByLabelText('联网搜索')).not.toBeInTheDocument()
-  expect(within(panel).getByLabelText('自动校验素材')).toBeChecked()
+  expect(within(panel).queryByLabelText('自动校验素材')).not.toBeInTheDocument()
 })
 
 test('resolves the selected provider from the persisted generation config before the legacy node field', () => {
   const data = makeData(true)
   data.node = {
     ...data.node,
-    modelProviderId: 'mock-seedance-25',
+    modelProviderId: 'seedance-api',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'mock-kling-o3',
+      providerId: 'seedance-api',
       parameters: {
         aspectRatio: '9:16',
         duration: '3',
@@ -261,7 +251,7 @@ test('resolves the selected provider from the persisted generation config before
 
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
   expect(within(panel).getByRole('combobox', { name: '模型' })).toHaveValue(
-    'mock-kling-o3',
+    'seedance-api',
   )
   expect(within(panel).getByText('9:16 · 3s · 1个 · 4K')).toBeVisible()
   expect(within(panel).getByRole('combobox', { name: '声音' })).toHaveValue(
@@ -273,10 +263,10 @@ test('omits an empty quality value from the reordered video summary', () => {
   const data = makeData(true)
   data.node = {
     ...data.node,
-    modelProviderId: 'mock-kling-30',
+    modelProviderId: 'seedance-api',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'mock-kling-30',
+      providerId: 'seedance-api',
       parameters: {
         aspectRatio: '16:9',
         duration: '3',
@@ -293,84 +283,29 @@ test('omits an empty quality value from the reordered video summary', () => {
   expect(screen.queryByText(/1个 ·\s*$/)).not.toBeInTheDocument()
 })
 
-test('groups current LibTV video providers and removes superseded model versions', async () => {
-  const user = userEvent.setup()
+test('has no demo video options and disables unconfigured real generation', () => {
   const data = makeData(true)
-  const view = render(renderVideo(data))
-  const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
-  const model = within(panel).getByRole('combobox', { name: '模型' })
-
-  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual([
-    '官方 API 已接（开发直连）',
-    '本地演示',
-  ])
-  expect(within(model).getAllByRole('option')).toHaveLength(7)
-  const localOptions = Array.from(
-    model.querySelector('optgroup[label="本地演示"]')?.querySelectorAll('option') ?? [],
-    ({ text }) => text,
-  )
-  expect(localOptions).toEqual([
-    expect.stringContaining('Seedance 2.5'),
-    expect.stringContaining('Seedance 2.0 VIP'),
-    expect.stringContaining('Seedance 2.0 Mini'),
-    expect.stringContaining('Kling O3'),
-    expect.stringContaining('Kling 3.0'),
-    expect.stringContaining('Minimax H3'),
-  ])
-  for (const retiredId of [
-    'mock-kling-30-turbo',
-    'mock-wan-27',
-    'mock-wan-26',
-    'mock-hailuo-23',
-    'mock-hailuo-23-fast',
-    'mock-hailuo-o2',
-    'mock-vidu-q3-pro',
-    'mock-pixverse-55',
-    'mock-omnihuman-15',
-    'mock-mj-video',
-  ]) {
-    expect(model.querySelector(`option[value="${retiredId}"]`)).not.toBeInTheDocument()
-  }
-  await user.selectOptions(model, 'mock-seedance-20-vip')
-  expect(data.onSelectModelProvider).toHaveBeenCalledWith('mock-seedance-20-vip')
-
-  view.rerender(renderVideo({
-    ...data,
-    node: {
-      ...data.node,
-      modelProviderId: 'mock-seedance-20-vip',
-      generationConfig: {
-        targetKind: 'video',
-        providerId: 'mock-seedance-20-vip',
-        parameters: {},
-        referenceAssets: [],
-      },
-    },
-  }))
-  expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
-    '会员通道',
-  )
-  await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
-  expect(
-    within(panel).getByRole('combobox', { name: '时长' }).querySelectorAll('option'),
-  ).toHaveLength(3)
-  expect(within(panel).getByRole('option', { name: '15 秒' })).toBeVisible()
+  data.providerRegistry = createDefaultProviderRegistry()
+  render(renderVideo(data))
+  const model = screen.getByRole('combobox', { name: '模型' })
+  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual(['官方 API 已接（开发直连）', '待接入'])
+  expect(within(model).getAllByRole('option')).toHaveLength(5)
+  expect(within(model).getByRole('option', { name: /Seedance.*配置未完成/ })).toBeDisabled()
+  expect(model.querySelector('option[value^="mock-"]')).toBeNull()
+  expect(screen.getByText('火山方舟 Seedance 开发验证配置未完成')).toBeVisible()
+  expect(screen.getByRole('button', { name: '生成视频，预计成本 135' })).toBeDisabled()
 })
 
-test('narrows Seedance 2.5 parameters and exposes its 30 second flagship limit', async () => {
+test('uses official Seedance duration and resolution constraints instead of retired mock limits', async () => {
   const user = userEvent.setup()
-  const data = makeData(true)
-  data.node = { ...data.node, modelProviderId: 'mock-seedance-25' }
-  render(renderVideo(data))
+  render(renderVideo(makeData(true)))
   const panel = screen.getByRole('region', { name: '视频节点 16 生成参数' })
-
-  expect(within(panel).getByRole('note', { name: '当前模型说明' })).toHaveTextContent(
-    '最长 30 秒音画同步',
-  )
   await user.click(within(panel).getByRole('button', { name: '展开完整视频工具' }))
   const duration = within(panel).getByRole('combobox', { name: '时长' })
-  expect(within(duration).getByRole('option', { name: '30 秒' })).toBeVisible()
-  expect(within(panel).getByRole('combobox', { name: '清晰度' })).toHaveValue('1080P')
+  expect(within(duration).getAllByRole('option')).toHaveLength(12)
+  expect(within(duration).getByRole('option', { name: '15 秒' })).toBeVisible()
+  expect(within(duration).queryByRole('option', { name: '30 秒' })).not.toBeInTheDocument()
+  expect(within(panel).getByRole('combobox', { name: '清晰度' })).toHaveValue('720P')
   expect(within(panel).getByRole('combobox', { name: '声音' })).toHaveValue('开启')
 })
 
@@ -383,10 +318,10 @@ test('keeps all reference modes available when switching to live Seedance 2.0', 
   data.providerRegistry = registry
   data.node = {
     ...data.node,
-    modelProviderId: 'mock-seedance-25',
+    modelProviderId: 'seedance-api',
     generationConfig: {
       targetKind: 'video',
-      providerId: 'mock-seedance-25',
+      providerId: 'seedance-api',
       parameters: { generationMode: '全能参考' },
       referenceAssets: [],
     },

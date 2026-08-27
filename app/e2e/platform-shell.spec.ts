@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
 test('keeps creation-to-preview usable through platform navigation', async ({ page }) => {
   const browserErrors: string[] = []

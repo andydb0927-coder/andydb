@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
 test('creates a durable subject from an upload and reuses it in another project', async ({ page }) => {
   await page.goto('/projects/new')

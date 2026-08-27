@@ -154,6 +154,7 @@ export function loadImageElement(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.decoding = 'async'
+    image.crossOrigin = 'anonymous'
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error('无法读取图片像素，请确认素材仍可访问。'))
     image.src = url
@@ -292,6 +293,7 @@ export async function captureVideoFrame(
 
 export async function loadVideoElement(url: string) {
   const video = document.createElement('video')
+  video.crossOrigin = 'anonymous'
   video.preload = 'auto'
   video.muted = true
   video.playsInline = true

@@ -221,26 +221,14 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const referenceCount =
     data.incomingReferenceCount ?? data.videoReferences?.length ?? 0
   const providerRegistry = data.providerRegistry ?? defaultProviderRegistry
-  const providers = providerRegistry.matching([
+  const providers = providerRegistry.menuProvidersFor([
     'text-to-video',
     'image-to-video',
   ])
-  const configuredProviderIds = [
-    data.node.generationConfig?.providerId,
-    data.node.modelProviderId,
-    'mock-seedance-25',
-  ]
-  const selectedProvider =
-    configuredProviderIds.flatMap((providerId) =>
-      providerId
-        ? providers.filter(({ id }) => id === providerId)
-        : [],
-    )[0] ??
-    providers.find(
-      (provider) => provider.kind === 'demo' && isProviderEnabled(provider),
-    ) ??
-    providers[0] ??
-    defaultProviderRegistry.require('mock-seedance-25')
+  const selectedProvider = providerRegistry.defaultFor(
+    ['text-to-video', 'image-to-video'],
+    data.node.generationConfig?.providerId ?? data.node.modelProviderId,
+  ) ?? defaultProviderRegistry.require('seedance-api')
   const providerDefaults = providerDefaultParameters(selectedProvider)
   const savedParameters =
     data.node.generationConfig?.providerId === selectedProvider.id

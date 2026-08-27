@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './provider-fixture'
 
 import { runSelectedNodeManagementAction } from './canvas-node-actions'
+import { createFixtureCinematicProject } from './provider-fixture'
 
 async function createCinematicProject(page: import('@playwright/test').Page) {
-  await page.goto('/projects/new?recipe=cinematic-story')
-  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await createFixtureCinematicProject(page)
 }
 
 async function openPreview(page: import('@playwright/test').Page) {
@@ -889,7 +889,7 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
     'aria-pressed',
     'false',
   )
-  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('status').filter({ hasText: '请选择目标节点' })).toHaveCount(0)
 })
 
 test('drops a source connection on blank canvas to create one referenced downstream node', async ({
@@ -1075,7 +1075,7 @@ test('cancels active toolbar choices before native handle drags', async ({
   )
   await expect(characterVideo).toHaveCount(1)
   await expect(connect).toHaveAttribute('aria-pressed', 'false')
-  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('status').filter({ hasText: /^请选择(?:来源|目标)节点$/ })).toHaveCount(0)
   await expect(page.locator('.creative-node--connection-source')).toHaveCount(0)
   await page.getByRole('button', { name: '撤销' }).click()
   await expect(characterVideo).toBeHidden()
@@ -1093,7 +1093,7 @@ test('cancels active toolbar choices before native handle drags', async ({
   await expect(sceneVideo).toHaveCount(1)
   await expect(characterVideo).toBeHidden()
   await expect(connect).toHaveAttribute('aria-pressed', 'false')
-  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('status').filter({ hasText: /^请选择(?:来源|目标)节点$/ })).toHaveCount(0)
   await expect(page.locator('.creative-node--connection-source')).toHaveCount(0)
   await page.getByRole('button', { name: '撤销' }).click()
   await expect(sceneVideo).toBeHidden()

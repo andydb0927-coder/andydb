@@ -91,6 +91,7 @@ function createQueue(
 }
 
 const regenerateRequest: GenerationRequest = {
+  providerId: 'internal-demo',
   projectId: 'project-frost-river',
   nodeId: 'shot-1',
   operation: 'regenerate',
@@ -334,11 +335,11 @@ describe('generation queue lifecycle', () => {
     expect(statuses.at(-1)).toBe('succeeded')
     expect(statuses.filter((status) => status === 'running')).toHaveLength(5)
     expect(queue.get(job.id)).toMatchObject({
-      providerId: 'mock-mj-image',
-      providerName: 'Mock Studio',
-      modelName: 'Lib Image',
+      providerId: 'internal-demo',
+      providerName: 'Internal fixture',
+      modelName: '内部测试执行器',
       progress: 100,
-      creditsSpent: 18,
+      creditsSpent: 0,
     })
     expect(
       useProjectStore

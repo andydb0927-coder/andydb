@@ -105,10 +105,7 @@ function providerForDetails(
   capability: ModelCapability,
 ) {
   const registry = data.providerRegistry ?? defaultProviderRegistry
-  return (
-    registry.list().find(({ id }) => id === preferredId) ??
-    registry.matching([capability]).find(({ kind }) => kind === 'demo')
-  )
+  return registry.defaultFor([capability], preferredId)
 }
 
 function TextModelField({
@@ -190,7 +187,7 @@ function AudioModelField({
   onChange(provider: ModelProvider, variantId: string | undefined): void
 }) {
   const registry = data.providerRegistry ?? defaultProviderRegistry
-  const providers = registry.matching(['audio'])
+  const providers = registry.menuProvidersFor(['audio'])
   const value = provider.variants?.length ? variantId : provider.id
 
   return (
@@ -269,7 +266,7 @@ function TextDetails({
 }) {
   const initialProvider = providerForDetails(
     data,
-    details.modelProviderId ?? 'mock-text-llm',
+    details.modelProviderId ?? 'ark-text-llm',
     'text',
   )
   if (!initialProvider) return <p role="status">文本模型未配置</p>
@@ -306,6 +303,8 @@ function TextDetails({
   }
 
   const generate = () => {
+    if (!isProviderEnabled(provider)) { setStatus(provider.disabledReason ?? '模型未配置'); return }
+    if (provider.kind !== 'demo' && !data.onGenerateText) { setStatus('生成服务未连接'); return }
     const cleanPrompt = prompt.trim()
     if (!cleanPrompt) {
       setStatus('请输入提示词后再生成。')
@@ -414,8 +413,8 @@ function TextDetails({
           type="button"
           className="text-node-composer__generate"
           aria-label={`生成文本，预计成本 ${cost}`}
-          disabled={!prompt.trim()}
-          title={prompt.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入提示词后生成'}
+          disabled={!prompt.trim() || !isProviderEnabled(provider)}
+          title={!isProviderEnabled(provider) ? provider.disabledReason : prompt.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入提示词后生成'}
           onClick={generate}
         >
           <ArrowUp aria-hidden="true" />
@@ -423,6 +422,7 @@ function TextDetails({
       </footer>
       {!prompt.trim() ? <small className="text-node-composer__reason">请输入提示词后生成</small> : null}
       {generatedModel ? <p className="text-node-composer__source">来源模型：{generatedModel}</p> : null}
+      {!isProviderEnabled(provider) ? <p role="note">{provider.disabledReason}</p> : null}
       {status ? <p className="text-node-composer__status" role="status">{status}</p> : null}
       {details.content.trim() && !isTextCreationPlaceholder(details.content) ? (
         <div className="text-node-composer__result">
@@ -462,7 +462,7 @@ function ScriptDetails({
 }) {
   const initialProvider = providerForDetails(
     data,
-    details.modelProviderId ?? 'mock-text-llm',
+    details.modelProviderId ?? 'ark-text-llm',
     'text',
   )
   if (!initialProvider) return <p role="status">脚本模型未配置</p>
@@ -504,6 +504,8 @@ function ScriptDetails({
   }
 
   const generate = () => {
+    if (!isProviderEnabled(provider)) { setStatus(provider.disabledReason ?? '模型未配置'); return }
+    if (provider.kind !== 'demo' && !data.onGenerateText) { setStatus('生成服务未连接'); return }
     const cleanOutline = outline.trim()
     if (!cleanOutline) {
       setStatus('请输入剧情大纲后再生成。')
@@ -592,11 +594,12 @@ function ScriptDetails({
         type="button"
         className="specialized-node-details__primary"
         aria-label={`生成脚本，预计成本 ${cost}`}
-        disabled={!outline.trim()}
-        title={outline.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入剧情大纲后生成'}
+        disabled={!outline.trim() || !isProviderEnabled(provider)}
+        title={!isProviderEnabled(provider) ? provider.disabledReason : outline.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入剧情大纲后生成'}
         onClick={generate}
       >生成脚本</button>
       {!outline.trim() ? <small>请输入剧情大纲后生成</small> : null}
+      {!isProviderEnabled(provider) ? <p role="note">{provider.disabledReason}</p> : null}
       {generatedModel ? <p>来源模型：{generatedModel}</p> : null}
       {status ? <p role="status">{status}</p> : null}
       <ol className="specialized-node-details__chapters" aria-label="章节列表">
@@ -624,7 +627,7 @@ function AudioDetails({
 }) {
   const initialProvider = providerForDetails(
     data,
-    details.modelProviderId ?? 'mock-audio',
+    details.modelProviderId ?? 'ark-tts',
     'audio',
   )
   if (!initialProvider) return <p role="status">音频模型未配置</p>

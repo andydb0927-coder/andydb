@@ -59,17 +59,16 @@ describe('complete canvas Agent workspace', () => {
     expect(within(toolbar).getByRole('button', { name: '分享' })).toBeDisabled()
   })
 
-  test('reads independent image and video model choices from ProviderRegistry', () => {
+  test('reads independent real model choices and their configuration reasons from ProviderRegistry', () => {
     renderComposer()
-
     const imageModel = screen.getByRole('combobox', { name: '图片模型' })
     const videoModel = screen.getByRole('combobox', { name: '视频模型' })
-    expect(within(imageModel).getByRole('option', { name: /Lib Image/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /Kling O3/ })).toBeVisible()
-    expect(videoModel).toHaveValue('mock-seedance-25')
-    expect(within(videoModel).getByRole('option', { name: /Seedance 2\.5/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /Seedance 2\.0 VIP/ })).toBeVisible()
-    expect(within(videoModel).getByRole('option', { name: /火山方舟.*Seedance 2\.0/ })).toBeDisabled()
+    expect(imageModel).toHaveValue('seedream-5-pro-api')
+    expect(videoModel).toHaveValue('seedance-api')
+    expect(within(imageModel).getAllByRole('option')).toHaveLength(7)
+    expect(within(videoModel).getAllByRole('option')).toHaveLength(5)
+    expect(within(imageModel).getByRole('option', { name: /Seedream.*配置未完成/ })).toBeDisabled()
+    expect(within(videoModel).getByRole('option', { name: /Seedance.*配置未完成/ })).toBeDisabled()
     expect(screen.getByText('模型选择只保存到本机，不会发起第三方请求。')).toBeVisible()
   })
 
@@ -131,7 +130,6 @@ describe('complete canvas Agent workspace', () => {
     await user.click(screen.getByRole('checkbox', { name: '自动生成' }))
     await user.click(screen.getByRole('checkbox', { name: '浏览器通知' }))
     await user.click(screen.getByRole('checkbox', { name: '提示音' }))
-    await user.selectOptions(screen.getByRole('combobox', { name: '视频模型' }), 'mock-seedance-20-mini')
     first.unmount()
 
     const second = renderComposer()
@@ -140,7 +138,7 @@ describe('complete canvas Agent workspace', () => {
     expect(screen.getByRole('checkbox', { name: '自动生成' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: '浏览器通知' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: '提示音' })).toBeChecked()
-    expect(screen.getByRole('combobox', { name: '视频模型' })).toHaveValue('mock-seedance-20-mini')
+    expect(screen.getByRole('combobox', { name: '视频模型' })).toHaveValue('seedance-api')
 
     const input = screen.getByLabelText('告诉我下一步要做什么')
     await user.type(input, '删除这个节点')

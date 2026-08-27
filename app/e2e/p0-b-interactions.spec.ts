@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './provider-fixture'
 
 async function openRecipeProject(page: Page) {
   await page.goto('/projects/new?recipe=cinematic-story')
@@ -17,7 +17,7 @@ test('executes Slash parameters and creates a local AutoLink reference edge', as
   await prompt.pressSequentially('/竖屏')
   await expect(page.getByRole('dialog', { name: 'Slash 命令面板' })).toBeVisible()
   await prompt.press('Enter')
-  await expect(composer.getByRole('button', { name: '图片生成参数' })).toContainText('9:16')
+  await expect(composer.getByRole('button', { name: '图片生成参数' })).toContainText('1584×2816')
 
   await prompt.click()
   await prompt.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')

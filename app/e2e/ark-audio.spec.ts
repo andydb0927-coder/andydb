@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './provider-fixture'
 
 async function blankCanvasPoint(page: Page) {
   return page.locator('.react-flow__pane').evaluate((pane) => {

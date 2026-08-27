@@ -1,4 +1,4 @@
-import { expect, test, type Download, type Page } from '@playwright/test'
+import { expect, test, type Download, type Page } from './provider-fixture'
 
 async function createProject(page: Page) {
   await page.goto('/projects/new?recipe=cinematic-story')

@@ -800,13 +800,14 @@ export function ImageGenerationPanel({
     data.incomingReferenceCount ?? data.imageReferences?.length ?? 0
   const hasMedia = Boolean(data.asset || incomingReferenceCount)
   const providerRegistry = data.providerRegistry ?? defaultProviderRegistry
-  const providers = providerRegistry.matching([
+  const providers = providerRegistry.menuProvidersFor([
     'text-to-image',
     'image-to-image',
   ])
-  const selectedProvider =
-    providers.find(({ id }) => id === data.node.modelProviderId) ??
-    providers.find(({ kind }) => kind === 'demo')!
+  const selectedProvider = providerRegistry.defaultFor(
+    ['text-to-image', 'image-to-image'],
+    data.node.generationConfig?.providerId ?? data.node.modelProviderId,
+  ) ?? defaultProviderRegistry.require('seedream-5-pro-api')
   const primaryActions = imagePrimaryActionsFor(
     selectedProvider.id,
     Boolean(data.asset || data.imageResults?.length),

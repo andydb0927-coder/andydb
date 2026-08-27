@@ -1,6 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import {
+  loadImageElement,
   calculateGridCells,
   calculateStoryboardLayout,
   imageMirrorTransform,
@@ -10,6 +11,25 @@ import {
 } from './browser-media-processing'
 
 describe('browser media processing contracts', () => {
+  test('loads provider images in anonymous CORS mode before reading their pixels', async () => {
+    let image: HTMLImageElement | undefined
+    class ImageFixture {
+      crossOrigin: string | null = null
+      onload?: () => void
+      set src(_url: string) {
+        image = this as unknown as HTMLImageElement
+        queueMicrotask(() => this.onload?.())
+      }
+    }
+    vi.stubGlobal('Image', ImageFixture)
+    try {
+      await loadImageElement('https://media.fixture.invalid/image.png')
+      expect(image?.crossOrigin).toBe('anonymous')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   test('maps 2x2 and 3x3 image grids without dropping edge pixels', () => {
     expect(calculateGridCells(1001, 701, 2)).toEqual([
       { column: 0, row: 0, x: 0, y: 0, width: 500, height: 350 },
