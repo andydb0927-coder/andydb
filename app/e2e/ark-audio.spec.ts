@@ -120,9 +120,66 @@ test('selects Ark TTS, generates intercepted audio, and restores the persistent 
     'href',
     /^data:audio\/wav;base64,/,
   )
+  await expect(restored.getByRole('button', { name: '人声/背景音分离', exact: true })).toBeDisabled()
+  await expect(restored.getByRole('button', { name: '音频智能断句切分', exact: true })).toBeDisabled()
+  await expect(restored.getByRole('button', { name: '试听选区' })).toBeEnabled()
+  await expect(restored.getByRole('button', { name: '截取并导出 WAV' })).toBeEnabled()
+  expect(requests).toHaveLength(1)
   await page.getByRole('button', { name: '历史记录' }).click()
   await page.getByRole('tab', { name: /音频 1/ }).click()
   await expect(page.getByRole('article', { name: '历史任务 音频 01' })).toContainText(
     '豆包语音合成 2.0',
   )
+})
+
+test('keeps unsupported audio post tools disabled without requests or persistent changes', async ({ page }) => {
+  const networkAttempts: string[] = []
+  await page.route(/https:\/\/.*(?:fixture\.|volcengine|volces|bytedance)/, async (route) => {
+    networkAttempts.push(route.request().url())
+    await route.abort('blockedbyclient')
+  })
+  await page.goto('/projects/new')
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await addAudioNode(page)
+  const panel = page.getByRole('region', { name: '音频 01 音频参数' })
+  for (const [name, alternative] of [['人声/背景音分离', 'AI MediaKit'], ['音频智能断句切分', '豆包语音 ASR']]) {
+    const tool = panel.getByRole('button', { name, exact: true })
+    await expect(tool).toBeDisabled()
+    await expect(tool).toHaveAccessibleDescription(new RegExp(`当前 Ark 接口不支持.*${alternative}`))
+    await expect(tool).toHaveAccessibleDescription(/非官方报价.*不会扣费/)
+    await expect(tool.locator('.ai-placeholder-badge')).toHaveText('待接入')
+  }
+  const model = panel.getByRole('combobox', { name: '音频模型' })
+  for (const value of ['vocal-background-separation-api', 'audio-sentence-segmentation-api']) {
+    await expect(model.locator(`option[value="${value}"]`)).toHaveJSProperty('disabled', true)
+  }
+  await expect(model.locator('option[value="ark-tts"]')).toHaveJSProperty('disabled', false)
+  await expect(page.getByText('已保存', { exact: true })).toBeVisible()
+  const readPersistentCounts = () => page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const open = indexedDB.open('wireless-canvas-v1')
+      open.onsuccess = () => resolve(open.result)
+      open.onerror = () => reject(open.error)
+    })
+    try {
+      const tx = db.transaction(['projects', 'libraryAssets'], 'readonly')
+      const read = <T,>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      const [project, libraryCount] = await Promise.all([
+        read(tx.objectStore('projects').get(location.pathname.split('/').at(-1)!)),
+        read(tx.objectStore('libraryAssets').count()),
+      ])
+      return { jobs: project.jobs.length, assets: project.assets.length, libraryCount, versions: project.nodes.map((node: { versions: unknown[] }) => node.versions.length) }
+    } finally { db.close() }
+  })
+  const before = await readPersistentCounts()
+  expect(before.jobs).toBe(0)
+  await page.reload()
+  await page.getByRole('button', { name: '音频 01', exact: true }).click()
+  await expect(panel.getByRole('button', { name: '人声/背景音分离', exact: true })).toBeDisabled()
+  await expect(panel.getByRole('button', { name: '音频智能断句切分', exact: true })).toBeDisabled()
+  expect(await readPersistentCounts()).toEqual(before)
+  expect(networkAttempts).toEqual([])
 })

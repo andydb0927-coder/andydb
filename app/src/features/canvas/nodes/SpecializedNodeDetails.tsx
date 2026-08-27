@@ -8,7 +8,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 
 import type {
   AudioNodeDetails,
@@ -50,9 +50,10 @@ const panelTypeCopy: Record<CanvasNodeDetails['type'], string> = {
   'smart-edit': '智能剪辑',
 }
 
-const audioSentencePlaceholder = defaultProviderRegistry.require(
-  'audio-sentence-segmentation-api',
-)
+const audioPostPlaceholders = [
+  defaultProviderRegistry.require('vocal-background-separation-api'),
+  defaultProviderRegistry.require('audio-sentence-segmentation-api'),
+]
 const deepMotionPlaceholder = defaultProviderRegistry.require(
   'deep-motion-capture-api',
 )
@@ -625,6 +626,7 @@ function AudioDetails({
   details: AudioNodeDetails
   onUpdate(details: AudioNodeDetails): void
 }) {
+  const audioPostReasonId = useId()
   const initialProvider = providerForDetails(
     data,
     details.modelProviderId ?? 'ark-tts',
@@ -799,18 +801,16 @@ function AudioDetails({
         <span>目标时长（秒）</span>
         <input type="number" aria-label="目标时长" min="1" max="120" step="1" value={durationDraft} onChange={(event) => { const value = Math.min(120, Math.max(1, Number(event.currentTarget.value) || 1)); setDurationDraft(value); onUpdate({ ...details, durationSeconds: value }) }} />
       </label>
-      <div className="specialized-node-details__placeholder-action">
-        <button
-          type="button"
-          disabled
-          aria-describedby="audio-sentence-placeholder-reason"
-        >
-          音频智能断句切分<AiPlaceholderBadge compact />
-        </button>
-        <small id="audio-sentence-placeholder-reason">
-          {audioSentencePlaceholder.disabledReason}，预计成本 {audioSentencePlaceholder.pricing.amount} 积分。
-        </small>
-      </div>
+      {audioPostPlaceholders.map((tool) => (
+        <div key={tool.id} className="specialized-node-details__placeholder-action">
+          <button type="button" disabled aria-describedby={`${audioPostReasonId}-${tool.id}`}>
+            {tool.modelName}<AiPlaceholderBadge compact />
+          </button>
+          <small id={`${audioPostReasonId}-${tool.id}`}>
+            {tool.disabledReason} 占位估算 {tool.pricing.amount} 积分，非官方报价；未接入，不会扣费。
+          </small>
+        </div>
+      ))}
       <button
         type="button"
         className="specialized-node-details__primary"

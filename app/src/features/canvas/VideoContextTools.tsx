@@ -245,7 +245,7 @@ export function VideoMediaContextBar({
 
       {surface === 'audio-menu' ? (
         <div className="video-tool-menu video-tool-menu--with-reasons" role="menu" aria-label="音频分离">
-          <div><button type="button" role="menuitem" disabled aria-describedby="voice-separation-reason">人声分离<AiPlaceholderBadge compact /></button><span id="voice-separation-reason">{vocalSeparationPlaceholder.disabledReason}，预计成本 {vocalSeparationPlaceholder.pricing.amount} 积分。</span></div>
+          <div><button type="button" role="menuitem" disabled aria-describedby="voice-separation-reason">人声分离<AiPlaceholderBadge compact /></button><span id="voice-separation-reason">{vocalSeparationPlaceholder.disabledReason} 占位估算 {vocalSeparationPlaceholder.pricing.amount} 积分，非官方报价；未接入，不会扣费。</span></div>
           <div><button type="button" role="menuitem" onClick={() => { void onExtractAudio?.(); setSurface(undefined) }}>音视频分离</button><span>读取当前视频音轨并导出 WAV，同时保存到资产库。</span></div>
         </div>
       ) : null}

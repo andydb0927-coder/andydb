@@ -559,6 +559,12 @@ test('confirms derived video nodes, extracts audio, and keeps remaining unfinish
   expect(onCreateVideoToolNode).toHaveBeenCalledWith('视频高清')
 
   await user.click(screen.getByRole('button', { name: '音频分离' }))
+  const separation = screen.getByRole('menuitem', { name: '人声分离' })
+  expect(separation).toBeDisabled()
+  expect(separation).toHaveAccessibleDescription(expect.stringContaining('当前 Ark 接口不支持'))
+  expect(separation).toHaveAccessibleDescription(expect.stringContaining('AI MediaKit'))
+  await user.click(separation)
+  expect(onExtractVideoAudio).not.toHaveBeenCalled()
   await user.click(screen.getByRole('menuitem', { name: '音视频分离' }))
   expect(onExtractVideoAudio).toHaveBeenCalledOnce()
   for (const label of ['智能去字幕', '画面编辑']) {

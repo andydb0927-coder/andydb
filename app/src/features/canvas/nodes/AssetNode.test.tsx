@@ -681,6 +681,33 @@ test('switches between real audio providers with manifest defaults and estimated
   expect(within(panel).queryByText('本地演示')).not.toBeInTheDocument()
 })
 
+test.each(['mock', 'configured'] as const)('explains both unavailable Ark audio tools without side effects (%s)', async (mode) => {
+  const user = userEvent.setup()
+  const onGenerateAudio = vi.fn()
+  const onProcessAudio = vi.fn()
+  const { onUpdateNodeDetails } = renderSpecializedNode('音频 01', 'text', {
+    type: 'audio', durationSeconds: 12, voice: '温暖女声', speed: 1, volume: 80,
+  }, true, {
+    providerRegistry: mode === 'mock' ? createDefaultProviderRegistry() : createFixtureProviderRegistry(),
+    onGenerateAudio, onProcessAudio,
+  })
+  const panel = screen.getByRole('region', { name: '音频 01 音频参数' })
+  for (const [name, alternative] of [['人声/背景音分离', 'AI MediaKit'], ['音频智能断句切分', '豆包语音 ASR']]) {
+    const button = within(panel).getByRole('button', { name })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAccessibleDescription(expect.stringContaining('当前 Ark 接口不支持'))
+    expect(button).toHaveAccessibleDescription(expect.stringContaining(alternative))
+    const reason = document.getElementById(button.getAttribute('aria-describedby')!)!
+    expect(reason).toBeVisible()
+    expect(reason).toHaveTextContent('非官方报价')
+    expect(reason).toHaveTextContent('不会扣费')
+    await user.click(button)
+  }
+  expect(onUpdateNodeDetails).not.toHaveBeenCalled()
+  expect(onGenerateAudio).not.toHaveBeenCalled()
+  expect(onProcessAudio).not.toHaveBeenCalled()
+})
+
 test('groups live Ark audio models and dispatches TTS with persisted node parameters', async () => {
   const user = userEvent.setup()
   const onGenerateAudio = vi.fn()
