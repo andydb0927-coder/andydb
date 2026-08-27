@@ -43,3 +43,22 @@ export function parseDirectorCommand(
       return UNKNOWN_COMMAND
   }
 }
+
+export function describeCommand(command: DirectorCommand) {
+  switch (command.type) {
+    case 'regenerate':
+      return '重新生成所选节点，并保留当前版本。'
+    case 'extend-shot':
+      return '从所选节点扩展一个新的下游分镜。'
+    case 'generate-video':
+      return '从所选分镜生成一个新的下游视频节点。'
+    case 'add-to-timeline':
+      return '把所选片段加入时间线。'
+    case 'remove-node':
+      return '删除所选节点；相关下游内容会标记为来源已变更。'
+    case 'replace-node':
+      return '替换所选节点的内容，并保留旧版本。'
+    case 'unknown':
+      return command.suggestion
+  }
+}

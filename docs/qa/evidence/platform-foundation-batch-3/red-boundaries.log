@@ -1,0 +1,100 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/timeline-boundaries.test.ts src/app/route-boundaries.test.tsx src/features/director/DirectorInput.test.tsx src/features/canvas/canvas-page-selectors.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/app/route-boundaries.test.tsx (0 test)
+ ❯ src/features/timeline/timeline-boundaries.test.ts (0 test)
+ ❯ src/features/canvas/canvas-page-selectors.test.ts (0 test)
+ ❯ src/features/director/DirectorInput.test.tsx (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/route-boundaries.test.tsx [ src/app/route-boundaries.test.tsx ]
+Error: Failed to resolve import "./route-boundaries" from "src/app/route-boundaries.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/app/route-boundaries.test.tsx:5:62
+  3  |  import { createMemoryRouter, RouterProvider } from "react-router-dom";
+  4  |  import { expect, test } from "vitest";
+  5  |  import { RouteLoading, withSuspense, withRouteRecovery } from "./route-boundaries";
+     |                                                                 ^
+  6  |  import { RouteErrorPage } from "./RouteErrorPage";
+  7  |  var _jsxFileName = "/Users/andydb/.codex/worktrees/322b/无线画布/app/src/app/route-boundaries.test.tsx";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/features/director/DirectorInput.test.tsx [ src/features/director/DirectorInput.test.tsx ]
+Error: Failed to resolve import "./DirectorInput" from "src/features/director/DirectorInput.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/director/DirectorInput.test.tsx:6:30
+  4  |  import { MemoryRouter } from "react-router-dom";
+  5  |  import { expect, test, vi } from "vitest";
+  6  |  import { DirectorInput } from "./DirectorInput";
+     |                                 ^
+  7  |  import { DirectorComposer } from "./DirectorComposer";
+  8  |  import { describeCommand, parseDirectorCommand } from "./director-command";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/features/canvas/canvas-page-selectors.test.ts [ src/features/canvas/canvas-page-selectors.test.ts ]
+Error: Failed to resolve import "./canvas-page-selectors" from "src/features/canvas/canvas-page-selectors.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/canvas/canvas-page-selectors.test.ts:3:51
+  1  |  import { expect, test } from "vitest";
+  2  |  import { makeProjectFixture } from "../../test/fixtures";
+  3  |  import { downstreamConsumers, sameSelection } from "./canvas-page-selectors";
+     |                                                      ^
+  4  |  test("downstream traversal tolerates cycles, deduplicates and keeps project node order", () => {
+  5  |  	const project = makeProjectFixture();
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/features/timeline/timeline-boundaries.test.ts [ src/features/timeline/timeline-boundaries.test.ts ]
+Error: Failed to resolve import "./timeline-sources" from "src/features/timeline/timeline-boundaries.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/timeline/timeline-boundaries.test.ts:5:88
+  3  |  import { createTimelineProject } from "./timeline-project";
+  4  |  import * as compatibility from "./timeline-project";
+  5  |  import { canvasTimelineCandidate, libraryTimelineCandidate, resolveTimelineClips } from "./timeline-sources";
+     |                                                                                           ^
+  6  |  import { clipDuration } from "./timeline-math";
+  7  |  import { activeAt, allClips, candidateSources } from "./timeline-selectors";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  no tests
+   Start at  23:49:21
+   Duration  397ms (transform 36ms, setup 411ms, import 0ms, tests 0ms, environment 841ms)
+

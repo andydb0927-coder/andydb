@@ -1,0 +1,31 @@
+PASS body unchanged: clipDuration -> timeline/timeline-math.ts
+PASS body unchanged: activeAsset -> timeline/timeline-sources.ts
+PASS body unchanged: trackForAsset -> timeline/timeline-sources.ts
+PASS body unchanged: trackForCanvasNode -> timeline/timeline-sources.ts
+PASS body unchanged: canvasTimelineCandidate -> timeline/timeline-sources.ts
+PASS body unchanged: libraryTimelineCandidate -> timeline/timeline-sources.ts
+PASS body unchanged: describeAspectRatio -> timeline/timeline-sources.ts
+PASS body unchanged: resolveClip -> timeline/timeline-sources.ts
+PASS body unchanged: resolveTimelineClips -> timeline/timeline-sources.ts
+PASS body unchanged: candidateSources -> timeline/timeline-selectors.ts
+PASS body unchanged: activeAt -> timeline/timeline-selectors.ts
+PASS body unchanged: allClips -> timeline/timeline-selectors.ts
+PASS body unchanged: clipOrdinal -> timeline/TimelineClipCard.tsx
+PASS body unchanged: TimelineClipCard -> timeline/TimelineClipCard.tsx
+PASS body unchanged: serializeTimelineJson -> timeline/timeline-serialization.ts
+PASS body unchanged: toTimecode -> timeline/timeline-serialization.ts
+PASS body unchanged: reelName -> timeline/timeline-serialization.ts
+PASS body unchanged: serializeTimelineEdl -> timeline/timeline-serialization.ts
+PASS body unchanged: safeDownloadFilename -> ../shared/browser-download.ts
+PASS body unchanged: browserDownloadEnvironment -> ../shared/browser-download.ts
+PASS body unchanged: downloadBlob -> ../shared/browser-download.ts
+PASS body unchanged: sameSelection -> canvas/canvas-page-selectors.ts
+PASS body unchanged: downstreamConsumers -> canvas/canvas-page-selectors.ts
+PASS body unchanged: describeCommand -> director/director-command.ts
+PASS 24 moved function bodies; 13 timeline type declarations; 15 retained timeline operation bodies. Baseline d58675bc84330ea44c301070368dc81fe9a1d841.
+PASS owner function body unchanged: CanvasPage
+PASS owner function body unchanged: TimelineEditor
+PASS owner function body unchanged: createPreviewRecording
+PASS owner function body unchanged: supportsPreviewRecording
+PASS owner function body unchanged: browserPreviewRecorderFactory
+PASS PreviewPage state/effect statements unchanged

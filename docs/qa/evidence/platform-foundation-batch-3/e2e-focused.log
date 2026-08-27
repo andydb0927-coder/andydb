@@ -1,0 +1,79 @@
+[WebServer] (node:6563) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:6564) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/platform-foundation-batch3.spec.ts:13:1 › timeline extraction preserves edited playback, JSON/EDL exports and saved state (2.6s)
+(node:6573) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › e2e/platform-foundation-batch3.spec.ts:73:1 › central route recovery preserves deep pages and project data after a 404 (9.6s)
+(node:6597) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [chromium] › e2e/platform-foundation-batch3.spec.ts:98:1 › controlled director input retains proposal gating, dependency confirmation and focus return (2.2s)
+
+
+  1) [chromium] › e2e/platform-foundation-batch3.spec.ts:13:1 › timeline extraction preserves edited playback, JSON/EDL exports and saved state 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "未命名项目 · 2026-08-27 23:56剪辑.json"
+    Received: "未命名项目 · 2026-08-27 23-56剪辑.json"
+
+      33 |   expect(exported).toMatchObject({ format: 'wireless-canvas-timeline', version: 1 })
+      34 |   expect(Number.isFinite(Date.parse(exported.exportedAt))).toBe(true)
+    > 35 |   expect(jsonDownload.suggestedFilename()).toBe(`${exported.project.title}.json`)
+         |                                            ^
+      36 |   const clip = exported.project.tracks.flatMap(track => track.clips)[0]
+      37 |   expect(clip).toMatchObject({ playbackRate: 2, layout: { mode: 'picture-in-picture', x: 0.2 } })
+      38 |   await expect(page.getByRole('status').filter({ hasText: 'JSON 已开始下载' })).toBeVisible()
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/platform-foundation-batch3.spec.ts:35:44
+
+    Error Context: test-results/platform-foundation-batch3-20157-EDL-exports-and-saved-state-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/platform-foundation-batch3-20157-EDL-exports-and-saved-state-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/platform-foundation-batch3-20157-EDL-exports-and-saved-state-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/platform-foundation-batch3.spec.ts:73:1 › central route recovery preserves deep pages and project data after a 404 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('navigation', { name: '平台导航' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('navigation', { name: '平台导航' })
+
+
+      88 |   await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible()
+      89 |   await page.getByRole('link', { name: '返回首页', exact: true }).click()
+    > 90 |   await expect(page.getByRole('navigation', { name: '平台导航' })).toBeVisible()
+         |                                                                ^
+      91 |   await page.goto(projectUrl)
+      92 |   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+      93 |   await expect(page.locator('.react-flow__node')).toHaveCount(nodeCount)
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/platform-foundation-batch3.spec.ts:90:64
+
+    Error Context: test-results/platform-foundation-batch3-5afbf-nd-project-data-after-a-404-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/platform-foundation-batch3-5afbf-nd-project-data-after-a-404-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/platform-foundation-batch3-5afbf-nd-project-data-after-a-404-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › e2e/platform-foundation-batch3.spec.ts:13:1 › timeline extraction preserves edited playback, JSON/EDL exports and saved state 
+    [chromium] › e2e/platform-foundation-batch3.spec.ts:73:1 › central route recovery preserves deep pages and project data after a 404 
+  1 passed (17.0s)

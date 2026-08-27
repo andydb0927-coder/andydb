@@ -1,9 +1,10 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 
 import { PlatformShell } from '../features/platform/PlatformShell'
 import { quickCreateProjectLoader } from '../features/launcher/quick-create-project'
-import { RouteErrorPage, RouteNotFoundPage } from './RouteErrorPage'
+import { RouteNotFoundPage } from './RouteErrorPage'
+import { RouteLoading, withSuspense, withRouteRecovery } from './route-boundaries'
 import '../styles/global.css'
 import '../styles/deployed-ui-polish.css'
 import '../styles/liblib-web-design.css'
@@ -55,22 +56,9 @@ const HelpCenterPage = lazy(() =>
   import('../features/help/HelpCenterPage').then((m) => ({ default: m.HelpCenterPage })),
 )
 
-function RouteLoading() {
-  return (
-    <div className="route-loading" role="status">
-      <p>正在加载页面…</p>
-    </div>
-  )
-}
-
-function withSuspense(node: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{node}</Suspense>
-}
-
-export const routes: RouteObject[] = [
+export const routes: RouteObject[] = withRouteRecovery([
   {
     element: <PlatformShell />,
-    errorElement: <RouteErrorPage />,
     hydrateFallbackElement: <RouteLoading />,
     children: [
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
@@ -88,17 +76,16 @@ export const routes: RouteObject[] = [
   },
   {
     element: <PlatformShell mode="workspace" />,
-    errorElement: <RouteErrorPage />,
     children: [
       { path: '/project/:projectId', element: withSuspense(<CanvasPage />) },
       { path: '/project/:projectId/preview', element: withSuspense(<PreviewPage />) },
     ],
   },
-  { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />), errorElement: <RouteErrorPage /> },
-  { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />), errorElement: <RouteErrorPage /> },
-  { path: '/view/:workId', element: withSuspense(<PublishedWorkViewPage />), errorElement: <RouteErrorPage /> },
+  { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />) },
+  { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />) },
+  { path: '/view/:workId', element: withSuspense(<PublishedWorkViewPage />) },
   { path: '*', element: <RouteNotFoundPage /> },
-]
+])
 
 export function createAppRouter(): ReturnType<typeof createBrowserRouter> {
   return createBrowserRouter(routes, {

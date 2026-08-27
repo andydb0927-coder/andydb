@@ -17,8 +17,10 @@ import {
 } from '../generation/model-provider-registry'
 import {
   parseDirectorCommand,
+  describeCommand,
   type DirectorCommand,
 } from './director-command'
+import { DirectorInput } from './DirectorInput'
 
 type AgentUtility = 'history' | 'share' | 'settings' | 'cli'
 type SkillTab = '创建' | '全部' | '通用' | '收藏' | '我的'
@@ -137,25 +139,6 @@ function loadPreferences(
     }
   } catch {
     return fallback
-  }
-}
-
-function describeCommand(command: DirectorCommand) {
-  switch (command.type) {
-    case 'regenerate':
-      return '重新生成所选节点，并保留当前版本。'
-    case 'extend-shot':
-      return '从所选节点扩展一个新的下游分镜。'
-    case 'generate-video':
-      return '从所选分镜生成一个新的下游视频节点。'
-    case 'add-to-timeline':
-      return '把所选片段加入时间线。'
-    case 'remove-node':
-      return '删除所选节点；相关下游内容会标记为来源已变更。'
-    case 'replace-node':
-      return '替换所选节点的内容，并保留旧版本。'
-    case 'unknown':
-      return command.suggestion
   }
 }
 
@@ -422,16 +405,10 @@ export function DirectorComposer({
           : '自动模式：只自动编排本地草稿；删除和生成仍需确认。'}
       </p>
 
-      <form onSubmit={submit}>
-        <label className="director-composer__input-label" htmlFor="director-command-input">告诉我下一步要做什么</label>
-        <textarea ref={inputRef} id="director-command-input" value={input} rows={4} placeholder="例如：@节点 扩展这个镜头" onChange={(event) => { setInput(event.target.value); setProposal(undefined) }} />
-        <div className="agent-composer-actions">
-          <button type="button" aria-expanded={referenceMenuOpen} onClick={() => setReferenceMenuOpen((open) => !open)}>添加 @ 引用</button>
-          <label className="agent-upload-control">上传附件<input type="file" multiple onChange={addFiles} /></label>
-          <button type="button" aria-expanded={assetLibraryOpen} onClick={() => setAssetLibraryOpen((open) => !open)}>从资产库添加</button>
-          <button type="submit" disabled={!input.trim()}>提交给 AI 导演</button>
-        </div>
-      </form>
+      <DirectorInput input={input} inputRef={inputRef} referenceMenuOpen={referenceMenuOpen} assetLibraryOpen={assetLibraryOpen}
+        onChange={(value) => { setInput(value); setProposal(undefined) }} onSubmit={submit} onFiles={addFiles}
+        onToggleReference={() => setReferenceMenuOpen((open) => !open)}
+        onToggleAssets={() => setAssetLibraryOpen((open) => !open)} />
 
       {referenceMenuOpen ? (
         <div className="agent-popover-list" role="menu" aria-label="可引用的画布上下文">

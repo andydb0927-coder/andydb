@@ -1,0 +1,12 @@
+[WebServer] (node:6707) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:6710) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › e2e/platform-foundation-batch3.spec.ts:13:1 › timeline extraction preserves edited playback, JSON/EDL exports and saved state (2.5s)
+  ✓  2 [chromium] › e2e/platform-foundation-batch3.spec.ts:73:1 › central route recovery preserves deep pages and project data after a 404 (6.2s)
+  ✓  3 [chromium] › e2e/platform-foundation-batch3.spec.ts:98:1 › controlled director input retains proposal gating, dependency confirmation and focus return (2.2s)
+
+  3 passed (11.7s)

@@ -2,12 +2,9 @@ import { useState } from 'react'
 
 import type { MembershipPlanId } from '../membership/membership-model'
 import type { TimelineProject } from './timeline-project'
-import {
-  downloadBlob,
-  serializeTimelineEdl,
-  serializeTimelineJson,
-  type PreviewRecordingSession,
-} from './timeline-export'
+import { downloadBlob } from '../../shared/browser-download'
+import { buildTimelineDownload } from './timeline-serialization'
+import type { PreviewRecordingSession } from './timeline-export'
 
 interface TimelineExportPanelProps {
   timeline: TimelineProject
@@ -27,17 +24,9 @@ export function TimelineExportPanel({
   const [feedback, setFeedback] = useState<string>()
 
   const download = (kind: 'json' | 'edl') => {
-    const content =
-      kind === 'json'
-        ? serializeTimelineJson(timeline)
-        : serializeTimelineEdl(timeline)
-    onDownload(
-      new Blob([content], {
-        type: kind === 'json' ? 'application/json' : 'text/plain',
-      }),
-      `${timeline.title}.${kind}`,
-    )
-    setFeedback(kind === 'json' ? 'JSON 已开始下载' : 'EDL 已开始下载')
+    const artifact = buildTimelineDownload(timeline, kind)
+    onDownload(new Blob([artifact.content], { type: artifact.mimeType }), artifact.filename)
+    setFeedback(artifact.feedback)
   }
 
   const toggleRecording = () => {

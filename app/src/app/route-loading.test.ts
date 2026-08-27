@@ -2,6 +2,9 @@
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { createElement } from 'react'
+import { render, screen } from '@testing-library/react'
+import { RouteLoading } from './route-boundaries'
 
 import { expect, test } from 'vitest'
 
@@ -18,7 +21,7 @@ test('styles the route loading status as a centered dark-theme surface', () => {
 })
 
 test('exposes the route loading message as an accessible status', () => {
-  const source = readFileSync(resolve(process.cwd(), 'src/app/router.tsx'), 'utf8')
-
-  expect(source).toContain('className="route-loading" role="status"')
+  render(createElement(RouteLoading))
+  expect(screen.getByRole('status')).toHaveClass('route-loading')
+  expect(screen.getByRole('status')).toHaveTextContent('正在加载页面…')
 })

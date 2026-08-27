@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { downloadBlob } from '../../shared/browser-download'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
@@ -22,22 +23,18 @@ import { useProjectStore } from '../project/project-store'
 import { PreviewPlayer } from './PreviewPlayer'
 import { TimelineEditor } from './TimelineEditor'
 import { TimelineExportPanel } from './TimelineExportPanel'
+import { activeAt, allClips, candidateSources } from './timeline-selectors'
 import {
   browserPreviewRecorderFactory,
   createPreviewRecording,
-  downloadBlob,
   supportsPreviewRecording,
   type PreviewRecorderFactory,
 } from './timeline-export'
 import {
-  canvasTimelineCandidate,
   createTimelineProject,
-  libraryTimelineCandidate,
   mergeLegacyTimeline,
   resolveTimelineClips,
-  type ResolvedTimelineClip,
   type TimelineProject,
-  type TimelineSourceCandidate,
 } from './timeline-project'
 import {
   TimelineRepository,
@@ -77,37 +74,6 @@ export interface PreviewPageProps {
   recorderFactory?: PreviewRecorderFactory
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
   membershipStore?: Pick<MembershipRepository, 'get'>
-}
-
-function candidateSources(
-  project: NonNullable<ReturnType<typeof useProjectStore.getState>['activeProject']>,
-  library: LibraryAssetRecord[],
-): TimelineSourceCandidate[] {
-  const candidates = [
-    ...project.nodes.flatMap((node) => {
-      const candidate = canvasTimelineCandidate(project, node.id)
-      return candidate ? [candidate] : []
-    }),
-    ...library.map(libraryTimelineCandidate),
-  ]
-  return [...new Map(candidates.map((candidate) => [candidate.id, candidate])).values()]
-}
-
-function activeAt(
-  visual: ResolvedTimelineClip[],
-  selectedClipId: string | undefined,
-  currentTime: number,
-) {
-  return (
-    visual.find(({ clip }) => clip.id === selectedClipId) ??
-    visual.find(
-      (item, index) =>
-        currentTime >= item.startSeconds &&
-        (currentTime < item.endSeconds ||
-          (index === visual.length - 1 && currentTime === item.endSeconds)),
-    ) ??
-    visual[0]
-  )
 }
 
 export function PreviewPage({
@@ -364,7 +330,7 @@ export function PreviewPage({
               projectId={project.id}
               targetType="clip"
               targetId={selectedClipId}
-              targetLabel={timeline.tracks.flatMap(({ clips }) => clips).find(({ id }) => id === selectedClipId)?.name ?? '当前片段'}
+              targetLabel={allClips(timeline).find(({ id }) => id === selectedClipId)?.name ?? '当前片段'}
               repository={collaborationRepository}
             />
           ) : null}

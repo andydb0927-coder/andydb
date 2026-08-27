@@ -4,7 +4,7 @@ import type {
   DependencyEdge,
   Project,
 } from '../project/model'
-import { safeDownloadFilename } from '../timeline/timeline-export'
+import { safeDownloadFilename } from '../../shared/browser-download'
 
 export type CanvasExportScope = 'viewport' | 'all'
 export type CanvasExportFormat = 'png' | 'svg'
