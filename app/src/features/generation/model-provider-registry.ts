@@ -20,6 +20,7 @@ import { createArkImageEditProvider } from './ark-image-edit-provider'
 import { createArkImageAnalysisProviders, isImageAnalysisToolId } from './ark-image-analysis-provider'
 import { createArkFrameAnalysisProvider, frameAnalysisId } from './ark-frame-analysis-provider'
 import { createArkSubjectExtractionProvider } from './ark-subject-extraction-provider'
+import { createArkScriptProviders } from './ark-script-provider'
 import { createArkVideoContinueProvider } from './ark-video-continue-provider'
 import {
   createArkTextLlmProvider,
@@ -683,6 +684,7 @@ export function createDefaultProviderRegistry(
     ...createArkImageAnalysisProviders(options.seedream),
     createArkFrameAnalysisProvider(options.arkText),
     createArkSubjectExtractionProvider(options.arkText),
+    ...createArkScriptProviders(options.arkText),
     createSeedanceVideoProvider(options.seedanceVideo),
     createArkVideoContinueProvider(options.seedanceVideo),
     createArkTextLlmProvider(options.arkText),

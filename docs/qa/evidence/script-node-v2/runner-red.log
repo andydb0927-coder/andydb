@@ -1,0 +1,37 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/script/script-workflow-runner.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/script/script-workflow-runner.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/script/script-workflow-runner.test.ts [ src/features/script/script-workflow-runner.test.ts ]
+Error: Failed to resolve import "./script-workflow-runner" from "src/features/script/script-workflow-runner.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/script/script-workflow-runner.test.ts:7:37
+  5  |  import { SubjectRepository } from "../subjects/subject-repository";
+  6  |  import { createDefaultProviderRegistry } from "../generation/model-provider-registry";
+  7  |  import { ScriptWorkflowRunner } from "./script-workflow-runner";
+     |                                        ^
+  8  |  import { parseScriptBreakdown, parseScriptShots } from "./script-workflow";
+  9  |  import { scriptBreakdownFixture, scriptChatFixture, scriptShotsFixture, scriptV2ConfigFixture } from "./fixtures/scri...
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  01:17:12
+   Duration  383ms (transform 10ms, setup 97ms, import 0ms, tests 0ms, environment 208ms)
+

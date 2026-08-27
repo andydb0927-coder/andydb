@@ -228,6 +228,32 @@ export interface ScriptChapter {
   id: string
   title: string
   summary: string
+  scenes?: ScriptScene[]
+}
+
+export interface ScriptScene { id: string; title: string; summary: string }
+export interface ScriptCharacter {
+  id: string
+  name: string
+  description: string
+  referenceAssetId?: string
+  subjectId?: string
+}
+export interface ScriptProp { id: string; name: string; description: string }
+export interface ScriptShot {
+  id: string
+  sceneId: string
+  title: string
+  shotSize: string
+  cameraAngle: string
+  cameraMovement: string
+  prompt: string
+  characterIds: string[]
+  assetId?: string
+  generationJobId?: string
+  status?: TaskStatus
+  error?: string
+  canvasNodeId?: string
 }
 
 export interface ScriptNodeDetails {
@@ -238,6 +264,9 @@ export interface ScriptNodeDetails {
   outline?: string
   sceneCount?: number
   generatedByModel?: string
+  characters?: ScriptCharacter[]
+  props?: ScriptProp[]
+  shots?: ScriptShot[]
 }
 
 export interface AudioNodeDetails {

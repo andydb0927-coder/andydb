@@ -1,0 +1,46 @@
+.script-v2-overlay {
+  position: fixed; inset: 0; z-index: 160; display: grid; place-items: center;
+  padding: var(--space-4); background: var(--surface-backdrop);
+}
+.script-v2-overlay--confirm { z-index: 170; }
+.script-v2-workspace, .script-v2-confirm {
+  width: min(960px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  background: var(--surface-panel-strong); color: var(--text-primary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-panel);
+  padding: var(--space-5); box-sizing: border-box; box-shadow: var(--shadow-overlay);
+}
+.script-v2-confirm { width: min(520px, 100%); }
+.script-v2-workspace > header, .script-v2-shot header, .script-v2-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.script-v2-workspace h2, .script-v2-workspace h3 { margin: 0 0 12px; }
+.script-v2-workspace p, .script-v2-shot p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.script-v2-workspace section { margin-top: 24px; }
+.script-v2-workspace label, .script-v2-shot label { display: grid; gap: 6px; margin-bottom: 10px; }
+.script-v2-workspace input:not([type='checkbox']), .script-v2-workspace select, .script-v2-workspace textarea,
+.script-v2-shot input:not([type='checkbox']), .script-v2-shot textarea {
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px;
+  color: inherit; background: var(--surface-node); border: 1px solid var(--border-default); border-radius: var(--radius-button);
+}
+.script-v2-workspace textarea, .script-v2-shot textarea { resize: vertical; }
+.script-v2-workspace button, .script-v2-confirm button, .script-v2-shot button {
+  padding: var(--space-2) var(--space-3); color: inherit; background: var(--surface-control); border: 1px solid var(--border-default); border-radius: var(--radius-button); cursor: pointer;
+}
+.script-v2-workspace button:hover:not(:disabled), .script-v2-confirm button:hover, .script-v2-shot button:hover:not(:disabled) { background: var(--surface-control-hover); }
+.script-v2-workspace button:disabled, .script-v2-shot button:disabled { opacity: .5; cursor: not-allowed; }
+.script-v2-workspace :focus-visible, .script-v2-confirm :focus-visible, .script-v2-shot :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.script-v2-workspace fieldset, .script-v2-shot fieldset { border: 0; padding: 0; min-width: 0; }
+.script-v2-range { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.script-v2-shots__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.script-v2-shot { min-width: 0; padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-card); }
+.script-v2-shot img, .script-v2-shot__empty { width: 100%; height: 180px; object-fit: contain; background: var(--surface-node); margin: 10px 0; }
+.script-v2-shot__empty { display: grid; place-items: center; }
+.script-v2-shot summary { cursor: pointer; padding: 8px 0; }
+.script-v2-shot input[type='checkbox'] { margin-right: 6px; }
+.script-v2-shot fieldset fieldset label { display: inline-flex; align-items: center; margin-right: 8px; }
+.script-v2-workspace [aria-label='剧本角色'] article { padding: var(--space-3) 0; border-bottom: 1px solid var(--border-default); }
+@media (max-width: 760px) {
+  .script-v2-workspace, .script-v2-confirm { padding: 16px; }
+  .script-v2-shots__grid { grid-template-columns: minmax(0, 1fr); }
+  .script-v2-range { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

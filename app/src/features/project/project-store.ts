@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { scriptDetailsAfterJob, scriptDetailsAfterResult, scriptJobAction } from '../script/script-workflow'
 
 import {
   appendNodeVersion,
@@ -1611,6 +1612,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                     ? { ...version, generationJobId: job.id }
                     : version,
                 ),
+                ...(scriptJobAction(job) ? { details: scriptDetailsAfterJob(node, job) } : {}),
               }
             : node,
         ),
@@ -1720,6 +1722,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
 
       const version: NodeVersion = result.version
+      const scriptDetails = scriptDetailsAfterResult(source, job, result)
       const assets = [...project.assets, ...generatedAssets]
       let next: Project
 
@@ -1738,16 +1741,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   versions: [...node.versions, version],
                   activeVersionId: version.id,
                   sourceChanged: false,
-                  ...(imageResults.length
+                  ...(imageResults.length && !scriptDetails
                     ? {
                         imageResults,
                         activeResultId: imageResults[0].id,
                       }
                     : {}),
-                  ...(job.generationConfig
+                  ...(job.generationConfig && !scriptDetails
                     ? { generationConfig: cloneGenerationConfig(job) }
                     : {}),
-                  ...(version.textContent
+                  ...(version.textContent && !scriptDetails
                     ? { details: textGenerationDetails(source, job, version) }
                     : {}),
                   ...(result.asset.kind === 'audio' && source.details?.type === 'audio'
@@ -1761,7 +1764,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                         },
                       }
                     : {}),
-                  ...(job.providerId && job.providerId !== 'libtv-bridge'
+                  ...(scriptDetails ? { details: scriptDetails } : {}),
+                  ...(job.providerId && job.providerId !== 'libtv-bridge' && !scriptDetails
                     ? { modelProviderId: job.providerId }
                     : {}),
                 }

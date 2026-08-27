@@ -1,5 +1,6 @@
 import type { Asset, Project } from '../project/model'
 import { projectReferencesAsset } from './domain/asset-library-policy'
+import { detachScriptAsset } from '../script/script-project-references'
 
 export type LibraryAssetSource = 'upload' | 'generated' | 'project' | 'built-in'
 export type LibraryAssetFolderId = 'project' | 'generated' | 'inspiration'
@@ -103,6 +104,7 @@ export function detachLibraryAssetFromProject(
 
       return {
         ...node,
+        details: detachScriptAsset(node.details, assetId),
         card:
           node.card?.imageAssetId === assetId
             ? { ...node.card, imageAssetId: undefined }

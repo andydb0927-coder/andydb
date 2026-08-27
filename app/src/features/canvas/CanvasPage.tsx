@@ -3,6 +3,8 @@ import { CanvasGenerationDialogs, type AnalysisSession, type ImageEditSession, t
 import { CanvasProjectDialogs } from './CanvasProjectDialogs'
 import { CanvasNodeEditors, type PendingPlacement, type EditingCard } from './CanvasNodeEditors'
 import { CanvasWorkspacePanels } from './CanvasWorkspacePanels'
+import { ScriptWorkspace } from '../script/ScriptWorkspace'
+import { sendScriptShotToCanvas } from '../script/script-canvas-actions'
 import { CanvasWorkflowTools, CanvasWorkflowBatchStatus, type WorkflowBatchView } from './CanvasWorkflowTools'
 import { buildGenerationRequest, generationEligibilityFailure, isWorkflowGeneratableNode, forceDemoProvider } from './canvas-generation-request'
 import { buildMediaAssetCreation, activeNodeAsset, processedMediaRecord } from './canvas-media-creation'
@@ -410,6 +412,8 @@ export function CanvasPage({
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
+  const [scriptWorkspaceNodeId, setScriptWorkspaceNodeId] = useState<string>()
+  useEffect(() => { setScriptWorkspaceNodeId(undefined) }, [projectId, project?.activeCanvasId])
   const workspaceAssetRepository = useMemo(
     () => ({
       list: () => libraryRepository.list(),
@@ -2506,6 +2510,7 @@ export function CanvasPage({
           onUpdateNodeDetails: (details) => {
             updateNode(node.id, { details })
           },
+          onOpenScriptWorkspace: () => setScriptWorkspaceNodeId(node.id),
           onExportDirectorViews: (blob) => exportDirectorViews(node.id, blob),
           onGenerateText: (details, prompt) => {
             const selectedProvider = providerRegistry.list().find(
@@ -5753,6 +5758,17 @@ export function CanvasPage({
           collaborationRepository={collaborationRepository}
           storyboard={{ onOpenNode: openWorkspaceNode, onReorderNodes: reorderStoryboardNodes,
             onUpdateDialogue: (nodeId, dialogue) => updateNode(nodeId, { storyboardDialogue: dialogue }),
+            onOpenScript: setScriptWorkspaceNodeId,
+            onEditScriptShot: (nodeId, shotId, changes) => {
+              const current = useProjectStore.getState().activeProject
+              const source = current?.nodes.find(node => node.id === nodeId)
+              if (!current || current.id !== projectId || source?.details?.type !== 'script' || current.jobs.some(job => job.nodeId === nodeId && (job.status === 'queued' || job.status === 'running'))) return
+              updateNode(nodeId, { details: { ...source.details, shots: source.details.shots?.map(shot => shot.id === shotId ? { ...shot, ...changes } : shot) } })
+            },
+            onSendScriptShot: (nodeId, shotId) => {
+              try { openWorkspaceNode(sendScriptShotToCanvas(projectId!, nodeId, shotId)) }
+              catch (error) { setGenerationFeedback(error instanceof Error ? error.message : '分镜发送失败。') }
+            },
           }}
           resources={{ assetRepository: workspaceAssetRepository, subjectRepository, generationPreferenceStore,
             historyInsertionMode: Boolean(historyPlacement), onClose: closeWorkspacePanel,
@@ -5813,6 +5829,9 @@ export function CanvasPage({
         remote={pendingRemoteGeneration ? { request: pendingRemoteGeneration.request, selection: pendingRemoteGeneration.selection,
           returnFocusTo: pendingRemoteGeneration.returnFocusTo, onCancel: () => setPendingRemoteGeneration(undefined), onConfirm: confirmRemoteGeneration,
         } : undefined} />
+      {project && scriptWorkspaceNodeId ? <ScriptWorkspace key={`${project.id}:${project.activeCanvasId}:${scriptWorkspaceNodeId}`}
+        project={project} nodeId={scriptWorkspaceNodeId} registry={providerRegistry} repository={repository} subjects={subjectRepository}
+        onClose={() => setScriptWorkspaceNodeId(undefined)} onSent={nodeId => { setScriptWorkspaceNodeId(undefined); openWorkspaceNode(nodeId) }} /> : null}
     </main>
   )
 }

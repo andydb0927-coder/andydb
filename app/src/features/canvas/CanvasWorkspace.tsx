@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ScriptStoryboardCards, type ScriptShotChanges } from '../script/ScriptStoryboardCards'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import { defaultProviderRegistry, type ProviderRegistry } from '../generation/model-provider-registry'
@@ -96,6 +97,9 @@ interface CanvasStoryboardViewProps {
   onOpenNode(nodeId: string): void
   onReorderNodes(sourceNodeId: string, targetNodeId: string): void
   onUpdateDialogue(nodeId: string, dialogue: string): void
+  onOpenScript?(nodeId: string): void
+  onEditScriptShot?(nodeId: string, shotId: string, changes: ScriptShotChanges): void
+  onSendScriptShot?(nodeId: string, shotId: string): void
 }
 
 type StoryboardSectionId = 'text' | 'image' | 'video'
@@ -134,6 +138,9 @@ export function CanvasStoryboardView({
   onOpenNode,
   onReorderNodes,
   onUpdateDialogue,
+  onOpenScript,
+  onEditScriptShot,
+  onSendScriptShot,
 }: CanvasStoryboardViewProps) {
   const storageKey = `wireless-canvas:storyboard-sections:${project.id}`
   const [expanded, setExpanded] = useState<StoryboardSectionState>(() =>
@@ -232,6 +239,12 @@ export function CanvasStoryboardView({
         <p>按媒介汇总当前画布内容。选择卡片可回到工作流定位来源节点。</p>
       </div>
       <div className="canvas-storyboard__sections">
+        {project.nodes.filter(node => node.details?.type === 'script' && node.details.shots?.length).map(node => node.details?.type === 'script' ? <section key={node.id} className="canvas-storyboard__section" aria-label={`${node.title}分镜故事板`}>
+          <h3>{node.title} · 分镜故事板</h3>
+          <button type="button" onClick={() => onOpenScript?.(node.id)}>打开脚本工作台</button>
+          <ScriptStoryboardCards details={node.details} assets={project.assets} busy={project.jobs.some(job => job.nodeId === node.id && (job.status === 'queued' || job.status === 'running'))}
+            onEdit={(shotId, changes) => onEditScriptShot?.(node.id, shotId, changes)} onSend={shotId => onSendScriptShot?.(node.id, shotId)} />
+        </section> : null)}
         {groups.map((group) => (
           <section key={group.id} className="canvas-storyboard__section" aria-label={`${group.title}区`}>
             <div className="canvas-storyboard__section-heading">

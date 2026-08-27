@@ -1,5 +1,6 @@
 import type { CanvasNode, Project } from '../../project/model'
 import type { LibraryAssetRecord } from '../library-model'
+import { scriptAssetReferences } from '../../script/script-project-references'
 
 export type DeleteLibraryAssetResult =
   | { status: 'deleted'; projectIds?: string[]; nodeTitles?: string[] }
@@ -20,7 +21,8 @@ export function requireLibraryAsset(record: LibraryAssetRecord | undefined): Lib
 function nodeReferencesAsset(node: CanvasNode, assetId: string) {
   return node.card?.imageAssetId === assetId ||
     node.versions.some((version) => version.assetId === assetId) ||
-    Boolean(node.imageResults?.some((result) => result.assetId === assetId))
+    Boolean(node.imageResults?.some((result) => result.assetId === assetId)) ||
+    scriptAssetReferences(node.details).includes(assetId)
 }
 
 /** Same reference boundary as the existing repository; no snapshot or schema changes. */

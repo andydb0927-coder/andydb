@@ -371,6 +371,10 @@ export function parseWorkflowImport(
       continue
     }
     const node = candidateNode as unknown as CanvasNode
+    if (node.details?.type === 'script' && !isScriptDetailsShape(node.details)) {
+      errors.push(`节点 ${node.title} 的脚本结构无效`)
+      continue
+    }
     if (nodeIds.has(node.id)) errors.push(`节点 ID ${node.id} 重复`)
     nodeIds.add(node.id)
     validNodes.push(node)
@@ -413,6 +417,7 @@ export function parseWorkflowImport(
       ),
       ...(node.imageResults?.map((result) => result.assetId) ?? []),
       ...(node.card?.imageAssetId ? [node.card.imageAssetId] : []),
+      ...scriptAssetReferences(node.details),
     ]
     for (const assetId of referencedAssetIds) {
       if (!assetIds.has(assetId)) {
@@ -463,6 +468,7 @@ export function prepareWorkflowMerge(
     return {
       ...node,
       id: nodeIds.get(node.id)!,
+      details: remapScriptReferences(node.details, assetIds, nodeIds),
       versions: node.versions.map((version) => ({
         ...version,
         id: versionIds.get(version.id)!,
@@ -511,3 +517,4 @@ export function prepareWorkflowMerge(
   }))
   return { assets, nodes, edges }
 }
+import { isScriptDetailsShape, remapScriptReferences, scriptAssetReferences } from '../script/script-project-references'

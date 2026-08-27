@@ -478,6 +478,7 @@ function ScriptDetails({
   const [generatedModel, setGeneratedModel] = useState(details.generatedByModel ?? '')
   const [status, setStatus] = useState('')
   const cost = modelProviderVariantCost(provider, variantId)
+  useEffect(() => { setOutline(details.outline ?? '') }, [details.outline])
 
   const selectModel = (
     nextProvider: ModelProvider,
@@ -603,15 +604,22 @@ function ScriptDetails({
       {!isProviderEnabled(provider) ? <p role="note">{provider.disabledReason}</p> : null}
       {generatedModel ? <p>来源模型：{generatedModel}</p> : null}
       {status ? <p role="status">{status}</p> : null}
+      {data.onOpenScriptWorkspace ? <div className="specialized-node-details__meta">
+        <button type="button" onClick={() => { onUpdate({ ...details, outline }); data.onOpenScriptWorkspace?.() }}>AI拆解</button>
+        <button type="button" onClick={() => { onUpdate({ ...details, outline }); data.onOpenScriptWorkspace?.() }}>分镜工作台</button>
+      </div> : null}
       <ol className="specialized-node-details__chapters" aria-label="章节列表">
         {details.chapters.map((chapter, index) => (
           <li key={chapter.id}>
             <span>{String(index + 1).padStart(2, '0')}</span>
             <input aria-label={`${chapter.title}标题`} value={chapter.title} maxLength={60} onChange={(event) => onUpdate({ ...details, chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, title: event.currentTarget.value } : candidate) })} />
             <textarea aria-label={`${chapter.title}情节摘要`} value={chapter.summary} rows={3} maxLength={1000} onChange={(event) => onUpdate({ ...details, chapters: details.chapters.map((candidate) => candidate.id === chapter.id ? { ...candidate, summary: event.currentTarget.value } : candidate) })} />
+            {chapter.scenes?.length ? <ul>{chapter.scenes.map(scene => <li key={scene.id}>{scene.title}：{scene.summary}</li>)}</ul> : null}
           </li>
         ))}
       </ol>
+      {details.characters?.length ? <ul aria-label="脚本角色列表">{details.characters.map(character => <li key={character.id}>{character.name}：{character.description}{character.subjectId ? '（已入主体库）' : ''}</li>)}</ul> : null}
+      {details.shots?.length ? <p>已保存 {details.shots.length} 张分镜卡，可在故事板查看与编辑。</p> : null}
       <strong className="specialized-node-details__count">共 {details.chapters.reduce((total, chapter) => total + countCharacters(chapter.title) + countCharacters(chapter.summary), 0)} 字</strong>
     </>
   )

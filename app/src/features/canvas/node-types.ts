@@ -102,6 +102,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
     details: Extract<CanvasNodeDetails, { type: 'audio' }>,
     prompt: string,
   ): void
+  onOpenScriptWorkspace?(): void
   onCreateTextToVideoPreset?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
   onUpdateNodeDetails?(details: CanvasNodeDetails): void
