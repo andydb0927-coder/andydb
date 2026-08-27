@@ -865,7 +865,6 @@ export function CreativeNodeShell({
             onExpandedChange={setManualTextExpanded}
           />
         ) : null}
-        {imageGenerationNode ? <ImageResults data={data} /> : null}
         {node.videoTool && contextual && !specializedDetails ? <VideoToolDetails data={data} /> : null}
         {node.effectTool && contextual ? <EffectToolDetails data={data} /> : null}
         {specializedDetails && contextual && !textGenerationNode ? <SpecializedNodeDetailsPanel data={data} /> : null}
@@ -909,6 +908,7 @@ export function CreativeNodeShell({
           }}
         />
       </article>
+      {imageGenerationNode ? <ImageResults data={data} /> : null}
       {imageGenerationNode && contextual ? (
         <div className="creative-node-composer">
           <ImageGenerationPanel

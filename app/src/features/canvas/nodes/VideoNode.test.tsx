@@ -8,6 +8,7 @@ import { createDefaultProviderRegistry } from '../../generation/model-provider-r
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { VideoNode } from './VideoNode'
 import { VideoToolDetails } from './VideoNodeDetails'
+import { VideoGenerationPanel } from './VideoNodeDetails'
 import { createFixtureProviderRegistry } from '../../../test/provider-fixtures'
 
 function makeData(contextual: boolean): CreativeNodeData {
@@ -89,6 +90,25 @@ function renderVideo(data: CreativeNodeData) {
     </div>
   )
 }
+
+test('an empty video prompt cannot submit without a source and becomes usable after typing', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  data.asset = undefined
+  data.videoReferences = []
+  data.incomingReferenceCount = 0
+  data.node.versions[0].prompt = ''
+  render(<VideoGenerationPanel data={data} />)
+  const generate = screen.getByRole('button', { name: /生成视频，预计成本/ })
+  expect(generate).toBeDisabled()
+  expect(generate).toHaveAccessibleDescription('请输入提示词或添加参考媒体后再生成。')
+  await user.click(generate)
+  expect(data.onLocalVideoGenerate).not.toHaveBeenCalled()
+  await user.type(screen.getByRole('textbox', { name: '提示词' }), '清晨古桥')
+  expect(generate).toBeEnabled()
+  await user.click(generate)
+  expect(data.onLocalVideoGenerate).toHaveBeenCalledWith('清晨古桥')
+})
 
 test('keeps a video as a folded media card until it becomes the current node', () => {
   const view = render(renderVideo(makeData(false)))

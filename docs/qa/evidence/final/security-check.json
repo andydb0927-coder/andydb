@@ -1,0 +1,11 @@
+{
+  "branch": "codex/current-product-stabilization",
+  "startingCommit": "f1e098d71b7a047ddc95321ae83df835b7e217fb",
+  "trackedFiles": 776,
+  "scannedTextFiles": 638,
+  "trackedCredentialEnvironmentFiles": [],
+  "frozenPathsChanged": [],
+  "highConfidencePatternFindings": [],
+  "buildKeyPolicy": "build:mock explicitly sets VITE_GENERATION_MODE=mock and VITE_SEEDREAM_API_KEY empty",
+  "limitations": "No local credential files read. Pattern scan is not a full secret audit of all Git objects or arbitrary token formats."
+}

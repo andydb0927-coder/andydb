@@ -12,6 +12,9 @@ import { getCreatorChallenge } from '../challenges/challenge-catalog'
 type QuickCreateRepository = Pick<ProjectRepository, 'save'>
 
 const defaultRepository = new ProjectRepository(new WirelessCanvasDatabase())
+// Coalesce only an in-flight save, not later intentional project creation.
+// Repository scoping keeps tests and independent workspaces isolated.
+const pendingCreations = new WeakMap<QuickCreateRepository, Map<string, Promise<Response>>>()
 
 function formatProjectTimestamp(now: Date): string {
   const values = Object.fromEntries(
@@ -54,9 +57,24 @@ export async function createQuickProjectRedirect(
   repository: QuickCreateRepository = defaultRepository,
   now = new Date(),
 ): Promise<Response> {
-  const project = buildQuickProject(requestUrl, now)
-  await repository.save(project)
-  return redirect(`/project/${project.id}`)
+  let pending = pendingCreations.get(repository)
+  if (!pending) {
+    pending = new Map()
+    pendingCreations.set(repository, pending)
+  }
+  const existing = pending.get(requestUrl)
+  if (existing) return existing
+  const creation = (async () => {
+    const project = buildQuickProject(requestUrl, now)
+    await repository.save(project)
+    return redirect(`/project/${project.id}`)
+  })()
+  pending.set(requestUrl, creation)
+  try {
+    return await creation
+  } finally {
+    pending.delete(requestUrl)
+  }
 }
 
 export function quickCreateProjectLoader({ request }: LoaderFunctionArgs) {

@@ -1,0 +1,779 @@
+
+> app@0.0.0 test:run
+> vitest run --reporter=default --reporter=json --outputFile.json=../docs/qa/evidence/baseline/vitest.json
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+stderr | src/features/launcher/ProjectLauncherPage.test.tsx > project launcher > does not duplicate the shell-owned account actions inside the home page
+An update to ProjectLauncherPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/launcher/ProjectLauncherPage.test.tsx > project launcher > does not duplicate the shell-owned account actions inside the home page
+An update to PlatformHomeSections inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to PlatformHomeSections inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/timeline/PreviewPage.test.tsx > preview journey > loads library sources into the editor and persists added clips in Dexie
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/canvas/nodes/VideoNode.test.tsx (14 tests) 761ms
+ ✓ src/features/launcher/ProjectLauncherPage.test.tsx (15 tests) 850ms
+AggregateError: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    },
+    Error: connect ECONNREFUSED ::1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    }
+  ]
+}
+ ✓ src/features/canvas/CanvasWorkspace.test.tsx (17 tests) 784ms
+ ✓ src/features/canvas/nodes/AssetNode.test.tsx (22 tests) 1095ms
+stderr | src/features/timeline/PreviewPage.test.tsx > preview journey > catches timeline reorder staying in memory instead of surviving direct hydration
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/timeline/PreviewPage.test.tsx > preview journey > catches timeline reorder staying in memory instead of surviving direct hydration
+An update to CollaborationCommentsPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/timeline/PreviewPage.test.tsx > preview journey > catches timeline reorder staying in memory instead of surviving direct hydration
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to PreviewPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/timeline/PreviewPage.test.tsx > preview journey > catches timeline reorder staying in memory instead of surviving direct hydration
+An update to CollaborationCommentsPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/timeline/PreviewPage.test.tsx (9 tests) 1235ms
+     ✓ catches backward clip-boundary stepping resetting to the previous clip start  375ms
+ ✓ src/features/canvas/nodes/ImageNodeDetails.test.tsx (16 tests) 1264ms
+ ✓ src/features/generation/generation-queue.test.ts (31 tests) 1416ms
+stderr | src/features/canvas/CreativeCardEditor.test.tsx > creative card editor > renders the focused script structured form
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CreativeCardEditor.test.tsx > creative card editor > renders the focused character-card structured form
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CreativeCardEditor.test.tsx > creative card editor > renders the focused worldview structured form
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to CreativeCardEditor inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/canvas/CanvasResourcePanels.test.tsx (6 tests) 532ms
+ ✓ src/features/director/DirectorComposer.test.tsx (5 tests) 672ms
+ ✓ src/features/subjects/CreateSubjectDialog.test.tsx (7 tests) 406ms
+ ✓ src/features/canvas/CreativeCardEditor.test.tsx (9 tests) 479ms
+ ✓ src/features/home/PlatformHomeSections.test.tsx (7 tests) 864ms
+ ✓ src/features/projects/ProjectsPage.test.tsx (5 tests) 384ms
+ ✓ src/app/App.test.tsx (10 tests) 2553ms
+   ✓ renders /  334ms
+   ✓ renders /projects  312ms
+   ✓ renders /agents  327ms
+   ✓ renders /challenges  322ms
+   ✓ renders /activity/director-master  313ms
+   ✓ renders /tutorials/add-node  310ms
+   ✓ renders /project/demo-project  322ms
+   ✓ renders /project/demo-project/preview  311ms
+ ✓ src/features/agent/AgentsPage.test.tsx (8 tests) 669ms
+stderr | src/features/community/community-repository.test.ts > community repository > opens a version 5 database without losing project and timeline data
+Another connection wants to delete database 'wireless-canvas-community-legacy-0554bd3f-00a7-420e-899c-0d9be14dad04'. Closing db now to resume the delete request.
+
+ ✓ src/features/canvas/NodeDraftPanel.test.tsx (15 tests) 380ms
+stderr | src/features/community/community-repository.test.ts > community repository > seeds all fixed demo works and remains idempotent
+Another connection wants to delete database 'wireless-canvas-community-9f04f121-933b-439c-abad-34e92ae9f7dc'. Closing db now to resume the delete request.
+
+stderr | src/features/community/community-repository.test.ts > community repository > supplements missing demo ids without overwriting existing interaction data
+Another connection wants to delete database 'wireless-canvas-community-772728c9-f211-4e4f-bfcb-1d9697393c12'. Closing db now to resume the delete request.
+
+stderr | src/features/community/community-repository.test.ts > community repository > publishes one snapshot per project and preserves metrics on republish
+Another connection wants to delete database 'wireless-canvas-community-9298e442-18de-46d1-a9a1-e586269dbc28'. Closing db now to resume the delete request.
+
+stderr | src/features/community/community-repository.test.ts > community repository > persists views, likes, favorites and status changes transactionally
+Another connection wants to delete database 'wireless-canvas-community-ade10f95-1b65-419b-834e-9a1aaaa1a49e'. Closing db now to resume the delete request.
+
+stderr | src/features/community/community-repository.test.ts > community repository > lists durable timeline projects for personal publishing management
+Another connection wants to delete database 'wireless-canvas-community-6654abb6-dce0-45fc-8fd3-03cf946f30de'. Closing db now to resume the delete request.
+
+ ✓ src/features/community/community-repository.test.ts (6 tests) 213ms
+ ✓ src/features/canvas/CanvasTopBar.test.tsx (4 tests) 446ms
+ ✓ src/features/canvas/GenerationHistoryPanel.test.tsx (4 tests) 336ms
+ ✓ server/libtv/generation-command.test.ts (74 tests) 177ms
+ ✓ src/features/timeline/TimelineEditor.test.tsx (5 tests) 324ms
+ ✓ src/features/account/CanvasAccountMenu.test.tsx (3 tests) 342ms
+ ✓ src/features/canvas/VideoContinueDialog.test.tsx (4 tests) 249ms
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > returns the existing record for identical file bytes
+Another connection wants to delete database 'wireless-canvas-library-c26129fd-0812-449e-8f65-61727bf0fa43'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > deduplicates identical file bytes imported concurrently
+Another connection wants to delete database 'wireless-canvas-library-85b12443-1a33-4d8a-b8c1-bd50cb6b7c0f'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > indexes project assets without replacing richer library metadata
+Another connection wants to delete database 'wireless-canvas-library-b53d40f6-2063-4008-9a5f-6a16f5cb2d35'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > uses the owning node title for legacy assets and a stable asset id fallback
+Another connection wants to delete database 'wireless-canvas-library-aa87394a-0577-4ac7-8206-133b60d80c2d'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > indexes every multi-image result as a generated library asset with a stable result name
+Another connection wants to delete database 'wireless-canvas-library-c6376faf-1779-4216-a994-d2fcb80bc078'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > deletes an unreferenced library record and treats a repeated delete as missing
+Another connection wants to delete database 'wireless-canvas-library-9d71fad5-aa1d-461e-b3fb-4377f78509bf'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > refuses deletion while any project history references the asset
+Another connection wants to delete database 'wireless-canvas-library-4bf9fe8a-22ce-45ec-a8dc-056cfa7313e3'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > protects a historical version reference even when the asset snapshot is absent
+Another connection wants to delete database 'wireless-canvas-library-1660c83f-6223-420c-9c68-9e425226a073'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > persists asset names and folders across repository instances
+Another connection wants to delete database 'wireless-canvas-library-ff6d00b0-be0e-4ea5-bbda-f246015c69eb'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > persists asset names and folders across repository instances
+Another connection wants to delete database 'wireless-canvas-library-ff6d00b0-be0e-4ea5-bbda-f246015c69eb'. Closing db now to resume the delete request.
+
+stderr | src/features/assets/asset-library-repository.test.ts > asset library repository > requires impact confirmation before deleting a referenced asset and detaches every reference after confirmation
+Another connection wants to delete database 'wireless-canvas-library-c6e6153d-6009-4566-a567-95a953b6af0e'. Closing db now to resume the delete request.
+
+ ✓ src/features/assets/asset-library-repository.test.ts (10 tests) 250ms
+ ✓ src/features/community/WorkDetailPage.test.tsx (5 tests) 282ms
+ ✓ src/features/canvas/CanvasNodeTypePicker.test.tsx (5 tests) 187ms
+ ✓ src/features/platform/PlatformShell.test.tsx (5 tests) 254ms
+ ✓ src/features/canvas/CanvasToolbar.test.tsx (4 tests) 156ms
+ ✓ src/features/community/PublishWorkDialog.test.tsx (2 tests) 229ms
+ ✓ src/features/collaboration/CollaborationCommentsPanel.test.tsx (2 tests) 240ms
+ ✓ src/features/platform/PlatformTaskDrawer.test.tsx (2 tests) 200ms
+stderr | src/features/project/project-store.test.ts > project repository > opens a version 1 project database after adding the library table
+Another connection wants to delete database 'wireless-canvas-v1-ca5490d7-29f1-4ae3-9223-cbd8f8ebd9e2'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project repository > round-trips the complete project graph through IndexedDB
+Another connection wants to delete database 'wireless-canvas-test-0c28e48c-8902-4aca-9233-55e260784ec4'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project repository > lists the most recently updated projects first and respects the limit
+Another connection wants to delete database 'wireless-canvas-test-cd969c1a-4b78-46a7-817e-4a03e0209e68'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project store history and persistence > persists image generation parameters as one undoable node configuration
+Another connection wants to delete database 'wireless-canvas-test-f3ec0ccf-e0df-43cf-ac30-221e970444d2'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project store history and persistence > persists the active image result, updates the active version, and invalidates downstream consumers
+Another connection wants to delete database 'wireless-canvas-test-9f8c4eb6-e630-4517-ba1c-86f85ca14dc1'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project store history and persistence > persists a moved node and the later undo snapshot through Dexie
+Another connection wants to delete database 'wireless-canvas-test-9949c6a8-07bf-445f-90ed-6510534402c2'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project store history and persistence > persists connected and disconnected dependencies through Dexie and undo
+Another connection wants to delete database 'wireless-canvas-test-3a6e6179-eb54-4fa0-b59c-82d56672281f'. Closing db now to resume the delete request.
+
+stderr | src/features/project/project-store.test.ts > project store history and persistence > hydrates a saved project without creating an undo entry
+Another connection wants to delete database 'wireless-canvas-test-27e9c06b-57b8-4887-9203-e7bd9a27b780'. Closing db now to resume the delete request.
+
+ ✓ src/features/project/project-store.test.ts (55 tests) 279ms
+ ✓ src/features/tutorials/TutorialCenterPage.test.tsx (2 tests) 105ms
+ ✓ src/features/generation/model-manifest-acceptance.test.tsx (1 test) 132ms
+ ✓ src/features/canvas/ImageEditDialog.test.tsx (4 tests) 176ms
+ ✓ src/features/community/CreationProcessPage.test.tsx (1 test) 103ms
+ ✓ src/features/canvas/CanvasGenerationSettings.test.tsx (1 test) 131ms
+ ✓ src/features/canvas/ArkAnalysisDialog.test.tsx (5 tests) 178ms
+ ✓ src/features/canvas/PromptAssist.test.tsx (6 tests) 191ms
+ ✓ src/features/canvas/CanvasContextMenu.test.tsx (6 tests) 221ms
+ ✓ src/features/canvas/StoryboardGroupDialog.test.tsx (1 test) 112ms
+stderr | src/features/collaboration/project-package-repository.test.ts > project package repository > exports project, referenced library assets, timeline and collaboration
+Another connection wants to delete database 'project-package-f0ccc9e4-1241-4742-810e-3f0d7a37e583'. Closing db now to resume the delete request.
+
+stderr | src/features/collaboration/project-package-repository.test.ts > project package repository > restores a package transactionally into another local database
+Another connection wants to delete database 'project-package-382b0637-25fb-4650-9932-799923457526'. Closing db now to resume the delete request.
+
+stderr | src/features/collaboration/project-package-repository.test.ts > project package repository > restores a package transactionally into another local database
+Another connection wants to delete database 'project-package-c9724627-eabb-4b90-b9c5-ac3d761e2e6a'. Closing db now to resume the delete request.
+
+ ✓ src/features/generation/GenerationConfirmationDialog.test.tsx (2 tests) 107ms
+stderr | src/features/collaboration/project-package-repository.test.ts > project package repository > creates a workspace backup containing every local project
+Another connection wants to delete database 'project-package-d8906741-ccb8-4060-ab11-3739752a7220'. Closing db now to resume the delete request.
+
+ ✓ src/features/collaboration/project-package-repository.test.ts (3 tests) 103ms
+stderr | src/features/canvas/DependencyEdge.test.tsx > renders the selected edge delete action at the path label point
+The tag <path> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.
+The tag <g> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.
+
+stderr | src/features/export/ExportPanel.test.tsx > export panel > catches cancellation that leaves a job running
+An update to ExportPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/canvas/CanvasGroupOverlay.test.tsx (5 tests) 198ms
+ ✓ src/features/canvas/nodes/CreativeCardNode.test.tsx (3 tests) 146ms
+ ✓ src/features/export/ExportPanel.test.tsx (6 tests) 134ms
+ ✓ src/features/canvas/DependencyEdge.test.tsx (11 tests) 122ms
+ ✓ src/features/canvas/CanvasTransferDialogs.test.tsx (2 tests) 77ms
+stderr | src/features/projects/project-space-repository.test.ts > project space repository > upgrades a version 8 workspace without losing existing projects
+Another connection wants to delete database 'project-space-v8-8183289e-17bb-4f7a-9721-fae6fa1d2411'. Closing db now to resume the delete request.
+
+stderr | src/features/projects/project-space-repository.test.ts > project space repository > creates trimmed folders in stable name order and rejects empty or duplicate names
+Another connection wants to delete database 'project-space-db141ac7-e8bb-446e-a299-e307a6f3cfc9'. Closing db now to resume the delete request.
+
+stderr | src/features/projects/project-space-repository.test.ts > project space repository > moves an existing project into a folder and back to unclassified
+Another connection wants to delete database 'project-space-568cdf12-9423-4848-a1a5-c178f6bd26a3'. Closing db now to resume the delete request.
+
+stderr | src/features/projects/project-space-repository.test.ts > project space repository > rejects locations for missing projects or folders without writing orphan records
+Another connection wants to delete database 'project-space-7a54217b-febc-445e-a572-3d023b56cb28'. Closing db now to resume the delete request.
+
+ ✓ src/features/projects/project-space-repository.test.ts (4 tests) 92ms
+stderr | src/features/timeline/timeline-repository.test.ts > timeline repository > round-trips and overwrites a complete timeline project
+Another connection wants to delete database 'wireless-canvas-timeline-eccd414a-6093-49c0-9699-0c9c80c92a38'. Closing db now to resume the delete request.
+
+ ✓ src/features/challenges/ChallengesPage.test.tsx (3 tests) 181ms
+stderr | src/features/timeline/timeline-repository.test.ts > timeline repository > isolates timeline aggregates by owning project
+Another connection wants to delete database 'wireless-canvas-timeline-cf6417cd-30d9-43d6-9fb3-42b3a0bb8ccd'. Closing db now to resume the delete request.
+
+stderr | src/features/timeline/timeline-repository.test.ts > timeline repository > opens a version 4 database without losing projects or workflow schema
+Another connection wants to delete database 'wireless-canvas-timeline-legacy-20d82a1e-a5f1-4b9e-bb22-df04c738abc8'. Closing db now to resume the delete request.
+
+ ✓ src/features/timeline/timeline-repository.test.ts (3 tests) 54ms
+stderr | src/features/subjects/subject-repository.test.ts > subject repository > persists a subject from an image result and keeps it globally reusable
+Another connection wants to delete database 'wireless-canvas-subjects-310d99ff-f5b4-4f1d-bd37-6f1ebd3d58ce'. Closing db now to resume the delete request.
+
+stderr | src/features/subjects/subject-repository.test.ts > subject repository > edits and deletes a subject without project scoping
+Another connection wants to delete database 'wireless-canvas-subjects-8bdc7705-7134-4895-bfac-1606cd1d884d'. Closing db now to resume the delete request.
+
+stderr | src/features/subjects/subject-repository.test.ts > subject repository > persists reviewed structured extraction and token usage across repository instances
+Another connection wants to delete database 'subjects-ai-0817ea76-ed76-4ec4-a8fd-eea9f1ed1dc5'. Closing db now to resume the delete request.
+
+stderr | src/features/subjects/subject-repository.test.ts > subject repository > persists reviewed structured extraction and token usage across repository instances
+Another connection wants to delete database 'subjects-ai-0817ea76-ed76-4ec4-a8fd-eea9f1ed1dc5'. Closing db now to resume the delete request.
+
+ ✓ src/features/subjects/subject-repository.test.ts (3 tests) 68ms
+stderr | src/features/home/home-content-repository.test.ts > home content repository > opens a version 7 database and adds the home content table without losing data
+Another connection wants to delete database 'wireless-canvas-home-legacy-73343f29-302e-4365-ae78-b003689927c6'. Closing db now to resume the delete request.
+
+ ✓ src/features/timeline/TimelineExportPanel.test.tsx (3 tests) 81ms
+stderr | src/features/home/home-content-repository.test.ts > home content repository > seeds missing fixed ids, preserves existing records and remains idempotent
+Another connection wants to delete database 'wireless-canvas-home-1831f640-7bac-4844-bd52-116b90d51a9a'. Closing db now to resume the delete request.
+
+ ✓ src/features/home/home-content-repository.test.ts (2 tests) 52ms
+ ✓ src/features/help/HelpCenterPage.test.tsx (1 test) 114ms
+ ✓ src/features/canvas/PanoramaViewer.test.tsx (1 test) 146ms
+ ✓ src/ui/ui.test.tsx (2 tests) 21ms
+ ✓ src/features/generation/ark-analysis-providers.test.ts (30 tests) 97ms
+stderr | src/features/collaboration/collaboration-repository.test.ts > collaboration repository > seeds one owner and manages editor/viewer roles without removing the owner
+Another connection wants to delete database 'collaboration-8b9345ee-ba92-49a0-b6b0-ab1a693d447b'. Closing db now to resume the delete request.
+
+stderr | src/features/collaboration/collaboration-repository.test.ts > collaboration repository > persists node and clip comments and resolves them without deleting history
+Another connection wants to delete database 'collaboration-d31e2b96-c019-4521-8283-9ef0e735e660'. Closing db now to resume the delete request.
+
+stderr | src/features/collaboration/collaboration-repository.test.ts > collaboration repository > edits and deletes comments with optimistic concurrency protection
+Another connection wants to delete database 'collaboration-versioned-b0a642ca-22bd-4d1b-9db8-8a1b229ae309'. Closing db now to resume the delete request.
+
+ ✓ src/features/collaboration/collaboration-repository.test.ts (3 tests) 92ms
+ ✓ src/features/generation/ark-subject-extraction-provider.test.ts (21 tests) 24ms
+ ✓ src/features/generation/model-provider-registry.test.ts (30 tests) 78ms
+ ✓ src/features/membership/MembershipPage.test.tsx (2 tests) 58ms
+ ✓ src/features/membership/entitlement-gates.test.tsx (1 test) 65ms
+ ✓ src/features/timeline/PreviewPlayer.test.tsx (1 test) 99ms
+ ✓ src/features/canvas/Director3DViewport.test.tsx (1 test) 88ms
+ ✓ server/libtv/http-handler.test.ts (24 tests) 51ms
+ ✓ src/features/tutorials/TutorialDetailPage.test.tsx (2 tests) 119ms
+ ✓ src/features/generation/seedream-live-provider.test.ts (13 tests) 47ms
+ ✓ src/features/generation/libtv-generation-adapter.test.ts (21 tests) 119ms
+stderr | src/features/membership/membership-repository.test.ts > membership repository > upgrades a version 6 workspace without losing existing projects
+Another connection wants to delete database 'membership-v6-f5a9aae6-ea56-4455-868c-3aa21b933552'. Closing db now to resume the delete request.
+
+stderr | src/features/membership/membership-repository.test.ts > membership repository > defaults to free and persists local subscribe, cancel and renew actions
+Another connection wants to delete database 'membership-1ee357cf-8774-4c28-9161-ba9ebf07c37b'. Closing db now to resume the delete request.
+
+ ✓ src/features/membership/membership-repository.test.ts (2 tests) 101ms
+ ✓ src/features/community/PublishedWorkViewPage.test.tsx (1 test) 81ms
+ ✓ server/libtv/vite-plugin.test.ts (19 tests) 77ms
+ ✓ src/features/assets/asset-import.test.ts (6 tests) 68ms
+ ✓ src/app/deployment-config.test.ts (10 tests) 44ms
+ ✓ src/features/community/WorkCard.test.tsx (1 test) 43ms
+ ✓ src/features/canvas/canvas-workflow-export.test.ts (9 tests) 31ms
+ ✓ src/features/generation/ark-image-edit-provider.test.ts (25 tests) 40ms
+ ✓ src/features/assets/AssetDeleteDialog.test.tsx (2 tests) 159ms
+ ✓ server/workspace/vite-plugin.test.ts (2 tests) 20ms
+ ✓ server/workspace/http-handler.test.ts (8 tests) 38ms
+ ✓ src/features/community/PublishedWorksPage.test.tsx (1 test) 47ms
+ ✓ src/features/generation/image-size-resolver.test.ts (8 tests) 16ms
+ ✓ src/features/generation/runtime-generation-adapter.test.ts (5 tests) 8ms
+ ✓ src/features/canvas/ImageAnnotationEditor.test.tsx (2 tests) 33ms
+ ✓ src/features/canvas/image-file.test.ts (6 tests) 20ms
+ ✓ src/features/timeline/timeline-export.test.ts (5 tests) 6ms
+ ✓ src/features/launcher/quick-create-project.test.ts (3 tests) 29ms
+ ✓ src/features/generation/ark-video-continue-provider.test.ts (38 tests) 23ms
+ ✓ src/features/community/community-model.test.ts (8 tests) 11ms
+ ✓ src/features/project/dependency-policy.test.ts (104 tests) 9ms
+ ✓ src/features/generation/ark-audio-post-capabilities.test.ts (6 tests) 17ms
+ ✓ src/features/generation/ark-tts-provider.test.ts (8 tests) 16ms
+ ✓ src/features/generation/provider-visibility.test.ts (7 tests) 18ms
+ ✓ src/app/static-dist-fixture.test.ts (4 tests) 12ms
+ ✓ src/features/account/generation-notifications.test.ts (1 test) 20ms
+ ✓ src/features/collaboration/project-package.test.ts (6 tests) 10ms
+ ✓ src/features/generation/ark-text-llm-provider.test.ts (11 tests) 23ms
+ ✓ src/features/community/demo-works.test.ts (2 tests) 10ms
+ ✓ src/features/project/creative-card.test.ts (14 tests) 11ms
+ ✓ src/features/canvas/node-draft.test.ts (17 tests) 6ms
+ ✓ src/features/account/local-account-preferences.test.ts (7 tests) 5ms
+ ✓ src/features/generation/model-parameter-semantics.test.ts (2 tests) 2ms
+ ✓ src/features/generation/seedance-video-provider.test.ts (11 tests) 11ms
+ ✓ src/features/agent/workspace-manifest-client.test.ts (3 tests) 7ms
+ ✓ src/features/generation/generation-provider-preference.test.ts (15 tests) 7ms
+ ✓ server/libtv/cli-runner.test.ts (6 tests) 51ms
+ ✓ src/features/generation/ark-audio-gen-provider.test.ts (7 tests) 13ms
+ ✓ src/features/home/home-content.test.ts (2 tests) 3ms
+ ✓ src/styles/design-system.test.ts (4 tests) 3ms
+ ✓ src/features/agent/builtin-skills.test.ts (6 tests) 6ms
+ ✓ src/features/project/example-project.test.ts (2 tests) 7ms
+ ✓ src/features/membership/membership-model.test.ts (2 tests) 6ms
+ ✓ server/workspace/workspace-command.test.ts (5 tests) 11ms
+ ✓ src/styles/liblib-web-design.test.ts (4 tests) 4ms
+ ✓ src/features/media/browser-media-processing.test.ts (6 tests) 4ms
+ ✓ src/features/community/publication.test.ts (2 tests) 5ms
+ ✓ src/app/index-document.test.ts (1 test) 5ms
+ ✓ src/features/timeline/timeline-model.test.ts (4 tests) 4ms
+ ✓ src/features/canvas/prompt-assist.test.ts (4 tests) 6ms
+ ✓ src/features/agent/skill-loader.test.ts (2 tests) 3ms
+ ✓ src/features/director/director-command.test.ts (4 tests) 2ms
+ ✓ src/styles/home-workbench-layout.test.ts (5 tests) 19ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > routes keyboard handle actions through the existing Connect controller
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/platform/platform-task-progress.test.ts (5 tests) 6ms
+ ✓ src/features/canvas/canvas-group.test.ts (3 tests) 4ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > opens the recorded downstream picker when a source connection ends on blank canvas
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/platform/platform-shell-layout.test.ts (2 tests) 4ms
+ ✓ src/styles/deployed-ui-polish-layout.test.ts (3 tests) 4ms
+ ✓ server/libtv/catalog.test.ts (12 tests) 13ms
+ ✓ src/features/agent/skill-result-node.test.ts (1 test) 6ms
+ ✓ src/features/canvas/local-prompt-optimizer.test.ts (2 tests) 2ms
+ ✓ src/features/timeline/timeline-project.test.ts (7 tests) 4ms
+ ✓ src/features/assets/attach-library-asset.test.ts (5 tests) 7ms
+ ✓ src/features/agent/agent-skill.test.ts (6 tests) 8ms
+ ✓ src/features/canvas/connection-tool.test.ts (1 test) 1ms
+ ✓ src/app/route-loading.test.ts (2 tests) 15ms
+ ✓ src/features/canvas/node-action-policy.test.ts (2 tests) 3ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > ignores the L shortcut for modifiers, editable targets, and an open draft dialog
+A component suspended inside an `act` scope, but the `act` call was not awaited. When testing React components that depend on asynchronous data, you must await the result:
+
+await act(() => ...)
+
+ ✓ src/features/canvas/director-3d-scene.test.ts (7 tests) 6ms
+ ✓ src/features/generation/ephemeral-generation-result-store.test.ts (2 tests) 5ms
+ ✓ src/features/collaboration/collaboration-model.test.ts (3 tests) 5ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > cancels 'active Connect' without focus theft before one native drag mutation
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/platform/platform-tasks.test.ts (2 tests) 5ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > cancels 'selected toolbar source' without focus theft before one native drag mutation
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > selects and deletes an edge with one history entry, restores source focus, and keeps timeline unchanged through undo
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/styles/platform-functional-pages-layout.test.ts (4 tests) 4ms
+ ✓ src/features/canvas/workflow-batch.test.ts (2 tests) 2ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > inserts contextual media nodes into all selected edges through the shared picker as one undo step
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/canvas/nodes/image-result-action-policy.test.ts (3 tests) 2ms
+ ✓ src/app/public-url.test.ts (3 tests) 2ms
+ ✓ src/features/project/recipe-catalog.test.ts (2 tests) 2ms
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > upgrades a retired video provider to the current default before editing parameters
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > duplicates selected nodes at the Option-drag drop position without moving originals
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > switches from connection selection to context creation without stale state
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > keeps dependency creation out of the timeline and configures real canvas gestures
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > moves every selected node in one undoable mutation
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > groups selected nodes, restores the group selection, and ungroups through the toolbar
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > executes a selected group in dependency order and collapses results to one undo
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > renders drag positions continuously but commits one history entry on release
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > references one library image, edits from the node, and restores focus with undo and redo
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > creates a text context node with one initial prompt version
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > creates a video context node with one initial prompt version
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/canvas/CanvasPage.test.tsx > creative canvas > creates a video context node with one initial prompt version
+An update to CanvasPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/canvas/CanvasPage.test.tsx (149 tests) 14381ms
+     ✓ persists confirmed Ark edits as new versions, project assets and history in IndexedDB (retry=true)  416ms
+     ✓ submits the current image prompt to Seedream after editing the composer  407ms
+     ✓ persists a custom Seedream size and submits the chosen dimensions  389ms
+     ✓ autosaves generated video and timeline state and rehydrates it from Dexie  1461ms
+     ✓ reloads context-uploaded image content from real Dexie persistence  311ms
+     ✓ offers node-local Cancel and Retry controls for generation state  322ms
+     ✓ retries the persisted cancelled job after the Canvas remounts  319ms
+     ✓ routes a destructive Director command through dependency confirmation and restores Director focus  328ms
+
+ Test Files  145 passed (145)
+      Tests  1289 passed (1289)
+   Start at  21:42:06
+   Duration  16.15s (transform 5.47s, setup 13.76s, import 15.67s, tests 38.21s, environment 32.05s)
+
+JSON report written to /Users/andydb/.codex/worktrees/322b/无线画布/docs/qa/evidence/baseline/vitest.json

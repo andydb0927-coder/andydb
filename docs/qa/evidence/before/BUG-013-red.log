@@ -1,0 +1,38 @@
+[WebServer] (node:92526) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:92529) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/stabilization-audit.spec.ts:141:1 › stabilization: four image results and remaining node panels render without page errors (2.0s)
+
+
+  1) [chromium] › e2e/stabilization-audit.spec.ts:141:1 › stabilization: four image results and remaining node panels render without page errors 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 717.3750610351562
+    Received:    1230.890625
+
+      165 |   expect(resultGridBounds).not.toBeNull()
+      166 |   expect(composerBounds).not.toBeNull()
+    > 167 |   expect(resultGridBounds!.y + resultGridBounds!.height).toBeLessThanOrEqual(composerBounds!.y)
+          |                                                          ^
+      168 |   await expect(page.getByRole('complementary', { name: '图片 01评论' })).toBeVisible()
+      169 |   await page.getByRole('textbox', { name: '评论内容', exact: true }).fill('这是隔离测试项目的评论')
+      170 |   await page.getByRole('button', { name: '添加评论', exact: true }).click()
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/stabilization-audit.spec.ts:167:58
+
+    Error Context: test-results/stabilization-audit-stabil-182d1--render-without-page-errors-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/stabilization-audit-stabil-182d1--render-without-page-errors-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/stabilization-audit-stabil-182d1--render-without-page-errors-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/stabilization-audit.spec.ts:141:1 › stabilization: four image results and remaining node panels render without page errors 

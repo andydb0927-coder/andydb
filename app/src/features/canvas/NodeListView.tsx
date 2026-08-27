@@ -160,7 +160,7 @@ export function NodeListView({
                           { action: 'extend-shot' as const, label: '扩展镜头' },
                           { action: 'generate-video' as const, label: '生成视频' },
                         ]
-                      : [{ action: 'regenerate' as const, label: '重生成' }]
+                      : [{ action: 'generate' as const, label: '重生成' }]
             return (
               <li key={node.id}>
                 <button

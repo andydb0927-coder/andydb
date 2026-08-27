@@ -1,0 +1,116 @@
+编号,层级,界面,功能,状态,数据来源与源码依据,核验方式,边界与缺口
+F001,一级,首页,导航与一键新建,REAL_LOCAL,features/launcher/quick-create-project.ts与ProjectRepository,浏览器操作及并发回归,同一待保存意图合并；不同项目独立
+F002,一级,首页,推荐作品与推广卡片,STATIC,features/home/home-content.ts与home-content-repository.ts,源码及浏览器,本地种子内容；不是线上实时推荐
+F003,一级,项目,列表搜索与排序,REAL_LOCAL,features/projects/ProjectsPage.tsx与ProjectRepository,浏览器及既有单测,仅当前浏览器数据库
+F004,一级,项目,分组与项目空间,REAL_LOCAL,features/projects/project-space-repository.ts,源码及单测,没有云端团队同步
+F005,一级,项目,新建与恢复画布,REAL_LOCAL,features/launcher/quick-create-project.ts与project-store.ts,浏览器跨项目及刷新回归,不清旧数据
+F006,一级,作品,本地发布列表,REAL_LOCAL,features/community/community-repository.ts的publishedWorks,浏览器及发布E2E,浏览量点赞种子统计不代表公网统计
+F007,一级,Skills,分类搜索收藏筛选,REAL_LOCAL,features/agent/AgentsPage.tsx与agent-skill.ts,浏览器及单测,内置目录；收藏用于本地启用状态
+F008,一级,Skills,封面作者与使用量,STATIC,features/agent/AgentsPage.tsx的skillPresentationById,源码,展示值不来自平台实时服务
+F009,一级,Skills,运行内置技能并写入画布,REAL_LOCAL,features/agent/builtin-skills.ts与skill-result-node.ts,源码及既有E2E,确定性处理器；不是通用LLM Agent
+F010,一级,Skills,模型与生成模式输入区,PARTIAL,features/agent/AgentsPage.tsx,浏览器及源码,模型来自注册表；输入区不等于已接通用自由创作服务
+F011,一级,Skills,CLI工作区清单,PARTIAL,features/agent/workspace-manifest-client.ts,源码,依赖可选本地服务；不可用有提示
+F012,一级,挑战赛,赛事列表与筛选,STATIC,features/challenges/challenge-catalog.ts,浏览器,本地样例赛事
+F013,一级,教程,四分类与教程条目,STATIC,features/tutorials/tutorial-catalog.ts,浏览器及单测,本地中文教程而非远端CMS
+F014,一级,积分会员,余额与流水,REAL_LOCAL,features/membership/credit-ledger.ts读取Project.jobs,浏览器及单测,本地估算积分；不是火山账单或可充值钱包
+F015,一级,积分会员,套餐说明,STATIC,features/membership/membership-model.ts,浏览器,本地权益展示
+F016,一级,积分会员,支付与开通,PLACEHOLDER,features/membership/MembershipPage.tsx,浏览器,支付待接入且按钮禁用；不是BUG
+F017,一级,帮助,分类FAQ与本地搜索,REAL_LOCAL,features/help/help-catalog.ts与HelpCenterPage.tsx,浏览器搜索AutoLink,静态答案配本地搜索
+F018,二级,画布,空白态与双击创建,REAL_LOCAL,features/canvas/CanvasEmptyStarter.tsx与CanvasNodeTypePicker.tsx,浏览器及既有E2E,创建本地节点不自动付费
+F019,二级,画布,节点拖动与多选框选,REAL_LOCAL,features/canvas/CanvasPage.tsx与project-store.ts,既有连接与拖动E2E,缩放后坐标换算；输入焦点不应触发拖动
+F020,二级,画布,连线创建拒绝删除与撤销,REAL_LOCAL,features/canvas/connection-tool.ts与project/dependency-policy.ts,既有node-connections E2E,有向依赖与循环检查
+F021,二级,画布,连线中点插入节点,REAL_LOCAL,features/canvas/DependencyEdge.tsx与CanvasPage.tsx,既有E2E,一次撤销恢复原连线
+F022,二级,画布,节点标题与提示词编辑,REAL_LOCAL,features/canvas/nodes/AssetNode.tsx与VideoNodeDetails.tsx,浏览器输入及刷新回归,本地保存；不代替真实生成
+F023,二级,画布,视口缩放与适配,REAL_LOCAL,features/canvas/CanvasPage.tsx,浏览器及视口E2E,本轮缩放为等效CSS布局；未声称原生浏览器缩放全覆盖
+F024,二级,画布,多画布新建切换重命名删除,REAL_LOCAL,features/project/model.ts与project-store.ts,既有p0-b-interactions E2E,每画布独立节点连线视口；至少保留一幅
+F025,二级,画布,节点列表选择与核心操作,REAL_LOCAL,features/canvas/NodeListView.tsx,新增单测与E2E,重生成已接回标准资格校验；加入时间线保留
+F026,二级,画布,快捷键面板与焦点拦截,REAL_LOCAL,features/canvas/CanvasWorkspace.tsx与CanvasPage.tsx,浏览器面板与输入回归及既有E2E,输入框和弹窗内不触发节点快捷键
+F027,二级,画布,撤销重做与删除影响确认,REAL_LOCAL,features/project/project-store.ts与DependencyImpactDialog.tsx,既有Vitest与E2E,不清用户数据库
+F028,二级,画布,分组及分镜组排版,REAL_LOCAL,features/canvas/canvas-group.ts与StoryboardGroupDialog.tsx,既有hosted与媒体E2E,支持格数和字幕；不是AI生成
+F029,二级,画布,整组执行,MOCK,features/canvas/workflow-batch.ts与CanvasPage.tsx,源码与既有E2E,确定性演示执行；不把它当真实批量API
+F030,二级,画布,小地图与连线显隐,REAL_LOCAL,features/canvas/CanvasPage.tsx与CanvasWorkspace.tsx,既有可达性E2E,与画布状态联动
+F031,二级,画布,故事板三区与排序对白,REAL_LOCAL,features/canvas/CanvasWorkspace.tsx与project-store.ts,既有creation-flow E2E,节点增删与排序双向同步
+F032,二级,画布,评论与已解决状态,REAL_LOCAL,features/collaboration/CollaborationCommentsPanel.tsx与collaboration-repository.ts,源码及既有测试,本地评论；不是多人实时协作
+F033,二级,画布,多人协作同步,NOT_IMPLEMENTED,features/collaboration/collaboration-repository.ts,源码,没有云端会话或协同编辑服务
+F034,二级,Agent,新对话历史分享设置,PARTIAL,features/director/DirectorComposer.tsx,浏览器打开及源码,本地会话摘要与偏好；非云端对话服务
+F035,二级,Agent,命令理解与执行,REAL_LOCAL,features/director/director-command.ts,源码与既有导演E2E,规则解析和确认执行；不是自由问答大模型
+F036,二级,Agent,工作流节点资产引用与附件,REAL_LOCAL,features/director/DirectorComposer.tsx,源码与既有测试,本地引用与附件展示
+F037,二级,Agent,双模型与自动手动偏好,PARTIAL,features/director/DirectorComposer.tsx,源码及浏览器,偏好本地保存；无后台自主Agent循环
+F038,二级,Agent,Skill搜索创建收藏详情,REAL_LOCAL,features/director/DirectorComposer.tsx,源码与既有测试,本地Skill定义；不代表执行任意远端脚本
+F039,二级,生成历史,按媒体与日期筛选,REAL_LOCAL,features/canvas/GenerationHistoryPanel.tsx,浏览器及既有E2E,读取项目jobs及资产；不是云端历史
+F040,二级,生成历史,批量选择下载删除,REAL_LOCAL,features/canvas/GenerationHistoryPanel.tsx与project-store.ts,源码及既有测试,远端媒体仍受URL有效期和CORS限制
+F041,二级,生成历史,查看使用与重发配置,REAL_LOCAL,features/canvas/GenerationHistoryPanel.tsx,源码及既有E2E,写回节点并预填；重新生成仍需配置模型
+F042,二级,工具箱,17种特效模板,MOCK,features/canvas/CanvasResourcePanels.tsx,浏览器及源码,CSS缩略图和参数节点；未实际合成动效
+F043,二级,资产管理,搜索文件夹重命名移动删除,REAL_LOCAL,features/assets/asset-library-repository.ts与AssetDeleteDialog.tsx,浏览器及既有持久化E2E,IndexedDB资产库；关联引用需确认
+F044,二级,资产管理,保存到资产与发送画布,REAL_LOCAL,features/assets/attach-library-asset.ts与CanvasPage.tsx,源码与既有E2E,创建本地资产和对应媒体节点
+F045,二级,上传,图片视频音频校验与预览,REAL_LOCAL,features/assets/asset-import.ts,既有上传和媒体E2E,本地文件入库；格式受浏览器解码支持限制
+F046,二级,素材库,风格与特效参考节点入口,REAL_LOCAL,features/canvas/CanvasResourcePanels.tsx,浏览器及源码,创建参数参考节点；不代表风格模型已接
+F047,二级,角色库,内置角色筛选与示例,MOCK,features/canvas/CanvasResourcePanels.tsx,浏览器及源码,内置示例图和标签
+F048,二级,角色库,本地主体编辑删除跨项目复用,REAL_LOCAL,features/subjects/subject-repository.ts,既有hosted-batch-3与final-batch E2E,IndexedDB主体资产
+F049,三级,创建主体,手动封面名称描述样本保存,REAL_LOCAL,features/subjects/CreateSubjectDialog.tsx,源码及既有E2E,保存到本地主体库
+F050,三级,创建主体,图片AI描述提取,LIVE_API,features/generation/ark-subject-extraction-provider.ts,仅源码UI与fixture既有测试,需开发配置；本轮未发真实请求且代码冻结
+F051,二级,图片节点,折叠媒体与独立参数浮层,REAL_LOCAL,features/canvas/nodes/AssetNode.tsx与ImageNodeDetails.tsx,浏览器视口矩阵,仅当前选中节点展开
+F052,二级,图片节点,模型列表与能力收窄,REAL_LOCAL,features/generation/model-provider-registry.ts与ImageNodeDetails.tsx,public-model-catalog及节点测试,公开列表无demo模型；未配置live禁用
+F053,二级,图片节点,比例清晰度数量实际尺寸与费用确认,REAL_LOCAL,features/generation/image-size-resolver.ts与ImageNodeDetails.tsx,浏览器21:9与2张保存及fixtureE2E,尺寸来自manifest；费用为声明估算
+F054,二级,图片节点,Seedream文生图与图生图,LIVE_API,features/generation/seedream-live-provider.ts,仅既有fixture测试和UI审计,需开发Key；本轮不验证供应商可用性或真实质量
+F055,二级,图片节点,多结果网格主图与轮播,REAL_LOCAL,features/canvas/nodes/ImageNodeDetails.tsx,既有多图E2E,主图影响下游引用并持久化
+F056,二级,图片节点,参考模式手动连线,REAL_LOCAL,features/canvas/CanvasPage.tsx与ImageNodeDetails.tsx,既有node-connections与p0-b E2E,选择画布节点形成入边
+F057,二级,图片节点,标记元素提示,PARTIAL,features/canvas/nodes/ImageNodeDetails.tsx,源码,提示选择局部元素；不等于视觉分割模型
+F058,三级,风格广场,标签搜索商用筛选详情收藏,PARTIAL,features/canvas/nodes/ImageNodeDetails.tsx的styleCards与ImageStyleGallery,源码及面板测试,内置示例目录；收藏在组件内；未接真实风格平台
+F059,二级,图片节点,本地标注编辑与导出,REAL_LOCAL,features/canvas/ImageAnnotationEditor.tsx与browser-media-processing.ts,既有p0-a媒体测试,几何笔刷文本绘制；可随工作流保存
+F060,二级,图片节点,宫格切分2x2与3x3,REAL_LOCAL,features/media/browser-media-processing.ts与CanvasPage.tsx,既有媒体E2E,真实canvas裁切并生成资产与节点
+F061,二级,图片节点,水平垂直镜像与旋转,REAL_LOCAL,features/canvas/CanvasPage.tsx与AssetNode.tsx,既有媒体测试,变换持久化并实际渲染
+F062,二级,图片节点,全景查看器,REAL_LOCAL,features/canvas/PanoramaViewer.tsx,既有hosted-batch-1 E2E,查看等距柱状图片；不保证任意图无缝
+F063,二级,图片节点,全景与多格故事板生成,LIVE_API,features/generation/ark-image-analysis-provider.ts,仅既有fixture测试与UI核验,模板加串行生成；不保证几何连续性
+F064,二级,图片节点,光影校正扩图擦除,LIVE_API,features/generation/ark-image-edit-provider.ts与ImageEditDialog.tsx,仅既有fixture测试与源码,提示词编辑边界以既有说明为准；不宣称专用mask算法
+F065,二级,图片节点,专用高清超分与抠像,PLACEHOLDER,features/canvas/nodes/ImageNodeDetails.tsx与ark-image-edit-provider.ts,源码及既有E2E,没有确认的对应服务；禁用并说明原因
+F066,二级,图片节点,多角度编辑器与部分传统工具参数,PARTIAL,features/canvas/CanvasWorkspace.tsx,源码与既有面板测试,部分参数仅草稿或演示工具节点；不视为真实AI处理
+F067,二级,图片节点,翻译提示词,PLACEHOLDER,features/canvas/nodes/ImageNodeDetails.tsx,浏览器及源码,未接翻译服务且禁用
+F068,二级,图片视频,Slash命令与参数预设,REAL_LOCAL,features/canvas/prompt-assist.ts与PromptAssist.tsx,既有p0-b与占位E2E,本地命令；AI类明确服务或说明弹层
+F069,二级,图片视频,AutoLink本地候选与引用,REAL_LOCAL,features/canvas/prompt-assist.ts与CanvasPage.tsx,既有p0-b E2E,关键词标签匹配；非AI语义检索
+F070,二级,视频节点,播放器进度时长相机,REAL_LOCAL,features/canvas/nodes/VideoNode.tsx,既有creation-flow与媒体E2E,播放依赖媒体可访问和浏览器编解码
+F071,二级,视频节点,Seedance视频生成链路,LIVE_API,features/canvas/nodes/VideoNodeDetails.tsx与seedance-video-provider.ts,仅fixture E2E与本轮资格校验,模型模式参数联动；线上未配置禁用；不发真实视频任务
+F072,二级,视频节点,空提示词资格提示,REAL_LOCAL,features/canvas/nodes/VideoNodeDetails.tsx,本轮单测及E2E,无提示词且无媒体引用不能提交
+F073,二级,视频节点,参考与引用入边,REAL_LOCAL,features/canvas/CanvasPage.tsx与VideoNodeDetails.tsx,既有连接E2E,本地引用关系可保存
+F074,三级,视频引用控制,标记特效主体角色库运镜面板,PARTIAL,features/canvas/nodes/VideoNodeDetails.tsx,源码及既有面板测试,部分为本地目录与选择UI；不代表全部映射到官方API
+F075,二级,视频节点,首帧尾帧当前帧截取,REAL_LOCAL,features/media/browser-media-processing.ts与CanvasPage.tsx,既有p0-a媒体E2E,真实抽帧入资产；CORS或解码失败需提示
+F076,二级,视频节点,截取与裁剪导出,REAL_LOCAL,features/media/browser-media-processing.ts与VideoContextTools.tsx,既有媒体E2E,浏览器MediaRecorder导出；格式能力受环境限制
+F077,二级,视频节点,提取整条音轨,REAL_LOCAL,features/media/browser-media-processing.ts,既有媒体E2E,解码音轨；不是人声伴奏AI分离
+F078,二级,视频节点,尾帧续作,LIVE_API,features/generation/ark-video-continue-provider.ts与VideoContinueDialog.tsx,仅既有fixture测试,尾帧图生视频近似续作；不宣称任意源视频无缝延长
+F079,二级,视频节点,片段重拍与字幕擦除,PLACEHOLDER,features/canvas/VideoContextTools.tsx,源码与既有测试,官方契约未支持者禁用并说明
+F080,二级,视频节点,Seedance提示词优化,REAL_LOCAL,features/canvas/local-prompt-optimizer.ts,既有final-batch E2E,本地规则版0网络；真正AI优化为占位
+F081,二级,文本节点,富文本编辑格式与复制,REAL_LOCAL,features/canvas/nodes/SpecializedNodeDetails.tsx,既有creation-flow E2E,节点内容本地持久化
+F082,二级,文本节点,豆包模型生成回填,LIVE_API,features/generation/ark-text-llm-provider.ts,仅既有fixture测试,非流式与SSE契约；不重新验证真实服务
+F083,二级,脚本节点,章节大纲场次与编辑,REAL_LOCAL,features/canvas/nodes/SpecializedNodeDetails.tsx,既有creation-flow E2E,手工结构与顺序持久化
+F084,二级,脚本节点,结构化脚本生成,LIVE_API,features/generation/ark-text-llm-provider.ts,仅既有fixture测试,与文本共用provider；配置门不变
+F085,二级,音频节点,音色语速音量与模型选择,REAL_LOCAL,features/canvas/nodes/SpecializedNodeDetails.tsx,既有节点测试与E2E,参数可保存；不能据此断言语音服务已授权
+F086,二级,音频节点,TTS与音频生成,LIVE_API,features/generation/ark-tts-provider.ts与ark-audio-gen-provider.ts,仅源码与既有fixture测试,实现契约存在；实际鉴权权限本轮未核验
+F087,二级,音频节点,播放下载与资产入库,REAL_LOCAL,features/canvas/nodes/SpecializedNodeDetails.tsx与project-store.ts,既有音频E2E,音频URL或base64需可解码
+F088,二级,音频节点,截取变速与WAV导出,REAL_LOCAL,features/media/browser-media-processing.ts,既有p0-a媒体E2E,本地0.5x至2x处理；不是音色克隆
+F089,二级,音频节点,人声背景分离智能断句音色克隆,PLACEHOLDER,features/canvas/nodes/SpecializedNodeDetails.tsx与model-provider-registry.ts,源码与既有audio-post测试,独立语音服务权限及契约尚未满足；禁用有原因
+F090,二级,导演台,分镜编排与机位提示,REAL_LOCAL,features/canvas/nodes/SpecializedNodeDetails.tsx,既有creation-flow E2E,本地编排列表
+F091,二级,导演台,3D对象树视图与四视图导出,REAL_LOCAL,features/canvas/Director3DViewport.tsx与director-3d-scene.ts,既有导演台E2E,Three.js基础几何场景；不是电影级DCC
+F092,二级,导演台,运动运镜生成及动作捕捉,PLACEHOLDER,features/canvas/Director3DViewport.tsx与model-provider-registry.ts,源码及既有测试,轨迹字段预留；服务待接入
+F093,二级,逐帧拉片,视频抽样分镜与动态分析,LIVE_API,features/canvas/nodes/FrameAnalysisControls.tsx与ark-frame-analysis-provider.ts,仅既有fixture E2E,抽样帧加视觉LLM分析；音乐分析禁用；非逐帧精密追踪
+F094,二级,智能剪辑,轨道与片段占位参数,PARTIAL,features/canvas/nodes/SpecializedNodeDetails.tsx,既有节点测试,不等于时间线编辑器的真实粗剪
+F095,二级,智能剪辑,智能粗剪与混剪,PLACEHOLDER,features/generation/model-provider-registry.ts,源码及既有测试,独立AI剪辑服务未接；禁用原因明确
+F096,三级,节点右键,复制副本删除保存资产创建主体,REAL_LOCAL,features/canvas/CanvasContextMenu.tsx与CanvasPage.tsx,既有context E2E,本地动作；主体自动提取需另行配置
+F097,三级,空白右键,上传添加节点撤销重做粘贴,REAL_LOCAL,features/canvas/CanvasContextMenu.tsx,既有E2E,禁用态按剪贴板和历史状态计算
+F098,三级,发布分享,本地发布表单与冻结快照,REAL_LOCAL,features/community/PublishWorkDialog.tsx与publication.ts,既有publication E2E,写IndexedDB而不是发到LibTV或云端
+F099,三级,发布分享,分享链接与只读view,REAL_LOCAL,features/community/PublishedWorkViewPage.tsx,浏览器空状态及既有publication E2E,链接只能在有本地作品数据的浏览器还原
+F100,三级,发布分享,云端发布与跨设备访问,NOT_IMPLEMENTED,features/community/publication.ts,源码,没有后端作品存储；本地提示明确不是BUG
+F101,三级,画布导出,PNG与SVG范围导出,REAL_LOCAL,features/canvas/canvas-workflow-export.ts与CanvasTransferDialogs.tsx,既有canvas-export E2E,当前视口或全节点范围；外部媒体受CORS影响
+F102,三级,画布导出,工作流JSON导入导出,REAL_LOCAL,features/canvas/canvas-workflow-export.ts,既有导出E2E,完整快照校验和合并；不清原项目
+F103,三级,分镜组导出,4K序号字幕排版,REAL_LOCAL,features/media/browser-media-processing.ts与canvas-group.ts,既有媒体与hosted测试,兼容自定义格数
+F104,二级,时间线,多轨片段排序切分入出点,REAL_LOCAL,features/timeline/TimelineEditor.tsx与timeline-repository.ts,浏览器及既有时间线E2E,IndexedDB时间线项目
+F105,二级,时间线,变速与画中画三分屏,REAL_LOCAL,features/timeline/PreviewPlayer.tsx与timeline-model.ts,本轮窄屏变速恢复及既有p0-b E2E,0.25x至4x；布局改变实际播放与时长
+F106,三级,时间线导出,本地合成与格式选择,PARTIAL,features/timeline/TimelineExportPanel.tsx与timeline-export.ts,源码与既有测试,浏览器支持格式可用；不保证所有机器硬件编码
+F107,三级,作品详情,沉浸播放器推荐与只读创作过程,STATIC,features/community/WorkDetailPage.tsx与CreationProcessPage.tsx,浏览器矩阵,示例作品和创作过程；复制才变为本地项目
+F108,三级,挑战赛详情,赛道规则奖项日历与去创作,REAL_LOCAL,features/challenges/ChallengeDetailPage.tsx与challenge-catalog.ts,浏览器及既有hosted-batch-3 E2E,内容静态；创建项目写赛事标签可用
+F109,三级,教程详情,步骤分类上一篇下一篇,STATIC,features/tutorials/TutorialDetailPage.tsx,浏览器矩阵与既有教程E2E,本地条目
+F110,三级,账号菜单,个人资料主题水印偏好,REAL_LOCAL,features/account/local-account-preferences.ts与CanvasAccountMenu.tsx,源码及既有菜单测试,仅本机设置；无真实账号体系
+F111,三级,账号菜单,通知列表与已读持久化,REAL_LOCAL,features/account/generation-notifications.ts,既有E2E及15次重复验证,来自项目jobs；原始一次自动化超时保留观察
+F112,一级,平台壳,任务进度抽屉,REAL_LOCAL,features/platform/platform-task-progress.ts与PlatformTaskDrawer.tsx,源码及既有platform-shell E2E,本地阶段标记而非服务端任务调度
+F113,三级,异常与未知路由,中文恢复页及加载提示,REAL_LOCAL,app/RouteErrorPage.tsx与app/router.tsx,新增单测与E2E,返回首页或重试；不清本地数据
+F114,二级,生成结果,节点版本资产历史持久化,REAL_LOCAL,features/project/project-store.ts与project-repository.ts,既有live-persistence fixture测试,保存元数据和URL；远端URL过期不等于永久对象存储
+F115,二级,模型注册表,隐藏测试模型与公开配置门,REAL_LOCAL,features/generation/model-provider-registry.ts,既有public-model-catalog E2E,hidden demo不进入用户选择器；本轮所有provider源码冻结

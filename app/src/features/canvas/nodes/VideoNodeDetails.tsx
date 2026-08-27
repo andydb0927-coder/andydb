@@ -6,7 +6,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import {
@@ -210,6 +210,7 @@ function ReferenceSurface({
 }
 
 export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
+  const generationReasonId = useId()
   const [advanced, setAdvanced] = useState(false)
   const [workflowOpen, setWorkflowOpen] = useState(false)
   const [surface, setSurface] = useState<VideoSurface>()
@@ -257,6 +258,11 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const soundSupported = selectedProvider.parameterSchema.sound?.type === 'boolean'
   const cost = selectedProvider.pricing.amount
   const selectedProviderEnabled = isProviderEnabled(selectedProvider)
+  const generationUnavailableReason = !selectedProviderEnabled
+    ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
+    : !prompt.trim() && !data.asset && referenceCount === 0
+      ? '请输入提示词或添加参考媒体后再生成。'
+      : undefined
   const liveConfigurationReason = providers.find(
     ({ id }) => id === 'seedance-api',
   )?.disabledReason
@@ -470,13 +476,14 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           type="button"
           className="video-generation-panel__generate"
           aria-label={`生成视频，预计成本 ${cost}`}
+          aria-describedby={generationUnavailableReason ? generationReasonId : undefined}
           title={
             selectedProvider.disabledReason ??
             (selectedProvider.kind === 'live'
               ? `${selectedProvider.modelName} 开发直连验证`
               : '本地演示，不连接真实生成')
           }
-          disabled={!selectedProviderEnabled}
+          disabled={Boolean(generationUnavailableReason)}
           onClick={() =>
             data.onLocalVideoGenerate?.(promptDraftRef.current)
           }
@@ -484,6 +491,11 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           <ArrowUp aria-hidden="true" />
         </button>
       </div>
+      {generationUnavailableReason ? (
+        <p id={generationReasonId} className="video-generation-panel__reasons" role="status">
+          {generationUnavailableReason}
+        </p>
+      ) : null}
       {modeNotice ? (
         <p className="video-generation-panel__reasons" role="status" aria-live="polite">
           {modeNotice}
@@ -494,7 +506,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           {selectedProvider.modelNotice}
         </p>
       ) : null}
-      {liveConfigurationReason ? (
+      {liveConfigurationReason && liveConfigurationReason !== generationUnavailableReason ? (
         <p className="video-generation-panel__reasons" role="note">
           {liveConfigurationReason}
         </p>

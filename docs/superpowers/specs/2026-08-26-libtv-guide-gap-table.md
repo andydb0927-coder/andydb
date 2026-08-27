@@ -1,5 +1,7 @@
 # LibTV 官方使用指南 1–5 章功能对照表
 
+> 稳定化勘误（2026-08-27，起点f1e098d）：原A/B/C/D为当时审计，不可直接用作今天的BUG结论。当前本地媒体处理、多画布、分镜组、3D导演台和已接provider已另按源码归类；未接API与明确占位不算BUG。最新状态见[当前功能状态](../../qa/current-feature-status.csv)，测试证据见[稳定化报告](../../qa/current-product-stabilization-report.md)。本轮未重新访问官方指南，也未修改API代码；历史正文保留。
+
 > 对照日期：2026-08-26  
 > 官方正文：[LibTV 官方使用指南（飞书）](https://resonate.feishu.cn/wiki/Loxfw6XHziYRk0kKzdjcFfp9nhb)  
 > 目录基线：[2026-08-26-libtv-official-guide-tree.md](./2026-08-26-libtv-official-guide-tree.md)  

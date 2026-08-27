@@ -1,0 +1,40 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/nodes/AssetNode.test.tsx -t keeps image nodes folded
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/canvas/nodes/AssetNode.test.tsx (22 tests | 1 failed | 21 skipped) 64ms
+   × keeps image nodes folded until they become the current selection 63ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/nodes/AssetNode.test.tsx > keeps image nodes folded until they become the current selection
+Error: expect(element).not.toContainElement(element)
+
+<article
+  class="creative-node creative-node--image creative-node--selected creative-node--image-media creative-node--liblib-media creative-node--expanded"
+/> contains: <section
+  aria-label="L1 的 4 张结果"
+  class="image-results-grid nodrag"
+  role="region"
+  style="grid-template-columns: repeat(2, minmax(0, 1fr));"
+/>
+        
+ ❯ src/features/canvas/nodes/AssetNode.test.tsx:201:25
+    199|   const results = screen.getByRole('region', { name: 'L1 的 4 张结果' })
+    200|   expect(within(results).getAllByRole('img')).toHaveLength(4)
+    201|   expect(mediaCard).not.toContainElement(results)
+       |                         ^
+    202|   expect(results.parentElement).toBe(generation.parentElement?.parentE…
+    203|   expect(results.nextElementSibling).toBe(generation.parentElement)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 21 skipped (22)
+   Start at  22:22:35
+   Duration  852ms (transform 201ms, setup 94ms, import 359ms, tests 64ms, environment 247ms)
+

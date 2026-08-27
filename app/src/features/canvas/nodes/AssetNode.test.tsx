@@ -198,6 +198,9 @@ test('keeps image nodes folded until they become the current selection', async (
   await user.click(screen.getByRole('button', { name: '查看 4 张结果' }))
   const results = screen.getByRole('region', { name: 'L1 的 4 张结果' })
   expect(within(results).getAllByRole('img')).toHaveLength(4)
+  expect(mediaCard).not.toContainElement(results)
+  expect(results.parentElement).toBe(generation.parentElement?.parentElement)
+  expect(results.nextElementSibling).toBe(generation.parentElement)
   await user.click(within(results).getByRole('button', { name: '将结果 2 设为主图' }))
   expect(screen.getByRole('alertdialog', { name: '设为主图' })).toHaveTextContent(
     '下游引用将使用新的主图',
