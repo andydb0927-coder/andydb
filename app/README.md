@@ -20,9 +20,15 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 |------|------|
 | `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run build` | TypeScript 检查 + 生产构建（输出到 `dist/`） |
+| `npm run build:mock` | 强制 mock、清空构建进程中的火山 Key，包含 TypeScript 检查与 404 fallback |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
-| `npm run test:run` | 全量 Vitest 单测（当前 839 项） |
-| `npm run e2e` | Playwright Chromium E2E（当前 26 项） |
+| `npm run test:run` | 全量 Vitest 单测 |
+| `npm run e2e` | Playwright Chromium E2E；离线模型目录用例要求先执行 `build:mock` |
+| `npm run verify` | 完整门禁：typecheck → Vitest → build:mock → Playwright |
+
+公开静态部署和离线产物验收使用 `build:mock`，不要使用会继承 `.env.local` 的普通
+`build`。`PLAYWRIGHT_OFFLINE_DIST=dist` 仅指定生产模型目录用例读取的 mock 产物；
+其余 E2E 仍使用独立开发服务器、fixture Key 和网络拦截，不调用真实 API。
 
 ## 功能地图
 
@@ -67,8 +73,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 
 ```bash
 npm --prefix app ci
-npm --prefix app run test:run
-npm --prefix app run build
+npm --prefix app run verify
 ```
 
 ### Vercel

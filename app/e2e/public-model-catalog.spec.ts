@@ -2,9 +2,10 @@ import { expect, test } from './provider-fixture'
 import { readFile } from 'node:fs/promises'
 import { extname, resolve } from 'node:path'
 
-// Run after the mock production build: verifies the exact GitHub Pages artifact,
+// Run after npm run build:mock: verifies the exact GitHub Pages artifact,
 // not a dev server whose fixture keys would enable the providers.
 test('production selectors contain only unconfigured real models and never generate demo results', async ({ page }) => {
+  const root = resolve(process.env.PLAYWRIGHT_OFFLINE_DIST ?? 'dist')
   const apiRequests: string[] = []
   page.on('request', (request) => {
     if (/images\/generations|chat\/completions|contents\/generations\/tasks|tts\//.test(request.url())) apiRequests.push(request.url())
@@ -12,7 +13,6 @@ test('production selectors contain only unconfigured real models and never gener
   await page.route('https://catalog-fixture.local/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/andydb\/?/, '')
     const file = extname(path) ? path : 'index.html'
-    const root = resolve('dist')
     const target = resolve(root, file)
     if (!target.startsWith(`${root}/`)) throw new Error('Invalid production fixture path')
     const types: Record<string, string> = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' }

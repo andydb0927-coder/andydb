@@ -6,11 +6,11 @@
 
 公开静态部署仍保持 Mock 默认模式；本地开发环境可显式开启火山方舟 Seedream、Seedance 与豆包的短期真实 API 验证：
 
-- 未配置开发验证模式时，生成能力继续使用本地演示数据；
+- 未配置开发验证模式时，真实模型禁用并显示配置未完成，模型菜单不再提供演示模型；
 - `seedream-direct-dev` 仅供本机短期验证，不能用于公开静态部署；
 - 不新增后端、数据库、对象存储或远端任务队列；
 - 项目数据保存在当前浏览器的本地存储中，不提供跨浏览器、跨设备同步；
-- 本地开发专用的 LibTV bridge 依赖 Vite 开发服务器，静态部署不提供该 bridge，线上预览应保持演示供应商模式。
+- 本地开发专用的 LibTV bridge 依赖 Vite 开发服务器，静态部署不提供该 bridge，线上预览保持 mock 构建、真实生成禁用。
 
 ## 2. 构建契约
 
@@ -27,18 +27,25 @@
 
 ```bash
 npm --prefix app ci
-npm --prefix app run build
+npm --prefix app run build:mock
 ```
 
-构建命令内部执行 TypeScript 项目构建和 `vite build`。部署时应上传 `app/dist` 的完整内容，而不是只上传 `index.html`。
+`build:mock` 执行 TypeScript 项目构建、强制 `VITE_GENERATION_MODE=mock` 的 `vite build` 和 404 fallback，输出仍为 `app/dist`。同时将构建进程中的 `VITE_SEEDREAM_API_KEY` 置空，防止本机 `.env.local` 的开发 Key 写入公开产物；不修改 `.env.local`。部署时应上传 `app/dist` 的完整内容，而不是只上传 `index.html`。
+
+普通 `build` 保留开发验证用途，会继承 `.env.local`，不能用于本节公开部署与离线验收。
 
 ### 部署前本地门禁
 
 ```bash
 npm --prefix app run typecheck
 npm --prefix app run test:run
-npm --prefix app run build
+npm --prefix app run build:mock
+PLAYWRIGHT_OFFLINE_DIST=dist npm --prefix app run e2e
 ```
+
+也可直接执行 `npm --prefix app run verify`，顺序与 GitHub Actions 一致。首次运行前安装 Chromium：在 `app` 目录执行 `npx playwright install chromium`（CI 使用 `--with-deps`）。
+
+`PLAYWRIGHT_OFFLINE_DIST` 是相对于 `app` 的 mock 构建目录，也可传绝对路径。它仅供 `public-model-catalog.spec.ts` 读取静态产物，不再关闭开发测试服务器。生成链路 E2E 仍使用原有 fixture Key 和拦截网络；不能把它们切换为禁用生成的 mock 静态站点。
 
 如需检查最终静态产物：
 
@@ -68,7 +75,7 @@ GitHub Pages 不支持任意重写规则，因此生产构建还会把最终 `in
 
 1. push 到 `codex/platform-shell-phase` 时触发，也可在 Actions 页面手动运行；
 2. 使用 Node.js 22 和 `app/package-lock.json` 安装锁定依赖；
-3. 强制以 `VITE_GENERATION_MODE=mock` 构建，不读取或调用真实模型 API；
+3. 安装 Playwright Chromium，按 typecheck → Vitest → `build:mock` → Playwright 顺序验收，不调用真实模型 API；
 4. 生成 `app/dist/index.html`、同内容的 `app/dist/404.html`，静态资源路径以 `/andydb/` 开头；
 5. 将 `app/dist` 发布到孤立的 `gh-pages` 分支。
 
@@ -78,7 +85,7 @@ GitHub Pages 不支持任意重写规则，因此生产构建还会把最终 `in
 
 ```bash
 cd app
-npm run build
+npm run build:mock
 npx serve dist -l 4173
 ```
 
@@ -106,7 +113,7 @@ npx serve dist -l 4173
 
 ## 6. 任意静态托管步骤
 
-1. 在 CI 中执行 `npm --prefix app ci` 和 `npm --prefix app run build`。
+1. 在 CI 中执行 `npm --prefix app ci` 和 `npm --prefix app run verify`。
 2. 上传 `app/dist/` 内的全部文件。
 3. 配置 HTTPS、正确的 JavaScript/CSS/图片/音视频 MIME 类型，以及第 3 节的 SPA 回退。
 4. 缓存建议：
@@ -178,11 +185,11 @@ Preview 页面应明显标注“演示”或“Preview”，避免用户把本�
 
 ## 9. 上线前验收清单
 
-- [ ] `typecheck`、Vitest 和 `build` 全绿；
+- [ ] 按 `typecheck` → Vitest → `build:mock` → Playwright 顺序全绿；
 - [ ] 首页、项目页、Skills、挑战赛可直接打开并刷新；
 - [ ] 新建项目后 `/project/:projectId` 可直接打开并刷新；
 - [ ] 双击创建节点、节点编辑、连线、故事板、Agent 面板和导出入口可用；
-- [ ] 演示供应商标识可见，生成操作不请求真实第三方 API；
+- [ ] 模型菜单只显示未配置的真实供应商与待接入项，生成禁用且不请求真实第三方 API；
 - [ ] 同一浏览器刷新后本地项目仍存在，换浏览器不承诺同步；
 - [ ] 控制台无未处理错误，静态资源无 404；
 - [ ] 不存在 `VITE_SEEDREAM_API_KEY` 或其他真实密钥；

@@ -1,44 +1,9 @@
 import { expect, test, type Page } from './provider-fixture'
-import { readFile } from 'node:fs/promises'
-import { extname, resolve } from 'node:path'
 
 const onePixelPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 )
-
-const contentTypes: Record<string, string> = {
-  '.css': 'text/css',
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-}
-
-async function installOfflineBuildRoute(page: Page) {
-  const dist = process.env.PLAYWRIGHT_OFFLINE_DIST
-  if (!dist) return
-  const distRoot = resolve(process.cwd(), dist)
-  await page.route('http://wireless-canvas.local/**', async (route) => {
-    const url = new URL(route.request().url())
-    const relativePath = url.pathname.replace(/^\/+/, '')
-    const requestedPath = resolve(distRoot, relativePath || 'index.html')
-    const insideDist =
-      requestedPath === distRoot || requestedPath.startsWith(`${distRoot}/`)
-    const assetRequest = insideDist && extname(requestedPath).length > 0
-    const filePath = assetRequest ? requestedPath : resolve(distRoot, 'index.html')
-    try {
-      await route.fulfill({
-        status: 200,
-        contentType: contentTypes[extname(filePath)] ?? 'application/octet-stream',
-        body: await readFile(filePath),
-      })
-    } catch {
-      await route.fulfill({ status: 404, body: 'Not found' })
-    }
-  })
-}
 
 async function createCinematicProject(page: Page) {
   await page.goto('/projects/new?recipe=cinematic-story')
@@ -223,7 +188,6 @@ test('creates, links, edits, and reloads structured creative cards', async ({
   })
   page.on('pageerror', (error) => browserErrors.push(error.message))
 
-  await installOfflineBuildRoute(page)
   await createCinematicProject(page)
   await uploadReferenceToCanvas(page)
 

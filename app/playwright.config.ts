@@ -1,10 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const port = process.env.PLAYWRIGHT_PORT ?? '4174'
-const offlineDist = process.env.PLAYWRIGHT_OFFLINE_DIST
-const baseURL = offlineDist
-  ? 'http://wireless-canvas.local'
-  : `http://127.0.0.1:${port}`
+const baseURL = `http://127.0.0.1:${port}`
 const fixtureGenerationEnvironment = [
   'VITE_GENERATION_MODE=seedream-direct-dev',
   'VITE_SEEDREAM_API_KEY=playwright-fixture-seedream-key',
@@ -27,11 +24,9 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: offlineDist
-    ? undefined
-    : {
-        command: `${fixtureGenerationEnvironment} npm run dev -- --host 127.0.0.1 --port ${port}`,
-        url: baseURL,
-        reuseExistingServer: false,
-      },
+  webServer: {
+    command: `${fixtureGenerationEnvironment} npm run dev -- --host 127.0.0.1 --port ${port}`,
+    url: baseURL,
+    reuseExistingServer: false,
+  },
 })

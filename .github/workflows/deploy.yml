@@ -29,10 +29,25 @@ jobs:
       - name: Install dependencies
         run: npm --prefix app ci
 
+      - name: Install Playwright Chromium
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck
+        run: npm --prefix app run typecheck
+
+      - name: Unit tests
+        run: npm --prefix app run test:run
+
       - name: Build static site
         env:
           VITE_GENERATION_MODE: mock
-        run: npm --prefix app run build
+        run: npm --prefix app run build:mock
+
+      - name: End-to-end tests
+        env:
+          PLAYWRIGHT_OFFLINE_DIST: dist
+        run: npm --prefix app run e2e
 
       - name: Publish app/dist to gh-pages
         uses: peaceiris/actions-gh-pages@v4.0.0

@@ -9,6 +9,37 @@ import { expect, test } from 'vitest'
 
 const repositoryRoot = resolve(process.cwd(), '..')
 
+test('builds the offline artifact in mock mode without bundling the local API key', () => {
+  const { scripts } = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
+    scripts: Record<string, string>
+  }
+
+  expect(scripts['build:mock']).toBe(
+    scripts.build.replace('vite build', 'VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= vite build'),
+  )
+})
+
+test('runs the local gate in order with the mock artifact selected for offline checks', () => {
+  const { scripts } = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
+    scripts: Record<string, string>
+  }
+
+  expect(scripts.verify).toBe(
+    'npm run typecheck && npm run test:run && npm run build:mock && PLAYWRIGHT_OFFLINE_DIST=dist npm run e2e',
+  )
+})
+
+test('selects the offline artifact without disabling the fixture-key development server', () => {
+  const playwrightConfig = readFileSync(resolve(process.cwd(), 'playwright.config.ts'), 'utf8')
+  const publicCatalogTest = readFileSync(resolve(process.cwd(), 'e2e/public-model-catalog.spec.ts'), 'utf8')
+
+  expect(publicCatalogTest).toContain("resolve(process.env.PLAYWRIGHT_OFFLINE_DIST ?? 'dist')")
+  expect(playwrightConfig).not.toContain('PLAYWRIGHT_OFFLINE_DIST')
+  expect(playwrightConfig).toContain('VITE_GENERATION_MODE=seedream-direct-dev')
+  expect(playwrightConfig).toContain('VITE_SEEDREAM_API_KEY=playwright-fixture-seedream-key')
+  expect(playwrightConfig).toContain('reuseExistingServer: false')
+})
+
 test('configures Vercel to build app and serve BrowserRouter routes', () => {
   const config = JSON.parse(readFileSync(resolve(repositoryRoot, 'vercel.json'), 'utf8')) as {
     buildCommand?: string
@@ -79,7 +110,11 @@ test('deploys app/dist to gh-pages after pushes to the platform branch', () => {
 
   expect(workflow).toMatch(/branches:\s*\[?['"]?codex\/platform-shell-phase['"]?\]?/)
   expect(workflow).toContain('npm --prefix app ci')
-  expect(workflow).toContain('npm --prefix app run build')
+  expect(workflow).toMatch(
+    /npm --prefix app run typecheck[\s\S]*npm --prefix app run test:run[\s\S]*npm --prefix app run build:mock[\s\S]*npm --prefix app run e2e/,
+  )
+  expect(workflow).toContain('npx playwright install --with-deps chromium')
+  expect(workflow).toMatch(/PLAYWRIGHT_OFFLINE_DIST:\s*dist/)
   expect(workflow).toContain('peaceiris/actions-gh-pages@v4.0.0')
   expect(workflow).toMatch(/publish_dir:\s*\.\/app\/dist/)
   expect(workflow).toMatch(/publish_branch:\s*gh-pages/)
