@@ -1,5 +1,7 @@
 import type { ImageGenerationSettings, NodeKind } from '../project/model'
 import type { ManagedAiPlaceholderId } from '../generation/model-provider-registry'
+import { imageAiPlaceholderPresets } from './image-creation-presets'
+export { imageAiPlaceholderPresets, imageAiPlaceholderForLabel } from './image-creation-presets'
 
 export type PromptCommandContext = 'image' | 'video'
 export type PromptCommandSection = 'preset' | 'tool' | 'parameter'
@@ -37,58 +39,6 @@ export const promptCommandSectionLabels: Record<PromptCommandSection, string> = 
   preset: '预设',
   tool: '工具命令',
   parameter: '参数预览',
-}
-
-export const imageAiPlaceholderPresets = {
-  '720全景': {
-    providerId: 'panorama-720-api',
-    promptText: '将当前场景扩展为无缝等距柱状720全景，保持地平线水平、主体位置一致、左右边缘可连续拼接。',
-  },
-  '多机位九宫格': {
-    providerId: 'multi-camera-grid-api',
-    promptText: '同一主体、同一服装与同一场景保持一致，输出九个连贯机位：正面、侧面、背面、俯拍、仰拍、近景、中景、全景与细节特写。',
-  },
-  '剧情推演四宫格': {
-    providerId: 'plot-four-grid-api',
-    promptText: '围绕同一角色与场景，按起因、发展、转折、结果输出四个连续剧情画面，保持人物与美术风格一致。',
-  },
-  '25宫格连贯分镜': {
-    providerId: 'storyboard-25-grid-api',
-    promptText: '将当前故事拆为25个时间连续、动作衔接、角色一致的电影分镜，覆盖远景、中景、近景与细节镜头。',
-  },
-  '电影级光影校正': {
-    providerId: 'cinematic-lighting-api',
-    promptText: '保持主体与构图不变，使用电影级三点布光矫正：主光方向明确、辅光控制反差、轮廓光分离背景，高光不过曝。',
-  },
-  '角色脸部三视图': {
-    providerId: 'setting-image-api',
-    promptText: '输出角色脸部正面、左侧面、右侧面三视图，保持五官比例、发型、妆容与光线一致，中性背景。',
-  },
-  '角色设定图': {
-    providerId: 'setting-image-api',
-    promptText: '输出标准角色设定图：全身正面、侧面、背面与服装细节，标注材质、色彩和比例，中性背景。',
-  },
-  '角色三视图': {
-    providerId: 'setting-image-api',
-    promptText: '输出角色全身正面、侧面、背面三视图，统一姿势、比例、服装、发型与光线，中性背景。',
-  },
-  '场景设定图': {
-    providerId: 'setting-image-api',
-    promptText: '输出场景设定图：全景、关键区域、材质和光线说明，保持空间比例与美术风格统一。',
-  },
-  '产品设定图': {
-    providerId: 'setting-image-api',
-    promptText: '输出产品正面、侧面、背面与结构细节设定图，标注材质、配色和尺寸关系，中性背景。',
-  },
-} as const satisfies Record<string, {
-  providerId: ManagedAiPlaceholderId
-  promptText: string
-}>
-
-export function imageAiPlaceholderForLabel(label: string) {
-  return imageAiPlaceholderPresets[
-    label as keyof typeof imageAiPlaceholderPresets
-  ]
 }
 
 const promptCommands: PromptCommand[] = [

@@ -1,0 +1,7 @@
+buildGenerationRequest: AST-equivalent (only file location / export changed)
+generationEligibilityFailure: AST-equivalent (only file location / export changed)
+isWorkflowGeneratableNode: AST-equivalent (only file location / export changed)
+forceDemoProvider: AST-equivalent (only file location / export changed)
+buildMediaAssetCreation: AST-equivalent (only file location / export changed)
+activeNodeAsset: AST-equivalent (only file location / export changed)
+processedMediaRecord: AST-equivalent (only file location / export changed)

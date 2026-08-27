@@ -1,0 +1,12 @@
+[WebServer] (node:2598) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:2601) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › e2e/platform-foundation-batch2.spec.ts:3:1 › extracted dock, resources and export overlays keep their entry points and dismiss behavior (3.3s)
+  ✓  2 [chromium] › e2e/platform-foundation-batch2.spec.ts:22:1 › menu and Slash share preset defaults and confirmation focus at 721px without generating on cancel (1.9s)
+  ✓  3 [chromium] › e2e/platform-foundation-batch2.spec.ts:54:1 › Agent preferences and panel lifecycle do not mutate director 3D scene and camera (5.8s)
+
+  3 passed (11.9s)

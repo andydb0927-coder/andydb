@@ -1,3 +1,10 @@
+import { CanvasGenerationDialogs, type AnalysisSession, type ImageEditSession, type VideoContinueSession } from './CanvasGenerationDialogs'
+import { CanvasProjectDialogs } from './CanvasProjectDialogs'
+import { CanvasNodeEditors, type PendingPlacement, type EditingCard } from './CanvasNodeEditors'
+import { CanvasWorkspacePanels } from './CanvasWorkspacePanels'
+import { CanvasWorkflowTools, CanvasWorkflowBatchStatus, type WorkflowBatchView } from './CanvasWorkflowTools'
+import { buildGenerationRequest, generationEligibilityFailure, isWorkflowGeneratableNode, forceDemoProvider } from './canvas-generation-request'
+import { buildMediaAssetCreation, activeNodeAsset, processedMediaRecord } from './canvas-media-creation'
 import {
   Background,
   Controls,
@@ -28,11 +35,9 @@ import {
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { withAppBase } from '../../app/public-url'
-import { DirectorComposer } from '../director/DirectorComposer'
-import { CollaborationCommentsPanel } from '../collaboration/CollaborationCommentsPanel'
 import { CollaborationRepository } from '../collaboration/collaboration-repository'
 import { CommunityRepository, type CommunityWorkRepository } from '../community/community-repository'
-import { PublishWorkDialog, type PublishWorkFormValue } from '../community/PublishWorkDialog'
+import type { PublishWorkFormValue } from '../community/PublishWorkDialog'
 import { collectPublishCoverOptions, copyPublishedWorkShareLink } from '../community/publication'
 import { AssetLibraryRepository } from '../assets/asset-library-repository'
 import {
@@ -56,9 +61,8 @@ import {
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
-import { arkImageUpscaleUnavailable, buildArkImageEditPrompt, imageEditParameters, type ArkImageEditDraft, type ArkImageEditOperation } from '../generation/ark-image-edit-provider'
-import { ImageEditDialog } from './ImageEditDialog'
-import { ArkAnalysisDialog, type ArkAnalysisDraft } from './ArkAnalysisDialog'
+import { arkImageUpscaleUnavailable, buildArkImageEditPrompt, imageEditParameters, type ArkImageEditDraft } from '../generation/ark-image-edit-provider'
+import type { ArkAnalysisDraft } from './ArkAnalysisDialog'
 import { imageAnalysisPlan, isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
 import { frameAnalysisId, validateFrameAnalysisRequest } from '../generation/ark-frame-analysis-provider'
 import { parseSubjectDescription, subjectExtractionId, subjectExtractionUnavailable } from '../generation/ark-subject-extraction-provider'
@@ -67,7 +71,6 @@ import {
   type GenerationAdapter,
   type GenerationRequest,
 } from '../generation/generation-adapter'
-import { GenerationConfirmationDialog } from '../generation/GenerationConfirmationDialog'
 import { GenerationQueue } from '../generation/generation-queue'
 import {
   defaultEphemeralGenerationResultStore,
@@ -81,20 +84,18 @@ import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
 import type { LibTvProviderSelection } from '../generation/libtv-contract'
 import { RuntimeGenerationAdapter, isPinnedArkTool } from '../generation/runtime-generation-adapter'
 import { arkVideoContinueId, buildArkVideoContinuePrompt, videoContinueParameters, type ArkVideoContinueDraft } from '../generation/ark-video-continue-provider'
-import { VideoContinueDialog } from './VideoContinueDialog'
 import {
   defaultImageGenerationSettings,
   type Asset,
   type CanvasCreation,
   type CanvasGroup,
-  type CreativeCardKind,
   type GenerationConfiguration,
   type GenerationJob,
   type ImageAnnotation,
   type Project,
   type VideoDerivedTool,
 } from '../project/model'
-import { CreateSubjectDialog, type CreateSubjectFormValue } from '../subjects/CreateSubjectDialog'
+import type { CreateSubjectFormValue } from '../subjects/CreateSubjectDialog'
 import type { SubjectAsset } from '../subjects/subject-model'
 import { SubjectRepository } from '../subjects/subject-repository'
 import {
@@ -128,19 +129,12 @@ import {
 import { createDefaultDirectorScene } from './director-3d-scene'
 import { createTimelineProject } from '../timeline/timeline-project'
 import { TimelineRepository, type TimelineProjectRepository } from '../timeline/timeline-repository'
-import {
-  CanvasToolbar,
-  type CanvasTool,
-} from './CanvasToolbar'
+import type { CanvasTool } from './CanvasToolbar'
 import {
   CanvasContextMenu,
   type ContextQuickNodeType,
 } from './CanvasContextMenu'
 import { CanvasTopBar } from './CanvasTopBar'
-import {
-  CanvasExportDialog,
-  WorkflowImportDialog,
-} from './CanvasTransferDialogs'
 import {
   buildCanvasExportFilename,
   buildWorkflowFilename,
@@ -161,13 +155,9 @@ import {
   type NodeTypePickerMode,
   type QuickNodeType,
 } from './CanvasNodeTypePicker'
-import { CanvasEmptyStarter } from './CanvasEmptyStarter'
 import {
-  CanvasAgentPanel,
-  CanvasStoryboardView,
   CanvasViewControls,
   SelectionContextBar,
-  WorkspaceSidePanel,
   type WorkspaceMode,
   type WorkspacePanel,
 } from './CanvasWorkspace'
@@ -185,8 +175,6 @@ import {
   findSelectedCanvasGroup,
   measureCanvasGroup,
 } from './canvas-group'
-import { CreativeCardEditor } from './CreativeCardEditor'
-import { DependencyImpactDialog } from './DependencyImpactDialog'
 import { edgeTypes, type DependencyFlowEdge } from './edge-types'
 import { selectNodeGenerationJob } from './job-selector'
 import {
@@ -199,14 +187,10 @@ import {
   ImagePreparationError,
   prepareImageFile,
 } from './image-file'
-import {
-  NodeDraftPanel,
-  type NodeDraftFormValue,
-} from './NodeDraftPanel'
+import type { NodeDraftFormValue } from './NodeDraftPanel'
 import {
   buildCanvasCreation,
   nextNodeTitle,
-  type CreatableNodeKind,
 } from './node-draft'
 import {
   cancelConnectionTool,
@@ -218,72 +202,6 @@ import '../../styles/global.css'
 
 type CanvasRepository = Pick<ProjectRepository, 'load' | 'save'>
 
-function buildMediaAssetCreation(
-  project: Project,
-  record: LibraryAssetRecord,
-  position: CanvasNodePosition,
-): CanvasCreation {
-  const nodeId = crypto.randomUUID()
-  const versionId = crypto.randomUUID()
-  const title = record.name.trim().slice(0, 80) || `素材 ${project.nodes.length + 1}`
-  const alreadyInProject = project.assets.some(({ id }) => id === record.id)
-
-  return {
-    node: {
-      id: nodeId,
-      kind: record.kind === 'video' ? 'video' : record.kind === 'image' ? 'image' : 'text',
-      title,
-      position,
-      versions: [{
-        id: versionId,
-        createdAt: new Date().toISOString(),
-        prompt: title,
-        assetId: record.id,
-      }],
-      activeVersionId: versionId,
-      sourceChanged: false,
-      ...(record.kind === 'audio'
-        ? {
-            details: {
-              type: 'audio' as const,
-              durationSeconds: record.durationSeconds ?? 0,
-              voice: '温暖女声' as const,
-              speed: 1,
-              volume: 80,
-              modelProviderId: 'ark-tts',
-            },
-          }
-        : {}),
-    },
-    ...(alreadyInProject ? {} : { asset: libraryRecordToAsset(record) }),
-  }
-}
-
-function activeNodeAsset(project: Project, nodeId: string) {
-  const node = project.nodes.find(({ id }) => id === nodeId)
-  const version = node?.versions.find(({ id }) => id === node.activeVersionId)
-  return project.assets.find(({ id }) => id === version?.assetId)
-}
-
-function processedMediaRecord(
-  media: ProcessedMedia,
-  name: string,
-  kind: LibraryAssetRecord['kind'],
-): LibraryAssetRecord {
-  return {
-    id: crypto.randomUUID(),
-    name,
-    kind,
-    mimeType: media.mimeType,
-    url: media.dataUrl,
-    createdAt: new Date().toISOString(),
-    source: 'project',
-    folderId: 'project',
-    width: media.width,
-    height: media.height,
-    durationSeconds: media.durationSeconds,
-  }
-}
 type CanvasPublicationRepository = Pick<
   CommunityWorkRepository,
   'publish' | 'findByProjectId'
@@ -312,15 +230,6 @@ interface OptionDragCloneState {
 interface NodeMeasurementState {
   projectId?: string
   measurements: Record<string, { width: number; height: number }>
-}
-
-interface PendingPlacement {
-  projectId: string
-  kind: CreatableNodeKind | CreativeCardKind
-  entry: 'add-node' | 'free-generation' | 'upload'
-  position: CanvasNodePosition
-  anchor: { x: number; y: number }
-  bounds: { width: number; height: number }
 }
 
 interface NodeTypePickerState {
@@ -367,14 +276,6 @@ interface WorkflowImportSession {
   result: WorkflowImportResult
 }
 
-interface EditingCard {
-  projectId: string
-  nodeId: string
-  anchor: { x: number; y: number }
-  bounds: { width: number; height: number }
-  returnFocusTo?: HTMLElement
-}
-
 interface PendingSubjectCreation {
   projectId: string
   canvasId?: string
@@ -391,16 +292,6 @@ interface WorkflowBatchRuntime {
   nodeIds: string[]
   cursor: number
   activeJobId?: string
-}
-
-interface WorkflowBatchView {
-  id: string
-  label: string
-  status: 'running' | 'paused' | 'completed'
-  completed: number
-  total: number
-  currentNodeTitle?: string
-  error?: string
 }
 
 interface StoryboardSetupState {
@@ -480,191 +371,6 @@ function sameSelection(
     left.videoModelKey === right.videoModelKey &&
     left.videoModelName === right.videoModelName
   )
-}
-
-function buildGenerationRequest(
-  project: Project,
-  node: Project['nodes'][number],
-  operation: GenerationRequest['operation'],
-  prompt: string,
-  providerRegistry: ProviderRegistry,
-): GenerationRequest {
-  const activeVersion = node.versions.find(
-    (version) => version.id === node.activeVersionId,
-  )
-  const asset = project.assets.find(
-    (candidate) => candidate.id === activeVersion?.assetId,
-  )
-  const savedConfig = node.generationConfig
-  const targetKind =
-    operation === 'generate-video'
-      ? 'video'
-      : savedConfig?.targetKind ??
-        (node.details?.type === 'audio'
-          ? 'audio'
-          : node.kind === 'video'
-          ? 'video'
-          : node.kind === 'text' || node.kind === 'script'
-            ? 'text'
-            : 'image')
-  const defaultProviderId =
-    targetKind === 'video'
-      ? 'seedance-api'
-      : targetKind === 'text'
-        ? 'ark-text-llm'
-        : targetKind === 'audio'
-          ? 'ark-tts'
-        : 'seedream-5-pro-api'
-  const configuredProviderId = savedConfig?.providerId ?? node.modelProviderId
-  const configuredProvider = configuredProviderId
-    ? providerRegistry.list().find(({ id }) => id === configuredProviderId)
-    : undefined
-  const supportsTarget = (provider: typeof configuredProvider) =>
-    Boolean(provider?.capabilities.some((capability) =>
-      targetKind === 'video'
-        ? capability === 'text-to-video' || capability === 'image-to-video'
-        : targetKind === 'text'
-          ? capability === 'text'
-        : targetKind === 'audio'
-          ? capability === 'audio'
-          : capability === 'text-to-image' || capability === 'image-to-image',
-    ))
-  const fallbackProvider = defaultProviderId
-    ? providerRegistry.list().find(({ id }) => id === defaultProviderId)
-    : undefined
-  const registeredProvider = supportsTarget(configuredProvider) && !isImageAnalysisToolId(configuredProviderId ?? '') && configuredProviderId !== frameAnalysisId
-    ? configuredProvider
-    : supportsTarget(fallbackProvider)
-      ? fallbackProvider
-      : undefined
-  const registeredProviderId = registeredProvider?.id
-  const normalizedImageSettings = node.imageGeneration
-    ? { ...defaultImageGenerationSettings, ...node.imageGeneration }
-    : undefined
-  const imageParameters =
-    targetKind === 'image' && normalizedImageSettings && registeredProvider
-      ? Object.fromEntries(
-          (
-            [
-              ['aspectRatio', normalizedImageSettings.aspectRatio],
-              ['quality', normalizedImageSettings.quality],
-              ['resolution', normalizedImageSettings.resolution],
-              ['count', normalizedImageSettings.count],
-              ['editStrength', normalizedImageSettings.editStrength],
-              ['autoLink', normalizedImageSettings.autoLink],
-              ['customWidth', normalizedImageSettings.customWidth],
-              ['customHeight', normalizedImageSettings.customHeight],
-            ] as const
-          ).flatMap(([name, value]) => {
-            const definition = registeredProvider.parameterSchema[name]
-            if (!definition) return []
-            if (
-              definition.type === 'enum' &&
-              !definition.options.includes(String(value))
-            ) {
-              return []
-            }
-            return [[name, value] as const]
-          }),
-        )
-      : undefined
-  const parameters: Record<string, string | number | boolean> = {
-    ...(registeredProvider ? providerDefaultParameters(registeredProvider) : {}),
-    ...(savedConfig && savedConfig.providerId === registeredProviderId ? savedConfig.parameters : {}),
-    ...imageParameters,
-  }
-  if (targetKind === 'video' && registeredProvider) {
-    parameters.generationMode =
-      resolveVideoGenerationMode(
-        registeredProvider,
-        parameters.generationMode ?? defaultVideoGenerationMode,
-      ) ?? defaultVideoGenerationMode
-  }
-  const generationMode = isVideoGenerationMode(parameters.generationMode)
-    ? parameters.generationMode
-    : undefined
-  const incomingReferenceAssets = project.edges
-    .filter(({ targetNodeId }) => targetNodeId === node.id)
-    .flatMap(({ sourceNodeId }) => {
-      const source = project.nodes.find(({ id }) => id === sourceNodeId)
-      const sourceVersion = source?.versions.find(
-        ({ id }) => id === source.activeVersionId,
-      )
-      const sourceAsset = project.assets.find(
-        ({ id }) => id === sourceVersion?.assetId,
-      )
-      if (!sourceAsset || sourceAsset.kind === 'text') return []
-      return [{
-        url: sourceAsset.url,
-        kind: sourceAsset.kind,
-        mimeType: sourceAsset.mimeType,
-      }]
-    })
-
-  return {
-    projectId: project.id,
-    nodeId: node.id,
-    operation,
-    targetKind,
-    ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
-    prompt,
-    ...(Object.keys(parameters).length ? { parameters } : {}),
-    referenceAssets: generationMode === '文生视频'
-      ? []
-      : savedConfig?.referenceAssets.length
-        ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
-        : (node.kind === 'image' ||
-              node.kind === 'character' ||
-              node.kind === 'scene') &&
-            incomingReferenceAssets.length
-          ? incomingReferenceAssets
-          : asset && asset.kind !== 'text'
-            ? [
-                {
-                  url: asset.url,
-                  kind: asset.kind,
-                  mimeType: asset.mimeType,
-                },
-              ]
-            : [],
-  }
-}
-
-function generationEligibilityFailure(
-  request: GenerationRequest,
-  providerRegistry: ProviderRegistry,
-) {
-  if (!request.prompt.trim() && request.referenceAssets.length === 0) {
-    return '请输入提示词或添加参考素材后再生成。'
-  }
-  if (request.providerId) {
-    const provider = providerRegistry.list().find(
-      ({ id }) => id === request.providerId,
-    )
-    if (!provider) return '当前节点绑定的生成模型不存在。'
-    if (!isProviderEnabled(provider)) {
-      return provider.disabledReason ?? '当前生成模型暂不可用。'
-    }
-  }
-  return undefined
-}
-
-function isWorkflowGeneratableNode(node: Project['nodes'][number]) {
-  if (node.imageTool || node.videoTool || node.effectTool) return false
-  return [
-    'image',
-    'character',
-    'scene',
-    'video',
-    'storyboard',
-    'text',
-    'script',
-  ].includes(node.kind) || node.details?.type === 'audio'
-}
-
-function forceDemoProvider(request: GenerationRequest): GenerationRequest {
-  // Batch execution was explicitly demo-only. Never turn it into paid calls.
-  return { ...request, providerId: 'internal-demo' }
 }
 
 function downstreamConsumers(project: Project, nodeId: string) {
@@ -871,9 +577,9 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
-  const [imageEditSession, setImageEditSession] = useState<{ nodeId: string; asset: Asset; operation: ArkImageEditOperation; projectId: string }>()
-  const [videoContinueSession, setVideoContinueSession] = useState<{ nodeId: string; asset: Asset; projectId: string }>()
-  const [analysisSession, setAnalysisSession] = useState<{ nodeId: string; projectId: string; canvasId?: string; toolId: string; prompt: string; source?: Asset; parameters?: GenerationRequest['parameters'] }>()
+  const [imageEditSession, setImageEditSession] = useState<ImageEditSession>()
+  const [videoContinueSession, setVideoContinueSession] = useState<VideoContinueSession>()
+  const [analysisSession, setAnalysisSession] = useState<AnalysisSession>()
   const openAnalysisTool = useCallback((nodeId: string, toolId: string, prompt?: string, savedConfig?: GenerationConfiguration) => {
     const current = useProjectStore.getState().activeProject
     const node = current?.nodes.find(candidate => candidate.id === nodeId)
@@ -5753,46 +5459,24 @@ export function CanvasPage({
         aria-label="导入工作流 JSON 文件"
         onChange={(event) => void handleWorkflowImport(event)}
       />
-      {canvasExportSession && project ? (
-        <CanvasExportDialog
-          projectTitle={project.title}
-          viewportEstimate={canvasExportSession.viewport}
-          allEstimate={canvasExportSession.all}
-          onClose={closeCanvasExport}
-          onExport={(format, scope) => void exportCanvas(format, scope)}
-        />
-      ) : null}
-      {workflowImportSession ? (
-        <WorkflowImportDialog
-          fileName={workflowImportSession.fileName}
-          result={workflowImportSession.result}
-          onClose={closeWorkflowImport}
-          onConfirm={confirmWorkflowImport}
-        />
-      ) : null}
-      {publishDialogOpen && project ? (
-        <PublishWorkDialog
-          projectTitle={project.title}
-          coverOptions={publishCoverOptions}
-          busy={publishBusy}
-          error={publishError}
-          onClose={closePublishDialog}
-          onSubmit={(value) => void publishWork(value)}
-        />
-      ) : null}
-      {pendingSubjectCreation && project?.id === pendingSubjectCreation.projectId && project.activeCanvasId === pendingSubjectCreation.canvasId ? (
-        <CreateSubjectDialog
-          sourceTitle={pendingSubjectCreation.sourceTitle}
-          coverUrl={pendingSubjectCreation.asset.url}
-          busy={subjectCreationBusy}
-          error={subjectCreationError}
-          onExtract={extractSubject}
-          extractionDisabledReason={subjectExtractionProvider?.disabledReason ?? (!subjectExtractionProvider ? subjectExtractionUnavailable : undefined)}
-          extractionNotice={`自动发送图片至豆包生成主体草稿；按token计费（输入${subjectExtractionProvider?.tokenPricing?.inputPerMillionCny ?? 6}元/百万，输出${subjectExtractionProvider?.tokenPricing?.outputPerMillionCny ?? 30}元/百万），保存前请核对。取消等待不保证免除已产生的费用。`}
-          onCancel={closeSubjectCreation}
-          onSubmit={saveSubject}
-        />
-      ) : null}
+      <CanvasProjectDialogs
+        canvasExport={canvasExportSession && project ? { projectTitle: project.title,
+          viewportEstimate: canvasExportSession.viewport, allEstimate: canvasExportSession.all,
+          onClose: closeCanvasExport, onExport: (format, scope) => void exportCanvas(format, scope),
+        } : undefined}
+        workflowImport={workflowImportSession ? { fileName: workflowImportSession.fileName, result: workflowImportSession.result,
+          onClose: closeWorkflowImport, onConfirm: confirmWorkflowImport,
+        } : undefined}
+        publication={publishDialogOpen && project ? { projectTitle: project.title, coverOptions: publishCoverOptions,
+          busy: publishBusy, error: publishError, onClose: closePublishDialog, onSubmit: (value) => void publishWork(value),
+        } : undefined}
+        subject={pendingSubjectCreation && project?.id === pendingSubjectCreation.projectId && project.activeCanvasId === pendingSubjectCreation.canvasId ? {
+          sourceTitle: pendingSubjectCreation.sourceTitle, coverUrl: pendingSubjectCreation.asset.url,
+          busy: subjectCreationBusy, error: subjectCreationError, onExtract: extractSubject,
+          extractionDisabledReason: subjectExtractionProvider?.disabledReason ?? (!subjectExtractionProvider ? subjectExtractionUnavailable : undefined),
+          extractionNotice: `自动发送图片至豆包生成主体草稿；按token计费（输入${subjectExtractionProvider?.tokenPricing?.inputPerMillionCny ?? 6}元/百万，输出${subjectExtractionProvider?.tokenPricing?.outputPerMillionCny ?? 30}元/百万），保存前请核对。取消等待不保证免除已产生的费用。`,
+          onCancel: closeSubjectCreation, onSubmit: saveSubject,
+        } : undefined} />
       <div
         ref={viewportRef}
         className="canvas-page__viewport"
@@ -5951,37 +5635,16 @@ export function CanvasPage({
             ))}
           </ViewportPortal>
         </ReactFlow>
-        {project?.nodes.length === 0 &&
-        !nodeTypePicker &&
-        !pendingPlacement &&
-        !contextMenu &&
-        !editingCard ? (
-          <CanvasEmptyStarter
-            disabled={!flowInstance}
-            onSelect={createStarterNode}
-          />
-        ) : null}
-        <CanvasToolbar
-          activeTool={activeTool}
-          connectionsVisible={connectionsVisible}
-          disabled={!project}
-          draftOpen={Boolean(pendingPlacement || nodeTypePicker || editingCard)}
-          groupAction={
-            selectedCanvasGroup
-              ? 'ungroup'
-              : selectedNodeIds.size >= 2
-                ? 'group'
-                : 'disabled'
-          }
-          onGroupAction={handleGroupAction}
-          onAddNode={openNodeTypePickerFromDock}
-          onOpenPanel={(panel) => {
-            setHistoryPlacement(undefined)
-            setWorkspacePanel(panel)
-          }}
-          onToggleConnections={toggleConnectionsVisibility}
-          onToolChange={handleToolChange}
-        />
+        <CanvasWorkflowTools
+          empty={project?.nodes.length === 0 && !nodeTypePicker && !pendingPlacement && !contextMenu && !editingCard
+            ? { disabled: !flowInstance, onSelect: createStarterNode } : undefined}
+          toolbar={{ activeTool, connectionsVisible, disabled: !project,
+            draftOpen: Boolean(pendingPlacement || nodeTypePicker || editingCard),
+            groupAction: selectedCanvasGroup ? 'ungroup' : selectedNodeIds.size >= 2 ? 'group' : 'disabled',
+            onGroupAction: handleGroupAction, onAddNode: openNodeTypePickerFromDock,
+            onOpenPanel: (panel) => { setHistoryPlacement(undefined); setWorkspacePanel(panel) },
+            onToggleConnections: toggleConnectionsVisibility, onToolChange: handleToolChange,
+          }} />
         {contextMenu && project ? (
           <CanvasContextMenu
             anchor={contextMenu.anchor}
@@ -6034,28 +5697,7 @@ export function CanvasPage({
             onClose={closeContextMenu}
           />
         ) : null}
-        {workflowBatch ? (
-          <aside
-            className="workflow-batch-status floating-panel"
-            role="status"
-            aria-label="工作流整组执行状态"
-            data-status={workflowBatch.status}
-          >
-            <div>
-              <strong>{workflowBatch.label}</strong>
-              <span>{workflowBatch.completed}/{workflowBatch.total}</span>
-            </div>
-            {workflowBatch.currentNodeTitle ? <p>当前：{workflowBatch.currentNodeTitle}</p> : null}
-            {workflowBatch.error ? <p>{workflowBatch.error}</p> : null}
-            <progress value={workflowBatch.completed} max={workflowBatch.total} />
-            {workflowBatch.status === 'paused' ? (
-              <button type="button" onClick={retryWorkflowBatch}>重试当前节点</button>
-            ) : null}
-            {workflowBatch.status === 'completed' ? (
-              <button type="button" onClick={() => setWorkflowBatch(undefined)}>完成</button>
-            ) : null}
-          </aside>
-        ) : null}
+        <CanvasWorkflowBatchStatus batch={workflowBatch} onRetry={retryWorkflowBatch} onDismiss={() => setWorkflowBatch(undefined)} />
         {storyboardSetup ? (
           <StoryboardGroupDialog
             title={storyboardSetup.group.title}
@@ -6146,115 +5788,25 @@ export function CanvasPage({
             {canvasHint}
           </p>
         ) : null}
-        {project && pendingPlacement && !isCreativeCardKind(pendingPlacement.kind) ? (
-          <NodeDraftPanel
-            key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
-            kind={pendingPlacement.kind}
-            presentation={pendingPlacement.entry}
-            initialTitle={nextNodeTitle(project, pendingPlacement.kind)}
-            anchor={pendingPlacement.anchor}
-            bounds={pendingPlacement.bounds}
-            onCancel={cancelPlacement}
-            onSubmit={submitPlacement}
-          />
-        ) : null}
-        {project && pendingPlacement && isCreativeCardKind(pendingPlacement.kind) ? (
-          <CreativeCardEditor
-            key={`${pendingPlacement.projectId}:${pendingPlacement.kind}`}
-            kind={pendingPlacement.kind}
-            initialTitle={nextCreativeCardTitle(project, pendingPlacement.kind)}
-            anchor={pendingPlacement.anchor}
-            bounds={pendingPlacement.bounds}
-            libraryRepository={libraryRepository}
-            onCancel={cancelPlacement}
-            onSubmit={submitCardPlacement}
-          />
-        ) : null}
-        {project && editingCard ? (() => {
-          const node = project.nodes.find(({ id }) => id === editingCard.nodeId)
-          if (!node || !isCreativeCardKind(node.kind) || !node.card) return null
-          const asset = node.card.imageAssetId
-            ? project.assets.find(({ id }) => id === node.card?.imageAssetId)
-            : undefined
-          return (
-            <CreativeCardEditor
-              key={`${editingCard.projectId}:${editingCard.nodeId}`}
-              kind={node.kind}
-              initialTitle={node.title}
-              initialCard={node.card}
-              initialImage={asset ? deriveLibraryRecord(project, asset) : undefined}
-              anchor={editingCard.anchor}
-              bounds={editingCard.bounds}
-              libraryRepository={libraryRepository}
-              onCancel={cancelCardEditing}
-              onSubmit={submitCardEdit}
-            />
-          )
-        })() : null}
+        <CanvasNodeEditors project={project} pendingPlacement={pendingPlacement} editingCard={editingCard}
+          libraryRepository={libraryRepository} cancelPlacement={cancelPlacement} submitPlacement={submitPlacement}
+          submitCardPlacement={submitCardPlacement} cancelCardEditing={cancelCardEditing} submitCardEdit={submitCardEdit} />
         </div>
-        {workspaceMode === 'storyboard' && project ? (
-          <CanvasStoryboardView
-            key={project.id}
-            project={project}
-            onOpenNode={openWorkspaceNode}
-            onReorderNodes={reorderStoryboardNodes}
-            onUpdateDialogue={(nodeId, dialogue) => {
-              updateNode(nodeId, { storyboardDialogue: dialogue })
-            }}
-          />
-        ) : null}
-        {workspacePanel && project ? (
-          <WorkspaceSidePanel
-            assetRepository={workspaceAssetRepository}
-            subjectRepository={subjectRepository}
-            generationPreferenceStore={generationPreferenceStore}
-            panel={workspacePanel}
-            project={project}
-            historyInsertionMode={Boolean(historyPlacement)}
-            onClose={closeWorkspacePanel}
-            onApplyCharacters={applyCharactersToCanvas}
-            onApplySubject={insertSubjectReference}
-            onDeleteHistoryJobs={deleteHistoryJobs}
-            onInsertAsset={insertWorkspaceAsset}
-            onRemoveProjectAsset={removeAssetReferences}
-            onInsertEffect={insertEffectTemplate}
-            onInsertMaterial={insertMaterialReference}
-            onInsertHistoryResult={useHistoryResult}
-            onResendHistoryJob={resendHistoryJob}
-            onSelectNode={openWorkspaceNode}
-          />
-        ) : null}
-        {agentOpen && project ? (
-          <CanvasAgentPanel onClose={closeAgent}>
-            <DirectorComposer
-              selectedNodeId={primaryNodeId}
-              projectTitle={project.title}
-              selectedNodeTitle={
-                project.nodes.find(({ id }) => id === primaryNodeId)?.title
-              }
-              assetNames={[
-                ...new Set(
-                  project.assets.map((asset, index) =>
-                    project.nodes.find((node) =>
-                      node.versions.some(({ assetId }) => assetId === asset.id),
-                    )?.title ?? `项目资源 ${index + 1}`,
-                  ),
-                ),
-              ]}
-              onExecute={handleDirectorCommand}
-            />
-          </CanvasAgentPanel>
-        ) : null}
-        {project && commentNode && workspaceMode === 'workflow' ? (
-          <CollaborationCommentsPanel
-            projectId={project.id}
-            targetType="node"
-            targetId={commentNode.id}
-            targetLabel={commentNode.title}
-            repository={collaborationRepository}
-            variant="floating"
-          />
-        ) : null}
+        <CanvasWorkspacePanels project={project} mode={workspaceMode} panel={workspacePanel}
+          agentOpen={agentOpen} selectedNodeId={primaryNodeId} commentNode={commentNode}
+          collaborationRepository={collaborationRepository}
+          storyboard={{ onOpenNode: openWorkspaceNode, onReorderNodes: reorderStoryboardNodes,
+            onUpdateDialogue: (nodeId, dialogue) => updateNode(nodeId, { storyboardDialogue: dialogue }),
+          }}
+          resources={{ assetRepository: workspaceAssetRepository, subjectRepository, generationPreferenceStore,
+            historyInsertionMode: Boolean(historyPlacement), onClose: closeWorkspacePanel,
+            onApplyCharacters: applyCharactersToCanvas, onApplySubject: insertSubjectReference,
+            onDeleteHistoryJobs: deleteHistoryJobs, onInsertAsset: insertWorkspaceAsset,
+            onRemoveProjectAsset: removeAssetReferences, onInsertEffect: insertEffectTemplate,
+            onInsertMaterial: insertMaterialReference, onInsertHistoryResult: useHistoryResult,
+            onResendHistoryJob: resendHistoryJob, onSelectNode: openWorkspaceNode,
+          }}
+          agent={{ onClose: closeAgent, onExecute: handleDirectorCommand }} />
         {!project ? (
           <div
             className="canvas-route-state"
@@ -6297,57 +5849,14 @@ export function CanvasPage({
           onClose={closeNodeList}
         />
       ) : null}
-      {deleteCandidate ? (
-        <DependencyImpactDialog
-          node={deleteCandidate}
-          consumers={consumers}
-          onCancel={cancelDelete}
-          onConfirm={confirmDelete}
-        />
-      ) : null}
-      {analysisSession && analysisSession.projectId === project?.id && analysisSession.canvasId === project.activeCanvasId ? (
-        <ArkAnalysisDialog
-          key={`${analysisSession.nodeId}-${analysisSession.toolId}`}
-          provider={providerRegistry.require(analysisSession.toolId)}
-          assets={project.assets}
-          initialSource={analysisSession.source}
-          initialPrompt={analysisSession.prompt}
-          initialParameters={analysisSession.parameters}
-          busy={project.jobs.some(job => job.nodeId === analysisSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
-          onSubmit={submitAnalysis}
-          onImportFile={importAnalysisAsset}
-          onClose={() => setAnalysisSession(undefined)}
-        />
-      ) : null}
-      {imageEditSession && imageEditSession.projectId === project?.id ? (
-        <ImageEditDialog
-          asset={imageEditSession.asset}
-          operation={imageEditSession.operation}
-          provider={providerRegistry.require('ark-image-edit')}
-          busy={project.jobs.some((job) => job.nodeId === imageEditSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
-          onSubmit={submitImageEdit}
-          onClose={() => setImageEditSession(undefined)}
-        />
-      ) : null}
-      {videoContinueProvider && videoContinueSession && videoContinueSession.projectId === project?.id ? (
-        <VideoContinueDialog
-          key={videoContinueSession.asset.id}
-          asset={videoContinueSession.asset}
-          provider={videoContinueProvider}
-          busy={project.jobs.some(job => job.nodeId === videoContinueSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
-          onSubmit={submitVideoContinue}
-          onClose={() => setVideoContinueSession(undefined)}
-        />
-      ) : null}
-      {pendingRemoteGeneration ? (
-        <GenerationConfirmationDialog
-          request={pendingRemoteGeneration.request}
-          selection={pendingRemoteGeneration.selection}
-          returnFocusTo={pendingRemoteGeneration.returnFocusTo}
-          onCancel={() => setPendingRemoteGeneration(undefined)}
-          onConfirm={confirmRemoteGeneration}
-        />
-      ) : null}
+      <CanvasGenerationDialogs project={project} providerRegistry={providerRegistry}
+        deletion={deleteCandidate ? { node: deleteCandidate, consumers, onCancel: cancelDelete, onConfirm: confirmDelete } : undefined}
+        analysis={{ session: analysisSession, onSubmit: submitAnalysis, onImportFile: importAnalysisAsset, onClose: () => setAnalysisSession(undefined) }}
+        imageEdit={{ session: imageEditSession, onSubmit: submitImageEdit, onClose: () => setImageEditSession(undefined) }}
+        videoContinue={{ session: videoContinueSession, provider: videoContinueProvider, onSubmit: submitVideoContinue, onClose: () => setVideoContinueSession(undefined) }}
+        remote={pendingRemoteGeneration ? { request: pendingRemoteGeneration.request, selection: pendingRemoteGeneration.selection,
+          returnFocusTo: pendingRemoteGeneration.returnFocusTo, onCancel: () => setPendingRemoteGeneration(undefined), onConfirm: confirmRemoteGeneration,
+        } : undefined} />
     </main>
   )
 }

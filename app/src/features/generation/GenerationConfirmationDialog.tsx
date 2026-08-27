@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 
 import type { GenerationRequest } from './generation-adapter'
 import type { LibTvProviderSelection } from './libtv-contract'
@@ -46,19 +47,9 @@ export function GenerationConfirmationDialog({
   }
 
   return (
-    <div className="generation-confirmation" role="presentation">
-      <section
-        aria-labelledby="generation-confirmation-title"
-        aria-describedby="generation-confirmation-impact generation-confirmation-warning"
-        aria-modal="true"
-        className="generation-confirmation__dialog"
-        role="dialog"
-        onKeyDown={(event) => {
-          if (event.key !== 'Escape') return
-          event.preventDefault()
-          finish(onCancel)
-        }}
-      >
+    <ConfirmDialog as="section" overlayClassName="generation-confirmation" overlayRole="presentation"
+      className="generation-confirmation__dialog" labelledBy="generation-confirmation-title"
+      describedBy="generation-confirmation-impact generation-confirmation-warning" onClose={() => finish(onCancel)}>
         <header>
           <p>REMOTE GENERATION</p>
           <h2 id="generation-confirmation-title">确认 LibTV 实际生成</h2>
@@ -99,7 +90,6 @@ export function GenerationConfirmationDialog({
             确认并提交 LibTV
           </button>
         </div>
-      </section>
-    </div>
+    </ConfirmDialog>
   )
 }

@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { Asset } from '../project/model'
 import type { GenerationRequest } from '../generation/generation-adapter'
 import type { ModelProvider } from '../generation/model-provider-registry'
+import { imageAnalysisParameterDefaults } from '../generation/image-analysis-parameters'
 import { imageAnalysisPlan } from '../generation/ark-image-analysis-provider'
 import { frameAnalysisId, frameAnalysisMusicReason, validateFrameAnalysisRequest } from '../generation/ark-frame-analysis-provider'
 
@@ -26,7 +27,10 @@ export function ArkAnalysisDialog({ provider, assets, initialSource, initialProm
   const frame = provider.id === frameAnalysisId
   const title = frame ? '逐帧拉片分析' : provider.modelName
   const [prompt, setPrompt] = useState(initialPrompt || (frame ? '分析视频的分镜变化和人物动态。' : ''))
-  const [resolution, setResolution] = useState(String(initialParameters.resolution ?? '1.5K'))
+  const defaults = imageAnalysisParameterDefaults(provider, initialParameters)
+  const resolutionSchema = provider.parameterSchema.resolution
+  const resolutionOptions = resolutionSchema?.type === 'enum' ? resolutionSchema.options : []
+  const [resolution, setResolution] = useState(defaults.resolution)
   const [sourceId, setSourceId] = useState(initialSource?.id ?? '')
   const [uploaded, setUploaded] = useState<Asset>()
   const [uploadBusy, setUploadBusy] = useState(false)
@@ -38,18 +42,15 @@ export function ArkAnalysisDialog({ provider, assets, initialSource, initialProm
   const [box, setBox] = useState({ editX1: Number(initialParameters.editX1 ?? 0), editY1: Number(initialParameters.editY1 ?? 0), editX2: Number(initialParameters.editX2 ?? 999), editY2: Number(initialParameters.editY2 ?? 999) })
   const [submitted, setSubmitted] = useState(false)
   const submittedRef = useRef(false)
-  const dialogRef = useRef<HTMLElement>(null)
   const errorId = useId()
   const active = useRef(true)
   useEffect(() => {
     active.current = true
-    const trigger = document.activeElement
-    dialogRef.current?.querySelector('textarea')?.focus()
-    return () => { active.current = false; if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus() }
+    return () => { active.current = false }
   }, [])
   const available = [...new Map([...assets, ...(initialSource ? [initialSource] : []), ...(uploaded ? [uploaded] : [])].map(asset => [asset.id, asset])).values()].filter(asset => asset.kind === (frame ? 'video' : 'image'))
   const source = available.find(asset => asset.id === sourceId)
-  const parameters: NonNullable<GenerationRequest['parameters']> = frame ? { fps, storyboard, motion, music: false } : { resolution, count: 1, useBox, ...box }
+  const parameters: NonNullable<GenerationRequest['parameters']> = frame ? { fps, storyboard, motion, music: false } : { resolution, count: defaults.count, useBox, ...box }
   const request: GenerationRequest = {
     projectId: '', nodeId: '', operation: 'regenerate', targetKind: frame ? 'text' : 'image', providerId: provider.id, prompt,
     parameters, referenceAssets: source && source.kind !== 'text' ? [{ kind: source.kind, url: source.url, mimeType: source.mimeType }] : [],
@@ -62,18 +63,9 @@ export function ArkAnalysisDialog({ provider, assets, initialSource, initialProm
     else plan = imageAnalysisPlan(request)
   } catch (failure) { error ||= failure instanceof Error ? failure.message : '请检查输入。' }
 
-  return createPortal(
-    <div className="ark-image-edit-overlay nodrag nowheel" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}>
-      <section ref={dialogRef} className="ark-image-edit-dialog ark-analysis-dialog" role="dialog" aria-modal="true" aria-label={title}
-        onKeyDown={event => {
-          event.stopPropagation()
-          if (event.key === 'Escape') { event.preventDefault(); onClose() }
-          if (event.key === 'Tab') {
-            const controls = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select,textarea,summary') ?? [])]
-            if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1)?.focus() }
-            if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus() }
-          }
-        }}>
+  return (
+    <ConfirmDialog portal as="section" label={title} overlayClassName="ark-image-edit-overlay nodrag nowheel" className="ark-image-edit-dialog ark-analysis-dialog"
+      initialFocus="textarea" focusableSelector="button:not(:disabled),input:not(:disabled),select,textarea,summary" restoreFocus dismissOnBackdrop onClose={onClose}>
         <header><h2>{title}</h2><button type="button" aria-label={`关闭${title}`} onClick={onClose}>关闭</button></header>
         <p>火山方舟 · {frame ? '豆包视频理解' : 'Seedream 5.0 Pro'} · 官方 API</p>
         <p>{provider.modelNotice}</p>
@@ -103,7 +95,7 @@ export function ArkAnalysisDialog({ provider, assets, initialSource, initialProm
           </fieldset>
           <p>本地预计 1 积分；官方输入 ¥6/百万 token、输出 ¥30/百万 token，最终以 usage 和账单为准。视频需小于50MB，格式 MP4/MOV/AVI。</p>
         </> : <>
-          <label>输出清晰度<select aria-label="输出清晰度" value={resolution} onChange={event => setResolution(event.target.value)}>{['1K', '1.5K', '2K'].map(value => <option key={value}>{value}</option>)}</select></label>
+          <label>输出清晰度<select aria-label="输出清晰度" value={resolution} onChange={event => setResolution(event.target.value)}>{resolutionOptions.map(value => <option key={value}>{value}</option>)}</select></label>
           {provider.id === 'cinematic-lighting-api' ? <fieldset><legend>局部光影</legend>
             <label><input type="checkbox" checked={useBox} onChange={event => setUseBox(event.target.checked)} />指定光影区域</label>
             {useBox ? <div className="ark-image-edit-dialog__fields">{([['editX1', '左边界'], ['editY1', '上边界'], ['editX2', '右边界'], ['editY2', '下边界']] as const).map(([key, label]) => <label key={key}>{label}<input aria-label={label} type="number" min={0} max={999} value={box[key]} onChange={event => setBox({ ...box, [key]: Number(event.target.value) })} /></label>)}</div> : null}
@@ -116,7 +108,6 @@ export function ArkAnalysisDialog({ provider, assets, initialSource, initialProm
         <p>确认后调用真实 API。失败不自动重试；取消不能撤销服务端已发生的费用。结果写入项目版本、资产与历史，URL 有效期以服务商为准。</p>
         {error ? <p role="status" id={errorId}>{error}</p> : null}
         <footer><button type="button" onClick={onClose}>取消</button><button type="button" disabled={Boolean(error) || submitted || uploadBusy} aria-describedby={error ? errorId : undefined} onClick={() => { if (submittedRef.current) return; submittedRef.current = true; setSubmitted(true); onSubmit({ prompt, parameters, source }) }}>{frame ? '确认分析' : '确认生成'}</button></footer>
-      </section>
-    </div>, document.body,
+    </ConfirmDialog>
   )
 }

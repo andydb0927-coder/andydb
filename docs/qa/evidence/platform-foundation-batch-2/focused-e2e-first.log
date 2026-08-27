@@ -1,0 +1,50 @@
+[WebServer] (node:2440) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:2445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/platform-foundation-batch2.spec.ts:3:1 › extracted dock, resources and export overlays keep their entry points and dismiss behavior (8.2s)
+(node:2461) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › e2e/platform-foundation-batch2.spec.ts:22:1 › menu and Slash share preset defaults and confirmation focus at 721px without generating on cancel (2.0s)
+  ✓  3 [chromium] › e2e/platform-foundation-batch2.spec.ts:54:1 › Agent preferences and panel lifecycle do not mutate director 3D scene and camera (5.2s)
+
+
+  1) [chromium] › e2e/platform-foundation-batch2.spec.ts:3:1 › extracted dock, resources and export overlays keep their entry points and dismiss behavior 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('complementary', { name: '生成历史', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('complementary', { name: '生成历史', exact: true })
+
+
+       7 |   for (const [entry, name] of [['打开工具箱', '工具箱'], ['资产管理', '资产管理'], ['素材库', '素材库'], ['角色库', '角色库'], ['历史记录', '生成历史']]) {
+       8 |     await page.getByRole('button', { name: entry, exact: true }).click()
+    >  9 |     await expect(page.getByRole('complementary', { name, exact: true })).toBeVisible()
+         |                                                                          ^
+      10 |     await page.getByRole('button', { name: `关闭${name}面板` }).click()
+      11 |     await expect(page.getByRole('complementary', { name, exact: true })).toHaveCount(0)
+      12 |   }
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/platform-foundation-batch2.spec.ts:9:74
+
+    Error Context: test-results/platform-foundation-batch2-21184-points-and-dismiss-behavior-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/platform-foundation-batch2-21184-points-and-dismiss-behavior-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/platform-foundation-batch2-21184-points-and-dismiss-behavior-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/platform-foundation-batch2.spec.ts:3:1 › extracted dock, resources and export overlays keep their entry points and dismiss behavior 
+  2 passed (17.3s)

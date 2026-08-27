@@ -4,6 +4,7 @@ import type { ModelCapability, ModelProvider } from './model-provider-registry'
 import { ImageSizeResolver } from './image-size-resolver'
 import { arkImageEditModelId, createArkImageEditProvider, estimateArkImageEditCny } from './ark-image-edit-provider'
 import { createSeedreamLiveProvider, seedreamImageSizePolicy, type SeedreamLiveProviderOptions } from './seedream-live-provider'
+import { resolveModelParameterManifest, standardImageResolutionTiers, type ModelParameterManifest } from './model-parameter-semantics'
 
 export const imageAnalysisTools = [
   { id: 'panorama-720-api', label: '720全景', capability: 'panorama-720', count: 1, columns: 1, notice: '提示词全景：2:1 图片，不保证等距柱状投影或接缝准确；请在全景查看器中复核。' },
@@ -28,7 +29,7 @@ export function imageAnalysisPlan(request: GenerationRequest) {
   if (request.referenceAssets.length > 1 || request.referenceAssets.some(asset => asset.kind !== 'image')) throw new Error('图片分析仅支持一张源图片。')
   if (Number(request.parameters?.count ?? 1) !== 1) throw new Error('工具数量由预设确定，不支持额外数量倍增。')
   const resolution = String(request.parameters?.resolution ?? '1.5K')
-  if (!['1K', '1.5K', '2K'].includes(resolution)) throw new Error('请选择 1K、1.5K 或 2K 清晰度。')
+  if (!standardImageResolutionTiers.some(tier => tier === resolution)) throw new Error('请选择 1K、1.5K 或 2K 清晰度。')
   const aspectRatio = tool.id === 'panorama-720-api' ? '2:1' : '16:9'
   const size = resolver.resolve({ aspectRatio, resolution })
   let instruction = ''
@@ -54,11 +55,18 @@ export function imageAnalysisPlan(request: GenerationRequest) {
 export function createArkImageAnalysisProviders(options: SeedreamLiveProviderOptions & { timeoutMs?: number } = {}): ModelProvider[] {
   const delegate = createSeedreamLiveProvider({ ...options, modelId: arkImageEditModelId })
   const edit = createArkImageEditProvider({ ...options, modelId: arkImageEditModelId })
+  const parameterManifest: ModelParameterManifest = {
+    ...delegate.parameterManifest,
+    resolution: { type: 'enum', options: standardImageResolutionTiers, defaultValue: '1.5K' },
+    count: { type: 'enum', options: ['1'], defaultValue: '1' },
+  }
   return imageAnalysisTools.map(tool => ({
     ...delegate, id: tool.id, name: '火山方舟', modelName: tool.label, selectorVisible: false,
     menuCapabilities: [], capabilities: ['text-to-image', 'image-to-image', tool.capability],
     disabledReason: delegate.disabledReason ? `${tool.label}开发验证配置未完成` : undefined,
     modelNotice: tool.notice,
+    parameterManifest,
+    parameterSchema: resolveModelParameterManifest(parameterManifest),
     pricing: { amount: tool.count * 18, currency: 'credits', unit: 'generation' },
     sizePolicy: { ...seedreamImageSizePolicy, costMode: { amount: tool.count * 18, per: 'generation' } },
     async generate(request, context) {

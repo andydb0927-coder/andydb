@@ -1,0 +1,58 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/canvas-generation-request.test.ts src/features/canvas/CanvasGenerationDialogs.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/canvas/canvas-generation-request.test.ts (0 test)
+ ❯ src/features/canvas/CanvasGenerationDialogs.test.tsx (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/CanvasGenerationDialogs.test.tsx [ src/features/canvas/CanvasGenerationDialogs.test.tsx ]
+Error: Failed to resolve import "./CanvasGenerationDialogs" from "src/features/canvas/CanvasGenerationDialogs.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/canvas/CanvasGenerationDialogs.test.tsx:5:40
+  3  |  import { makeProjectFixture } from "../../test/fixtures";
+  4  |  import { createFixtureProviderRegistry } from "../../test/provider-fixtures";
+  5  |  import { CanvasGenerationDialogs } from "./CanvasGenerationDialogs";
+     |                                           ^
+  6  |  var _jsxFileName = "/Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/canvas/CanvasGenerationDialogs.test.tsx";
+  7  |  import { jsxDEV as _jsxDEV } from "react/jsx-dev-runtime";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/canvas/canvas-generation-request.test.ts [ src/features/canvas/canvas-generation-request.test.ts ]
+Error: Failed to resolve import "./canvas-generation-request" from "src/features/canvas/canvas-generation-request.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/canvas/canvas-generation-request.test.ts:4:88
+  2  |  import { makeProjectFixture } from "../../test/fixtures";
+  3  |  import { createFixtureProviderRegistry } from "../../test/provider-fixtures";
+  4  |  import { buildGenerationRequest, generationEligibilityFailure, forceDemoProvider } from "./canvas-generation-request";
+     |                                                                                           ^
+  5  |  test("extracted builder retains provider defaults, prompt and reference without mutating project", () => {
+  6  |  	const project = makeProjectFixture(), snapshot = structuredClone(project);
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  23:20:57
+   Duration  405ms (transform 19ms, setup 205ms, import 0ms, tests 0ms, environment 436ms)
+

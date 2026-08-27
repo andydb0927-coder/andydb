@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, useState } from 'react'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { Asset } from '../project/model'
 import { providerGenerationCost, type ModelProvider } from '../generation/model-provider-registry'
 import { seedanceVideoTokenRateCny } from '../generation/seedance-video-provider'
@@ -19,13 +19,7 @@ export function VideoContinueDialog({ asset, provider, busy = false, onSubmit, o
   const [metadata, setMetadata] = useState<Pick<Asset, 'durationSeconds' | 'width' | 'height'>>({})
   const [loadError, setLoadError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const dialogRef = useRef<HTMLDivElement>(null)
   const submittedRef = useRef(false)
-  useEffect(() => {
-    const trigger = document.activeElement
-    dialogRef.current?.querySelector('textarea')?.focus()
-    return () => { if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus() }
-  }, [])
   const source = { ...asset, ...metadata }
   const error = provider.disabledReason || (busy ? '当前节点已有生成任务，请等待完成。' : '') ||
     (loadError ? '源视频无法读取，请检查链接有效期或更换素材。' : '') || videoContinuationSourceFailure(source) ||
@@ -36,19 +30,9 @@ export function VideoContinueDialog({ asset, provider, busy = false, onSubmit, o
   const durationOptions = durationSchema?.type === 'enum' ? durationSchema.options : []
   const qualityOptions = qualitySchema?.type === 'enum' ? qualitySchema.options : []
   const drafts = { prompt: prompt.trim(), duration, quality, sound, sourceDuration: source.durationSeconds ?? NaN, sourceWidth: source.width, sourceHeight: source.height }
-  return createPortal(
-    <div className="ark-video-continue-overlay nodrag nowheel" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="智能续写" className="ark-video-continue-dialog"
-        onKeyDown={(event) => {
-          event.stopPropagation()
-          if (event.key === 'Escape') { event.preventDefault(); onClose() }
-          if (event.key === 'Tab') {
-            const elements = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),textarea,input,select,video[controls]') ?? [])]
-            const first = elements[0], last = elements.at(-1)
-            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-            if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
-          }
-        }}>
+  return (
+    <ConfirmDialog portal label="智能续写" overlayClassName="ark-video-continue-overlay nodrag nowheel" className="ark-video-continue-dialog"
+      initialFocus="textarea" focusableSelector="button:not(:disabled),textarea,input,select,video[controls]" restoreFocus dismissOnBackdrop onClose={onClose}>
         <header><div><h2>智能续写</h2><p>火山方舟 · Seedance 2.0 视频续写</p></div><button type="button" onClick={onClose} aria-label="关闭智能续写">关闭</button></header>
         <video aria-label="续写源视频" src={asset.url} controls preload="metadata" onError={() => setLoadError(true)}
           onLoadedMetadata={(event) => {
@@ -72,7 +56,6 @@ export function VideoContinueDialog({ asset, provider, busy = false, onSubmit, o
         {error ? <p role="status" id="video-continue-reason">{error}</p> : null}
         <footer><button type="button" onClick={onClose}>取消</button><button type="button" disabled={Boolean(error) || submitted} aria-describedby={error ? 'video-continue-reason' : undefined}
           onClick={() => { if (submittedRef.current || error) return; submittedRef.current = true; setSubmitted(true); onSubmit(drafts) }}>确认续写并生成</button></footer>
-      </div>
-    </div>, document.body,
+    </ConfirmDialog>
   )
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, useState, type PointerEvent } from 'react'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { Asset } from '../project/model'
 import { providerGenerationCost, type ModelProvider } from '../generation/model-provider-registry'
 import { ImageSizeResolver } from '../generation/image-size-resolver'
@@ -37,14 +37,6 @@ export function ImageEditDialog({ asset, operation, provider, busy = false, onSu
   const [loadError, setLoadError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const start = useRef<{ x: number; y: number } | undefined>(undefined)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-  useEffect(() => {
-    const trigger = document.activeElement
-    dialogRef.current?.querySelector<HTMLElement>('textarea')?.focus()
-    return () => { if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus() }
-  }, [])
   const draft: ArkImageEditDraft = { operation, prompt, width, height, direction, ...(operation === 'erase' ? { box } : {}) }
   let error = provider.disabledReason ?? (busy ? '当前节点已有生成任务，请等待完成。' : loadError ? '源图片无法显示，请重新上传后编辑。' : '')
   try {
@@ -59,19 +51,9 @@ export function ImageEditDialog({ asset, operation, provider, busy = false, onSu
   }
   const title = operation === 'erase' ? 'AI 局部擦除' : '提示词扩图'
 
-  return createPortal(
-    <div className="ark-image-edit-overlay nodrag nowheel" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} className="ark-image-edit-dialog"
-        onKeyDown={(event) => {
-          event.stopPropagation()
-          if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current() }
-          if (event.key === 'Tab') {
-            const controls = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),textarea,input,select') ?? [])]
-            const first = controls[0], last = controls.at(-1)
-            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-            if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
-          }
-        }}>
+  return (
+    <ConfirmDialog portal label={title} overlayClassName="ark-image-edit-overlay nodrag nowheel" className="ark-image-edit-dialog"
+      initialFocus="textarea" focusableSelector="button:not(:disabled),textarea,input,select" restoreFocus dismissOnBackdrop onClose={onClose}>
         <header><h2>{title}</h2><button type="button" aria-label={`关闭${title}`} onClick={onClose}>关闭</button></header>
         <p>火山方舟 · Seedream 5.0 Pro 图片编辑</p>
         <p>{operation === 'erase' ? '在图片上拖动框选区域，或填写 0–999 坐标。' : '按描述与目标尺寸延展画面，不是像素拼接。'} AI 重绘不保证未编辑区域像素完全不变；原图版本保留。</p>
@@ -93,7 +75,6 @@ export function ImageEditDialog({ asset, operation, provider, busy = false, onSu
         <p>单张输入图免费；最终费用以官方账单为准。确认后调用真实 API，结果保存到版本、资产与历史。</p>
         {error ? <p role="status" id="ark-edit-reason">{error}</p> : null}
         <footer><button type="button" onClick={onClose}>取消</button><button type="button" disabled={Boolean(error) || submitted} aria-describedby={error ? 'ark-edit-reason' : undefined} onClick={() => { setSubmitted(true); onSubmit(draft) }}>确认编辑并生成</button></footer>
-      </div>
-    </div>, document.body,
+    </ConfirmDialog>
   )
 }

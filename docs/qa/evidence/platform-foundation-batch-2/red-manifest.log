@@ -1,0 +1,95 @@
+
+> app@0.0.0 test:run
+> vitest run
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+AggregateError: 
+    at internalConnectMultiple (node:net:1135:18)
+    at internalConnectMultiple (node:net:1211:5)
+    at internalConnectMultiple (node:net:1211:5)
+    at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+    at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+  code: 'EPERM',
+  [errors]: [
+    Error: connect EPERM ::1:3000 - Local (:::0)
+        at internalConnectMultiple (node:net:1207:16)
+        at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+        at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+        at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+      errno: -1,
+      code: 'EPERM',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect EPERM 127.0.0.1:3000 - Local (0.0.0.0:0)
+        at internalConnectMultiple (node:net:1207:16)
+        at internalConnectMultiple (node:net:1211:5)
+        at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+        at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+        at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+      errno: -1,
+      code: 'EPERM',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}
+ ❯ src/features/generation/model-provider-registry.test.ts (30 tests | 1 failed) 83ms
+     × compiles all manifests 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/generation/model-provider-registry.test.ts > model provider registry > compiles all manifests
+AssertionError: expected { aspectRatio: { …(3) }, …(6) } to deeply equal { aspectRatio: { …(3) }, …(6) }
+
+- Expected
++ Received
+
+@@ -26,12 +26,10 @@
+    },
+    "count": {
+      "defaultValue": "1",
+      "options": [
+        "1",
+-       "2",
+-       "4",
+      ],
+      "type": "enum",
+    },
+    "customHeight": {
+      "defaultValue": 2048,
+@@ -53,11 +51,11 @@
+      "min": 0,
+      "step": 0.05,
+      "type": "number",
+    },
+    "resolution": {
+-     "defaultValue": "2K",
++     "defaultValue": "1.5K",
+      "options": [
+        "1K",
+        "1.5K",
+        "2K",
+      ],
+
+ ❯ src/features/generation/model-provider-registry.test.ts:15:87
+     13| describe('model provider registry', () => {
+     14|   test('compiles all manifests', () => {
+     15|     for (const p of createDefaultProviderRegistry().list()) expect(p.p…
+       |                                                                                       ^
+     16|   })
+     17|   test.each([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 157 passed (158)
+      Tests  1 failed | 1366 passed (1367)
+   Start at  23:28:15
+   Duration  16.64s (transform 6.14s, setup 13.78s, import 18.38s, tests 39.76s, environment 33.19s)
+

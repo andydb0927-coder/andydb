@@ -43,7 +43,8 @@ import {
 import type { CreativeNodeData } from '../node-types'
 import { AiPlaceholderBadge, AiPlaceholderNotice } from '../AiPlaceholderNotice'
 import { PromptAssist } from '../PromptAssist'
-import { imageAiPlaceholderForLabel } from '../prompt-assist'
+import { imageCreationTemplateColumns, imageAiPlaceholderForLabel, resolveImagePreset, type ImageTemplateCategory } from '../image-creation-presets'
+import { ConfirmDialog } from '../../../ui/ConfirmDialog'
 import { imageAnalysisTools, isImageAnalysisToolId } from '../../generation/ark-image-analysis-provider'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 import { arkImageUpscaleUnavailable } from '../../generation/ark-image-edit-provider'
@@ -138,58 +139,6 @@ const styleCards = [
 ] as const
 
 type StyleTab = 'plaza' | 'favorites' | 'recent'
-
-type ImageTemplateCategory = 'story' | 'texture' | 'space' | 'setting'
-
-interface ImageCreationTemplate {
-  label: string
-  category: ImageTemplateCategory
-  featured?: boolean
-}
-
-const imageCreationTemplateColumns: ReadonlyArray<
-  ReadonlyArray<{ title: string; items: readonly ImageCreationTemplate[] }>
-> = [
-  [
-    {
-      title: '分镜叙事',
-      items: [
-        { label: '调度故事板', category: 'story', featured: true },
-        { label: '故事板', category: 'story', featured: true },
-        { label: '25宫格连贯分镜', category: 'story' },
-        { label: '剧情推演四宫格', category: 'story' },
-        { label: '画面推演 - 3秒后', category: 'story' },
-        { label: '画面推演 - 5秒前', category: 'story' },
-      ],
-    },
-    {
-      title: '质感调节',
-      items: [
-        { label: '人像质感调节', category: 'texture', featured: true },
-        { label: '电影级光影校正', category: 'texture' },
-      ],
-    },
-  ],
-  [
-    {
-      title: '空间与机位',
-      items: [
-        { label: '720全景', category: 'space' },
-        { label: '多机位九宫格', category: 'space' },
-      ],
-    },
-    {
-      title: '设定图',
-      items: [
-        { label: '角色脸部三视图', category: 'setting' },
-        { label: '角色设定图', category: 'setting' },
-        { label: '角色三视图', category: 'setting' },
-        { label: '场景设定图', category: 'setting' },
-        { label: '产品设定图', category: 'setting' },
-      ],
-    },
-  ],
-]
 
 type ImageParameterKey =
   | 'quality'
@@ -1290,11 +1239,11 @@ export function ImageGenerationPanel({
           triggerRef={templateTriggerRef}
           onSelect={(template) => {
             setTemplatesOpen(false)
-            const aiPreset = imageAiPlaceholderForLabel(template)
-            if (aiPreset && isImageAnalysisToolId(aiPreset.providerId) && data.onOpenAnalysisTool) {
-              data.onOpenAnalysisTool(aiPreset.providerId, promptDraftRef.current.trim())
-            } else if (aiPreset) {
-              setPendingAiTemplate({ label: template, ...aiPreset })
+            const preset = resolveImagePreset(template)
+            if (preset.kind === 'analysis' && data.onOpenAnalysisTool) {
+              data.onOpenAnalysisTool(preset.providerId, promptDraftRef.current.trim())
+            } else if (preset.kind !== 'tool') {
+              setPendingAiTemplate(preset)
             } else {
               setPendingTemplate(template)
             }
@@ -1430,13 +1379,9 @@ export function ImageGenerationPanel({
         </div>,
         document.body,
       ) : null}
-      {liveConfirmationOpen ? createPortal(
-        <div className="image-result-confirm nodrag">
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="确认真实图片生成"
-          >
+      {liveConfirmationOpen ? (
+        <ConfirmDialog portal overlayClassName="image-result-confirm nodrag" role="alertdialog"
+          label="确认真实图片生成" onClose={closeLiveConfirmation}>
             <button
               type="button"
               aria-label="关闭真实图片生成确认"
@@ -1470,9 +1415,7 @@ export function ImageGenerationPanel({
                 确认生成
               </button>
             </div>
-          </div>
-        </div>,
-        document.body,
+        </ConfirmDialog>
       ) : null}
       {pendingTemplate ? createPortal(
         <div className="image-result-confirm nodrag">
