@@ -1,25 +1,33 @@
 import { expect, test } from './provider-fixture'
 import { readFile } from 'node:fs/promises'
-import { extname, resolve } from 'node:path'
+import { extname } from 'node:path'
+import { resolveOfflineDist, resolveStaticFixtureFile } from './static-dist-fixture'
 
 // Run after npm run build:mock: verifies the exact GitHub Pages artifact,
 // not a dev server whose fixture keys would enable the providers.
 test('production selectors contain only unconfigured real models and never generate demo results', async ({ page }) => {
-  const root = resolve(process.env.PLAYWRIGHT_OFFLINE_DIST ?? 'dist')
+  const root = resolveOfflineDist()
   const apiRequests: string[] = []
   page.on('request', (request) => {
     if (/images\/generations|chat\/completions|contents\/generations\/tasks|tts\//.test(request.url())) apiRequests.push(request.url())
   })
   await page.route('https://catalog-fixture.local/**', async (route) => {
-    const path = new URL(route.request().url()).pathname.replace(/^\/andydb\/?/, '')
-    const file = extname(path) ? path : 'index.html'
-    const target = resolve(root, file)
-    if (!target.startsWith(`${root}/`)) throw new Error('Invalid production fixture path')
+    const target = resolveStaticFixtureFile(root, new URL(route.request().url()).pathname)
     const types: Record<string, string> = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' }
-    await route.fulfill({ contentType: types[extname(file)] ?? 'application/octet-stream', body: await readFile(target) })
+    await route.fulfill({ contentType: types[extname(target)] ?? 'application/octet-stream', body: await readFile(target) })
   })
   await page.goto('https://catalog-fixture.local/andydb/projects/new')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  const indexDocument = await readFile(resolveStaticFixtureFile(root, '/andydb/'), 'utf8')
+  for (const path of ['/andydb/projects/new', '/andydb/1', '/andydb/1/index.html', '/andydb/missing-fixture.js']) {
+    const response = await page.evaluate(async (pathname) => {
+      const result = await fetch(pathname)
+      return { status: result.status, type: result.headers.get('content-type'), body: await result.text() }
+    }, path)
+    expect(response.status).toBe(200)
+    expect(response.type).toContain('text/html')
+    expect(response.body).toBe(indexDocument)
+  }
   for (const [type, modelLabel, ids, promptLabel, generate] of [
     ['图片', '图片模型', ['seedream-5-pro-api'], '提示词', '生成图片，预计成本 18'],
     ['视频', '模型', ['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api', 'frame-analysis-api'], '提示词', '生成视频，预计成本 135'],

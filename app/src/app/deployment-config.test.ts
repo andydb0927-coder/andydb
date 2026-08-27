@@ -33,7 +33,7 @@ test('selects the offline artifact without disabling the fixture-key development
   const playwrightConfig = readFileSync(resolve(process.cwd(), 'playwright.config.ts'), 'utf8')
   const publicCatalogTest = readFileSync(resolve(process.cwd(), 'e2e/public-model-catalog.spec.ts'), 'utf8')
 
-  expect(publicCatalogTest).toContain("resolve(process.env.PLAYWRIGHT_OFFLINE_DIST ?? 'dist')")
+  expect(publicCatalogTest).toContain('resolveOfflineDist()')
   expect(playwrightConfig).not.toContain('PLAYWRIGHT_OFFLINE_DIST')
   expect(playwrightConfig).toContain('VITE_GENERATION_MODE=seedream-direct-dev')
   expect(playwrightConfig).toContain('VITE_SEEDREAM_API_KEY=playwright-fixture-seedream-key')
