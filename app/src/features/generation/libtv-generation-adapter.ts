@@ -5,6 +5,7 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import type { GenerationProviderPreferenceStore } from './generation-provider-preference'
+import { libtvBridgeErrorMessage, preserveAbort } from './generation-errors'
 import {
   LIBTV_PROJECT_UUID_PATTERN,
   type LibTvCatalog,
@@ -423,16 +424,7 @@ async function bridgeErrorMessage(
     signal.throwIfAborted()
     // Only fixed messages are returned for malformed error bodies.
   }
-  if (code === 'WRITES_DISABLED') {
-    return 'LibTV 写入未启用，请在画布的模型设置中检查写入门禁。'
-  }
-  if (code === 'PAYLOAD_TOO_LARGE') {
-    return 'LibTV 生成请求过大，请减少参考素材后重试。'
-  }
-  if (code === 'UNSUPPORTED_MEDIA_TYPE' || code === 'INVALID_JSON') {
-    return 'LibTV 生成请求无效，请检查模型与参考素材。'
-  }
-  return 'LibTV 生成请求失败，请检查本地桥接状态后重试。'
+  return libtvBridgeErrorMessage(code)
 }
 
 function parseGeneratedAsset(
@@ -569,12 +561,6 @@ function browserOrigin(): string {
     (window.location.protocol === 'http:' || window.location.protocol === 'https:')
     ? window.location.origin
     : 'http://localhost'
-}
-
-function preserveAbort(error: unknown): void {
-  if (error instanceof DOMException && error.name === 'AbortError') {
-    throw error
-  }
 }
 
 function optionalPositiveNumber(value: unknown): value is number | undefined {

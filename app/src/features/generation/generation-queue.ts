@@ -1,4 +1,6 @@
 import type { GenerationJob, GenerationOperation } from '../project/model'
+import { generationErrorMessage, isGenerationAbort } from './generation-errors'
+import { isActiveTask, isRetryableTask } from './task-status'
 import type {
   GenerationAdapter,
   GenerationRequest,
@@ -23,10 +25,6 @@ interface QueueEntry {
   job: QueueGenerationJob
   request: GenerationRequest
   controller: AbortController
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 function isRestorableJob(
@@ -105,7 +103,7 @@ export class GenerationQueue {
     const entry = this.entries.get(id)
     if (
       !entry ||
-      (entry.job.status !== 'queued' && entry.job.status !== 'running')
+      !isActiveTask(entry.job.status)
     ) {
       return undefined
     }
@@ -134,7 +132,7 @@ export class GenerationQueue {
     }
     if (
       !entry ||
-      (entry.job.status !== 'failed' && entry.job.status !== 'cancelled')
+      !isRetryableTask(entry.job.status)
     ) {
       return undefined
     }
@@ -195,10 +193,10 @@ export class GenerationQueue {
       )
     } catch (error) {
       if (!this.isCurrentAttempt(entry, attempt)) return
-      if (this.isCancelled(entry) || isAbortError(error)) return
+      if (this.isCancelled(entry) || isGenerationAbort(error)) return
       this.update(entry, {
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Generation failed',
+        error: generationErrorMessage(error),
       })
       return
     }
@@ -210,7 +208,7 @@ export class GenerationQueue {
       ...entry.job,
       status: result.incomplete ? 'failed' : 'succeeded',
       assetId: result.asset.id,
-      error: result.incomplete?.reason,
+      error: result.incomplete ? generationErrorMessage(new Error(result.incomplete.reason)) : undefined,
       progress: result.incomplete ? Math.floor(result.incomplete.completed / result.incomplete.total * 100) : 100,
       ...(result.usage
         ? {
@@ -233,7 +231,7 @@ export class GenerationQueue {
     ) {
       this.update(entry, {
         status: 'failed',
-        error: 'Generation result asset reference mismatch',
+        error: '生成结果素材引用不一致，请重新检查节点。',
       })
       return
     }
@@ -251,10 +249,7 @@ export class GenerationQueue {
       this.update(entry, {
         status: 'failed',
         assetId: undefined,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Generation result rejected',
+        error: generationErrorMessage(error, '生成结果保存失败，请重试。'),
       })
       return
     }

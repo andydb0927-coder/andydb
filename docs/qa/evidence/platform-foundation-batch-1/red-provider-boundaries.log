@@ -1,0 +1,84 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/generation/provider-error-contract.test.ts src/features/generation/generation-queue.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/generation/provider-error-contract.test.ts (10 tests | 6 failed) 11ms
+   × Seedream在真实Provider调用点转换网络错误，不泄露凭据 4ms
+   × Seedance在真实Provider调用点转换网络错误，不泄露凭据 1ms
+   × 豆包文本在真实Provider调用点转换网络错误，不泄露凭据 1ms
+   × 豆包TTS在真实Provider调用点转换网络错误，不泄露凭据 1ms
+   × 豆包音频在真实Provider调用点转换网络错误，不泄露凭据 1ms
+   × 远程失败详情也经过安全边界 1ms
+ ❯ src/features/generation/generation-queue.test.ts (32 tests | 1 failed) 1493ms
+     × keeps provider secrets out of the persisted job error without swallowing failure 57ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/generation/generation-queue.test.ts > generation queue lifecycle > keeps provider secrets out of the persisted job error without swallowing failure
+AssertionError: expected 'Authorization: Bearer fixture-private…' to be '生成失败，请稍后重试。' // Object.is equality
+
+Expected: "生成失败，请稍后重试。"
+Received: "Authorization: Bearer fixture-private-key"
+
+ ❯ src/features/generation/generation-queue.test.ts:137:38
+    135|     const job = queue.enqueue(regenerateRequest)
+    136|     await vi.waitFor(() => expect(queue.get(job.id)?.status).toBe('fai…
+    137|     expect(queue.get(job.id)?.error).toBe('生成失败，请稍后重试。')
+       |                                      ^
+    138|     expect(useProjectStore.getState().activeProject?.jobs.find(({ id }…
+    139|       .not.toContain('fixture-private-key')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/features/generation/provider-error-contract.test.ts > Seedream在真实Provider调用点转换网络错误，不泄露凭据
+ FAIL  src/features/generation/provider-error-contract.test.ts > Seedance在真实Provider调用点转换网络错误，不泄露凭据
+ FAIL  src/features/generation/provider-error-contract.test.ts > 豆包文本在真实Provider调用点转换网络错误，不泄露凭据
+ FAIL  src/features/generation/provider-error-contract.test.ts > 豆包TTS在真实Provider调用点转换网络错误，不泄露凭据
+ FAIL  src/features/generation/provider-error-contract.test.ts > 豆包音频在真实Provider调用点转换网络错误，不泄露凭据
+AssertionError: expected TypeError: Authorization: Bearer fixture-… to match object { …(1) }
+
+- Expected
++ Received
+
+- {
+-   "cause": TypeError {
++ TypeError {
+    "message": "Authorization: Bearer fixture-private-key",
+-   },
+  }
+
+ ❯ src/features/generation/provider-error-contract.test.ts:28:24
+     26|   const provider = createProvider({ ...configuration, fetchFn })
+     27|   const pending = provider.generate({ ...request, targetKind }, { sign…
+     28|   await expect(pending).rejects.toMatchObject({ cause })
+       |                        ^
+     29|   await expect(pending).rejects.toThrow('网络异常')
+     30|   await expect(pending).rejects.not.toThrow('fixture-private-key')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/features/generation/provider-error-contract.test.ts > 远程失败详情也经过安全边界
+AssertionError: expected [Function] to throw error including '火山方舟 Seedance 生成失败：任务未完成' but got '火山方舟 Seedance 生成失败：Authorization: Bea…'
+
+Expected: "火山方舟 Seedance 生成失败：任务未完成"
+Received: "火山方舟 Seedance 生成失败：Authorization: Bearer fixture-private-key"
+
+ ❯ src/features/generation/provider-error-contract.test.ts:65:94
+     63|     .mockResolvedValueOnce(Response.json({ status: 'failed', error: { …
+     64|   await expect(createSeedanceVideoProvider({ ...configuration, fetchFn…
+     65|     .generate({ ...request, targetKind: 'video' }, { signal: new Abort…
+       |                                                                                              ^
+     66| })
+     67|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  7 failed | 35 passed (42)
+   Start at  22:48:19
+   Duration  1.98s (transform 179ms, setup 190ms, import 227ms, tests 1.50s, environment 357ms)
+

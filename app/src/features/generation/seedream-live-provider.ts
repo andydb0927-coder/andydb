@@ -4,6 +4,7 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { assertProviderResponse, fetchProviderResponse, readProviderJson } from './generation-errors'
 import {
   ImageSizeResolver,
   type ImageSizePolicy,
@@ -111,12 +112,6 @@ interface SeedreamResponse {
   data?: SeedreamOutput[]
 }
 
-interface SeedreamErrorResponse {
-  error?: {
-    code?: unknown
-  }
-}
-
 function envValue(name: string) {
   const env = import.meta.env as Record<string, string | undefined>
   const value = env[name]
@@ -129,43 +124,6 @@ function generationModeEnabled(mode: string, expected: string) {
 
 function normalizedBaseUrl(apiBase: string) {
   return apiBase.replace(/\/+$/u, '')
-}
-
-async function readJson(response: Response) {
-  try {
-    return await response.json() as unknown
-  } catch {
-    throw new Error('Seedream 响应格式异常')
-  }
-}
-
-async function assertSuccessfulResponse(response: Response) {
-  if (response.ok) return
-  if (response.status === 401) throw new Error('Seedream 鉴权失败（401）')
-  if (response.status === 403) throw new Error('Seedream 访问被拒绝（403）')
-  if (response.status === 429) {
-    throw new Error('Seedream 请求过于频繁或额度不足（429）')
-  }
-  if (response.status === 400) {
-    let code = ''
-    try {
-      const body = await response.json() as SeedreamErrorResponse
-      code = typeof body.error?.code === 'string' ? body.error.code : ''
-    } catch {
-      // Keep malformed upstream details out of the user-facing error.
-    }
-    if (code === 'InputTextSensitiveContentDetected') {
-      throw new Error('Seedream 提示词未通过安全检查（400）')
-    }
-    if (code === 'InputImageSensitiveContentDetected') {
-      throw new Error('Seedream 参考图片未通过安全检查（400）')
-    }
-    if (code === 'OutputImageSensitiveContentDetected') {
-      throw new Error('Seedream 生成结果未通过安全检查（400）')
-    }
-    throw new Error('Seedream 请求参数无效（400）')
-  }
-  throw new Error(`Seedream 请求失败（${response.status}）`)
 }
 
 function imageSizeSetting(
@@ -304,7 +262,7 @@ export function createSeedreamLiveProvider(
         : 1
       for (let index = 0; index < requestCount; index += 1) {
         context.signal.throwIfAborted()
-        const response = await fetchFn(createUrl, {
+        const response = await fetchProviderResponse(fetchFn, 'seedream', createUrl, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -313,8 +271,8 @@ export function createSeedreamLiveProvider(
           body: JSON.stringify(body),
           signal: context.signal,
         })
-        await assertSuccessfulResponse(response)
-        const responseBody = await readJson(response) as SeedreamResponse
+        await assertProviderResponse(response, 'seedream')
+        const responseBody = await readProviderJson(response, 'Seedream 响应格式异常') as SeedreamResponse
         if (Array.isArray(responseBody.data)) outputs.push(...responseBody.data)
         context.onProgress?.(10 + Math.round(((index + 1) / requestCount) * 75))
       }

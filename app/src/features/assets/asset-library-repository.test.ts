@@ -1,5 +1,5 @@
 import Dexie from 'dexie'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { makeProjectFixture } from '../../test/fixtures'
 import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
@@ -14,16 +14,38 @@ function createRepositories() {
   const database = new WirelessCanvasDatabase(databaseName)
 
   return {
+    database,
     library: new AssetLibraryRepository(database),
     projects: new ProjectRepository(database),
   }
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   await Promise.all(databaseNames.splice(0).map((name) => Dexie.delete(name)))
 })
 
 describe('asset library repository', () => {
+  test('资产删除写入失败时整个事务回滚，不留下半清理项目', async () => {
+    const { database, library, projects } = createRepositories()
+    const project = makeProjectFixture()
+    await projects.save(project)
+    const before = await library.load(project.assets[0].id)
+    const failure = new Error('fixture storage failure')
+    vi.spyOn(database.libraryAssets, 'delete').mockRejectedValueOnce(failure)
+    await expect(library.deleteAsset(project.assets[0].id, { detachReferences: true })).rejects.toBe(failure)
+    expect(await projects.load(project.id)).toEqual(project)
+    expect(await library.load(project.assets[0].id)).toEqual(before)
+  })
+
+  test('非重复文件的写入异常原样抛出，不能误报导入成功', async () => {
+    const { database, library } = createRepositories()
+    const failure = new Error('fixture quota exceeded')
+    vi.spyOn(database.libraryAssets, 'add').mockRejectedValueOnce(failure)
+    await expect(library.importFile(new File(['unique'], 'input.png', { type: 'image/png' }))).rejects.toBe(failure)
+    expect(await library.list()).toEqual([])
+  })
+
   test('returns the existing record for identical file bytes', async () => {
     const { library: repository } = createRepositories()
     const file = new File(['same-media'], 'first.png', { type: 'image/png' })

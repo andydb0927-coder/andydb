@@ -4,6 +4,7 @@ import type {
   GenerationUsage,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { assertProviderResponse, fetchProviderResponse, readProviderJson } from './generation-errors'
 import {
   resolveModelParameterManifest,
   type ModelParameterManifest,
@@ -166,34 +167,12 @@ function requestBody(request: GenerationRequest, modelId: string, messages?: Ark
   }
 }
 
-async function readErrorStatus(response: Response) {
-  if (response.ok) return
-  if (response.status === 400) {
-    throw new Error('火山方舟文本请求参数无效（400）')
-  }
-  if (response.status === 401) {
-    throw new Error('火山方舟文本鉴权失败（401）')
-  }
-  if (response.status === 403) {
-    throw new Error('火山方舟文本模型无访问权限（403）')
-  }
-  if (response.status === 429) {
-    throw new Error('火山方舟文本生成请求过于频繁（429）')
-  }
-  throw new Error(`火山方舟文本生成服务暂不可用（${response.status}）`)
-}
-
 function textContent(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
 async function readJsonResult(response: Response) {
-  let body: ArkChatResponse
-  try {
-    body = await response.json() as ArkChatResponse
-  } catch {
-    throw new Error('火山方舟豆包响应格式异常')
-  }
+  const body = await readProviderJson(response, '火山方舟豆包响应格式异常') as ArkChatResponse
   const content = textContent(body.choices?.[0]?.message?.content)
   if (!content) throw new Error('豆包未返回可用文本')
   return { content, usage: normalizedUsage(body.usage) }
@@ -322,7 +301,7 @@ export function createArkTextLlmProvider(
       if (!request.prompt.trim()) throw new Error('豆包文本生成需要提示词')
       const body = requestBody(request, resolvedModelId, buildMessages?.(request))
       context.onProgress?.(10)
-      const response = await fetchFn(createUrl, {
+      const response = await fetchProviderResponse(fetchFn, 'ark-text', createUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -331,7 +310,7 @@ export function createArkTextLlmProvider(
         body: JSON.stringify(body),
         signal: context.signal,
       })
-      await readErrorStatus(response)
+      await assertProviderResponse(response, 'ark-text')
       const parsed = body.stream
         ? await readSseResult(response)
         : await readJsonResult(response)

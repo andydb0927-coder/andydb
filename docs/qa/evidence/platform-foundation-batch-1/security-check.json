@@ -1,0 +1,8 @@
+{
+  "scope": "Tracked and proposed text files plus mock dist; high-confidence credential patterns only",
+  "trackedOrProposedSecretPaths": [],
+  "checkedTextFiles": 602,
+  "highConfidenceCredentialMatches": [],
+  "mockBundleNonemptyCredentialFields": [],
+  "envLocalRead": false
+}

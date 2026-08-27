@@ -128,6 +128,18 @@ afterEach(() => {
 })
 
 describe('generation queue lifecycle', () => {
+  test('keeps provider secrets out of the persisted job error without swallowing failure', async () => {
+    const queue = createQueue({
+      start: async () => { throw new Error('Authorization: Bearer fixture-private-key') },
+    })
+    const job = queue.enqueue(regenerateRequest)
+    await vi.waitFor(() => expect(queue.get(job.id)?.status).toBe('failed'))
+    expect(queue.get(job.id)?.error).toBe('生成失败，请稍后重试。')
+    expect(useProjectStore.getState().activeProject?.jobs.find(({ id }) => id === job.id)?.error)
+      .not.toContain('fixture-private-key')
+    queue.dispose()
+  })
+
   test('persists continuation versions, source and result assets, retry contract and token charges across IndexedDB reload', async () => {
     const base = makeProjectFixture()
     const source = { id: 'source-video', ...arkVideoContinueRequestFixture.referenceAssets[0]!, durationSeconds: 5, width: 1280, height: 720 }

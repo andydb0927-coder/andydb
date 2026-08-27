@@ -32,6 +32,7 @@ import {
   type CreativeCardDraft,
 } from './creative-card'
 import { detachLibraryAssetFromProject } from '../assets/library-model'
+import { isActiveTask, isRetryableTask } from '../generation/task-status'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -363,7 +364,7 @@ function placeGeneratedNode(
 }
 
 function isTransientGenerationJob(job: GenerationJob) {
-  return job.status === 'queued' || job.status === 'running'
+  return isActiveTask(job.status)
 }
 
 function sanitizeGenerationBaseline(baseline: Project, current: Project) {
@@ -1582,7 +1583,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
 
       const baselineKey = `${projectId}:${job.id}`
-      const terminal = job.status === 'failed' || job.status === 'cancelled'
+      const terminal = isRetryableTask(job.status)
       if (!terminal && !generationBaselines.has(baselineKey)) {
         generationBaselines.set(baselineKey, project)
       }
@@ -1968,6 +1969,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
       set({ saveStatus: 'saving' })
       const write = persistenceChain.then(() => repository.save(project))
+      // Recover only the scheduling chain. The original write is awaited below,
+      // so its failure still reaches saveStatus without blocking the next snapshot.
       persistenceChain = write.catch(() => undefined)
       try {
         await write

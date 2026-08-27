@@ -4,6 +4,7 @@ import type {
   GenerationUsage,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { assertProviderResponse, fetchProviderResponse, readProviderJson } from './generation-errors'
 import {
   resolveModelParameterManifest,
   type ModelParameterManifest,
@@ -20,7 +21,6 @@ import {
   providerVolume,
   resolveSpeechApiBase,
   sampleRateParameter,
-  throwForAudioHttpError,
   voiceId,
 } from './ark-audio-provider-utils'
 
@@ -181,7 +181,7 @@ export function createArkAudioGenProvider(
       const body = requestBody(request, resolvedModelId)
       const format = audioFormat(request.parameters?.format)
       context.onProgress?.(10)
-      const response = await fetchFn(createUrl, {
+      const response = await fetchProviderResponse(fetchFn, 'ark-audio', createUrl, {
         method: 'POST',
         headers: {
           'X-Api-Key': apiKey,
@@ -191,13 +191,8 @@ export function createArkAudioGenProvider(
         body: JSON.stringify(body),
         signal: context.signal,
       })
-      await throwForAudioHttpError(response, '豆包音频生成')
-      let parsed: AudioGenerationResponse
-      try {
-        parsed = await response.json() as AudioGenerationResponse
-      } catch {
-        throw new Error('豆包音频生成响应格式异常')
-      }
+      await assertProviderResponse(response, 'ark-audio')
+      const parsed = await readProviderJson(response, '豆包音频生成响应格式异常') as AudioGenerationResponse
       context.onProgress?.(90)
       const result = resultFor(request, parsed, format)
       context.onProgress?.(100)

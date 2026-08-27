@@ -1,5 +1,6 @@
 import type { Asset } from '../project/model'
 import type { GenerationRequest } from './generation-adapter'
+import { mapToolGenerationError } from './generation-errors'
 import type { ModelProvider } from './model-provider-registry'
 import { createSeedanceVideoProvider, type SeedanceVideoProviderOptions } from './seedance-video-provider'
 
@@ -104,12 +105,7 @@ export function createArkVideoContinueProvider(options: SeedanceVideoProviderOpt
         }
       } catch (error) {
         context.signal.throwIfAborted()
-        const message = error instanceof Error ? error.message : ''
-        if (timedOut || message.includes('超时')) throw new Error('视频续写等待超时；远程任务可能仍在运行，请先核对官方任务与用量，避免重复付费。')
-        if (message.startsWith('火山方舟 Seedance 生成失败：')) throw new Error('视频续写生成失败，请检查素材权限、输入规范与官方任务状态。')
-        const safe = /^火山方舟 Seedance (?:鉴权失败（401）|访问被拒绝（403）|请求过于频繁（429）|请求参数无效（400）|请求失败（\d+）|响应格式异常|创建任务响应格式异常|任务状态响应格式异常|结果 URL 无效|任务已取消)$/u
-        if (safe.test(message)) throw new Error(message.replace('火山方舟 Seedance', '视频续写'))
-        throw new Error('视频续写网络异常，请检查网络及服务配置；如已提交请先核对官方任务。')
+        throw mapToolGenerationError(error, 'video-continue', timedOut)
       } finally {
         clearTimeout(timer)
         context.signal.removeEventListener('abort', cancel)

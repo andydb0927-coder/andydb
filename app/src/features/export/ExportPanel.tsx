@@ -1,7 +1,8 @@
 import { Download, RotateCcw, Square } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
-import type { JobStatus } from '../project/model'
+import type { TaskStatus } from '../generation/task-status'
+import { generationErrorMessage } from '../generation/generation-errors'
 import type {
   ExportAdapter,
   ExportResult,
@@ -24,14 +25,14 @@ interface ExportPanelProps {
 
 interface ExportPanelJob {
   id: number
-  status: JobStatus
+  status: TaskStatus
   settings: ExportSettings
   progress: number
   result?: ExportResult
   error?: string
 }
 
-const statusCopy: Record<JobStatus, string> = {
+const statusCopy: Record<TaskStatus, string> = {
   queued: '排队中',
   running: '正在导出',
   succeeded: '演示导出已完成',
@@ -97,7 +98,7 @@ export function ExportPanel({ projectId, adapter }: ExportPanelProps) {
           }
           patchJob(job.id, {
             status: 'failed',
-            error: error instanceof Error ? error.message : '未知错误',
+            error: generationErrorMessage(error, '未知错误'),
           })
         },
       )

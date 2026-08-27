@@ -125,18 +125,6 @@ export function concatBase64Chunks(chunks: readonly string[]) {
   return btoa(binary)
 }
 
-export async function throwForAudioHttpError(
-  response: Response,
-  label: '豆包语音合成' | '豆包音频生成',
-) {
-  if (response.ok) return
-  if (response.status === 400) throw new Error(`${label}请求参数无效（400）`)
-  if (response.status === 401) throw new Error(`${label}鉴权失败（401）`)
-  if (response.status === 403) throw new Error(`${label}访问被拒绝（403）`)
-  if (response.status === 429) throw new Error(`${label}请求过于频繁（429）`)
-  throw new Error(`${label}服务暂不可用（${response.status}）`)
-}
-
 export function audioDuration(request: GenerationRequest, fallback: number) {
   return numberParameter(request.parameters?.duration, fallback, 1, 120)
 }

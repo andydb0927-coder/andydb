@@ -1,4 +1,5 @@
 import type { GenerationRequest } from './generation-adapter'
+import { mapToolGenerationError } from './generation-errors'
 import type { ModelProvider } from './model-provider-registry'
 import { createArkTextLlmProvider, type ArkTextLlmProviderOptions } from './ark-text-llm-provider'
 import type { SubjectVisualDescription } from '../subjects/subject-model'
@@ -68,11 +69,7 @@ export function createArkSubjectExtractionProvider(options: ArkTextLlmProviderOp
           usage: result.usage ? { ...result.usage, providerId: subjectExtractionId } : undefined }
       } catch (error) {
         context.signal.throwIfAborted()
-        if (timedOut) throw new Error('主体提取超时，请核对官方用量后重试，或手动填写。')
-        const message = error instanceof Error ? error.message : ''
-        if (message.startsWith('主体提取结果格式')) throw error
-        if (/^火山方舟文本(?:请求参数无效|鉴权失败|模型无访问权限|生成请求过于频繁|生成服务暂不可用)/.test(message)) throw new Error(message.replace('火山方舟文本', '主体提取'))
-        throw new Error('主体提取请求异常，请检查网络、图片格式与模型权限，或手动填写。')
+        throw mapToolGenerationError(error, 'subject-extraction', timedOut)
       } finally {
         clearTimeout(timer)
         context.signal.removeEventListener('abort', abort)

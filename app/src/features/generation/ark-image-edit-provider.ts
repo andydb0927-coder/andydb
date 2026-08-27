@@ -1,4 +1,5 @@
 import type { GenerationRequest } from './generation-adapter'
+import { mapToolGenerationError } from './generation-errors'
 import { ImageSizeResolver } from './image-size-resolver'
 import type { ModelProvider } from './model-provider-registry'
 import { createSeedreamLiveProvider, seedreamImageSizePolicy, type SeedreamLiveProviderOptions } from './seedream-live-provider'
@@ -93,13 +94,7 @@ export function createArkImageEditProvider(options: SeedreamLiveProviderOptions 
         }
       } catch (error) {
         context.signal.throwIfAborted()
-        if (timedOut) throw new Error('图片编辑请求超时；请先核对官方用量，避免重复付费。')
-        // Delegate errors are sanitized; never reflect raw network errors, keys or response bodies.
-        const message = error instanceof Error ? error.message : ''
-        if (/^Seedream (?:鉴权失败|访问被拒绝|请求过于频繁或额度不足|提示词未通过安全检查|参考图片未通过安全检查|生成结果未通过安全检查|请求参数无效|请求失败（\d+）|响应格式异常|结果 URL 无效|参考图片必须是 HTTPS 地址或本地上传图片|未返回图片结果|当前仅支持)/u.test(message)) {
-          throw new Error(message.replace('Seedream ', '图片编辑 '))
-        }
-        throw new Error('图片编辑网络异常，请检查网络和服务配置后重试。')
+        throw mapToolGenerationError(error, 'image-edit', timedOut)
       } finally {
         clearTimeout(timeout)
         context.signal.removeEventListener('abort', cancel)

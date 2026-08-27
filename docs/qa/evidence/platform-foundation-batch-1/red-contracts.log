@@ -1,0 +1,56 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/generation/task-status.test.ts src/features/generation/generation-errors.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/generation/task-status.test.ts (0 test)
+ ❯ src/features/generation/generation-errors.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/generation/generation-errors.test.ts [ src/features/generation/generation-errors.test.ts ]
+Error: Failed to resolve import "./generation-errors" from "src/features/generation/generation-errors.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/generation/generation-errors.test.ts:13:7
+  1  |  import { describe, expect, test, vi } from "vitest";
+  2  |  ...erationError, readProviderJson, safeProviderMessage } from "./generation-errors";
+     |                                                                 ^
+  3  |  describe("集中安全错误契约", () => {
+  4  |  	test.each([
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/generation/task-status.test.ts [ src/features/generation/task-status.test.ts ]
+Error: Failed to resolve import "./task-status" from "src/features/generation/task-status.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/generation/task-status.test.ts:13:7
+  1  |  import { describe, expect, expectTypeOf, test } from "vitest";
+  2  |  ..., isTaskStatus, isTerminalTask, normalizeTaskStatus } from "./task-status";
+     |                                                                 ^
+  3  |  describe("统一任务状态契约", () => {
+  4  |  	test("兼容已有持久化状态与JobStatus导入", () => {
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  22:47:30
+   Duration  395ms (transform 24ms, setup 206ms, import 0ms, tests 0ms, environment 426ms)
+

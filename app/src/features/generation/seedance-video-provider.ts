@@ -3,6 +3,8 @@ import type {
   GenerationRequest,
   GenerationResult,
 } from './generation-adapter'
+import { assertProviderResponse, fetchProviderResponse, readProviderJson, safeProviderMessage } from './generation-errors'
+import { normalizeTaskStatus } from './task-status'
 import type {
   ModelProvider,
   VideoGenerationMode,
@@ -106,37 +108,6 @@ function waitForPoll(delayMs: number, signal: AbortSignal) {
     }, delayMs)
     signal.addEventListener('abort', cancel, { once: true })
   })
-}
-
-async function readJson(response: Response) {
-  try {
-    return await response.json() as unknown
-  } catch {
-    throw new Error('火山方舟 Seedance 响应格式异常')
-  }
-}
-
-function assertSuccessfulResponse(response: Response) {
-  if (response.ok) return
-  if (response.status === 401) {
-    throw new Error('火山方舟 Seedance 鉴权失败（401）')
-  }
-  if (response.status === 403) {
-    throw new Error('火山方舟 Seedance 访问被拒绝（403）')
-  }
-  if (response.status === 429) {
-    throw new Error('火山方舟 Seedance 请求过于频繁（429）')
-  }
-  if (response.status === 400) {
-    throw new Error('火山方舟 Seedance 请求参数无效（400）')
-  }
-  throw new Error(`火山方舟 Seedance 请求失败（${response.status}）`)
-}
-
-function safeFailureMessage(value: unknown) {
-  if (typeof value !== 'string') return '任务未完成'
-  const normalized = value.trim().slice(0, 160)
-  return normalized || '任务未完成'
 }
 
 function httpsResultUrl(value: unknown) {
@@ -342,7 +313,7 @@ export function createSeedanceVideoProvider(
           request.parameters?.generationMode,
         ),
       ]
-      const response = await fetchFn(createUrl, {
+      const response = await fetchProviderResponse(fetchFn, 'seedance', createUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -359,8 +330,8 @@ export function createSeedanceVideoProvider(
         }),
         signal: context.signal,
       })
-      assertSuccessfulResponse(response)
-      const createBody = await readJson(response) as SeedanceCreateResponse
+      await assertProviderResponse(response, 'seedance')
+      const createBody = await readProviderJson(response, '火山方舟 Seedance 响应格式异常') as SeedanceCreateResponse
       const taskId = createBody.id ?? createBody.data?.id
       if (typeof taskId !== 'string' || !taskId.trim()) {
         throw new Error('火山方舟 Seedance 创建任务响应格式异常')
@@ -370,34 +341,32 @@ export function createSeedanceVideoProvider(
       const statusUrl = `${createUrl}/${encodeURIComponent(taskId)}`
       for (let attempt = 0; attempt < maxPollAttempts; attempt += 1) {
         await waitForPoll(pollIntervalMs, context.signal)
-        const statusResponse = await fetchFn(statusUrl, {
+        const statusResponse = await fetchProviderResponse(fetchFn, 'seedance', statusUrl, {
           method: 'GET',
           headers: { Authorization: `Bearer ${apiKey}` },
           signal: context.signal,
         })
-        assertSuccessfulResponse(statusResponse)
-        const task = await readJson(statusResponse) as SeedanceTaskResponse
-        if (typeof task.status !== 'string') {
+        await assertProviderResponse(statusResponse, 'seedance')
+        const task = await readProviderJson(statusResponse, '火山方舟 Seedance 响应格式异常') as SeedanceTaskResponse
+        const status = normalizeTaskStatus(task.status, { pending: 'queued', expired: 'failed' })
+        if (!status) {
           throw new Error('火山方舟 Seedance 任务状态响应格式异常')
-        }
-        if (task.status === 'failed') {
-          throw new Error(
-            `火山方舟 Seedance 生成失败：${safeFailureMessage(task.error?.message)}`,
-          )
-        }
-        if (task.status === 'cancelled') {
-          throw new Error('火山方舟 Seedance 任务已取消')
         }
         if (task.status === 'expired') {
           throw new Error('火山方舟 Seedance 任务已超时')
         }
-        if (task.status === 'succeeded') {
+        if (status === 'failed') {
+          throw new Error(
+            `火山方舟 Seedance 生成失败：${safeProviderMessage(task.error?.message)}`,
+          )
+        }
+        if (status === 'cancelled') {
+          throw new Error('火山方舟 Seedance 任务已取消')
+        }
+        if (status === 'succeeded') {
           const result = liveResult(request, task, resolution)
           context.onProgress?.(100)
           return result
-        }
-        if (!['queued', 'pending', 'running'].includes(task.status)) {
-          throw new Error('火山方舟 Seedance 任务状态响应格式异常')
         }
         context.onProgress?.(55)
       }

@@ -1,4 +1,5 @@
 import type { GenerationRequest } from './generation-adapter'
+import { mapToolGenerationError } from './generation-errors'
 import type { ModelProvider } from './model-provider-registry'
 import { createArkTextLlmProvider, type ArkTextLlmProviderOptions } from './ark-text-llm-provider'
 
@@ -70,11 +71,7 @@ export function createArkFrameAnalysisProvider(options: ArkTextLlmProviderOption
           usage: result.usage ? { ...result.usage, providerId: frameAnalysisId, modelName: '豆包视频拉片分析' } : undefined }
       } catch (error) {
         context.signal.throwIfAborted()
-        if (timedOut) throw new Error('拉片分析超时，请核对官方用量后再试。')
-        const message = error instanceof Error ? error.message : ''
-        if (message.startsWith('分析结果格式')) throw error
-        if (/^火山方舟文本(?:请求参数无效|鉴权失败|模型无访问权限|生成请求过于频繁|生成服务暂不可用)/.test(message)) throw new Error(message.replace('火山方舟文本', '拉片分析'))
-        throw new Error('拉片分析请求异常，请检查网络、视频格式及模型权限。')
+        throw mapToolGenerationError(error, 'frame-analysis', timedOut)
       } finally {
         clearTimeout(timer)
         context.signal.removeEventListener('abort', abort)

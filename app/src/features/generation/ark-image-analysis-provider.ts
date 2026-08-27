@@ -1,4 +1,5 @@
 import type { GenerationRequest, GenerationResult } from './generation-adapter'
+import { imageAnalysisFailureDetail } from './generation-errors'
 import type { ModelCapability, ModelProvider } from './model-provider-registry'
 import { ImageSizeResolver } from './image-size-resolver'
 import { arkImageEditModelId, createArkImageEditProvider, estimateArkImageEditCny } from './ark-image-edit-provider'
@@ -85,9 +86,8 @@ export function createArkImageAnalysisProviders(options: SeedreamLiveProviderOpt
           assets.push(output[0])
         } catch (error) {
           context.signal.throwIfAborted()
-          const raw = error instanceof Error ? error.message : ''
-          const detail = timedOut ? '请求超时，请核对官方用量后重试。' : /^(Seedream |图片编辑)/.test(raw) ? raw.replace(/^(Seedream |图片编辑)/, '') : '请求异常，请检查网络和模型权限。'
-          if (!assets.length) throw new Error(`${tool.label}${detail}`)
+          const detail = imageAnalysisFailureDetail(error, timedOut)
+          if (!assets.length) throw new Error(`${tool.label}${detail}`, { cause: error })
           incomplete = { completed: assets.length, total: plan.count, reason: `${tool.label}已完成 ${assets.length}/${plan.count} 张，后续失败：${detail}。已保存完成结果；重新执行会重跑整组，请核对官方用量。` }
           break
         } finally {

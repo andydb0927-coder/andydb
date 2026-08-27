@@ -4,6 +4,7 @@ import type {
   GenerationUsage,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { assertProviderResponse, fetchProviderResponse } from './generation-errors'
 import {
   resolveModelParameterManifest,
   type ModelParameterManifest,
@@ -19,7 +20,6 @@ import {
   providerVolume,
   resolveSpeechApiBase,
   sampleRateParameter,
-  throwForAudioHttpError,
   voiceId,
 } from './ark-audio-provider-utils'
 
@@ -185,7 +185,7 @@ export function createArkTtsProvider(
       const body = requestBody(request)
       const format = audioFormat(request.parameters?.format)
       context.onProgress?.(10)
-      const response = await fetchFn(createUrl, {
+      const response = await fetchProviderResponse(fetchFn, 'ark-tts', createUrl, {
         method: 'POST',
         headers: {
           'X-Api-Key': apiKey,
@@ -197,7 +197,7 @@ export function createArkTtsProvider(
         body: JSON.stringify(body),
         signal: context.signal,
       })
-      await throwForAudioHttpError(response, '豆包语音合成')
+      await assertProviderResponse(response, 'ark-tts')
       const chunks = parseChunkedResponse(await response.text())
       for (const chunk of chunks) {
         const code = Number(chunk.code ?? 0)

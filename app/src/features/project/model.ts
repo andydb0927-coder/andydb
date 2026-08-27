@@ -1,3 +1,5 @@
+import type { TaskStatus } from '../generation/task-status.js'
+
 export type NodeKind =
   | 'character'
   | 'character-card'
@@ -40,12 +42,8 @@ export interface WorldviewCard extends CreativeCardBase {
 
 export type CreativeCard = ScriptCard | CharacterCard | WorldviewCard
 
-export type JobStatus =
-  | 'queued'
-  | 'running'
-  | 'succeeded'
-  | 'failed'
-  | 'cancelled'
+/** Compatibility alias. The canonical contract is generation/task-status. */
+export type JobStatus = TaskStatus
 
 export type GenerationOperation =
   | 'regenerate'
@@ -430,7 +428,7 @@ export interface GenerationJob {
   id: string
   projectId?: string
   nodeId: string
-  status: JobStatus
+  status: TaskStatus
   prompt: string
   createdAt: string
   updatedAt: string
@@ -454,7 +452,7 @@ export interface GenerationJob {
 
 export interface ExportJob {
   id: string
-  status: JobStatus
+  status: TaskStatus
   createdAt: string
   updatedAt: string
   assetId?: string

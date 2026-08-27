@@ -1,4 +1,5 @@
 import type { Asset, Project } from '../project/model'
+import { projectReferencesAsset } from './domain/asset-library-policy'
 
 export type LibraryAssetSource = 'upload' | 'generated' | 'project' | 'built-in'
 export type LibraryAssetFolderId = 'project' | 'generated' | 'inspiration'
@@ -77,18 +78,7 @@ export function detachLibraryAssetFromProject(
   project: Project,
   assetId: string,
 ): Project {
-  const referenced =
-    project.assets.some((asset) => asset.id === assetId) ||
-    project.nodes.some(
-      (node) =>
-        node.card?.imageAssetId === assetId ||
-        node.versions.some((version) => version.assetId === assetId) ||
-        node.imageResults?.some((result) => result.assetId === assetId),
-    ) ||
-    project.jobs.some((job) => job.assetId === assetId) ||
-    project.exportJobs.some((job) => job.assetId === assetId)
-
-  if (!referenced) return project
+  if (!projectReferencesAsset(project, assetId)) return project
 
   const timestamp = new Date().toISOString()
 
