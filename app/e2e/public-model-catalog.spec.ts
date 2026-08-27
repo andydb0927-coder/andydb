@@ -21,7 +21,7 @@ test('production selectors contain only unconfigured real models and never gener
   await page.goto('https://catalog-fixture.local/andydb/projects/new')
   await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
   for (const [type, modelLabel, ids, promptLabel, generate] of [
-    ['图片', '图片模型', ['seedream-5-pro-api', 'panorama-720-api', 'multi-camera-grid-api', 'plot-four-grid-api', 'storyboard-25-grid-api', 'cinematic-lighting-api', 'setting-image-api'], '提示词', '生成图片，预计成本 18'],
+    ['图片', '图片模型', ['seedream-5-pro-api'], '提示词', '生成图片，预计成本 18'],
     ['视频', '模型', ['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api', 'frame-analysis-api'], '提示词', '生成视频，预计成本 135'],
     ['文本', '文本模型', ['ark-text-llm'], '文本生成提示词', '生成文本，预计成本 1'],
     ['音频', '音频模型', ['ark-tts', 'ark-audio-gen', 'vocal-background-separation-api', 'audio-sentence-segmentation-api'], '音频生成提示词', '生成音频，预计成本 1'],
@@ -38,6 +38,25 @@ test('production selectors contain only unconfigured real models and never gener
     await expect(model).not.toContainText(/Mock Studio|本地演示|内部测试/)
     await page.getByRole('textbox', { name: promptLabel, exact: true }).fill('未配置时不得生成演示内容')
     await expect(page.getByRole('button', { name: generate })).toBeDisabled()
+    if (type === '图片') {
+      await expect(model).not.toContainText(/720全景|九宫格|四宫格|25宫格|光影|设定图/)
+      const presetTrigger = page.getByRole('button', { name: '图片创作模板' })
+      await presetTrigger.click()
+      const presets = page.getByRole('dialog', { name: '图片创作模板' })
+      for (const label of ['720全景', '多机位九宫格', '剧情推演四宫格', '25宫格连贯分镜', '电影级光影校正', '角色设定图']) {
+        await expect(presets.getByRole('button', { name: label, exact: true })).toBeVisible()
+      }
+      await presets.getByRole('button', { name: '720全景', exact: true }).click()
+      const notice = page.getByRole('alertdialog', { name: '720全景生成功能待接入' })
+      await expect(notice).toContainText('待接入720全景生成服务')
+      await notice.getByRole('button', { name: '复制提示词到图片节点' }).click()
+      await expect(page.getByRole('textbox', { name: promptLabel, exact: true })).toContainText('无缝等距柱状720全景')
+      await page.keyboard.press('Escape')
+      await expect(notice).toHaveCount(0)
+      await expect(presetTrigger).toBeFocused()
+      await expect(model).toHaveValue('seedream-5-pro-api')
+      await expect(page.getByRole('button', { name: generate })).toBeDisabled()
+    }
   }
   await page.goto('https://catalog-fixture.local/andydb/agents')
   const skillModel = page.getByRole('combobox', { name: '选择模型', exact: true })

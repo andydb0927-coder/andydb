@@ -1156,6 +1156,7 @@ export function ImageGenerationPanel({
           <span className="visually-hidden">图片模型</span>
           <select
             aria-label="图片模型"
+            title="选择生图模型"
             value={selectedProvider.id}
             onChange={(event) => data.onSelectModelProvider?.(event.target.value)}
           >
@@ -1206,6 +1207,7 @@ export function ImageGenerationPanel({
           type="button"
           className="image-generation-panel__template-trigger"
           aria-label="图片创作模板"
+          title="预设：分镜叙事、质感调节、空间与机位、设定图"
           aria-haspopup="dialog"
           aria-expanded={templatesOpen}
           onClick={() => {

@@ -606,19 +606,21 @@ function placeholderProvider(config: ProviderManifestCore): ModelProvider {
   }
 }
 
+// Image tools belong to the preset panel, not the image model selector.
+// Keep their provider IDs registered for preset notices and future integration.
 export const managedAiPlaceholderCatalog = [
-  { id: 'panorama-720-api', name: '720全景', modelName: '720全景生成', capability: 'panorama-720', menuCapabilities: ["text-to-image","image-to-image"], cost: 36, disabledReason: '待接入720全景生成服务' },
-  { id: 'multi-camera-grid-api', name: '多机位九宫格', modelName: '多机位九宫格生成', capability: 'multi-camera-grid', menuCapabilities: ["text-to-image","image-to-image"], cost: 48, disabledReason: '待接入多机位九宫格生成服务' },
-  { id: 'plot-four-grid-api', name: '剧情推演四宫格', modelName: '剧情推演四宫格', capability: 'plot-four-grid', menuCapabilities: ["text-to-image","image-to-image"], cost: 28, disabledReason: '待接入剧情推演四宫格服务' },
-  { id: 'storyboard-25-grid-api', name: '25宫格连贯分镜', modelName: '25宫格连贯分镜', capability: 'storyboard-continuity', menuCapabilities: ["text-to-image","image-to-image"], cost: 90, disabledReason: '待接入25宫格连贯分镜服务' },
-  { id: 'cinematic-lighting-api', name: '电影级光影矫正', modelName: '电影级光影矫正', capability: 'cinematic-lighting', menuCapabilities: ["text-to-image","image-to-image"], cost: 12, disabledReason: '待接入电影级光影矫正服务' },
+  { id: 'panorama-720-api', name: '720全景', modelName: '720全景生成', capability: 'panorama-720', menuCapabilities: [], cost: 36, disabledReason: '待接入720全景生成服务' },
+  { id: 'multi-camera-grid-api', name: '多机位九宫格', modelName: '多机位九宫格生成', capability: 'multi-camera-grid', menuCapabilities: [], cost: 48, disabledReason: '待接入多机位九宫格生成服务' },
+  { id: 'plot-four-grid-api', name: '剧情推演四宫格', modelName: '剧情推演四宫格', capability: 'plot-four-grid', menuCapabilities: [], cost: 28, disabledReason: '待接入剧情推演四宫格服务' },
+  { id: 'storyboard-25-grid-api', name: '25宫格连贯分镜', modelName: '25宫格连贯分镜', capability: 'storyboard-continuity', menuCapabilities: [], cost: 90, disabledReason: '待接入25宫格连贯分镜服务' },
+  { id: 'cinematic-lighting-api', name: '电影级光影矫正', modelName: '电影级光影矫正', capability: 'cinematic-lighting', menuCapabilities: [], cost: 12, disabledReason: '待接入电影级光影矫正服务' },
   { id: 'vocal-background-separation-api', name: '人声/背景音分离', modelName: '人声/背景音分离', capability: 'audio-source-separation', menuCapabilities: ["audio"], cost: 8, disabledReason: '待接入人声/背景音分离服务' },
   { id: 'audio-sentence-segmentation-api', name: '音频智能断句切分', modelName: '音频智能断句切分', capability: 'audio-sentence-segmentation', menuCapabilities: ["audio"], cost: 4, disabledReason: '待接入音频智能断句切分服务' },
   { id: 'seedance-prompt-optimization-api', name: 'Seedance提示词优化', modelName: 'Seedance提示词优化', capability: 'prompt-optimization', menuCapabilities: ["text-to-video","image-to-video"], cost: 2, disabledReason: '待接入Seedance提示词优化服务' },
   { id: 'deep-motion-capture-api', name: '深度动作捕捉', modelName: '深度动作捕捉', capability: 'motion-capture', menuCapabilities: ["text-to-video","image-to-video"], cost: 30, disabledReason: '待接入深度动作捕捉服务' },
   { id: 'smart-edit-api', name: '智能剪辑', modelName: '智能剪辑粗剪/混剪', capability: 'smart-edit', menuCapabilities: ["text-to-video","image-to-video"], cost: 20, disabledReason: '待接入智能剪辑粗剪/混剪服务' },
   { id: 'frame-analysis-api', name: '逐帧拉片', modelName: '逐帧拉片分析', capability: 'frame-analysis', menuCapabilities: ["text-to-video","image-to-video"], cost: 15, disabledReason: '待接入逐帧拉片分析服务' },
-  { id: 'setting-image-api', name: '设定图', modelName: '设定图生成', capability: 'setting-image', menuCapabilities: ["text-to-image","image-to-image"], cost: 24, disabledReason: '待接入设定图生成服务' },
+  { id: 'setting-image-api', name: '设定图', modelName: '设定图生成', capability: 'setting-image', menuCapabilities: [], cost: 24, disabledReason: '待接入设定图生成服务' },
 ] as const satisfies readonly {
   id: string
   name: string

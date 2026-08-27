@@ -30,14 +30,14 @@ describe('public model catalog without demo models', () => {
     expect(menuProviders.filter(({ kind }) => kind === 'placeholder')).toHaveLength(12)
   })
 
-  test('shows capability-related pending services without claiming generation support', () => {
+  test('keeps image presets addressable without adding them to the image model menu', () => {
     const registry = createDefaultProviderRegistry()
     const imageMenu = registry.menuProvidersFor(['text-to-image', 'image-to-image'])
-    expect(imageMenu.map(({ id }) => id)).toEqual([
-      'seedream-5-pro-api', 'panorama-720-api', 'multi-camera-grid-api',
-      'plot-four-grid-api', 'storyboard-25-grid-api', 'cinematic-lighting-api', 'setting-image-api',
-    ])
-    expect(imageMenu.slice(1).every((provider) => !isProviderEnabled(provider))).toBe(true)
+    expect(imageMenu.map(({ id }) => id)).toEqual(['seedream-5-pro-api'])
+    for (const id of ['panorama-720-api', 'multi-camera-grid-api', 'plot-four-grid-api', 'storyboard-25-grid-api', 'cinematic-lighting-api', 'setting-image-api']) {
+      expect(registry.require(id)).toMatchObject({ kind: 'placeholder', menuCapabilities: [] })
+      expect(isProviderEnabled(registry.require(id))).toBe(false)
+    }
     expect(registry.defaultFor(['text-to-image'])?.id).toBe('seedream-5-pro-api')
     expect(registry.matching(['text-to-image'])).toHaveLength(1)
   })

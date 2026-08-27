@@ -72,7 +72,7 @@ export function AiPlaceholderNotice({
             <Copy aria-hidden="true" />复制提示词到图片节点
           </button>
         </footer>
-        {copied ? <p role="status">已复制提示词，可继续编辑或切换本地模型生成。</p> : null}
+        {copied ? <p role="status">已复制提示词，可继续编辑并选择已配置的图片模型生成。</p> : null}
       </section>
     </div>,
     document.body,

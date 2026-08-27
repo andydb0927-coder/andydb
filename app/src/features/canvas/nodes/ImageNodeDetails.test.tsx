@@ -216,6 +216,44 @@ test('opens the grouped Liblib image template catalog and guards AI templates be
   expect(data.onCreateImageToolNode).toHaveBeenCalledWith('调度故事板')
 })
 
+test('keeps every image AI preset in the preset panel without changing the selected model', async () => {
+  const user = userEvent.setup()
+  const data = makeData({ providerRegistry: createDefaultProviderRegistry() })
+  render(<ImageGenerationPanel {...panelProps(data)} />)
+  const model = screen.getByRole('combobox', { name: '图片模型' })
+  const trigger = screen.getByRole('button', { name: '图片创作模板' })
+  expect(within(model).getAllByRole('option')).toHaveLength(1)
+  expect(model).not.toHaveTextContent(/720全景|九宫格|四宫格|25宫格|光影|设定图/)
+  expect(trigger).toHaveAttribute('title', expect.stringContaining('预设'))
+
+  for (const [label, reason] of [
+    ['720全景', '待接入720全景生成服务'],
+    ['多机位九宫格', '待接入多机位九宫格生成服务'],
+    ['剧情推演四宫格', '待接入剧情推演四宫格服务'],
+    ['25宫格连贯分镜', '待接入25宫格连贯分镜服务'],
+    ['电影级光影校正', '待接入电影级光影矫正服务'],
+    ['角色设定图', '待接入设定图生成服务'],
+  ]) {
+    await user.click(trigger)
+    const presets = screen.getByRole('dialog', { name: '图片创作模板' })
+    await user.click(within(presets).getByRole('button', { name: label }))
+    const notice = screen.getByRole('alertdialog')
+    expect(notice).toHaveTextContent(reason)
+    if (label === '720全景') {
+      await user.click(within(notice).getByRole('button', { name: '复制提示词到图片节点' }))
+      expect(screen.getByRole('textbox', { name: '提示词' })).toHaveTextContent('无缝等距柱状720全景')
+      expect(within(notice).getByRole('status')).toHaveTextContent('选择已配置的图片模型生成')
+    }
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(model).toHaveValue('seedream-5-pro-api')
+  }
+  expect(data.onSelectModelProvider).not.toHaveBeenCalled()
+  expect(data.onLocalImageGenerate).not.toHaveBeenCalled()
+  expect(data.onCreateImageToolNode).not.toHaveBeenCalled()
+})
+
 test('keeps an already requested upscale confirmation without duplicating the composer action', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()
@@ -290,7 +328,7 @@ test('exposes the verified MJ image settings with persistent accessible controls
   const model = within(panel).getByRole('combobox', { name: '图片模型' })
   expect(model).toHaveValue('seedream-5-pro-api')
   expect(within(model).getByRole('option', { name: /Seedream 5\.0 Pro/ })).toBeEnabled()
-  expect(within(model).getAllByRole('option')).toHaveLength(7)
+  expect(within(model).getAllByRole('option')).toHaveLength(1)
   expect(within(model).queryByRole('option', { name: /Mock Studio|可灵图片|Lib Image|Qwen/ })).not.toBeInTheDocument()
   expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
   await user.selectOptions(model, 'seedream-5-pro-api')
@@ -328,12 +366,12 @@ test('exposes the verified MJ image settings with persistent accessible controls
   })
 })
 
-test('shows the disabled real image provider and pending services when configuration is missing', () => {
+test('shows only the disabled real image provider when configuration is missing', () => {
   const data = makeData({ providerRegistry: createDefaultProviderRegistry() })
   render(<ImageGenerationPanel {...panelProps(data)} imageToImage />)
   const model = screen.getByRole('combobox', { name: '图片模型' })
-  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual(['官方 API 已接（开发直连）', '待接入'])
-  expect(within(model).getAllByRole('option')).toHaveLength(7)
+  expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual(['官方 API 已接（开发直连）'])
+  expect(within(model).getAllByRole('option')).toHaveLength(1)
   expect(within(model).getByRole('option', { name: /Seedream.*配置未完成/ })).toBeDisabled()
   expect(screen.getByRole('button', { name: '生成图片，预计成本 18' })).toBeDisabled()
   expect(model).not.toHaveTextContent('本地演示')
