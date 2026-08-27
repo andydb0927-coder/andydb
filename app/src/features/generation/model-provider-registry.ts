@@ -17,6 +17,7 @@ import {
   type SeedreamLiveProviderOptions,
 } from './seedream-live-provider'
 import { createArkImageEditProvider } from './ark-image-edit-provider'
+import { createArkVideoContinueProvider } from './ark-video-continue-provider'
 import {
   createArkTextLlmProvider,
   type ArkTextLlmProviderOptions,
@@ -50,6 +51,7 @@ export type ModelCapability =
   | 'image-edit'
   | 'text-to-video'
   | 'image-to-video'
+  | 'video-continue'
   | 'audio'
   | 'panorama-720'
   | 'multi-camera-grid'
@@ -178,6 +180,7 @@ const capabilityCopy: Record<ModelCapability, string> = {
   'image-edit': '图片编辑',
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
+  'video-continue': '视频续写',
   audio: '音频',
   'panorama-720': '720全景生成',
   'multi-camera-grid': '多机位九宫格生成',
@@ -194,6 +197,7 @@ const capabilityCopy: Record<ModelCapability, string> = {
 }
 
 function generationCapability(request: GenerationRequest): ModelCapability {
+  if (request.targetKind === 'video' && request.parameters?.videoPostOperation === 'continue') return 'video-continue'
   if (request.targetKind === 'text') return 'text'
   if (request.targetKind === 'audio') return 'audio'
   const hasMedia = request.referenceAssets.length > 0
@@ -670,6 +674,7 @@ export function createDefaultProviderRegistry(
     createSeedreamLiveProvider(options.seedream),
     createArkImageEditProvider(options.seedream ? { ...options.seedream, modelId: undefined } : undefined),
     createSeedanceVideoProvider(options.seedanceVideo),
+    createArkVideoContinueProvider(options.seedanceVideo),
     createArkTextLlmProvider(options.arkText),
     createArkTtsProvider(options.arkTts),
     createArkAudioGenProvider(options.arkAudio),

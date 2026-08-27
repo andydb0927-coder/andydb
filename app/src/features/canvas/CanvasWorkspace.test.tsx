@@ -491,6 +491,25 @@ test('offers the exact eleven video media actions with visible disabled reasons'
   }
 })
 
+test('opens continuation only for an enabled service and valid source, leaving unsupported tools disabled with reasons', async () => {
+  const user = userEvent.setup()
+  const onContinueVideo = vi.fn()
+  const remoteProject = { ...project, assets: project.assets.map(asset => asset.kind === 'video' ? { ...asset, url: 'https://media.fixture.invalid/source.mp4' } : asset) }
+  const props = { project: remoteProject, node: project.nodes[2]!, onCreateToolNode: vi.fn(), onRotateImage: vi.fn(), onContinueVideo }
+  const { rerender } = render(<SelectionContextBar {...props} />)
+  await user.click(screen.getByRole('button', { name: '智能续写' }))
+  expect(onContinueVideo).toHaveBeenCalledWith('video-node')
+  expect(screen.getByRole('button', { name: '片段重拍' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '片段重拍' })).toHaveAttribute('title', expect.stringContaining('无精确时间区间重拍参数'))
+  expect(screen.getByRole('button', { name: '智能去字幕' })).toHaveAttribute('title', expect.stringContaining('未提供字幕区域或时序掩膜修复接口'))
+  rerender(<SelectionContextBar {...props} videoContinueDisabledReason="火山方舟视频续写开发验证配置未完成" />)
+  expect(screen.getByRole('button', { name: '智能续写' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '智能续写' })).toHaveAttribute('title', expect.stringContaining('配置未完成'))
+  rerender(<SelectionContextBar {...props} project={project} />)
+  expect(screen.getByRole('button', { name: '智能续写' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '智能续写' })).toHaveAttribute('title', expect.stringContaining('HTTPS'))
+})
+
 test('submits clip and crop as browser media-processing jobs', async () => {
   const user = userEvent.setup()
   const onProcessVideo = vi.fn(async (_options: unknown) => undefined)

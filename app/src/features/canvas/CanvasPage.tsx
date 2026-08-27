@@ -75,7 +75,9 @@ import {
 } from '../generation/generation-provider-preference'
 import { LibTvGenerationAdapter } from '../generation/libtv-generation-adapter'
 import type { LibTvProviderSelection } from '../generation/libtv-contract'
-import { RuntimeGenerationAdapter } from '../generation/runtime-generation-adapter'
+import { RuntimeGenerationAdapter, isPinnedArkTool } from '../generation/runtime-generation-adapter'
+import { arkVideoContinueId, buildArkVideoContinuePrompt, videoContinueParameters, type ArkVideoContinueDraft } from '../generation/ark-video-continue-provider'
+import { VideoContinueDialog } from './VideoContinueDialog'
 import {
   defaultImageGenerationSettings,
   type Asset,
@@ -864,6 +866,8 @@ export function CanvasPage({
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
   const [imageEditSession, setImageEditSession] = useState<{ nodeId: string; asset: Asset; operation: ArkImageEditOperation; projectId: string }>()
+  const [videoContinueSession, setVideoContinueSession] = useState<{ nodeId: string; asset: Asset; projectId: string }>()
+  const videoContinueProvider = providerRegistry.list().find(({ id }) => id === arkVideoContinueId)
   const [workflowBatch, setWorkflowBatch] = useState<WorkflowBatchView>()
   const [storyboardSetup, setStoryboardSetup] = useState<StoryboardSetupState>()
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
@@ -1511,7 +1515,7 @@ export function CanvasPage({
       }
       if (action === 'retry-generation') {
         if (job?.operation) {
-          const request = job.generationConfig?.providerId === 'ark-image-edit' ? {
+          const request = job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
             ...job.generationConfig, projectId: currentProject.id, nodeId: node.id, operation: job.operation, prompt: job.prompt,
           } : buildGenerationRequest(
             currentProject,
@@ -1528,7 +1532,7 @@ export function CanvasPage({
             setGenerationFeedback(eligibilityFailure)
             return
           }
-          const selection = request.providerId === 'ark-image-edit'
+          const selection = isPinnedArkTool(request.providerId)
             ? undefined
             : currentLibTvSelection(generationPreferenceStore)
           if (selection) {
@@ -2291,6 +2295,36 @@ export function CanvasPage({
       setGenerationFeedback(error instanceof Error ? error.message : '图片编辑提交失败。')
     }
     setImageEditSession(undefined)
+  }
+
+  const submitVideoContinue = (draft: ArkVideoContinueDraft) => {
+    const current = useProjectStore.getState().activeProject
+    const session = videoContinueSession
+    if (!current || !session || current.id !== session.projectId) return
+    const source = activeNodeAsset(current, session.nodeId)
+    if (!source || source.id !== session.asset.id || source.url !== session.asset.url) {
+      setGenerationFeedback('源视频已变化，请重新打开智能续写。')
+      setVideoContinueSession(undefined)
+      return
+    }
+    if (current.jobs.some(job => job.nodeId === session.nodeId && (job.status === 'queued' || job.status === 'running'))) {
+      setGenerationFeedback('当前节点已有生成任务，请等待完成。')
+      setVideoContinueSession(undefined)
+      return
+    }
+    const request: GenerationRequest = {
+      projectId: current.id, nodeId: session.nodeId, operation: 'regenerate', targetKind: 'video', providerId: arkVideoContinueId,
+      prompt: draft.prompt, parameters: videoContinueParameters(draft), referenceAssets: [{ kind: 'video', url: source.url, mimeType: source.mimeType }],
+    }
+    try {
+      const failure = generationEligibilityFailure(request, providerRegistry)
+      if (failure) throw new Error(failure)
+      buildArkVideoContinuePrompt(request)
+      generationQueue.enqueue(request)
+    } catch (error) {
+      setGenerationFeedback(error instanceof Error ? error.message : '视频续写提交失败。')
+    }
+    setVideoContinueSession(undefined)
   }
 
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
@@ -5974,6 +6008,11 @@ export function CanvasPage({
             }}
             onProcessVideo={(nodeId, options) => processVideoNode(nodeId, options)}
             onExtractVideoAudio={(nodeId) => extractVideoAudio(nodeId)}
+            videoContinueDisabledReason={videoContinueProvider ? videoContinueProvider.disabledReason : '视频续写服务尚未注册。'}
+            onContinueVideo={(nodeId) => {
+              const asset = activeNodeAsset(project, nodeId)
+              if (asset?.kind === 'video') setVideoContinueSession({ nodeId, asset, projectId: project.id })
+            }}
             onRotateImage={rotateImageNode}
             onMirrorImage={(nodeId, axis) => mirrorImage(nodeId, axis)}
             onSplitImage={(nodeId, grid, group) => splitImageNode(nodeId, grid, group)}
@@ -6170,6 +6209,16 @@ export function CanvasPage({
           busy={project.jobs.some((job) => job.nodeId === imageEditSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
           onSubmit={submitImageEdit}
           onClose={() => setImageEditSession(undefined)}
+        />
+      ) : null}
+      {videoContinueProvider && videoContinueSession && videoContinueSession.projectId === project?.id ? (
+        <VideoContinueDialog
+          key={videoContinueSession.asset.id}
+          asset={videoContinueSession.asset}
+          provider={videoContinueProvider}
+          busy={project.jobs.some(job => job.nodeId === videoContinueSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
+          onSubmit={submitVideoContinue}
+          onClose={() => setVideoContinueSession(undefined)}
         />
       ) : null}
       {pendingRemoteGeneration ? (

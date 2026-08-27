@@ -131,7 +131,7 @@
   --brand-secondary-a58: rgb(var(--brand-secondary-rgb) / 58%);
 }
 
-.ark-image-edit-overlay {
+.ark-image-edit-overlay, .ark-video-continue-overlay {
   position: fixed;
   z-index: 120;
   inset: 0;
@@ -161,6 +161,29 @@
 .ark-image-edit-dialog__source { position: relative; width: min(320px, 100%); margin-inline: auto; touch-action: none; user-select: none; }
 .ark-image-edit-dialog__source img { display: block; width: 100%; height: auto; pointer-events: none; }
 .ark-image-edit-dialog__box { position: absolute; border: 2px solid var(--focus-ring); background: var(--surface-control-active); pointer-events: none; }
+
+.ark-video-continue-dialog {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5);
+  background: var(--surface-panel-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+}
+.ark-video-continue-dialog h2, .ark-video-continue-dialog p { margin: 0 0 var(--space-3); }
+.ark-video-continue-dialog p { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.ark-video-continue-dialog header, .ark-video-continue-dialog footer { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.ark-video-continue-dialog video { display: block; width: 100%; max-height: 180px; margin-block: var(--space-3); background: var(--surface-canvas); border-radius: var(--radius-card); }
+.ark-video-continue-dialog label { display: grid; gap: var(--space-2); margin-block: var(--space-2); }
+.ark-video-continue-dialog textarea, .ark-video-continue-dialog select { width: 100%; min-width: 0; padding: var(--space-2); background: var(--surface-control); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: var(--radius-button); }
+.ark-video-continue-dialog textarea { min-height: 80px; resize: vertical; }
+.ark-video-continue-dialog__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.ark-video-continue-dialog .ark-video-continue-dialog__sound { display: flex; align-items: center; }
+.ark-video-continue-dialog [role="status"] { color: var(--brand-secondary-bright); }
 
 /* Hosted batch 3: durable subjects, tutorial details and activity examples. */
 .create-subject-dialog {

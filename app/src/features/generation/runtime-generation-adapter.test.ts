@@ -39,7 +39,7 @@ function adapter(start: GenerationAdapter['start']): GenerationAdapter {
 }
 
 describe('runtime generation adapter', () => {
-  test('pins explicit Ark image editing to its registry provider even with a legacy LibTV preference', async () => {
+  test.each(['ark-image-edit', 'ark-video-continue'])('pins explicit %s to its registry provider even with a legacy LibTV preference', async (providerId) => {
     const registryStart = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('ark-edit'))
     const libtvStart = vi.fn<GenerationAdapter['start']>()
     const preferenceStore: GenerationProviderPreferenceStore = {
@@ -49,9 +49,9 @@ describe('runtime generation adapter', () => {
       } }),
       write: () => {},
     }
-    const dispatch = { providerId: 'ark-image-edit', providerName: '火山方舟', modelName: 'Seedream 5.0 Pro 图片编辑', estimatedCost: 18 }
+    const dispatch = { providerId, providerName: '火山方舟', modelName: '显式确认的工具', estimatedCost: 18 }
     const runtime = new RuntimeGenerationAdapter(preferenceStore, { start: registryStart, describe: () => dispatch }, adapter(libtvStart))
-    const edit = { ...request, providerId: 'ark-image-edit' }
+    const edit = { ...request, providerId, targetKind: providerId === 'ark-video-continue' ? 'video' as const : 'image' as const }
     expect(runtime.describe(edit)).toEqual(dispatch)
     await expect(runtime.start(edit, new AbortController().signal)).resolves.toEqual(result('ark-edit'))
     expect(registryStart).toHaveBeenCalledOnce()

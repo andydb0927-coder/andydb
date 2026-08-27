@@ -37,6 +37,23 @@ function createProvider(fetchFn: typeof fetch, overrides = {}) {
 }
 
 describe('Seedance video live provider', () => {
+  test('sets explicit roles on video and audio references and uses the input-video price', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(seedanceVideoCreateSuccessFixture))
+      .mockResolvedValueOnce(jsonResponse(seedanceVideoSuccessFixture))
+    const result = await createProvider(fetchFn).generate({ ...seedanceVideoGenerationRequestFixture,
+      parameters: { generationMode: '全能参考', quality: '1080P', duration: 5 },
+      referenceAssets: [
+        { kind: 'video', url: 'https://media.fixture.invalid/source.mp4', mimeType: 'video/mp4' },
+        { kind: 'audio', url: 'https://media.fixture.invalid/source.wav', mimeType: 'audio/wav' },
+      ],
+    }, { signal: new AbortController().signal })
+    expect(JSON.parse(String(fetchFn.mock.calls[0]![1]?.body)).content).toEqual([
+      { type: 'text', text: seedanceVideoGenerationRequestFixture.prompt },
+      { type: 'video_url', video_url: { url: 'https://media.fixture.invalid/source.mp4' }, role: 'reference_video' },
+      { type: 'audio_url', audio_url: { url: 'https://media.fixture.invalid/source.wav' }, role: 'reference_audio' },
+    ])
+    expect(result.usage?.estimatedCostCny).toBe(3.348)
+  })
   test('creates with the official content contract, polls, and returns a project-persistent video', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()

@@ -719,6 +719,8 @@ interface SelectionContextBarProps {
   onSubmitVideoDraft?(tool: string): void
   onProcessVideo?(nodeId: string, options: VideoSegmentOptions): Promise<void> | void
   onExtractVideoAudio?(nodeId: string): Promise<void> | void
+  onContinueVideo?(nodeId: string): void
+  videoContinueDisabledReason?: string
   onRotateImage(nodeId: string): void
   onMirrorImage?(nodeId: string, axis: 'horizontal' | 'vertical'): void
   onSplitImage?(nodeId: string, grid: ImageGridSize, group: boolean): Promise<void> | void
@@ -734,6 +736,8 @@ export function SelectionContextBar({
   onSubmitVideoDraft,
   onProcessVideo,
   onExtractVideoAudio,
+  onContinueVideo,
+  videoContinueDisabledReason,
   onRotateImage,
   onMirrorImage,
   onSplitImage,
@@ -771,6 +775,8 @@ export function SelectionContextBar({
         onSubmitDraft={onSubmitVideoDraft}
         onProcessVideo={(options) => onProcessVideo?.(node.id, options)}
         onExtractAudio={() => onExtractVideoAudio?.(node.id)}
+        onContinueVideo={onContinueVideo ? () => onContinueVideo(node.id) : undefined}
+        continueDisabledReason={videoContinueDisabledReason}
       />
     )
   }

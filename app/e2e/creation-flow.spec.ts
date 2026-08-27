@@ -1715,15 +1715,15 @@ test('matches Liblib result action policies and exposes the inline video player'
   const videoActions = videoPanel.getByRole('toolbar', { name: '视频主操作' })
   await expect(videoActions.getByRole('button', { name: '主体' })).toBeVisible()
   const videoTools = page.getByRole('toolbar', { name: '视频媒体处理工具' })
-  for (const label of ['片段重拍', '智能续写']) {
+  for (const label of ['片段重拍', '智能去字幕']) {
     await expect(videoTools.getByRole('button', { name: label })).toBeDisabled()
   }
-  for (const label of ['剪辑', '裁剪', '音频分离']) {
+  for (const label of ['剪辑', '裁剪', '音频分离', '智能续写']) {
     await expect(videoTools.getByRole('button', { name: label })).toBeEnabled()
   }
   const disabledReasons = page.getByRole('note', { name: '视频工具禁用原因' })
   await expect(disabledReasons).toContainText('片段重拍暂未开放')
-  await expect(disabledReasons).toContainText('智能续写暂未开放')
+  await expect(disabledReasons).toContainText('Seedance 2.0 未提供字幕区域或时序掩膜修复接口')
 })
 
 test('persists image mirror and annotations, then creates real 2x2 slices and a storyboard group', async ({ page }) => {

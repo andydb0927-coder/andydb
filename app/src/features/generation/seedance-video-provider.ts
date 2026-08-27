@@ -74,6 +74,7 @@ interface SeedanceTaskResponse {
   content?: { video_url?: unknown }
   error?: SeedanceTaskError
   duration?: unknown
+  resolution?: unknown
   usage?: { completion_tokens?: unknown }
 }
 
@@ -213,7 +214,8 @@ function referenceContent(
       type,
       [type]: { url: referenceUrl(reference) },
     }
-    if (reference.kind !== 'image') return content
+    if (reference.kind === 'video') return { ...content, role: 'reference_video' }
+    if (reference.kind === 'audio') return { ...content, role: 'reference_audio' }
     const imageIndex = imageReferences.indexOf(reference)
     if (mode === '首尾帧') {
       if (imageIndex === 0) return { ...content, role: 'first_frame' }
@@ -235,9 +237,15 @@ function completionTokens(value: unknown) {
   return Number.isFinite(tokens) && tokens >= 0 ? tokens : undefined
 }
 
-function estimatedCostCny(tokens: number | undefined, resolution: string) {
+export function seedanceVideoTokenRateCny(resolution: string, hasVideoInput: boolean) {
+  if (resolution.toLowerCase() === '4k') return hasVideoInput ? 16 : 26
+  if (resolution.toLowerCase() === '1080p') return hasVideoInput ? 31 : 51
+  return hasVideoInput ? 28 : 46
+}
+
+function estimatedCostCny(tokens: number | undefined, resolution: string, hasVideoInput: boolean) {
   if (tokens === undefined) return undefined
-  const rate = resolution === '4k' ? 26 : resolution === '1080p' ? 51 : 46
+  const rate = seedanceVideoTokenRateCny(resolution, hasVideoInput)
   return Number(((tokens / 1_000_000) * rate).toFixed(4))
 }
 
@@ -275,7 +283,9 @@ function liveResult(
             currency: 'credits' as const,
             outputTokens: tokens,
             totalTokens: tokens,
-            estimatedCostCny: estimatedCostCny(tokens, resolution),
+            estimatedCostCny: estimatedCostCny(tokens,
+              typeof task.resolution === 'string' && ['480p', '720p', '1080p', '4k'].includes(task.resolution) ? task.resolution : resolution,
+              request.referenceAssets.some(({ kind }) => kind === 'video')),
           },
         }),
   }
@@ -377,6 +387,9 @@ export function createSeedanceVideoProvider(
         }
         if (task.status === 'cancelled') {
           throw new Error('火山方舟 Seedance 任务已取消')
+        }
+        if (task.status === 'expired') {
+          throw new Error('火山方舟 Seedance 任务已超时')
         }
         if (task.status === 'succeeded') {
           const result = liveResult(request, task, resolution)

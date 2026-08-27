@@ -16,6 +16,7 @@ import type { Asset, CanvasNode, VideoDerivedTool } from '../project/model'
 import type { VideoSegmentOptions } from '../media/browser-media-processing'
 import { defaultProviderRegistry } from '../generation/model-provider-registry'
 import { AiPlaceholderBadge } from './AiPlaceholderNotice'
+import { videoContinuationSourceFailure, videoReshootUnavailable, videoSubtitleUnavailable } from '../generation/ark-video-continue-provider'
 
 type VideoMediaSurface =
   | 'clip'
@@ -43,6 +44,8 @@ interface VideoMediaContextBarProps {
   onSubmitDraft?(tool: string): void
   onProcessVideo?(options: VideoSegmentOptions): Promise<void> | void
   onExtractAudio?(): Promise<void> | void
+  onContinueVideo?(): void
+  continueDisabledReason?: string
 }
 
 function DerivedToolConfirmation({
@@ -172,9 +175,13 @@ export function VideoMediaContextBar({
   onSubmitDraft,
   onProcessVideo,
   onExtractAudio,
+  onContinueVideo,
+  continueDisabledReason,
 }: VideoMediaContextBarProps) {
   const [surface, setSurface] = useState<VideoMediaSurface>()
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
+  const continuationReason = continueDisabledReason ?? (!onContinueVideo ? '续写操作尚未配置。' :
+    videoContinuationSourceFailure({ ...asset, durationSeconds: asset.durationSeconds ?? 5 }))
 
   useEffect(() => {
     setSurface(undefined)
@@ -206,21 +213,21 @@ export function VideoMediaContextBar({
     <>
       <div className="selection-context-bar selection-context-bar--video floating-panel" role="toolbar" aria-label="视频媒体处理工具">
         <button type="button" onClick={() => setSurface('clip')}><Scissors aria-hidden="true" />剪辑</button>
-        <button type="button" disabled title="片段重拍暂未开放" aria-describedby="video-reshoot-reason">片段重拍</button>
+        <button type="button" disabled title={videoReshootUnavailable} aria-describedby="video-reshoot-reason">片段重拍</button>
         <button type="button" onClick={() => setSurface('crop')}>裁剪</button>
         <button type="button" onClick={() => setPendingTool('视频高清')}><ScanLine aria-hidden="true" />高清</button>
         <button type="button" onClick={() => setPendingTool('逐帧拉片')}><Film aria-hidden="true" />逐帧拉片</button>
-        <button type="button" disabled title="智能续写暂未开放" aria-describedby="video-extend-reason">智能续写</button>
-        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="智能去字幕暂未开放" aria-describedby="video-subtitle-reason"><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
+        <button type="button" disabled={Boolean(continuationReason)} title={continuationReason ? `智能续写暂未开放：${continuationReason}` : '火山方舟 Seedance 视频续写（确认后付费生成）'} aria-describedby={continuationReason ? 'video-extend-reason' : undefined} onClick={onContinueVideo}>智能续写</button>
+        <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title={videoSubtitleUnavailable} aria-describedby="video-subtitle-reason"><Captions aria-hidden="true" />智能去字幕<ChevronDown aria-hidden="true" /></button>
         <button type="button" aria-haspopup="menu" aria-expanded={surface === 'audio-menu'} onClick={() => setSurface('audio-menu')}>音频分离<ChevronDown aria-hidden="true" /></button>
         <button type="button" aria-haspopup="menu" aria-expanded="false" disabled title="画面编辑暂未开放" aria-describedby="video-picture-reason"><Sparkles aria-hidden="true" />画面编辑<ChevronDown aria-hidden="true" /></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
       <div className="video-disabled-reasons visually-hidden" role="note" aria-label="视频工具禁用原因">
-        <span id="video-reshoot-reason">片段重拍暂未开放：尚未接入媒体重拍模型。</span>
-        <span id="video-extend-reason">智能续写暂未开放：尚未接入续写模型能力。</span>
-        <span id="video-subtitle-reason">智能去字幕暂未开放：尚未接入可持久化的擦除结果。</span>
+        <span id="video-reshoot-reason">{videoReshootUnavailable}</span>
+        {continuationReason ? <span id="video-extend-reason">智能续写暂未开放：{continuationReason}</span> : null}
+        <span id="video-subtitle-reason">{videoSubtitleUnavailable}</span>
         <span id="video-picture-reason">画面编辑暂未开放：尚未接入主体编辑结果。</span>
       </div>
 

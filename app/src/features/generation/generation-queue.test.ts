@@ -10,6 +10,11 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import { GenerationQueue } from './generation-queue'
+import { createArkVideoContinueProvider } from './ark-video-continue-provider'
+import { arkVideoContinueConfigFixture, arkVideoContinueRequestFixture, arkVideoContinueCreateFixture, arkVideoContinueSuccessFixture } from './fixtures/ark-video-continue.fixture'
+import { ProviderRegistry } from './model-provider-registry'
+import { RegistryGenerationAdapter } from './registry-generation-adapter'
+import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
 
 function activate(project: Project = makeProjectFixture()) {
   useProjectStore.setState({
@@ -123,6 +128,44 @@ afterEach(() => {
 })
 
 describe('generation queue lifecycle', () => {
+  test('persists continuation versions, source and result assets, retry contract and token charges across IndexedDB reload', async () => {
+    const base = makeProjectFixture()
+    const source = { id: 'source-video', ...arkVideoContinueRequestFixture.referenceAssets[0]!, durationSeconds: 5, width: 1280, height: 720 }
+    const originalVersion = { id: 'source-version', assetId: source.id, prompt: '原视频', createdAt: base.createdAt }
+    activate({ ...base, assets: [source], edges: [], jobs: [], timeline: [], canvases: undefined, activeCanvasId: undefined,
+      nodes: [{ id: 'video-live', kind: 'video', title: '视频', position: { x: 0, y: 0 }, versions: [originalVersion], activeVersionId: originalVersion.id, sourceChanged: false }],
+    })
+    const fetchFn = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify(arkVideoContinueCreateFixture)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(arkVideoContinueSuccessFixture)))
+    const registry = new ProviderRegistry([createArkVideoContinueProvider({ ...arkVideoContinueConfigFixture, fetchFn, pollIntervalMs: 0 })])
+    const queue = createQueue(new RegistryGenerationAdapter(registry))
+    const request = { ...arkVideoContinueRequestFixture, projectId: base.id, nodeId: 'video-live' }
+    const job = queue.enqueue(request)
+    await vi.waitFor(() => expect(queue.get(job.id)?.status).toBe('succeeded'))
+    const project = useProjectStore.getState().activeProject!
+    expect(project.nodes[0]!.versions).toContainEqual(expect.objectContaining(originalVersion))
+    expect(project.nodes[0]!.versions).toHaveLength(2)
+    expect(project.assets).toContainEqual(source)
+    expect(project.assets).toContainEqual(expect.objectContaining({ url: arkVideoContinueSuccessFixture.content.video_url, kind: 'video' }))
+    expect(project.jobs).toContainEqual(expect.objectContaining({ id: job.id, status: 'succeeded', providerId: 'ark-video-continue',
+      creditsSpent: 135, outputTokens: 216000, estimatedCostCny: 6.048,
+      generationConfig: expect.objectContaining({ providerId: 'ark-video-continue', parameters: request.parameters, referenceAssets: request.referenceAssets }),
+    }))
+    const db = new WirelessCanvasDatabase(`continuation-test-${crypto.randomUUID()}`)
+    try {
+      const repository = new ProjectRepository(db)
+      await repository.save(project)
+      const restored = await repository.load(project.id)
+      expect(restored?.nodes[0]?.versions).toEqual(project.nodes[0]?.versions)
+      expect(restored?.jobs).toEqual(project.jobs)
+      expect(await db.libraryAssets.count()).toBe(2)
+    } finally {
+      await db.delete()
+      queue.dispose()
+    }
+  })
+
   test('persists live text output, token usage, node version, and generation history', async () => {
     const base = makeProjectFixture()
     activate({
