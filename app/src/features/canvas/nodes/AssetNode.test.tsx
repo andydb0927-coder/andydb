@@ -289,7 +289,8 @@ test('matches the empty Liblib image card attempts and three composer actions', 
   expect(onImportImageReference).toHaveBeenCalledWith(referenceFile)
 
   await user.click(within(attempts).getByRole('button', { name: '图片高清' }))
-  expect(screen.getByRole('alertdialog', { name: '将添加工具节点' })).toBeVisible()
+  expect(within(attempts).getByRole('button', { name: '图片高清' })).toBeDisabled()
+  expect(screen.queryByRole('alertdialog', { name: '将添加工具节点' })).not.toBeInTheDocument()
   expect(onCreateImageToolNode).not.toHaveBeenCalled()
 })
 

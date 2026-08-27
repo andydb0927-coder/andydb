@@ -39,6 +39,25 @@ function adapter(start: GenerationAdapter['start']): GenerationAdapter {
 }
 
 describe('runtime generation adapter', () => {
+  test('pins explicit Ark image editing to its registry provider even with a legacy LibTV preference', async () => {
+    const registryStart = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('ark-edit'))
+    const libtvStart = vi.fn<GenerationAdapter['start']>()
+    const preferenceStore: GenerationProviderPreferenceStore = {
+      read: () => ({ provider: 'libtv', selection: {
+        projectUuid: '11111111-2222-3333-4444-555555555555', projectName: 'Legacy project',
+        imageModelKey: 'image-key', imageModelName: 'Image Model', videoModelKey: 'video-key', videoModelName: 'Video Model',
+      } }),
+      write: () => {},
+    }
+    const dispatch = { providerId: 'ark-image-edit', providerName: '火山方舟', modelName: 'Seedream 5.0 Pro 图片编辑', estimatedCost: 18 }
+    const runtime = new RuntimeGenerationAdapter(preferenceStore, { start: registryStart, describe: () => dispatch }, adapter(libtvStart))
+    const edit = { ...request, providerId: 'ark-image-edit' }
+    expect(runtime.describe(edit)).toEqual(dispatch)
+    await expect(runtime.start(edit, new AbortController().signal)).resolves.toEqual(result('ark-edit'))
+    expect(registryStart).toHaveBeenCalledOnce()
+    expect(libtvStart).not.toHaveBeenCalled()
+  })
+
   test('uses Demo only when the persisted provider is Demo', async () => {
     const demoStart = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('demo'))
     const libtvStart = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('libtv'))

@@ -50,6 +50,7 @@ import { PanoramaViewer } from './PanoramaViewer'
 import type { SubjectAsset } from '../subjects/subject-model'
 import type { SubjectRepository } from '../subjects/subject-repository'
 import { AiPlaceholderBadge } from './AiPlaceholderNotice'
+import { arkImageUpscaleUnavailable, arkImageCutoutUnavailable, type ArkImageEditOperation } from '../generation/ark-image-edit-provider'
 
 export type WorkspaceMode = 'workflow' | 'storyboard'
 export type WorkspacePanel =
@@ -713,6 +714,7 @@ interface SelectionContextBarProps {
   project: Project
   node?: CanvasNode
   onCreateToolNode(tool: string): void
+  onEditImage?(nodeId: string, operation: ArkImageEditOperation, trigger: HTMLButtonElement): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onSubmitVideoDraft?(tool: string): void
   onProcessVideo?(nodeId: string, options: VideoSegmentOptions): Promise<void> | void
@@ -727,6 +729,7 @@ export function SelectionContextBar({
   project,
   node,
   onCreateToolNode,
+  onEditImage,
   onCreateVideoToolNode,
   onSubmitVideoDraft,
   onProcessVideo,
@@ -849,7 +852,10 @@ export function SelectionContextBar({
         >
           <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" /><AiPlaceholderBadge compact />
         </button>
-        <button type="button" data-compact="false" onClick={() => requestToolNode('高清')}><ScanLine aria-hidden="true" />高清</button>
+        <button type="button" data-compact="false" disabled aria-label="高清" title={arkImageUpscaleUnavailable} aria-describedby="image-upscale-unavailable"><ScanLine aria-hidden="true" />高清<AiPlaceholderBadge compact /></button>
+        <button type="button" data-compact="false" onClick={(event) => onEditImage?.(node.id, 'outpaint', event.currentTarget)}>扩图</button>
+        <button type="button" data-compact="false" onClick={(event) => onEditImage?.(node.id, 'erase', event.currentTarget)}>擦除</button>
+        <button type="button" data-compact="false" disabled aria-label="抠像" title={arkImageCutoutUnavailable} aria-describedby="image-cutout-unavailable">抠像<AiPlaceholderBadge compact /></button>
         <button
           type="button"
           aria-haspopup="menu"
@@ -867,6 +873,8 @@ export function SelectionContextBar({
         <span id="nine-grid-disabled-reason" className="visually-hidden">{nineGridGenerationPlaceholder.disabledReason}</span>
       </div>
 
+      <span id="image-upscale-unavailable" className="visually-hidden">{arkImageUpscaleUnavailable}</span>
+      <span id="image-cutout-unavailable" className="visually-hidden">{arkImageCutoutUnavailable}</span>
       {surface === 'portrait' ? (
         <div className="image-tool-menu" role="menu" aria-label="人像质感调节">
           <button type="button" role="menuitem" onClick={() => requestToolNode('人像调节')}>人像调节</button>

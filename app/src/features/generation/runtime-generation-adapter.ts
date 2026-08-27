@@ -24,6 +24,7 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
     const preference = this.preferenceStore.read()
     const useLibTv =
       preference.provider === 'libtv' &&
+      request.providerId !== 'ark-image-edit' &&
       (request.targetKind === 'image' || request.targetKind === 'video')
     const adapter = useLibTv ? this.libtv : this.demo
     if (useLibTv && preference.provider === 'libtv') {
@@ -50,7 +51,9 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
     signal: AbortSignal,
     onProgress?: (percentage: number) => void,
   ): Promise<GenerationResult> {
+    // Editing confirmation authorizes Ark, never a different legacy remote provider.
     return this.preferenceStore.read().provider === 'libtv' &&
+      request.providerId !== 'ark-image-edit' &&
       (request.targetKind === 'image' || request.targetKind === 'video')
       ? this.libtv.start(request, signal, onProgress)
       : this.demo.start(request, signal, onProgress)

@@ -131,6 +131,37 @@
   --brand-secondary-a58: rgb(var(--brand-secondary-rgb) / 58%);
 }
 
+.ark-image-edit-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--surface-backdrop);
+}
+.ark-image-edit-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: var(--space-5);
+  background: var(--surface-panel-strong);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-menu);
+  box-shadow: var(--shadow-overlay);
+}
+.ark-image-edit-dialog h2, .ark-image-edit-dialog p { margin: 0 0 var(--space-3); }
+.ark-image-edit-dialog fieldset { min-width: 0; border: 1px solid var(--border-default); border-radius: var(--radius-button); }
+.ark-image-edit-dialog header, .ark-image-edit-dialog footer { display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; }
+.ark-image-edit-dialog label { display: grid; gap: var(--space-2); margin-block: var(--space-2); }
+.ark-image-edit-dialog input, .ark-image-edit-dialog select, .ark-image-edit-dialog textarea { width: 100%; min-width: 0; padding: var(--space-2); color: var(--text-primary); background: var(--surface-control); border: 1px solid var(--border-default); border-radius: var(--radius-button); }
+.ark-image-edit-dialog textarea { min-height: 80px; resize: vertical; }
+.ark-image-edit-dialog__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.ark-image-edit-dialog__source { position: relative; width: min(320px, 100%); margin-inline: auto; touch-action: none; user-select: none; }
+.ark-image-edit-dialog__source img { display: block; width: 100%; height: auto; pointer-events: none; }
+.ark-image-edit-dialog__box { position: absolute; border: 2px solid var(--focus-ring); background: var(--surface-control-active); pointer-events: none; }
+
 /* Hosted batch 3: durable subjects, tutorial details and activity examples. */
 .create-subject-dialog {
   display: grid;
@@ -6487,6 +6518,12 @@ select {
 
 .canvas-page__viewport:has(.react-flow__handle.connectingfrom) .react-flow__controls {
   opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Result tools must never intercept a native connection's target handle. */
+.canvas-page__viewport:has(.react-flow__handle.connectingfrom) .selection-context-bar {
+  visibility: hidden;
   pointer-events: none;
 }
 

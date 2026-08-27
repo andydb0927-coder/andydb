@@ -33,6 +33,7 @@ import {
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
 import { createDefaultProviderRegistry } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
+import { arkImageEditConfigFixture, arkImageEditSuccessFixture } from '../generation/fixtures/ark-image-edit.fixture'
 import type { LibraryAssetRecord } from '../assets/library-model'
 import { defaultImageGenerationSettings, type Project } from '../project/model'
 import {
@@ -927,71 +928,21 @@ describe('creative canvas', () => {
     )
   })
 
-  test('confirms image upscaling before inserting one connected tool node', async () => {
+  test('blocks unsupported upscale and legacy tool generation instead of silently redrawing', async () => {
     const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.nodes[0]!.kind = 'image'
+    project.nodes[0]!.imageTool = { kind: 'upscale', model: '高清修复', scale: '2x', resolution: '4K', detailProtection: true, cost: 18 }
+    act(() => activate(project))
     renderCanvas()
-
     await user.click(screen.getByRole('button', { name: '角色参考' }))
-    await user.click(screen.getByRole('button', { name: '高清' }))
-    expect(screen.getByRole('alertdialog', { name: '添加高清工具节点' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '高清' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '高清' })).toHaveAttribute('title', expect.stringContaining('未提供独立'))
+    expect(screen.getByRole('button', { name: '生成高清图片，预计成本 18' })).toBeDisabled()
+    act(() => triggerCanvasNodeAction('character', 'generate'))
+    expect(screen.getByRole('status')).toHaveTextContent('不能用重绘冒充高清放大')
     expect(useProjectStore.getState().activeProject?.nodes).toHaveLength(5)
-
-    await user.click(screen.getByRole('button', { name: '确认添加' }))
-    const project = useProjectStore.getState().activeProject!
-    const tool = project.nodes.find(({ title }) => title === '高清')
-    expect(tool).toBeDefined()
-    expect(tool).toMatchObject({
-      kind: 'image',
-      modelProviderId: 'seedream-5-pro-api',
-      imageTool: {
-        kind: 'upscale',
-        model: '高清修复',
-        scale: '2x',
-        resolution: '4K',
-        detailProtection: true,
-        cost: 18,
-      },
-    })
-    expect(project.edges).toContainEqual(expect.objectContaining({
-      sourceNodeId: 'character',
-      targetNodeId: tool?.id,
-    }))
-    expect(screen.getByRole('region', { name: '图片高清参数' })).toBeVisible()
-    expect(screen.getByRole('combobox', { name: '放大倍数' })).toHaveValue('2x')
-    expect(screen.getByRole('combobox', { name: '输出清晰度' })).toHaveValue('4K')
-    expect(screen.getByRole('checkbox', { name: '保护人物与文字细节' })).toBeChecked()
-    expect(screen.getByRole('button', { name: '生成高清图片，预计成本 18' })).toBeEnabled()
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: '放大倍数' }),
-      '4x',
-    )
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: '输出清晰度' }),
-      '2K',
-    )
-    await user.click(screen.getByRole('checkbox', { name: '保护人物与文字细节' }))
-    expect(
-      useProjectStore.getState().activeProject?.nodes.find(
-        ({ id }) => id === tool?.id,
-      ),
-    ).toMatchObject({
-      imageTool: {
-        scale: '4x',
-        resolution: '2K',
-        detailProtection: false,
-      },
-      imageGeneration: { resolution: '2K' },
-      generationConfig: {
-        parameters: {
-          resolution: '2K',
-          upscaleScale: '4x',
-          detailProtection: false,
-        },
-      },
-    })
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '已创建“高清”工具节点并建立连接',
-    )
+    expect(useProjectStore.getState().activeProject?.jobs).toHaveLength(1)
   })
 
   test('uploads and persists a local image-to-image reference without creating an edge', async () => {
@@ -1314,6 +1265,49 @@ describe('creative canvas', () => {
       expect.objectContaining({ status: 'succeeded', providerId: 'seedream-5-pro-api' }),
     )
     expect(ephemeralGenerationResultStore.get('project-canvas', 'seedream-image')).toBeUndefined()
+  })
+
+  test.each([false, true])('persists confirmed Ark edits as new versions, project assets and history in IndexedDB (retry=%s)', async (retry) => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.assets[0] = { ...project.assets[0]!, url: 'https://media.fixture.invalid/shot-river.png', width: 2816, height: 1584 }
+    act(() => activate(project))
+    const db = new WirelessCanvasDatabase(`image-edit-${crypto.randomUUID()}`)
+    const repository = new ProjectRepository(db)
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(arkImageEditSuccessFixture)))
+    if (retry) fetchFn.mockResolvedValueOnce(new Response('{}', { status: 401 }))
+    const providerRegistry = createDefaultProviderRegistry({ seedream: { ...arkImageEditConfigFixture, fetchFn } })
+    const view = renderCanvas({ repository, providerRegistry, generationAdapter: new RegistryGenerationAdapter(providerRegistry), generationPreferenceStore: libtvPreferenceStore })
+    try {
+      await user.click(screen.getByRole('button', { name: '角色参考' }))
+      await user.click(screen.getByRole('button', { name: '擦除' }))
+      const dialog = screen.getByRole('dialog', { name: 'AI 局部擦除' })
+      await user.type(within(dialog).getByLabelText('编辑描述'), '路牌')
+      for (const [name, value] of [['左边界', '100'], ['上边界', '200'], ['右边界', '600'], ['下边界', '800']]) {
+        fireEvent.change(within(dialog).getByLabelText(name!), { target: { value } })
+      }
+      expect(fetchFn).not.toHaveBeenCalled()
+      await user.click(within(dialog).getByRole('button', { name: '确认编辑并生成' }))
+      if (retry) {
+        await waitFor(() => expect(useProjectStore.getState().activeProject?.jobs.at(-1)?.status).toBe('failed'))
+        expect(useProjectStore.getState().activeProject?.nodes[0]?.versions).toHaveLength(1)
+        expect(useProjectStore.getState().activeProject?.assets).toHaveLength(project.assets.length)
+        await user.click(screen.getByRole('button', { name: '重试生成' }))
+      }
+      await waitFor(() => expect(useProjectStore.getState().activeProject?.jobs.at(-1)?.status).toBe('succeeded'))
+      await waitFor(async () => {
+        const saved = await repository.load(project.id)
+        expect(saved?.nodes[0]?.versions).toHaveLength(2)
+        expect(saved?.nodes[0]?.versions[0]?.id).toBe('version-character')
+        expect(saved?.assets).toContainEqual(expect.objectContaining({ url: arkImageEditSuccessFixture.data[0]!.url }))
+        expect(saved?.jobs.at(-1)).toMatchObject({ providerId: 'ark-image-edit', status: 'succeeded', creditsSpent: 18,
+          generationConfig: { parameters: { imageEditOperation: 'erase', editX1: 100, editY2: 800 } } })
+      })
+      expect(JSON.parse(String(fetchFn.mock.calls[0]![1]?.body)).prompt).toContain('<bbox>100 200 600 800</bbox>')
+    } finally {
+      view.unmount()
+      await db.delete()
+    }
   })
 
   test('submits the current image prompt to Seedream after editing the composer', async () => {

@@ -16,6 +16,7 @@ import {
   createSeedreamLiveProvider,
   type SeedreamLiveProviderOptions,
 } from './seedream-live-provider'
+import { createArkImageEditProvider } from './ark-image-edit-provider'
 import {
   createArkTextLlmProvider,
   type ArkTextLlmProviderOptions,
@@ -667,6 +668,7 @@ export function createDefaultProviderRegistry(
 ) {
   return new ProviderRegistry([
     createSeedreamLiveProvider(options.seedream),
+    createArkImageEditProvider(options.seedream ? { ...options.seedream, modelId: undefined } : undefined),
     createSeedanceVideoProvider(options.seedanceVideo),
     createArkTextLlmProvider(options.arkText),
     createArkTtsProvider(options.arkTts),

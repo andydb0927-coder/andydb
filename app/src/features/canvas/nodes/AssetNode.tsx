@@ -52,6 +52,7 @@ import { primaryActionsForNode } from '../node-action-policy'
 import type { CreativeFlowNode, CreativeNodeData } from '../node-types'
 import { imageMirrorTransform } from '../../media/browser-media-processing'
 import { ImageAnnotationOverlay } from '../ImageAnnotationEditor'
+import { arkImageUpscaleUnavailable } from '../../generation/ark-image-edit-provider'
 import {
   ImageGenerationPanel,
   ImageResults,
@@ -812,14 +813,7 @@ export function CreativeNodeShell({
               <Upload aria-hidden="true" />
               图生图
             </button>
-            <button
-              ref={upscaleTriggerRef}
-              type="button"
-              onClick={() => {
-                data.onSelect()
-                setUpscalePending(true)
-              }}
-            >
+            <button ref={upscaleTriggerRef} type="button" disabled title={arkImageUpscaleUnavailable} aria-description={arkImageUpscaleUnavailable}>
               <Maximize2 aria-hidden="true" />
               图片高清
             </button>

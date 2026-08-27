@@ -254,7 +254,7 @@ test('keeps every image AI preset in the preset panel without changing the selec
   expect(data.onCreateImageToolNode).not.toHaveBeenCalled()
 })
 
-test('keeps an already requested upscale confirmation without duplicating the composer action', async () => {
+test('blocks an already requested legacy upscale confirmation without creating fake output', async () => {
   const user = userEvent.setup()
   const onCreateImageToolNode = vi.fn()
   const upscaleTriggerRef = createRef<HTMLButtonElement>()
@@ -272,11 +272,12 @@ test('keeps an already requested upscale confirmation without duplicating the co
 
   expect(screen.queryByRole('button', { name: '图片高清' })).not.toBeInTheDocument()
   const dialog = screen.getByRole('alertdialog', { name: '将添加工具节点' })
-  expect(dialog).toHaveTextContent('图片高清')
+  expect(dialog).toHaveTextContent('未提供独立 2x/4x 图片超分接口')
   expect(onCreateImageToolNode).not.toHaveBeenCalled()
   await user.click(within(dialog).getByRole('button', { name: '确认添加图片高清工具节点' }))
-  expect(onCreateImageToolNode).toHaveBeenCalledWith('图片高清')
-  expect(onUpscalePendingChange).toHaveBeenCalledWith(false)
+  expect(within(dialog).getByRole('button', { name: '确认添加图片高清工具节点' })).toBeDisabled()
+  expect(onCreateImageToolNode).not.toHaveBeenCalled()
+  expect(onUpscalePendingChange).not.toHaveBeenCalled()
 })
 
 test('migrates retired image model selection to the real provider without losing the node', () => {

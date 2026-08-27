@@ -56,6 +56,8 @@ import {
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
+import { arkImageUpscaleUnavailable, buildArkImageEditPrompt, imageEditParameters, type ArkImageEditDraft, type ArkImageEditOperation } from '../generation/ark-image-edit-provider'
+import { ImageEditDialog } from './ImageEditDialog'
 import {
   generationResultAssets,
   type GenerationAdapter,
@@ -861,6 +863,7 @@ export function CanvasPage({
   const [visibilityFeedback, setVisibilityFeedback] = useState<string>()
   const [groupFeedback, setGroupFeedback] = useState<string>()
   const [generationFeedback, setGenerationFeedback] = useState<string>()
+  const [imageEditSession, setImageEditSession] = useState<{ nodeId: string; asset: Asset; operation: ArkImageEditOperation; projectId: string }>()
   const [workflowBatch, setWorkflowBatch] = useState<WorkflowBatchView>()
   const [storyboardSetup, setStoryboardSetup] = useState<StoryboardSetupState>()
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
@@ -1502,9 +1505,15 @@ export function CanvasPage({
         return
       }
 
+      if (node.imageTool?.kind === 'upscale' && (action === 'generate' || action === 'retry-generation')) {
+        setGenerationFeedback(arkImageUpscaleUnavailable)
+        return
+      }
       if (action === 'retry-generation') {
         if (job?.operation) {
-          const request = buildGenerationRequest(
+          const request = job.generationConfig?.providerId === 'ark-image-edit' ? {
+            ...job.generationConfig, projectId: currentProject.id, nodeId: node.id, operation: job.operation, prompt: job.prompt,
+          } : buildGenerationRequest(
             currentProject,
             node,
             job.operation,
@@ -1519,7 +1528,9 @@ export function CanvasPage({
             setGenerationFeedback(eligibilityFailure)
             return
           }
-          const selection = currentLibTvSelection(generationPreferenceStore)
+          const selection = request.providerId === 'ark-image-edit'
+            ? undefined
+            : currentLibTvSelection(generationPreferenceStore)
           if (selection) {
             const activeElement = document.activeElement
             setPendingRemoteGeneration({
@@ -2223,105 +2234,22 @@ export function CanvasPage({
       const currentProject = useProjectStore.getState().activeProject
       const sourceNode = currentProject?.nodes.find(({ id }) => id === sourceNodeId)
       if (!currentProject || currentProject.id !== projectId || !sourceNode) return
-      const sourceVersion = sourceNode.versions.find(
-        ({ id }) => id === sourceNode.activeVersionId,
-      )
-      const directSourceAsset = currentProject.assets.find(
-        ({ id }) => id === sourceVersion?.assetId,
-      )
-      const inheritedSourceAsset = currentProject.edges
-        .filter(({ targetNodeId }) => targetNodeId === sourceNode.id)
-        .flatMap(({ sourceNodeId: referenceNodeId }) => {
-          const referenceNode = currentProject.nodes.find(
-            ({ id }) => id === referenceNodeId,
-          )
-          const referenceVersion = referenceNode?.versions.find(
-            ({ id }) => id === referenceNode.activeVersionId,
-          )
-          const referenceAsset = currentProject.assets.find(
-            ({ id }) => id === referenceVersion?.assetId,
-          )
-          return referenceAsset ? [referenceAsset] : []
-        })
-        .find(({ kind }) => kind === 'image')
-      const sourceAsset = directSourceAsset ?? inheritedSourceAsset
-      const isUpscale = tool === '图片高清' || tool === '高清'
-      const prompt = isUpscale
-        ? `基于“${sourceNode.title}”执行高清修复，保留原始构图、人物身份与文字细节`
-        : `基于“${sourceNode.title}”创建的${tool}本地配置预览`
-      let creation = buildCanvasCreation(currentProject, {
-        kind: isUpscale ? 'image' : 'storyboard',
-        title: isUpscale ? '高清' : tool,
-        content: prompt,
-        ...(isUpscale &&
-        sourceAsset?.kind === 'image' &&
-        (sourceAsset.mimeType === 'image/png' ||
-          sourceAsset.mimeType === 'image/jpeg' ||
-          sourceAsset.mimeType === 'image/webp')
-          ? {
-              image: {
-                dataUrl: sourceAsset.url,
-                mimeType: sourceAsset.mimeType,
-              },
-            }
-          : {}),
-        position: {
-          x: sourceNode.position.x + 360,
-          y: sourceNode.position.y + 40,
-        },
-      })
-      if (isUpscale) {
-        creation = {
-          ...creation,
-          node: {
-            ...creation.node,
-            modelProviderId: 'seedream-5-pro-api',
-            imageTool: {
-              kind: 'upscale',
-              model: '高清修复',
-              scale: '2x',
-              resolution: '4K',
-              detailProtection: true,
-              cost: 18,
-            },
-            imageGeneration: {
-              ...defaultImageGenerationSettings,
-              prompt,
-              quality: '高画质',
-              resolution: '4K',
-              count: 1,
-            },
-            generationConfig: {
-              targetKind: 'image',
-              providerId: 'seedream-5-pro-api',
-              parameters: {
-                aspectRatio: '16:9',
-                quality: '高画质',
-                resolution: '4K',
-                count: 1,
-                editStrength: 0.2,
-                autoLink: true,
-                upscaleScale: '2x',
-                detailProtection: true,
-              },
-              referenceAssets:
-                sourceAsset?.kind === 'image'
-                  ? [{
-                      url: sourceAsset.url,
-                      kind: sourceAsset.kind,
-                      mimeType: sourceAsset.mimeType,
-                    }]
-                  : [],
-            },
-          },
-        }
+      if (tool === '图片高清' || tool === '高清') {
+        setGenerationFeedback(arkImageUpscaleUnavailable)
+        return
       }
+      const creation = buildCanvasCreation(currentProject, {
+        kind: 'storyboard',
+        title: tool,
+        content: `基于“${sourceNode.title}”创建的${tool}本地配置预览`,
+        position: { x: sourceNode.position.x + 360, y: sourceNode.position.y + 40 },
+      })
       if (
         !createConnectedCanvasContent(
           sourceNode.id,
           creation,
           crypto.randomUUID(),
-          isUpscale ? 'image-reference' : 'dependency',
+          'dependency',
         )
       ) {
         setGenerationFeedback('无法创建工具节点，请重新选择来源节点。')
@@ -2334,6 +2262,36 @@ export function CanvasPage({
     },
     [createConnectedCanvasContent, projectId, selectOnlyNode],
   )
+
+  const submitImageEdit = (draft: ArkImageEditDraft) => {
+    const current = useProjectStore.getState().activeProject
+    const session = imageEditSession
+    if (!current || !session || current.id !== session.projectId) return
+    const source = activeNodeAsset(current, session.nodeId)
+    if (!source || source.id !== session.asset.id) {
+      setGenerationFeedback('源图片已变化，请重新打开图片编辑。')
+      setImageEditSession(undefined)
+      return
+    }
+    if (current.jobs.some((job) => job.nodeId === session.nodeId && (job.status === 'queued' || job.status === 'running'))) {
+      setGenerationFeedback('当前节点已有生成任务，请等待完成。')
+      setImageEditSession(undefined)
+      return
+    }
+    const request: GenerationRequest = {
+      projectId: current.id, nodeId: session.nodeId, operation: 'regenerate', targetKind: 'image', providerId: 'ark-image-edit',
+      prompt: draft.prompt, parameters: imageEditParameters(draft), referenceAssets: [{ url: source.url, kind: 'image', mimeType: source.mimeType }],
+    }
+    try {
+      const failure = generationEligibilityFailure(request, providerRegistry)
+      if (failure) throw new Error(failure)
+      buildArkImageEditPrompt(request)
+      generationQueue.enqueue(request)
+    } catch (error) {
+      setGenerationFeedback(error instanceof Error ? error.message : '图片编辑提交失败。')
+    }
+    setImageEditSession(undefined)
+  }
 
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
@@ -6004,6 +5962,10 @@ export function CanvasPage({
           <SelectionContextBar
             project={project}
             node={selectedWorkspaceNode}
+            onEditImage={(nodeId, operation) => {
+              const asset = activeNodeAsset(project, nodeId)
+              if (asset?.kind === 'image') setImageEditSession({ nodeId, operation, asset, projectId: project.id })
+            }}
             onCreateToolNode={(tool) => {
               if (primaryNodeId) createImageToolNode(primaryNodeId, tool)
             }}
@@ -6198,6 +6160,16 @@ export function CanvasPage({
           consumers={consumers}
           onCancel={cancelDelete}
           onConfirm={confirmDelete}
+        />
+      ) : null}
+      {imageEditSession && imageEditSession.projectId === project?.id ? (
+        <ImageEditDialog
+          asset={imageEditSession.asset}
+          operation={imageEditSession.operation}
+          provider={providerRegistry.require('ark-image-edit')}
+          busy={project.jobs.some((job) => job.nodeId === imageEditSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
+          onSubmit={submitImageEdit}
+          onClose={() => setImageEditSession(undefined)}
         />
       ) : null}
       {pendingRemoteGeneration ? (

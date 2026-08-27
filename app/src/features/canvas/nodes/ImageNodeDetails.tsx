@@ -45,6 +45,7 @@ import { AiPlaceholderBadge, AiPlaceholderNotice } from '../AiPlaceholderNotice'
 import { PromptAssist } from '../PromptAssist'
 import { imageAiPlaceholderForLabel } from '../prompt-assist'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
+import { arkImageUpscaleUnavailable } from '../../generation/ark-image-edit-provider'
 
 function downloadUrl(url: string, filename: string) {
   const anchor = document.createElement('a')
@@ -1396,16 +1397,13 @@ export function ImageGenerationPanel({
               <X aria-hidden="true" />
             </button>
             <h2>将添加工具节点</h2>
-            <p>图片高清会在当前节点下游创建一个本地工具节点，不会立即消耗积分。</p>
+            <p>{arkImageUpscaleUnavailable}</p>
             <div>
               <button type="button" onClick={closeUpscale}>取消</button>
               <button
                 type="button"
                 aria-label="确认添加图片高清工具节点"
-                onClick={() => {
-                  closeUpscale()
-                  data.onCreateImageToolNode?.('图片高清')
-                }}
+                disabled
               >
                 确认添加
               </button>
@@ -1623,10 +1621,10 @@ export function ImageToolDetails({ data }: { data: CreativeNodeData }) {
           <span>IMAGE UPSCALE</span>
           <strong>{config.model}</strong>
         </div>
-        <span className="model-provider-badge">本地演示</span>
+        <span className="model-provider-badge">待接入</span>
       </header>
-      <p>基于上游图片增强清晰度，并尽量保持原始构图、人物身份与文字细节。</p>
-      <div className="image-tool-node-panel__settings">
+      <p id="legacy-image-upscale-reason">{arkImageUpscaleUnavailable}</p>
+      <fieldset className="image-tool-node-panel__settings" disabled>
         <label>
           放大倍数
           <select
@@ -1667,19 +1665,15 @@ export function ImageToolDetails({ data }: { data: CreativeNodeData }) {
           />
           保护人物与文字细节
         </label>
-      </div>
+      </fieldset>
       <footer>
         <span><Zap aria-hidden="true" />预计成本 {config.cost}</span>
         <button
           type="button"
           aria-label={`生成高清图片，预计成本 ${config.cost}`}
-          title="本地演示，不连接真实生成"
-          onClick={() => {
-            const activePrompt = data.node.versions.find(
-              (version) => version.id === data.node.activeVersionId,
-            )?.prompt ?? ''
-            data.onLocalImageGenerate?.(activePrompt)
-          }}
+          title={arkImageUpscaleUnavailable}
+          aria-describedby="legacy-image-upscale-reason"
+          disabled
         >
           <ArrowUp aria-hidden="true" />
           <span className="visually-hidden">生成高清图片</span>

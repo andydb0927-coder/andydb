@@ -282,17 +282,18 @@ test('keeps one image node expanded and persists a confirmed main result', async
   await expect(page.getByRole('region', { name: '场景设定 生成参数' })).toBeVisible()
   const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
   await expect(imageTools).toBeVisible()
-  await expect(imageTools.getByRole('button')).toHaveCount(12)
+  await expect(imageTools.getByRole('button')).toHaveCount(15)
   await expect(
     imageTools.getByRole('button', { name: '全景预览' }),
   ).toBeVisible()
   const nodeCount = await page.locator('.react-flow__node').count()
-  await imageTools.getByRole('button', { name: '高清' }).click()
-  const toolConfirmation = page.getByRole('alertdialog', {
-    name: '添加高清工具节点',
-  })
-  await expect(toolConfirmation).toContainText('将添加工具节点')
-  await toolConfirmation.getByRole('button', { name: '取消' }).click()
+  const unavailableUpscale = imageTools.getByRole('button', { name: '高清' })
+  await expect(unavailableUpscale).toBeDisabled()
+  await expect(unavailableUpscale).toHaveAttribute('title', /未提供独立 2x\/4x 图片超分接口/)
+  await imageTools.getByRole('button', { name: '扩图' }).click()
+  const editDialog = page.getByRole('dialog', { name: '提示词扩图' })
+  await expect(editDialog).toContainText('确认后调用真实 API')
+  await editDialog.getByRole('button', { name: '取消' }).click()
   await expect(page.locator('.react-flow__node')).toHaveCount(nodeCount)
 
   await character.click()
@@ -317,7 +318,7 @@ test('keeps one image node expanded and persists a confirmed main result', async
   ).toHaveAttribute('src', 'https://media.fixture.invalid/shot-river.png')
 })
 
-test('uploads an image-to-image reference, links a canvas reference, and configures a derived upscale node', async ({
+test('uploads an image-to-image reference, links a canvas reference, and does not fake unsupported upscaling', async ({
   page,
 }) => {
   await createCinematicProject(page)
@@ -355,29 +356,12 @@ test('uploads an image-to-image reference, links a canvas reference, and configu
   )
   await expect(page.getByRole('region', { name: '从画布选择参考' })).toHaveCount(0)
 
-  await page
+  const upscale = page
     .getByRole('toolbar', { name: '图片快捷尝试' })
     .getByRole('button', { name: '图片高清' })
-    .click()
-  const confirmation = page.getByRole('alertdialog', { name: '将添加工具节点' })
-  await expect(confirmation).toContainText('不会立即消耗积分')
-  await confirmation
-    .getByRole('button', { name: '确认添加图片高清工具节点' })
-    .click()
-
-  const upscale = page.getByRole('region', { name: '图片高清参数' })
-  await expect(upscale).toBeVisible()
-  await upscale.getByRole('combobox', { name: '放大倍数' }).selectOption('4x')
-  await upscale.getByRole('combobox', { name: '输出清晰度' }).selectOption('2K')
-  await upscale.getByRole('checkbox', { name: '保护人物与文字细节' }).uncheck()
-  await expect(upscale.getByRole('combobox', { name: '放大倍数' })).toHaveValue('4x')
-  await expect(upscale.getByRole('combobox', { name: '输出清晰度' })).toHaveValue('2K')
-  await expect(upscale.getByRole('checkbox', { name: '保护人物与文字细节' })).not.toBeChecked()
-
-  await upscale
-    .getByRole('button', { name: '生成高清图片，预计成本 18' })
-    .click()
-  await expect(page.getByRole('status')).toContainText(/生成任务已提交|生成中|结果已保存到项目与生成历史/)
+  await expect(upscale).toBeDisabled()
+  await expect(upscale).toHaveAttribute('title', /不能用重绘冒充高清放大/)
+  await expect(page.getByRole('region', { name: '图片高清参数' })).toHaveCount(0)
 })
 
 test('renames a media node and accepts prompt input from the composer', async ({
