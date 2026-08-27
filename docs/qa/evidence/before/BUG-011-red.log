@@ -1,0 +1,67 @@
+[WebServer] (node:90720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:90723) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states (30.1s)
+(node:90815) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › e2e/stabilization-audit.spec.ts:125:1 › stabilization: four image results and remaining node panels render without page errors (5.3s)
+
+
+  1) [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.hover: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Zoom Out', exact: true })
+        - locator resolved to <button type="button" title="Zoom Out" aria-label="Zoom Out" class="react-flow__controls-button react-flow__controls-zoomout">…</button>
+      - attempting hover action
+        2 × waiting for element to be visible and stable
+          - element is visible and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <button type="button" aria-label="显示小地图" aria-pressed="false">…</button> from <div role="toolbar" aria-label="画布视图" class="canvas-view-controls floating-panel">…</div> subtree intercepts pointer events
+        - retrying hover action
+        - waiting 20ms
+        2 × waiting for element to be visible and stable
+          - element is visible and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <button type="button" aria-label="显示小地图" aria-pressed="false">…</button> from <div role="toolbar" aria-label="画布视图" class="canvas-view-controls floating-panel">…</div> subtree intercepts pointer events
+        - retrying hover action
+          - waiting 100ms
+        54 × waiting for element to be visible and stable
+           - element is visible and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <button type="button" aria-label="显示小地图" aria-pressed="false">…</button> from <div role="toolbar" aria-label="画布视图" class="canvas-view-controls floating-panel">…</div> subtree intercepts pointer events
+         - retrying hover action
+           - waiting 500ms
+
+
+      24 |     await expect(control).toBeInViewport()
+      25 |     for (const hovered of [false, true]) {
+    > 26 |       if (hovered) await control.hover()
+         |                                  ^
+      27 |       const contrast = await control.evaluate((element) => {
+      28 |         const style = getComputedStyle(element)
+      29 |         const icon = element.querySelector('svg')
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/stabilization-audit.spec.ts:26:34
+
+    Error Context: test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 
+  1 passed (36.6s)

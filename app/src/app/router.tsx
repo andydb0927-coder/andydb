@@ -3,6 +3,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 
 import { PlatformShell } from '../features/platform/PlatformShell'
 import { quickCreateProjectLoader } from '../features/launcher/quick-create-project'
+import { RouteErrorPage, RouteNotFoundPage } from './RouteErrorPage'
 import '../styles/global.css'
 import '../styles/deployed-ui-polish.css'
 import '../styles/liblib-web-design.css'
@@ -69,9 +70,11 @@ function withSuspense(node: ReactNode) {
 export const routes: RouteObject[] = [
   {
     element: <PlatformShell />,
+    errorElement: <RouteErrorPage />,
+    hydrateFallbackElement: <RouteLoading />,
     children: [
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
-      { path: '/projects/new', loader: quickCreateProjectLoader },
+      { path: '/projects/new', loader: quickCreateProjectLoader, element: <RouteLoading /> },
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
       { path: '/works', element: withSuspense(<PublishedWorksPage />) },
       { path: '/tutorials', element: withSuspense(<TutorialCenterPage />) },
@@ -85,14 +88,16 @@ export const routes: RouteObject[] = [
   },
   {
     element: <PlatformShell mode="workspace" />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: '/project/:projectId', element: withSuspense(<CanvasPage />) },
       { path: '/project/:projectId/preview', element: withSuspense(<PreviewPage />) },
     ],
   },
-  { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />) },
-  { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />) },
-  { path: '/view/:workId', element: withSuspense(<PublishedWorkViewPage />) },
+  { path: '/detail/:workId', element: withSuspense(<WorkDetailPage />), errorElement: <RouteErrorPage /> },
+  { path: '/detail/:workId/process', element: withSuspense(<CreationProcessPage />), errorElement: <RouteErrorPage /> },
+  { path: '/view/:workId', element: withSuspense(<PublishedWorkViewPage />), errorElement: <RouteErrorPage /> },
+  { path: '*', element: <RouteNotFoundPage /> },
 ]
 
 export function createAppRouter(): ReturnType<typeof createBrowserRouter> {

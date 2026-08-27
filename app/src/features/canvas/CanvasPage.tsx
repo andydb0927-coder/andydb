@@ -5884,7 +5884,7 @@ export function CanvasPage({
           snapGrid={[24, 24]}
         >
           <Background gap={24} size={1} color="rgba(255,255,255,0.1)" />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false} position="top-right" />
           {minimapVisible ? <MiniMap aria-label="画布小地图" pannable zoomable /> : null}
           <ViewportPortal>
             {selectionGroupOverlay ? (

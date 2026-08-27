@@ -1,0 +1,14 @@
+编号,级别,界面,复现步骤,期望,实际,根因,状态,回归测试,修复前证据,修复后证据
+BUG-001,P1,本地mock预览,build:mock后默认vite preview打开/andydb/,正常加载,整页白屏且JS返回HTML,Vite仅build配置base而preview仍为根路径,已修复并通过最终门禁,deployment-config.test与默认preview浏览器,evidence/before/BUG-001-preview-white.png,evidence/after/BUG-001-preview-home.png
+BUG-002,P3,通知自动化稳定性,原始全量通知用例适配画布后选图点击生成,费用确认出现,基线一次等待30秒超时,trace显示后续适配重绘；尚无稳定产品复现且不能确认唯一根因,保留观察不声称根治,原测试不改；原样单跑3次及并发12次通过,evidence/baseline/notification-error-context.md,evidence/final/playwright.log
+BUG-003,P2,异常路由,打开不存在路径或loader抛错,中文错误与恢复入口,默认英文异常且无法站内恢复,路由缺catch-all与errorElement,已修复并通过最终门禁,RouteErrorPage.test与navigation failures,evidence/before/unknown-route.png,evidence/after/unknown-route.png
+BUG-004,P1,项目新建,保存未完成时连续点击同一新建入口,一个项目,产生两个项目,loader同一创建意图并发重入,已修复并通过最终门禁,quick-create-project.test与rapid new-project,evidence/before/rapid-create.png,evidence/after/rapid-create.png
+BUG-005,P2,首页和标题,系统浅色偏好打开暗色产品,标题可读,标题变成近黑色,脚手架h1和h2强制系统主题文字色覆盖产品表面文字,已修复并通过最终门禁,headings系统浅深偏好E2E,evidence/before/heading-light.png,evidence/after/heading-light.png
+BUG-006,P2,Skills窄视口,721或800宽打开Skills,模型和创建栏不溢出,横向溢出214或137像素,原生select固有最小宽度撑开父级布局,已修复并通过最终门禁,Skills controls五档宽度E2E,evidence/before/skills-721-100.png,evidence/after/skills-721-100.png
+BUG-007,P1,视频生成UI与节点列表,空视频无提示词或引用点击生成及列表重生成,所有入口服从标准资格校验,按钮仍启用且列表发送legacy regenerate,UI仅检查provider是否启用；列表残留旧动作,已修复并通过最终门禁,VideoNode与NodeListView单测及0请求E2E,evidence/before/empty-video-generation.png,evidence/after/empty-video-generation.png
+BUG-008,P3,工程质量提示,全量测试与mock构建,长期降低非失败告警,存在act辅助连接和大chunk告警,测试环境及当前包拆分结构；无证据为产品白屏,仅记录本阶段不重构,保留原始和最终完整日志,evidence/baseline/build-mock.log,evidence/final/build-mock.log
+BUG-009,P3,教程文案,打开选择图片模型教程,描述当前已移除demo条目的选择器,步骤仍提及本地演示分组,教程静态文案落后于模型清单变更,仅记录本阶段不改P3,tutorial-catalog.ts源码与本地浏览器教程快照,evidence/before/tutorials-1440-100.png,evidence/after/tutorials-1440-100.png
+BUG-010,P2,画布缩放控件,打开画布观察右侧Zoom In和Zoom Out及Fit View,图标可辨且普通和悬停态均可读,近白字落在近白底上对比度仅1.06比1,第三方控件默认背景覆盖同权重项目样式并继承浅色图标,已修复并通过最终门禁,zoom controls对比度E2E先红后绿,evidence/before/BUG-010-controls.png,evidence/after/zoom-controls-Zoom-In-default.png
+BUG-011,P2,空画布缩放与小地图,1280x720空画布鼠标移到Zoom Out,按钮可实际命中,小地图按钮拦截指针且控件容器横跨1170像素,Controls默认bottom-left与项目right偏移同时生效导致左右拉伸,已修复并通过最终门禁,zoom controls真实hover命中加五档宽度与小地图开启态,evidence/before/BUG-011-controls-overlap.png,evidence/after/zoom-controls-720-minimap.png
+BUG-012,P2,窄屏空画布引导,720x450点击显示小地图,引导卡和常驻视图按钮互不遮挡,全能参考生视频引导卡覆盖小地图,引导区仅避让工具坞未预留上移后的视图栏高度,已修复并通过最终门禁,zoom controls小地图点击加原721空画布用例,evidence/before/BUG-012-starter-overlap.png,evidence/after/zoom-controls-720-minimap.png
+BUG-013,P1,图片多结果网格,新图片fixture生成4张后查看4张结果,网格四张完整显示并可操作且不与参数区重叠,网格溢出固定高媒体卡并被composer覆盖,ImageResults挂在固定351px媒体卡内部而composer按卡片底边定位,已修复并通过最终门禁,AssetNode结构断言及四图不重叠和下载按钮实际hover,evidence/before/BUG-013-image-results-overlap.png,evidence/after/image-four-results.png

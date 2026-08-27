@@ -2618,6 +2618,8 @@ select {
 }
 
 .canvas-page__viewport {
+  --canvas-view-controls-height: 48px;
+  --canvas-view-controls-bottom: var(--space-4);
   position: fixed;
   inset: 56px 0 0;
   min-height: calc(100vh - 56px);
@@ -6668,19 +6670,15 @@ select {
 }
 
 .react-flow__controls {
-  right: var(--space-4);
-  bottom: var(--space-4);
-  left: auto;
+  --xy-controls-button-background-color: var(--surface-floating);
+  --xy-controls-button-background-color-hover: var(--surface-node);
+  --xy-controls-button-color: var(--text-primary);
+  --xy-controls-button-color-hover: var(--text-primary);
+  --xy-controls-button-border-color: var(--border-default);
+  width: max-content;
   overflow: hidden;
   border: 1px solid var(--neutral-white-a10);
   border-radius: var(--radius-button);
-}
-
-.react-flow__controls-button {
-  border-bottom-color: var(--neutral-white-a10);
-  color: var(--text-primary);
-  background: var(--surface-floating);
-  fill: currentColor;
 }
 
 .react-flow__attribution {
@@ -13210,10 +13208,10 @@ select {
 .canvas-view-controls {
   position: absolute;
   z-index: 10;
-  bottom: var(--space-4);
+  bottom: var(--canvas-view-controls-bottom);
   left: var(--space-4);
   display: flex;
-  height: 48px;
+  height: var(--canvas-view-controls-height);
   align-items: center;
   gap: 2px;
   padding: var(--space-2);
@@ -16028,9 +16026,13 @@ select {
     transform: none;
   }
 
+  .canvas-page__viewport {
+    --canvas-view-controls-bottom: 74px;
+  }
+
   .canvas-empty-starter {
     right: var(--space-2);
-    bottom: 68px;
+    bottom: calc(var(--canvas-view-controls-bottom) + var(--canvas-view-controls-height) + var(--space-2));
     left: var(--space-2);
     gap: var(--space-2);
   }
@@ -16074,7 +16076,6 @@ select {
   }
 
   .canvas-view-controls {
-    bottom: 74px;
     left: var(--space-2);
     width: 88px;
     padding: var(--space-2);
@@ -16430,7 +16431,7 @@ select {
 .agent-creation-composer textarea { width: 100%; resize: vertical; border: 1px solid var(--neutral-white-a10); border-radius: var(--radius-panel); padding: var(--space-4); color: var(--text-primary); background: rgb(7 8 12 / 65%); }
 .agent-creation-composer__controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
 .agent-creation-composer__controls label { display: grid; min-width: 180px; flex: 1; gap: 6px; color: var(--text-muted); font-size: 0.76rem; }
-.agent-creation-composer__controls select { min-height: 42px; border: 1px solid var(--neutral-white-a10); border-radius: var(--radius-menu); padding: 0 var(--space-3); color: var(--text-primary); background: #15161c; }
+.agent-creation-composer__controls select { min-width: 0; width: 100%; max-width: 100%; min-height: 42px; border: 1px solid var(--neutral-white-a10); border-radius: var(--radius-menu); padding: 0 var(--space-3); color: var(--text-primary); background: #15161c; }
 .agent-creation-composer__controls button { display: inline-flex; min-height: 42px; align-items: center; gap: var(--space-2); padding: 0 var(--space-5); border: 0; border-radius: var(--radius-menu); color: var(--text-inverse); background: linear-gradient(135deg, var(--brand-secondary-bright), var(--brand-secondary-bright)); font-weight: 760; }
   .agent-creation-composer__controls button svg { width: 17px; }
 

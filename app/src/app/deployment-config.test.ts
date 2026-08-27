@@ -80,7 +80,7 @@ test('configures the GitHub Pages repository base and BrowserRouter basename', (
   const router = readFileSync(resolve(process.cwd(), 'src/app/router.tsx'), 'utf8')
 
   expect(viteConfig).toMatch(
-    /base:\s*command\s*===\s*['"]build['"]\s*\?\s*['"]\/andydb\/['"]\s*:\s*['"]\/['"]/,
+    /base:\s*command\s*===\s*['"]build['"]\s*\|\|\s*isPreview\s*\?\s*['"]\/andydb\/['"]\s*:\s*['"]\/['"]/,
   )
   expect(router).toContain('basename: import.meta.env.BASE_URL')
 })

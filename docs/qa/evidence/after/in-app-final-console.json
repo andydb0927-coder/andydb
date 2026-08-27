@@ -1,0 +1,8 @@
+{
+  "source": "in-app browser; isolated mock preview :4186",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "logs": []
+}

@@ -4,6 +4,34 @@ import type { Project } from '../project/model'
 import { createQuickProjectRedirect } from './quick-create-project'
 
 describe('quick project creation', () => {
+  test('coalesces concurrent creation of the same intent but permits the next deliberate creation', async () => {
+    let finishSave: () => void = () => { throw new Error('Save has not started') }
+    const repository = { save: vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve })) }
+    const url = 'http://wireless-canvas.local/projects/new?recipe=cinematic-story'
+    const first = createQuickProjectRedirect(url, repository)
+    const second = createQuickProjectRedirect(url, repository)
+    expect(repository.save).toHaveBeenCalledTimes(1)
+    finishSave()
+    expect((await first).headers.get('Location')).toBe((await second).headers.get('Location'))
+    const third = createQuickProjectRedirect(url, repository)
+    expect(repository.save).toHaveBeenCalledTimes(2)
+    finishSave()
+    expect((await third).headers.get('Location')).not.toBe((await first).headers.get('Location'))
+  })
+
+  test('clears a rejected pending creation and keeps distinct recipe intents independent', async () => {
+    const repository = { save: vi.fn(async (_project: Project) => undefined) }
+    repository.save.mockRejectedValueOnce(new Error('Storage is unavailable'))
+    const url = 'http://wireless-canvas.local/projects/new'
+    await expect(createQuickProjectRedirect(url, repository)).rejects.toThrow('Storage is unavailable')
+    await expect(createQuickProjectRedirect(url, repository)).resolves.toHaveProperty('status', 302)
+    await Promise.all([
+      createQuickProjectRedirect(`${url}?recipe=cinematic-story`, repository),
+      createQuickProjectRedirect(`${url}?challenge=director-master`, repository),
+    ])
+    expect(repository.save).toHaveBeenCalledTimes(4)
+  })
+
   test('persists an automatically named empty project and redirects to its starter canvas', async () => {
     const repository = {
       save: vi.fn(async (_project: Project) => undefined),

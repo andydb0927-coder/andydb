@@ -1,0 +1,40 @@
+[WebServer] (node:90586) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:90590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states (844ms)
+
+
+  1) [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 
+
+    Error: Zoom In default
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 3
+    Received:    1.062228918511832
+
+      43 |       })
+      44 |       await capture(page, `zoom-controls-${name.replaceAll(' ', '-')}-${hovered ? 'hover' : 'default'}`)
+    > 45 |       expect(contrast, `${name} ${hovered ? 'hover' : 'default'}`).toBeGreaterThanOrEqual(3)
+         |                                                                    ^
+      46 |     }
+      47 |   }
+      48 | })
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/stabilization-audit.spec.ts:45:68
+
+    Error Context: test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 

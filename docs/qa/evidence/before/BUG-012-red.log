@@ -1,0 +1,67 @@
+[WebServer] (node:91064) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:91069) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states (30.1s)
+(node:91132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › e2e/stabilization-audit.spec.ts:137:1 › stabilization: four image results and remaining node panels render without page errors (6.0s)
+
+
+  1) [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '显示小地图', exact: true })
+        - locator resolved to <button type="button" aria-label="显示小地图" aria-pressed="false">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <rect x="8" y="2" rx="2" width="14" height="14"></rect> from <section role="region" aria-label="开始创作" class="canvas-empty-starter">…</section> subtree intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <rect x="8" y="2" rx="2" width="14" height="14"></rect> from <section role="region" aria-label="开始创作" class="canvas-empty-starter">…</section> subtree intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        52 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <rect x="8" y="2" rx="2" width="14" height="14"></rect> from <section role="region" aria-label="开始创作" class="canvas-empty-starter">…</section> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+
+      55 |     }
+      56 |   }
+    > 57 |   await page.getByRole('button', { name: '显示小地图', exact: true }).click()
+         |                                                                  ^
+      58 |   await page.getByRole('button', { name: 'Zoom Out', exact: true }).hover()
+      59 |   await capture(page, 'zoom-controls-720-minimap')
+      60 | })
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/stabilization-audit.spec.ts:57:66
+
+    Error Context: test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/stabilization-audit-stabil-b74d0-in-default-and-hover-states-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/stabilization-audit.spec.ts:20:1 › stabilization: zoom controls have readable icons in default and hover states 
+  1 passed (37.3s)

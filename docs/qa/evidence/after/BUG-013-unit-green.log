@@ -1,0 +1,13 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/nodes/AssetNode.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  22:22:57
+   Duration  1.13s (transform 185ms, setup 47ms, import 269ms, tests 658ms, environment 99ms)
+
