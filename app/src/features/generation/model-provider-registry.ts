@@ -19,6 +19,7 @@ import {
 import { createArkImageEditProvider } from './ark-image-edit-provider'
 import { createArkImageAnalysisProviders, isImageAnalysisToolId } from './ark-image-analysis-provider'
 import { createArkFrameAnalysisProvider, frameAnalysisId } from './ark-frame-analysis-provider'
+import { createArkSubjectExtractionProvider } from './ark-subject-extraction-provider'
 import { createArkVideoContinueProvider } from './ark-video-continue-provider'
 import {
   createArkTextLlmProvider,
@@ -67,6 +68,8 @@ export type ModelCapability =
   | 'smart-edit'
   | 'frame-analysis'
   | 'setting-image'
+  | 'subject-extraction'
+  | 'voice-clone'
 
 export interface ModelProviderPricing {
   amount: number
@@ -176,6 +179,8 @@ export function resolveVideoGenerationMode(
 }
 
 const capabilityCopy: Record<ModelCapability, string> = {
+  'subject-extraction': '主体视觉提取',
+  'voice-clone': '音色克隆',
   text: '文本',
   'text-to-image': '文生图',
   'image-to-image': '图生图',
@@ -623,7 +628,7 @@ export const managedAiPlaceholderCatalog = [
   { id: 'cinematic-lighting-api', name: '电影级光影矫正', modelName: '电影级光影矫正', capability: 'cinematic-lighting', menuCapabilities: [], cost: 12, disabledReason: '待接入电影级光影矫正服务' },
   { id: 'vocal-background-separation-api', name: '人声/背景音分离', modelName: '人声/背景音分离', capability: 'audio-source-separation', menuCapabilities: ["audio"], cost: 8, disabledReason: '待接入人声/背景音分离服务：当前 Ark 接口不支持；AI MediaKit 为独立服务，需另行配置授权。' },
   { id: 'audio-sentence-segmentation-api', name: '音频智能断句切分', modelName: '音频智能断句切分', capability: 'audio-sentence-segmentation', menuCapabilities: ["audio"], cost: 4, disabledReason: '待接入音频智能断句切分服务：当前 Ark 接口不支持；豆包语音 ASR 返回分句文字和时间戳，需另行接入并裁切音频。' },
-  { id: 'seedance-prompt-optimization-api', name: 'Seedance提示词优化', modelName: 'Seedance提示词优化', capability: 'prompt-optimization', menuCapabilities: ["text-to-video","image-to-video"], cost: 2, disabledReason: '待接入Seedance提示词优化服务' },
+  { id: 'seedance-prompt-optimization-api', name: 'Seedance提示词优化', modelName: 'Seedance提示词优化', capability: 'prompt-optimization', menuCapabilities: ["text-to-video","image-to-video"], cost: 2, disabledReason: '待接入Seedance提示词优化服务：公开视频API未提供独立优化端点；本地规则版免费可用。' },
   { id: 'deep-motion-capture-api', name: '深度动作捕捉', modelName: '深度动作捕捉', capability: 'motion-capture', menuCapabilities: ["text-to-video","image-to-video"], cost: 30, disabledReason: '待接入深度动作捕捉服务' },
   { id: 'smart-edit-api', name: '智能剪辑', modelName: '智能剪辑粗剪/混剪', capability: 'smart-edit', menuCapabilities: ["text-to-video","image-to-video"], cost: 20, disabledReason: '待接入智能剪辑粗剪/混剪服务：Ark 当前不支持；AI MediaKit 为独立服务，需另行配置 Key 与跨服务授权。' },
   { id: 'frame-analysis-api', name: '逐帧拉片', modelName: '逐帧拉片分析', capability: 'frame-analysis', menuCapabilities: ["text-to-video","image-to-video"], cost: 15, disabledReason: '待接入逐帧拉片分析服务' },
@@ -677,11 +682,19 @@ export function createDefaultProviderRegistry(
     createArkImageEditProvider(options.seedream ? { ...options.seedream, modelId: undefined } : undefined),
     ...createArkImageAnalysisProviders(options.seedream),
     createArkFrameAnalysisProvider(options.arkText),
+    createArkSubjectExtractionProvider(options.arkText),
     createSeedanceVideoProvider(options.seedanceVideo),
     createArkVideoContinueProvider(options.seedanceVideo),
     createArkTextLlmProvider(options.arkText),
     createArkTtsProvider(options.arkTts),
     createArkAudioGenProvider(options.arkAudio),
+    placeholderProvider({
+      id: 'voice-clone-api', name: '豆包语音', modelName: '音色克隆', selectorVisible: false, menuCapabilities: [],
+      capabilities: ['voice-clone'], parameters: {}, pricing: { amount: 0, currency: 'credits', unit: 'generation' },
+      disabledReason: '待接入音色克隆服务：openspeech 需语音专用 API Key、复刻权限与音色槽位；现有 Ark Key 未确认通用。',
+      modelNotice: '复刻2.0合成3元/万字符；后付费槽位138元/音色。当前不可执行，不会扣费。',
+      officialApiEndpoint: 'https://openspeech.bytedance.com/api/v3/tts/voice_clone',
+    }),
     ...managedAiPlaceholderProviders(),
     createInternalDemoProvider(),
   ])

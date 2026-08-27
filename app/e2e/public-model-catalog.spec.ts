@@ -46,6 +46,9 @@ test('production selectors contain only unconfigured real models and never gener
     await expect(model).not.toContainText(/Mock Studio|本地演示|内部测试/)
     await page.getByRole('textbox', { name: promptLabel, exact: true }).fill('未配置时不得生成演示内容')
     await expect(page.getByRole('button', { name: generate })).toBeDisabled()
+    if (type === '音频') {
+      await expect(page.getByRole('button', { name: /音色克隆/ })).toBeDisabled()
+    }
     if (type === '图片') {
       await expect(model).not.toContainText(/720全景|九宫格|四宫格|25宫格|光影|设定图/)
       const presetTrigger = page.getByRole('button', { name: '图片创作模板' })
@@ -66,6 +69,16 @@ test('production selectors contain only unconfigured real models and never gener
       await expect(page.getByRole('button', { name: generate })).toBeDisabled()
     }
   }
+  await page.getByRole('button', { name: '添加节点', exact: true }).click()
+  const fileChooser = page.waitForEvent('filechooser')
+  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '上传', exact: true }).click()
+  await (await fileChooser).setFiles('public/demo/character-lin-yuan.png')
+  await page.getByRole('button', { name: 'character-lin-yuan.png', exact: true }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: '创建主体' }).click()
+  const subject = page.getByRole('dialog', { name: '创建本地主体' })
+  await expect(subject.getByRole('button', { name: 'AI 身份提取' })).toBeDisabled()
+  await expect(subject).toContainText('主体提取开发验证配置未完成')
+  await page.keyboard.press('Escape')
   await page.goto('https://catalog-fixture.local/andydb/agents')
   const skillModel = page.getByRole('combobox', { name: '选择模型', exact: true })
   await expect(skillModel).toHaveValue('seedance-api')

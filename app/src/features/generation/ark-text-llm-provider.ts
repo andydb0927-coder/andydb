@@ -69,7 +69,7 @@ interface ArkStreamChunk {
 
 export interface ArkChatMessage {
   role: 'system' | 'user'
-  content: string | Array<{ type: 'video_url'; video_url: { url: string; fps: number } } | { type: 'text'; text: string }>
+  content: string | Array<{ type: 'video_url'; video_url: { url: string; fps: number } } | { type: 'image_url'; image_url: { url: string } } | { type: 'text'; text: string }>
 }
 
 function envValue(name: string) {

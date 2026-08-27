@@ -160,12 +160,12 @@ export function PromptAssist({
         className="prompt-assist__optimizer"
         aria-label="本地优化提示词"
         disabled={!prompt.trim()}
-        title="本地规则立即可用；待接入Seedance提示词优化服务"
+        title={providerRegistry.list().find(({ id }) => id === 'seedance-prompt-optimization-api')?.disabledReason ?? '本地规则免费可用；公开视频API未提供独立优化端点。'}
         onClick={() => {
           const optimized = optimizePromptLocally(prompt, context)
           if (!optimized) return
           onPromptChange(optimized)
-          setOptimizeStatus('本地规则优化完成；真实 AI 优化待接入。')
+          setOptimizeStatus('本地规则优化完成，免费且不联网；公开视频API未提供独立优化端点，真实 AI 优化待接入。')
         }}
       >
         <Sparkles aria-hidden="true" />优化<AiPlaceholderBadge compact />

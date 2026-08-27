@@ -54,6 +54,7 @@ const audioPostPlaceholders = [
   defaultProviderRegistry.require('vocal-background-separation-api'),
   defaultProviderRegistry.require('audio-sentence-segmentation-api'),
 ]
+const voiceClonePlaceholder = defaultProviderRegistry.require('voice-clone-api')
 const deepMotionPlaceholder = defaultProviderRegistry.require(
   'deep-motion-capture-api',
 )
@@ -810,6 +811,12 @@ function AudioDetails({
           </small>
         </div>
       ))}
+      <div className="specialized-node-details__placeholder-action">
+        <button type="button" disabled aria-describedby={`${audioPostReasonId}-voice-clone`}>
+          音色克隆<AiPlaceholderBadge compact />
+        </button>
+        <small id={`${audioPostReasonId}-voice-clone`}>{voiceClonePlaceholder.disabledReason} {voiceClonePlaceholder.modelNotice}</small>
+      </div>
       <button
         type="button"
         className="specialized-node-details__primary"

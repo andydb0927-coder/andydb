@@ -15,14 +15,6 @@ const defaultEnvironment: SubjectEnvironment = {
   randomId: () => crypto.randomUUID(),
 }
 
-export const aiSubjectExtractionProvider = {
-  id: 'ai-subject-extraction',
-  name: 'AI 身份提取',
-  kind: 'placeholder' as const,
-  enabled: false,
-  disabledReason: '待接入 AI 身份提取',
-}
-
 function normalizedSubjectInput(input: CreateSubjectInput) {
   const name = input.name.trim().slice(0, 80)
   if (!name) throw new Error('请输入主体名称。')

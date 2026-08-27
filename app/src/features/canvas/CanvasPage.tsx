@@ -61,6 +61,7 @@ import { ImageEditDialog } from './ImageEditDialog'
 import { ArkAnalysisDialog, type ArkAnalysisDraft } from './ArkAnalysisDialog'
 import { imageAnalysisPlan, isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
 import { frameAnalysisId, validateFrameAnalysisRequest } from '../generation/ark-frame-analysis-provider'
+import { parseSubjectDescription, subjectExtractionId, subjectExtractionUnavailable } from '../generation/ark-subject-extraction-provider'
 import {
   generationResultAssets,
   type GenerationAdapter,
@@ -375,6 +376,8 @@ interface EditingCard {
 }
 
 interface PendingSubjectCreation {
+  projectId: string
+  canvasId?: string
   sourceNodeId: string
   sourceTitle: string
   asset: Asset
@@ -921,6 +924,10 @@ export function CanvasPage({
   const [pendingSubjectCreation, setPendingSubjectCreation] = useState<PendingSubjectCreation>()
   const [subjectCreationBusy, setSubjectCreationBusy] = useState(false)
   const [subjectCreationError, setSubjectCreationError] = useState<string>()
+  useEffect(() => {
+    setPendingSubjectCreation(pending => pending &&
+      (pending.projectId !== project?.id || pending.canvasId !== project?.activeCanvasId) ? undefined : pending)
+  }, [project?.id, project?.activeCanvasId])
   const [focusRequestVersion, setFocusRequestVersion] = useState(0)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string>()
   const [loadState, setLoadState] = useState<CanvasLoadState>(() =>
@@ -4764,6 +4771,8 @@ export function CanvasPage({
       return
     }
     setPendingSubjectCreation({
+      projectId: currentProject.id,
+      canvasId: currentProject.activeCanvasId,
       sourceNodeId: sourceNode.id,
       sourceTitle: sourceNode.title,
       asset: sourceAsset,
@@ -4780,10 +4789,24 @@ export function CanvasPage({
     queueMicrotask(() => returnFocusTo?.focus())
   }, [pendingSubjectCreation])
 
+  const subjectExtractionProvider = providerRegistry.list().find(({ id }) => id === subjectExtractionId)
+  const extractSubject = useCallback(async (signal: AbortSignal) => {
+    const pending = pendingSubjectCreation
+    if (!pending || !subjectExtractionProvider) throw new Error(subjectExtractionUnavailable)
+    const result = await providerRegistry.generate({
+      projectId: pending.projectId, nodeId: pending.sourceNodeId, operation: 'regenerate', targetKind: 'text',
+      providerId: subjectExtractionId, prompt: '提取这张图片主体的创作称呼、可见外貌、服装与标签。',
+      referenceAssets: [{ kind: 'image', url: pending.asset.url, mimeType: pending.asset.mimeType }],
+    }, { signal })
+    signal.throwIfAborted()
+    return { ...parseSubjectDescription(result.version.textContent ?? ''), providerId: subjectExtractionId,
+      modelName: subjectExtractionProvider.modelName, extractedAt: new Date().toISOString(), usage: result.usage }
+  }, [pendingSubjectCreation, providerRegistry, subjectExtractionProvider])
+
   const saveSubject = useCallback((value: CreateSubjectFormValue) => {
     const pending = pendingSubjectCreation
     const currentProject = useProjectStore.getState().activeProject
-    if (!pending || !currentProject || currentProject.id !== projectId) return
+    if (!pending || !currentProject || currentProject.id !== projectId || pending.projectId !== currentProject.id || pending.canvasId !== currentProject.activeCanvasId) return
     setSubjectCreationBusy(true)
     setSubjectCreationError(undefined)
     void subjectRepository.create({
@@ -5757,12 +5780,15 @@ export function CanvasPage({
           onSubmit={(value) => void publishWork(value)}
         />
       ) : null}
-      {pendingSubjectCreation ? (
+      {pendingSubjectCreation && project?.id === pendingSubjectCreation.projectId && project.activeCanvasId === pendingSubjectCreation.canvasId ? (
         <CreateSubjectDialog
           sourceTitle={pendingSubjectCreation.sourceTitle}
           coverUrl={pendingSubjectCreation.asset.url}
           busy={subjectCreationBusy}
           error={subjectCreationError}
+          onExtract={extractSubject}
+          extractionDisabledReason={subjectExtractionProvider?.disabledReason ?? (!subjectExtractionProvider ? subjectExtractionUnavailable : undefined)}
+          extractionNotice={`自动发送图片至豆包生成主体草稿；按token计费（输入${subjectExtractionProvider?.tokenPricing?.inputPerMillionCny ?? 6}元/百万，输出${subjectExtractionProvider?.tokenPricing?.outputPerMillionCny ?? 30}元/百万），保存前请核对。取消等待不保证免除已产生的费用。`}
           onCancel={closeSubjectCreation}
           onSubmit={saveSubject}
         />

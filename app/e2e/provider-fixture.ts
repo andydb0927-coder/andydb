@@ -1,6 +1,7 @@
 import { test as base, expect, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
+import { subjectResponseFixture } from '../src/features/generation/fixtures/ark-final.fixture'
 
 export { expect }
 export type { Page } from '@playwright/test'
@@ -9,7 +10,7 @@ export type { Page } from '@playwright/test'
 export const test = base.extend({
   page: async ({ page }, use) => {
     let sequence = 0
-    await page.route(/https:\/\/[^/]*(?:volcengine|volces|byteplus)\.[^/]+\//, (route) => route.abort('blockedbyclient'))
+    await page.route(/https:\/\/[^/]*(?:volcengine|volces|byteplus|bytedance)\.[^/]+\//, (route) => route.abort('blockedbyclient'))
     await page.route('https://media.fixture.invalid/**', async (route) => {
       const name = basename(new URL(route.request().url()).pathname)
       const video = name.endsWith('.mp4')
@@ -27,6 +28,10 @@ export const test = base.extend({
       } else if (path.includes('/contents/generations/tasks/')) {
         await route.fulfill({ json: { status: 'succeeded', content: { video_url: 'https://media.fixture.invalid/video-preview.mp4' }, duration: 5, ratio: '16:9', resolution: '720p' } })
       } else if (path.endsWith('/chat/completions')) {
+        if (String(body.messages[0].content).includes('"appearance"')) {
+          await route.fulfill({ json: subjectResponseFixture })
+          return
+        }
         const prompt = String(body.messages.at(-1).content)
         const script = String(body.messages[0].content).includes('chapters')
         const count = Number(prompt.match(/(\d+)\s*场/)?.[1] ?? 2)

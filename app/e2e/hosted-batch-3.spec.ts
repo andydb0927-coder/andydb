@@ -14,10 +14,11 @@ test('creates a durable subject from an upload and reuses it in another project'
   await imageNode.click({ button: 'right' })
   await page.getByRole('menuitem', { name: '创建主体' }).click()
   const dialog = page.getByRole('dialog', { name: '创建本地主体' })
+  await expect(dialog.getByRole('status')).toContainText('已填写视觉草稿')
   await dialog.getByLabel('主体名称').fill('雨夜旅人')
   await dialog.getByLabel('主体描述').fill('黑色风衣与冷色轮廓光')
   await dialog.getByLabel('主体标签').fill('主角, 雨夜')
-  await expect(dialog.getByRole('button', { name: 'AI 身份提取' })).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'AI 身份提取' })).toBeEnabled()
   await dialog.getByRole('button', { name: '保存到主体库' }).click()
 
   const library = page.getByRole('dialog', { name: '角色库' })
