@@ -14,7 +14,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import { withAppBase } from '../../../app/public-url'
@@ -44,6 +44,7 @@ import type { CreativeNodeData } from '../node-types'
 import { AiPlaceholderBadge, AiPlaceholderNotice } from '../AiPlaceholderNotice'
 import { PromptAssist } from '../PromptAssist'
 import { imageAiPlaceholderForLabel } from '../prompt-assist'
+import { imageAnalysisTools, isImageAnalysisToolId } from '../../generation/ark-image-analysis-provider'
 import { imagePrimaryActionsFor } from './image-result-action-policy'
 import { arkImageUpscaleUnavailable } from '../../generation/ark-image-edit-provider'
 
@@ -679,6 +680,19 @@ function ImageTemplatePicker({
   onClose(restoreFocus: boolean): void
 }) {
   const pickerRef = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState({ left: 16, top: 16 })
+  useLayoutEffect(() => {
+    const place = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect()
+      const menu = pickerRef.current?.getBoundingClientRect()
+      if (!trigger || !menu) return
+      setPosition({ left: Math.max(16, Math.min(trigger.right - menu.width, window.innerWidth - menu.width - 16)),
+        top: Math.max(16, Math.min(trigger.top - menu.height - 8, window.innerHeight - menu.height - 16)) })
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [triggerRef])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -705,10 +719,11 @@ function ImageTemplatePicker({
     }
   }, [onClose, triggerRef])
 
-  return (
+  return createPortal(
     <div
       ref={pickerRef}
       className="image-template-picker nodrag nowheel"
+      style={{ ...position, right: 'auto', bottom: 'auto' }}
       role="dialog"
       aria-label="图片创作模板"
     >
@@ -730,7 +745,7 @@ function ImageTemplatePicker({
                       key={item.label}
                       type="button"
                       aria-label={item.label}
-                      onClick={() => onSelect(item.label)}
+                      onClick={() => { triggerRef.current?.focus(); onSelect(item.label) }}
                     >
                       <span className="image-template-picker__icon">
                         <ImageTemplateIcon category={item.category} />
@@ -742,7 +757,7 @@ function ImageTemplatePicker({
                         ) : null}
                       </span>
                       <span>{item.label}</span>
-                      {imageAiPlaceholderForLabel(item.label) ? (
+                      {imageAiPlaceholderForLabel(item.label) && !isImageAnalysisToolId(imageAiPlaceholderForLabel(item.label)?.providerId) ? (
                         <AiPlaceholderBadge compact />
                       ) : null}
                     </button>
@@ -753,7 +768,7 @@ function ImageTemplatePicker({
           })}
         </div>
       ))}
-    </div>
+    </div>, document.body,
   )
 }
 
@@ -1151,6 +1166,7 @@ export function ImageGenerationPanel({
         onImageSettings={applyImageSettings}
         onCreateNode={data.onCreatePromptNode}
         onApplyAutoLink={data.onApplyAutoLink}
+        onOpenAnalysisTool={data.onOpenAnalysisTool}
       />
       <div className="image-generation-panel__controls">
         <label className="image-generation-panel__model">
@@ -1275,7 +1291,9 @@ export function ImageGenerationPanel({
           onSelect={(template) => {
             setTemplatesOpen(false)
             const aiPreset = imageAiPlaceholderForLabel(template)
-            if (aiPreset) {
+            if (aiPreset && isImageAnalysisToolId(aiPreset.providerId) && data.onOpenAnalysisTool) {
+              data.onOpenAnalysisTool(aiPreset.providerId, promptDraftRef.current.trim())
+            } else if (aiPreset) {
               setPendingAiTemplate({ label: template, ...aiPreset })
             } else {
               setPendingTemplate(template)
@@ -1543,6 +1561,7 @@ export function ImageResults({ data }: { data: CreativeNodeData }) {
       {open ? (
         <section
           className="image-results-grid nodrag"
+          style={{ gridTemplateColumns: `repeat(${imageAnalysisTools.find(tool => tool.id === data.node.generationConfig?.providerId)?.columns ?? 2}, minmax(0, 1fr))` }}
           role="region"
           aria-label={`${data.node.title} 的 ${results.length} 张结果`}
         >

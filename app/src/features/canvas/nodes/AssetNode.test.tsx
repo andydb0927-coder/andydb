@@ -842,33 +842,19 @@ test('adds, sorts, and removes director shots with camera hints', async () => {
   })
 })
 
-test('configures frame analysis dimensions while exposing the managed AI placeholder', async () => {
-  const user = userEvent.setup()
+test('explains the frame analysis source picker and keeps unconfigured submission disabled', () => {
   const details = {
     type: 'frame-analysis',
     sourceName: '待选择素材',
     sourceSummary: '尚未绑定视频',
     dimensions: { storyboard: true, motion: true, music: true },
   }
-  const { onUpdateNodeDetails } = renderSpecializedNode('逐帧拉片 01', 'storyboard', details)
+  renderSpecializedNode('逐帧拉片 01', 'storyboard', details)
   const panel = screen.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
-  expect(within(panel).getByText('尚未绑定视频')).toBeVisible()
-  await user.upload(
-    within(panel).getByLabelText('替换素材'),
-    new File(['demo'], '雨夜镜头.mp4', { type: 'video/mp4' }),
-  )
-  expect(onUpdateNodeDetails).toHaveBeenCalledWith({
-    ...details,
-    sourceName: '雨夜镜头.mp4',
-    sourceSummary: 'video/mp4 · 1 KB',
-  })
-  await user.click(within(panel).getByRole('checkbox', { name: '音乐维度' }))
-  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith({
-    ...details,
-    dimensions: { ...details.dimensions, music: false },
-  })
+  expect(within(panel).getByText(/选择上游视频或上传视频/)).toBeVisible()
+  expect(within(panel).getByText(/不读取音轨/)).toBeVisible()
   expect(within(panel).getByRole('button', { name: '开始拉片' })).toBeDisabled()
-  expect(within(panel).getByText(/待接入逐帧拉片分析服务/)).toBeVisible()
+  expect(within(panel).getByText(/配置未完成/)).toBeVisible()
 })
 
 test('shows smart-edit tracks, clips, and export duration', () => {

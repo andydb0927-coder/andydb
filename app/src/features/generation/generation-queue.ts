@@ -208,10 +208,10 @@ export class GenerationQueue {
     }
     const job: QueueGenerationJob = {
       ...entry.job,
-      status: 'succeeded',
+      status: result.incomplete ? 'failed' : 'succeeded',
       assetId: result.asset.id,
-      error: undefined,
-      progress: 100,
+      error: result.incomplete?.reason,
+      progress: result.incomplete ? Math.floor(result.incomplete.completed / result.incomplete.total * 100) : 100,
       ...(result.usage
         ? {
             providerId: result.usage.providerId,

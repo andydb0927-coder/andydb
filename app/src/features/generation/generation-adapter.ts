@@ -37,6 +37,8 @@ export interface GenerationResult {
   assets?: Asset[]
   usage?: GenerationUsage
   persistence?: 'project' | 'ephemeral'
+  /** A serial tool stopped early. Persist completed assets but mark the job failed. */
+  incomplete?: { completed: number; total: number; reason: string }
 }
 
 export function generationResultAssets(result: GenerationResult) {

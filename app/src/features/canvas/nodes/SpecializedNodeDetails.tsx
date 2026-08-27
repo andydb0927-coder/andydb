@@ -2,7 +2,6 @@ import {
   ArrowDown,
   ArrowUp,
   Expand,
-  FileVideo2,
   Languages,
   Plus,
   Trash2,
@@ -33,6 +32,7 @@ import {
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
+import { FrameAnalysisControls } from './FrameAnalysisControls'
 import { createDefaultDirectorScene } from '../director-3d-scene'
 import { extractAudioToWav } from '../../media/browser-media-processing'
 
@@ -58,7 +58,6 @@ const deepMotionPlaceholder = defaultProviderRegistry.require(
   'deep-motion-capture-api',
 )
 const smartEditPlaceholder = defaultProviderRegistry.require('smart-edit-api')
-const frameAnalysisPlaceholder = defaultProviderRegistry.require('frame-analysis-api')
 
 function countCharacters(value: string) {
   return Array.from(value).length
@@ -1055,47 +1054,7 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
       {details.type === 'director' ? <DirectorDetails data={data} details={details} onUpdate={update} /> : null}
 
       {details.type === 'frame-analysis' ? (
-        <>
-          <div className="specialized-node-details__source">
-            <FileVideo2 aria-hidden="true" />
-            <span><strong>{details.sourceName}</strong><small>{details.sourceSummary}</small></span>
-            <label className="specialized-node-details__replace">
-              替换素材
-              <input
-                type="file"
-                aria-label="替换素材"
-                accept="video/*,image/*,audio/*"
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0]
-                  if (!file) return
-                  update({ ...details, sourceName: file.name, sourceSummary: `${file.type || '本地素材'} · ${Math.max(1, Math.round(file.size / 1024))} KB` })
-                }}
-              />
-            </label>
-          </div>
-          <fieldset className="specialized-node-details__dimensions">
-            <legend>分析维度</legend>
-            {([
-              ['storyboard', '分镜维度'],
-              ['motion', '动态维度'],
-              ['music', '音乐维度'],
-            ] as const).map(([dimension, label]) => (
-              <label key={dimension}>
-                <input type="checkbox" checked={details.dimensions[dimension]} onChange={(event) => update({ ...details, dimensions: { ...details.dimensions, [dimension]: event.currentTarget.checked } })} />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-          <button
-            type="button"
-            className="specialized-node-details__primary"
-            disabled
-            aria-describedby="frame-analysis-placeholder-reason"
-          >开始拉片<AiPlaceholderBadge compact /></button>
-          <p id="frame-analysis-placeholder-reason">
-            {frameAnalysisPlaceholder.disabledReason}，预计成本 {frameAnalysisPlaceholder.pricing.amount} 积分。
-          </p>
-        </>
+        <FrameAnalysisControls data={data} />
       ) : null}
 
       {details.type === 'smart-edit' ? <SmartEditDetails details={details} onUpdate={update} /> : null}

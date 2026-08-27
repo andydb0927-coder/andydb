@@ -5,6 +5,7 @@ import { ProviderRegistry, createDefaultProviderRegistry, managedAiPlaceholderCa
 import { RegistryGenerationAdapter } from './registry-generation-adapter'
 import { resolveModelParameterManifest } from './model-parameter-semantics'
 import { createFixtureProviderRegistry } from '../../test/provider-fixtures'
+import { imageAnalysisTools } from './ark-image-analysis-provider'
 
 const imageRequest: GenerationRequest = { projectId: 'p', nodeId: 'n', operation: 'regenerate', targetKind: 'image', providerId: 'seedream-5-pro-api', prompt: '雨夜电影感人像', referenceAssets: [] }
 afterEach(() => vi.useRealTimers())
@@ -44,7 +45,12 @@ describe('model provider registry', () => {
     expect(providerGenerationCost(r.require('ark-audio-gen'), { duration: 12 })).toBe(12)
   })
   test.each(managedAiPlaceholderCatalog)('preserves $id reason and cost', (d) => {
-    expect(createDefaultProviderRegistry().require(d.id)).toMatchObject({ kind: 'placeholder', menuCapabilities: d.menuCapabilities, disabledReason: d.disabledReason, capabilities: [d.capability], pricing: { amount: d.cost } })
+    const provider = createDefaultProviderRegistry().require(d.id)
+    const activeTool = imageAnalysisTools.find(tool => tool.id === d.id)
+    if (activeTool || d.id === 'frame-analysis-api') {
+      expect(provider).toMatchObject({ kind: 'live', selectorVisible: false, disabledReason: expect.stringContaining('配置未完成'), pricing: { amount: activeTool ? activeTool.count * 18 : 1 } })
+      expect(provider.capabilities).toContain(d.capability)
+    } else expect(provider).toMatchObject({ kind: 'placeholder', menuCapabilities: d.menuCapabilities, disabledReason: d.disabledReason, capabilities: [d.capability], pricing: { amount: d.cost } })
   })
   test('migrates retired selections without silently executing them', () => {
     const r = createDefaultProviderRegistry()

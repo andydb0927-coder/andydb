@@ -157,6 +157,12 @@
 .ark-image-edit-dialog label { display: grid; gap: var(--space-2); margin-block: var(--space-2); }
 .ark-image-edit-dialog input, .ark-image-edit-dialog select, .ark-image-edit-dialog textarea { width: 100%; min-width: 0; padding: var(--space-2); color: var(--text-primary); background: var(--surface-control); border: 1px solid var(--border-default); border-radius: var(--radius-button); }
 .ark-image-edit-dialog textarea { min-height: 80px; resize: vertical; }
+.ark-analysis-dialog video, .ark-analysis-dialog__image { display: block; width: 100%; max-height: 160px; object-fit: contain; }
+.ark-analysis-dialog input[type='checkbox'] { width: auto; }
+.ark-analysis-dialog details { margin-block: var(--space-3); }
+.ark-analysis-dialog details li { margin-block: var(--space-2); overflow-wrap: anywhere; }
+.frame-analysis-controls section { max-height: 300px; overflow: auto; }
+.frame-analysis-controls section li { margin-block: var(--space-2); }
 .ark-image-edit-dialog__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
 .ark-image-edit-dialog__source { position: relative; width: min(320px, 100%); margin-inline: auto; touch-action: none; user-select: none; }
 .ark-image-edit-dialog__source img { display: block; width: 100%; height: auto; pointer-events: none; }
@@ -5884,8 +5890,8 @@ select {
 }
 
 .image-template-picker {
-  position: absolute;
-  z-index: 28;
+  position: fixed;
+  z-index: 1100;
   right: 16px;
   bottom: 76px;
   display: grid;
@@ -5928,7 +5934,7 @@ select {
   gap: var(--space-1);
 }
 
-.image-generation-panel .image-template-picker__group button {
+.image-template-picker__group button {
   display: grid;
   min-height: 52px;
   grid-template-columns: 38px minmax(0, 1fr);
@@ -5943,8 +5949,8 @@ select {
   text-align: left;
 }
 
-.image-generation-panel .image-template-picker__group button:hover,
-.image-generation-panel .image-template-picker__group button:focus-visible {
+.image-template-picker__group button:hover,
+.image-template-picker__group button:focus-visible {
   border-color: var(--neutral-white-a10);
   background: var(--neutral-white-a06);
 }

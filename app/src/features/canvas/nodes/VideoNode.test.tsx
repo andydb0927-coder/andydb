@@ -170,7 +170,7 @@ test('renders the verified video generation controls, disabled modes, and cost',
   expect(within(panel).getByLabelText('提示词')).toHaveAttribute('maxlength', '2000')
   const model = within(panel).getByLabelText('模型')
   expect(model).toHaveValue('seedance-api')
-  expect(within(model).getAllByRole('option')).toHaveLength(5)
+  expect(within(model).getAllByRole('option')).toHaveLength(4)
   expect(within(model).getByRole('option', { name: /火山方舟.*Seedance 2.0/ })).toBeEnabled()
   expect(within(panel).getByText('开发直连', { exact: true })).toBeVisible()
   await user.selectOptions(model, 'seedance-api')
@@ -289,7 +289,7 @@ test('has no demo video options and disables unconfigured real generation', () =
   render(renderVideo(data))
   const model = screen.getByRole('combobox', { name: '模型' })
   expect(Array.from(model.querySelectorAll('optgroup'), ({ label }) => label)).toEqual(['官方 API 已接（开发直连）', '待接入'])
-  expect(within(model).getAllByRole('option')).toHaveLength(5)
+  expect(within(model).getAllByRole('option')).toHaveLength(4)
   expect(within(model).getByRole('option', { name: /Seedance.*配置未完成/ })).toBeDisabled()
   expect(model.querySelector('option[value^="mock-"]')).toBeNull()
   expect(screen.getByText('火山方舟 Seedance 开发验证配置未完成')).toBeVisible()
@@ -482,9 +482,8 @@ test('renders exact local configurations for video upscale and frame analysis no
   }
   view.rerender(<VideoToolDetails data={analysis} />)
   const analysisPanel = screen.getByRole('region', { name: '逐帧拉片参数' })
-  for (const dimension of ['分镜', '动态', '音乐']) {
-    expect(within(analysisPanel).getByLabelText(dimension)).toBeChecked()
-  }
+  expect(within(analysisPanel).getByText('火山方舟 · 豆包视频理解')).toBeVisible()
+  expect(within(analysisPanel).getByText(/不读取音轨/)).toBeVisible()
   expect(within(analysisPanel).getByRole('button', { name: '开始拉片' })).toBeDisabled()
-  expect(within(analysisPanel).getByText(/待接入逐帧拉片分析服务/)).toBeVisible()
+  expect(within(analysisPanel).getByText('分析入口未连接。')).toBeVisible()
 })

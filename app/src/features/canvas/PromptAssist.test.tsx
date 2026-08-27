@@ -10,11 +10,13 @@ function Harness({
   onImageSettings = vi.fn(),
   onCreateNode = vi.fn(),
   onApplyAutoLink = vi.fn(),
+  onOpenAnalysisTool,
 }: {
   initialPrompt?: string
   onImageSettings?: (settings: Record<string, unknown>) => void
   onCreateNode?: (kind: 'image' | 'storyboard' | 'video') => void
   onApplyAutoLink?: (candidate: { nodeId: string }) => void
+  onOpenAnalysisTool?: (id: string, prompt?: string) => void
 }) {
   const [prompt, setPrompt] = useState(initialPrompt)
   return (
@@ -36,6 +38,7 @@ function Harness({
         onImageSettings={onImageSettings}
         onCreateNode={onCreateNode}
         onApplyAutoLink={onApplyAutoLink as never}
+        onOpenAnalysisTool={onOpenAnalysisTool}
       />
     </div>
   )
@@ -100,18 +103,28 @@ describe('prompt assist UI', () => {
 
   test('explains AI slash presets before copying their prompt into the image node', async () => {
     const user = userEvent.setup()
-    render(<Harness initialPrompt="古城 /九宫格" />)
+    render(<Harness initialPrompt="古城 /设定图" />)
 
-    await user.click(screen.getByRole('option', { name: /九宫格分镜预设/ }))
-    const dialog = screen.getByRole('alertdialog', { name: '多机位九宫格生成功能待接入' })
-    expect(dialog).toHaveTextContent('待接入多机位九宫格生成服务')
-    expect(dialog).toHaveTextContent('预计成本 48 积分')
+    await user.click(screen.getByRole('option', { name: /角色与场景设定图预设/ }))
+    const dialog = screen.getByRole('alertdialog', { name: '设定图生成功能待接入' })
+    expect(dialog).toHaveTextContent('待接入设定图生成服务')
+    expect(dialog).toHaveTextContent('预计成本 24 积分')
     await user.click(within(dialog).getByRole('button', { name: '复制提示词到图片节点' }))
 
     expect(
       (screen.getByRole('textbox', { name: '测试提示词' }) as HTMLTextAreaElement).value,
-    ).toContain('同一主体')
+    ).toContain('角色设定图')
     expect(screen.getByRole('status')).toHaveTextContent('已复制提示词')
+  })
+
+  test('routes a supported slash preset to confirmation without dispatching or reopening slash', async () => {
+    const user = userEvent.setup()
+    const onOpenAnalysisTool = vi.fn()
+    render(<Harness initialPrompt="古城 /九宫格" onOpenAnalysisTool={onOpenAnalysisTool} />)
+    await user.click(screen.getByRole('option', { name: /九宫格分镜预设/ }))
+    expect(onOpenAnalysisTool).toHaveBeenCalledWith('multi-camera-grid-api', '古城')
+    expect(screen.getByRole('textbox', { name: '测试提示词' })).toHaveValue('古城')
+    expect(screen.queryByRole('dialog', { name: 'Slash 命令面板' })).not.toBeInTheDocument()
   })
 
   test('optimizes the current prompt with deterministic local rules', async () => {

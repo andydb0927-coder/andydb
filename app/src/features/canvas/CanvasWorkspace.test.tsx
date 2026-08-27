@@ -340,7 +340,7 @@ test('offers the exact eleven image actions and confirms only click-to-insert to
   expect(within(portrait).getByText('NEW')).toBeVisible()
   expect(portrait.querySelector('.lucide-chevron-down')).toBeInTheDocument()
   const panorama = within(imageToolbar).getByRole('button', { name: '全景' })
-  expect(panorama).toHaveAttribute('title', '待接入720全景生成服务')
+  expect(panorama).toHaveAttribute('title', '720全景开发验证配置未完成')
   expect(panorama).toBeDisabled()
   expect(panorama.querySelector('.ai-placeholder-badge')).toHaveTextContent('待接入')
   expect(panorama.querySelector('.image-context-action__panorama-icon')).toHaveTextContent('720')
@@ -418,7 +418,7 @@ test('keeps nine-grid unavailable, performs real grid split, and keeps preview f
 
   expect(screen.getByRole('button', { name: '九宫格' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '宫格切分' })).toBeEnabled()
-  expect(screen.getByText(/待接入多机位九宫格生成服务/)).toBeInTheDocument()
+  expect(screen.getByText(/多机位九宫格开发验证配置未完成/)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '宫格切分' }))
   expect(screen.getByRole('menu', { name: '宫格切分规格' })).toBeVisible()
   await user.click(screen.getByRole('menuitem', { name: '4 宫格（2×2）' }))

@@ -4,6 +4,7 @@ import type {
   GenerationResult,
 } from './generation-adapter'
 import type { GenerationProviderPreferenceStore } from './generation-provider-preference'
+import { isImageAnalysisToolId } from './ark-image-analysis-provider'
 
 export class RuntimeGenerationAdapter implements GenerationAdapter {
   private readonly preferenceStore: GenerationProviderPreferenceStore
@@ -62,5 +63,5 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
 
 /** Explicit tool confirmations authorize only the stated Ark service. */
 export function isPinnedArkTool(providerId?: string) {
-  return providerId === 'ark-image-edit' || providerId === 'ark-video-continue'
+  return providerId === 'ark-image-edit' || providerId === 'ark-video-continue' || providerId === 'frame-analysis-api' || isImageAnalysisToolId(providerId)
 }

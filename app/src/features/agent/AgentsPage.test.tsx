@@ -52,7 +52,7 @@ describe('Agents page', () => {
     const model = await screen.findByRole('combobox', { name: '选择模型' })
     const mode = screen.getByRole('combobox', { name: '生成模式' })
     expect(model).toHaveValue('seedance-api')
-    expect(within(model).getAllByRole('option').map((option) => (option as HTMLOptionElement).value)).toEqual(['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api', 'frame-analysis-api'])
+    expect(within(model).getAllByRole('option').map((option) => (option as HTMLOptionElement).value)).toEqual(['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api'])
     within(model).getAllByRole('option').forEach((option) => expect(option).toBeDisabled())
     expect(model).not.toHaveTextContent(/本地演示|MiniMax|Seedance 2.5/)
     expect(screen.getByRole('button', { name: '开始创作' })).toBeDisabled()

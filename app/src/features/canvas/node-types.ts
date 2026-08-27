@@ -79,6 +79,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onImportImageReference?(file: File): void
   onLocalImageGenerate?(prompt: string): void
   onCreateImageToolNode?(tool: string): void
+  onOpenAnalysisTool?(toolId: string, prompt?: string): void
   onUpdateImageTool?(changes: Partial<ImageToolConfig>): void
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onCaptureVideoFrame?(

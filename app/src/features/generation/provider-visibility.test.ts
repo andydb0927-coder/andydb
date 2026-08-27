@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
+import { isImageAnalysisToolId } from './ark-image-analysis-provider'
 import {
   createDefaultProviderRegistry,
   groupProvidersForMenu,
@@ -16,7 +17,7 @@ describe('public model catalog without demo models', () => {
     expect(visible.every(({ kind }) => kind !== 'demo')).toBe(true)
     expect(visible.every((provider) => !isProviderEnabled(provider) && provider.disabledReason)).toBe(true)
     for (const { id } of managedAiPlaceholderCatalog) {
-      expect(registry.require(id).kind).toBe('placeholder')
+      expect(registry.require(id).kind).toBe(isImageAnalysisToolId(id) || id === 'frame-analysis-api' ? 'live' : 'placeholder')
     }
     expect(registry.list().filter(({ kind }) => kind === 'demo')).toEqual([
       expect.objectContaining({ id: 'internal-demo', selectorVisible: false }),
@@ -27,7 +28,7 @@ describe('public model catalog without demo models', () => {
     const registry = createDefaultProviderRegistry()
     const menuProviders = groupProvidersForMenu(registry.list()).flatMap(({ providers }) => providers)
     expect(menuProviders.every(({ selectorVisible, kind }) => selectorVisible !== false && kind !== 'demo')).toBe(true)
-    expect(menuProviders.filter(({ kind }) => kind === 'placeholder')).toHaveLength(12)
+    expect(menuProviders.filter(({ kind }) => kind === 'placeholder')).toHaveLength(6)
   })
 
   test('keeps image presets addressable without adding them to the image model menu', () => {
@@ -35,7 +36,7 @@ describe('public model catalog without demo models', () => {
     const imageMenu = registry.menuProvidersFor(['text-to-image', 'image-to-image'])
     expect(imageMenu.map(({ id }) => id)).toEqual(['seedream-5-pro-api'])
     for (const id of ['panorama-720-api', 'multi-camera-grid-api', 'plot-four-grid-api', 'storyboard-25-grid-api', 'cinematic-lighting-api', 'setting-image-api']) {
-      expect(registry.require(id)).toMatchObject({ kind: 'placeholder', menuCapabilities: [] })
+      expect(registry.require(id)).toMatchObject({ kind: isImageAnalysisToolId(id) ? 'live' : 'placeholder', menuCapabilities: [] })
       expect(isProviderEnabled(registry.require(id))).toBe(false)
     }
     expect(registry.defaultFor(['text-to-image'])?.id).toBe('seedream-5-pro-api')

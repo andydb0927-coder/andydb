@@ -21,7 +21,9 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { GenerationProviderPreferenceStore } from '../generation/generation-provider-preference'
-import { defaultProviderRegistry } from '../generation/model-provider-registry'
+import { defaultProviderRegistry, type ProviderRegistry } from '../generation/model-provider-registry'
+import { isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
+import { imageAiPlaceholderForLabel } from './prompt-assist'
 import type { AssetLibraryRepository } from '../assets/asset-library-repository'
 import type {
   CanvasNode,
@@ -659,9 +661,6 @@ const nineGridTemplates = [
   '画面推演 - 5 秒前',
 ] as const
 
-const panoramaGenerationPlaceholder = defaultProviderRegistry.require('panorama-720-api')
-const nineGridGenerationPlaceholder = defaultProviderRegistry.require('multi-camera-grid-api')
-
 const anglePresets = [
   '自定义',
   '鱼眼视角',
@@ -712,6 +711,8 @@ function ImageToolDialog({
 
 interface SelectionContextBarProps {
   project: Project
+  providerRegistry?: ProviderRegistry
+  onOpenAnalysisTool?(nodeId: string, toolId: string): void
   node?: CanvasNode
   onCreateToolNode(tool: string): void
   onEditImage?(nodeId: string, operation: ArkImageEditOperation, trigger: HTMLButtonElement): void
@@ -729,6 +730,8 @@ interface SelectionContextBarProps {
 
 export function SelectionContextBar({
   project,
+  providerRegistry = defaultProviderRegistry,
+  onOpenAnalysisTool,
   node,
   onCreateToolNode,
   onEditImage,
@@ -743,6 +746,10 @@ export function SelectionContextBar({
   onSplitImage,
   onSaveImageAnnotations,
 }: SelectionContextBarProps) {
+  const panoramaProvider = providerRegistry.require('panorama-720-api')
+  const nineGridProvider = providerRegistry.require('multi-camera-grid-api')
+  const panoramaReason = panoramaProvider.disabledReason ?? (!onOpenAnalysisTool ? '分析入口未连接。' : undefined)
+  const nineGridReason = nineGridProvider.disabledReason ?? (!onOpenAnalysisTool ? '分析入口未连接。' : undefined)
   const [surface, setSurface] = useState<ImageToolSurface>()
   const [pendingTool, setPendingTool] = useState<string>()
   const [previewIndex, setPreviewIndex] = useState(0)
@@ -828,13 +835,14 @@ export function SelectionContextBar({
         </button>
         <button
           type="button"
-          title={panoramaGenerationPlaceholder.disabledReason}
+          title={panoramaReason ?? panoramaProvider.modelNotice}
           aria-describedby="panorama-generation-disabled-reason"
           data-compact="false"
-          disabled
+          disabled={Boolean(panoramaReason)}
+          onClick={() => onOpenAnalysisTool?.(node.id, 'panorama-720-api')}
         >
           <span className="image-context-action__panorama-icon" aria-hidden="true">720</span>
-          全景<AiPlaceholderBadge compact />
+          全景{panoramaReason ? <AiPlaceholderBadge compact /> : null}
         </button>
         <button
           type="button"
@@ -851,12 +859,13 @@ export function SelectionContextBar({
         <button
           type="button"
           aria-haspopup="menu"
-          aria-expanded="false"
+          aria-expanded={surface === 'nine-grid'}
           aria-describedby="nine-grid-disabled-reason"
           data-compact="false"
-          disabled
+          disabled={Boolean(nineGridReason)}
+          onClick={() => setSurface('nine-grid')}
         >
-          <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" /><AiPlaceholderBadge compact />
+          <Grid3X3 aria-hidden="true" />九宫格<ChevronDown aria-hidden="true" />{nineGridReason ? <AiPlaceholderBadge compact /> : null}
         </button>
         <button type="button" data-compact="false" disabled aria-label="高清" title={arkImageUpscaleUnavailable} aria-describedby="image-upscale-unavailable"><ScanLine aria-hidden="true" />高清<AiPlaceholderBadge compact /></button>
         <button type="button" data-compact="false" onClick={(event) => onEditImage?.(node.id, 'outpaint', event.currentTarget)}>扩图</button>
@@ -875,8 +884,8 @@ export function SelectionContextBar({
         <button type="button" data-compact="true" aria-label="旋转与镜像" title="旋转与镜像" aria-haspopup="menu" aria-expanded={surface === 'transform'} onClick={() => setSurface('transform')}><RotateCw aria-hidden="true" /><span className="visually-hidden">旋转与镜像</span></button>
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={openPreview}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
-        <span id="panorama-generation-disabled-reason" className="visually-hidden">{panoramaGenerationPlaceholder.disabledReason}</span>
-        <span id="nine-grid-disabled-reason" className="visually-hidden">{nineGridGenerationPlaceholder.disabledReason}</span>
+        <span id="panorama-generation-disabled-reason" className="visually-hidden">{panoramaReason ?? panoramaProvider.modelNotice}</span>
+        <span id="nine-grid-disabled-reason" className="visually-hidden">{nineGridReason ?? nineGridProvider.modelNotice}</span>
       </div>
 
       <span id="image-upscale-unavailable" className="visually-hidden">{arkImageUpscaleUnavailable}</span>
@@ -891,8 +900,13 @@ export function SelectionContextBar({
 
       {surface === 'nine-grid' ? (
         <div className="image-tool-menu image-tool-menu--long" role="menu" aria-label="九宫格模板">
-          {nineGridTemplates.map((template) => <button key={template} type="button" role="menuitem" disabled aria-describedby="nine-grid-disabled-reason">{template}</button>)}
-          <p id="nine-grid-disabled-reason" className="image-tool-disabled-reason">规格仅核对至菜单层，本地演示不执行模板。</p>
+          {nineGridTemplates.map((template) => {
+            const preset = imageAiPlaceholderForLabel(template.replace('25 宫格', '25宫格'))
+            const available = preset && isImageAnalysisToolId(preset.providerId)
+            const reason = available ? providerRegistry.require(preset.providerId).disabledReason : '待接入专用AI服务。'
+            return <button key={template} type="button" role="menuitem" disabled={!available || Boolean(reason)} title={reason} onClick={() => { if (preset) onOpenAnalysisTool?.(node.id, preset.providerId); setSurface(undefined) }}>{template}</button>
+          })}
+          <p className="image-tool-disabled-reason">可用模板将打开费用确认，不自动生成；未接入的专用能力保持禁用。</p>
         </div>
       ) : null}
 
@@ -960,6 +974,7 @@ export function SelectionContextBar({
 
       {surface === 'lighting' ? (
         <ImageToolDialog title="打光编辑器" onClose={() => setSurface(undefined)}>
+          <button type="button" disabled={Boolean(providerRegistry.require('cinematic-lighting-api').disabledReason) || !onOpenAnalysisTool} title={providerRegistry.require('cinematic-lighting-api').disabledReason} onClick={() => { setSurface(undefined); onOpenAnalysisTool?.(node.id, 'cinematic-lighting-api') }}>电影级光影矫正（官方API）</button>
           <form onReset={() => setLightingDirty(false)} onSubmit={(event) => { event.preventDefault(); onCreateToolNode('打光'); setSurface(undefined) }}>
             <label>智能模式<input aria-label="智能模式" type="checkbox" onChange={() => setLightingDirty(true)} /></label>
             <label>亮度级别<input aria-label="亮度级别" type="range" min="0" max="4" step="1" defaultValue="2" onChange={() => setLightingDirty(true)} /></label>

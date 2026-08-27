@@ -17,16 +17,16 @@ test('explains guarded AI presets and applies the local prompt optimizer', async
   await expect(prompt).toContainText('镜头：')
   await expect(composer.getByRole('status')).toContainText('本地规则优化完成')
 
-  await prompt.fill('/九宫格')
-  await page.getByRole('option', { name: /九宫格分镜预设/ }).click()
-  const notice = page.getByRole('alertdialog', { name: '多机位九宫格生成功能待接入' })
-  await expect(notice).toContainText('待接入多机位九宫格生成服务')
-  await expect(notice).toContainText('预计成本 48 积分')
+  await prompt.fill('/设定图')
+  await page.getByRole('option', { name: /角色与场景设定图预设/ }).click()
+  const notice = page.getByRole('alertdialog', { name: '设定图生成功能待接入' })
+  await expect(notice).toContainText('待接入设定图生成服务')
+  await expect(notice).toContainText('预计成本 24 积分')
   await notice.getByRole('button', { name: '复制提示词到图片节点' }).click()
-  await expect(prompt).toContainText('同一主体')
+  await expect(prompt).toContainText('角色设定图')
 })
 
-test('shows managed disabled reasons for smart edit and frame analysis', async ({ page }) => {
+test('keeps smart edit unavailable and gates real frame analysis behind video selection', async ({ page }) => {
   await openRecipeProject(page)
 
   await page.getByRole('button', { name: '添加节点' }).click()
@@ -39,6 +39,9 @@ test('shows managed disabled reasons for smart edit and frame analysis', async (
   await page.getByRole('button', { name: '添加节点' }).click()
   await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '逐帧拉片 SD2.5' }).click()
   const frameAnalysis = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
-  await expect(frameAnalysis.getByRole('button', { name: '开始拉片' })).toBeDisabled()
-  await expect(frameAnalysis).toContainText('待接入逐帧拉片分析服务')
+  await frameAnalysis.getByRole('button', { name: '开始拉片' }).click()
+  const dialog = page.getByRole('dialog', { name: '逐帧拉片分析' })
+  await expect(dialog.getByRole('button', { name: '确认分析' })).toBeDisabled()
+  await expect(dialog).toContainText('不读取音轨')
+  await dialog.getByRole('button', { name: '取消' }).click()
 })

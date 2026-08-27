@@ -522,19 +522,19 @@ test('guards AI image templates and still inserts a confirmed local tool node', 
   const trigger = panel.getByRole('button', { name: '图片创作模板' })
 
   await trigger.click()
-  const catalog = panel.getByRole('dialog', { name: '图片创作模板' })
+  const catalog = page.getByRole('dialog', { name: '图片创作模板' })
   await expect(catalog.getByRole('group')).toHaveCount(4)
   await expect(catalog.getByRole('button')).toHaveCount(15)
   await catalog.getByRole('button', { name: '720全景' }).click()
-  const confirmation = page.getByRole('alertdialog', {
-    name: '720全景生成功能待接入',
+  const confirmation = page.getByRole('dialog', {
+    name: '720全景',
   })
-  await expect(confirmation).toContainText('待接入720全景生成服务')
-  await expect(confirmation).toContainText('预计成本 36 积分')
-  await confirmation.getByRole('button', { name: '关闭' }).click()
+  await expect(confirmation).toContainText('不保证等距柱状投影')
+  await expect(confirmation).toContainText('18 积分')
+  await confirmation.getByRole('button', { name: '取消' }).click()
 
   await trigger.click()
-  await panel.getByRole('dialog', { name: '图片创作模板' }).getByRole('button', { name: '调度故事板' }).click()
+  await page.getByRole('dialog', { name: '图片创作模板' }).getByRole('button', { name: '调度故事板' }).click()
   await page.getByRole('button', { name: '确认添加调度故事板工具节点' }).click()
   await expect(page.getByRole('button', { name: '调度故事板', exact: true })).toBeVisible()
   await expect(
@@ -1495,10 +1495,12 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
 
   await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
   const analysisPanel = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
-  await expect(analysisPanel).toContainText('尚未绑定视频')
-  await analysisPanel.getByRole('checkbox', { name: '音乐维度' }).uncheck()
-  await expect(analysisPanel.getByRole('button', { name: '开始拉片' })).toBeDisabled()
-  await expect(analysisPanel).toContainText('待接入逐帧拉片分析服务')
+  await expect(analysisPanel).toContainText('选择上游视频或上传视频')
+  await analysisPanel.getByRole('button', { name: '开始拉片' }).click()
+  const analysisConfirmation = page.getByRole('dialog', { name: '逐帧拉片分析' })
+  await expect(analysisConfirmation.getByRole('checkbox', { name: '音乐维度' })).toBeDisabled()
+  await expect(analysisConfirmation.getByRole('button', { name: '确认分析' })).toBeDisabled()
+  await analysisConfirmation.getByRole('button', { name: '取消' }).click()
 
   await openAddNodeAtBlank(page, '智能剪辑 Beta')
   const smartEditPanel = page.getByRole('region', { name: '智能剪辑 01 智能剪辑参数' })
@@ -1589,7 +1591,10 @@ test('shows only real image and video models with their supported parameters', a
   const model = videoPanel.getByRole('combobox', { name: '模型' })
   await expect(model).toHaveValue('seedance-api')
   await expect(model.locator('optgroup').first().getByRole('option')).toHaveCount(1)
-  await expect(model.locator('optgroup[label="待接入"]').getByRole('option')).toHaveCount(4)
+  expect(await model.locator('optgroup[label="待接入"] option').evaluateAll(options => options.map(option => (option as HTMLOptionElement).value))).toEqual([
+    'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api',
+  ])
+  await expect(model.locator('option[value="frame-analysis-api"]')).toHaveCount(0)
   await expect(model).not.toContainText('Mock Studio')
   await videoPanel.getByRole('button', { name: '展开完整视频工具' }).click()
   await expect(videoPanel.getByRole('combobox', { name: '时长' })).toContainText('15 秒')
@@ -1689,11 +1694,11 @@ test('matches Liblib result action policies and exposes the inline video player'
   await expect(imageActions.getByRole('button', { name: '图片高清' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '查看 4 张结果' })).toHaveText('4张')
   const imageTools = page.getByRole('toolbar', { name: '图片创作工具' })
-  await expect(imageTools.getByRole('button', { name: '九宫格' })).toBeDisabled()
+  await expect(imageTools.getByRole('button', { name: '九宫格' })).toBeEnabled()
   for (const label of ['宫格切分', '标注', '旋转与镜像']) {
     await expect(imageTools.getByRole('button', { name: label })).toBeEnabled()
   }
-  await expect(page.getByText('待接入多机位九宫格生成服务', { exact: true })).toBeAttached()
+  await expect(page.getByText(/串行生成 9 张独立图片并排为 3×3/)).toBeAttached()
 
   await expect(imagePanel.getByRole('combobox', { name: '图片模型' }).locator('option[value^="mock-"]')).toHaveCount(0)
   await expect(imageActions.getByRole('button')).toHaveCount(3)

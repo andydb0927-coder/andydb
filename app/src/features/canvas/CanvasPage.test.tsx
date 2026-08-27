@@ -34,6 +34,7 @@ import type { GenerationProviderPreferenceStore } from '../generation/generation
 import { createDefaultProviderRegistry } from '../generation/model-provider-registry'
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import { arkImageEditConfigFixture, arkImageEditSuccessFixture } from '../generation/fixtures/ark-image-edit.fixture'
+import { arkAnalysisConfigFixture, arkFrameResponseFixture } from '../generation/fixtures/ark-analysis.fixture'
 import type { LibraryAssetRecord } from '../assets/library-model'
 import { defaultImageGenerationSettings, type Project } from '../project/model'
 import {
@@ -1308,6 +1309,78 @@ describe('creative canvas', () => {
       view.unmount()
       await db.delete()
     }
+  })
+
+  test.each([false, true])('confirms serial grid analysis and persists every output, including partial failure (%s)', async (partial) => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.assets[0]!.url = 'https://media.fixture.invalid/reference.png'
+    act(() => activate(project))
+    const db = new WirelessCanvasDatabase(`analysis-grid-${crypto.randomUUID()}`)
+    const repository = new ProjectRepository(db)
+    let calls = 0
+    const fetchFn = vi.fn<typeof fetch>(async () => {
+      calls += 1
+      return calls === 3 && partial ? new Response('{}', { status: 429 }) : new Response(JSON.stringify({ data: [{ url: `https://media.fixture.invalid/grid-${calls}.png`, size: '2048x1152' }] }))
+    })
+    const providerRegistry = createDefaultProviderRegistry({ seedream: { ...arkAnalysisConfigFixture, fetchFn } })
+    const view = renderCanvas({ repository, providerRegistry, generationAdapter: new RegistryGenerationAdapter(providerRegistry), generationPreferenceStore: libtvPreferenceStore })
+    try {
+      const open = latestFlowProps?.nodes.find(node => node.id === 'character')?.data.onOpenAnalysisTool as ((id: string, prompt: string) => void)
+      expect(open).toBeTypeOf('function')
+      act(() => open('plot-four-grid-api', '清晨古桥'))
+      const dialog = screen.getByRole('dialog', { name: '剧情推演四宫格' })
+      expect(within(dialog).getByText(/72 积分/)).toBeVisible()
+      expect(fetchFn).not.toHaveBeenCalled()
+      await user.click(within(dialog).getByRole('button', { name: '确认生成' }))
+      await waitFor(() => expect(useProjectStore.getState().activeProject?.jobs.at(-1)?.status).toBe(partial ? 'failed' : 'succeeded'))
+      await waitFor(async () => {
+        const saved = await repository.load(project.id)
+        expect(saved?.nodes[0]?.imageResults).toHaveLength(partial ? 2 : 4)
+        expect(saved?.nodes[0]?.versions).toHaveLength(2)
+        expect(saved?.assets.filter(asset => asset.url.includes('/grid-'))).toHaveLength(partial ? 2 : 4)
+        expect(saved?.jobs.at(-1)).toMatchObject({ providerId: 'plot-four-grid-api', creditsSpent: partial ? 36 : 72 })
+      })
+      if (partial) {
+        act(() => triggerCanvasNodeAction('character', 'retry-generation'))
+        expect(screen.getByRole('dialog', { name: '剧情推演四宫格' })).toBeVisible()
+        expect(fetchFn).toHaveBeenCalledTimes(3)
+      } else {
+        await user.click(screen.getByRole('button', { name: '历史记录' }))
+        await user.click(screen.getByRole('button', { name: '重发画布 角色参考' }))
+        await user.click(screen.getByRole('button', { name: '确认重新生成' }))
+        const confirmation = screen.getByRole('dialog', { name: '剧情推演四宫格' })
+        expect(confirmation).toHaveTextContent('72 积分')
+        expect(fetchFn).toHaveBeenCalledTimes(4)
+      }
+    } finally { view.unmount(); await db.delete() }
+  })
+
+  test('persists structured video analysis without replacing the video source or calling generation APIs', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    project.assets[3] = { id: 'asset-video', kind: 'video', mimeType: 'video/mp4', url: 'https://media.fixture.invalid/clip.mp4' }
+    project.nodes[3]!.details = { type: 'frame-analysis', sourceName: '来源视频', sourceSummary: '来源视频', dimensions: { storyboard: true, motion: true, music: false } }
+    act(() => activate(project))
+    const db = new WirelessCanvasDatabase(`analysis-video-${crypto.randomUUID()}`)
+    const repository = new ProjectRepository(db)
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(arkFrameResponseFixture)))
+    const providerRegistry = createDefaultProviderRegistry({ arkText: { ...arkAnalysisConfigFixture, fetchFn } })
+    const view = renderCanvas({ repository, providerRegistry, generationAdapter: new RegistryGenerationAdapter(providerRegistry) })
+    try {
+      const open = latestFlowProps?.nodes.find(node => node.id === 'video')?.data.onOpenAnalysisTool as ((id: string) => void)
+      expect(open).toBeTypeOf('function')
+      act(() => open('frame-analysis-api'))
+      await user.click(screen.getByRole('button', { name: '确认分析' }))
+      await waitFor(() => expect(useProjectStore.getState().activeProject?.jobs.at(-1)).toMatchObject({ status: 'succeeded', providerId: 'frame-analysis-api' }))
+      await waitFor(async () => {
+        const saved = await repository.load(project.id)
+        expect(saved?.assets).toContainEqual(project.assets[3])
+        expect(saved?.nodes[3]?.versions.at(-1)?.textContent).toContain('shots')
+        expect(saved?.jobs.at(-1)).toMatchObject({ providerId: 'frame-analysis-api', generationConfig: { referenceAssets: [{ kind: 'video', url: project.assets[3]!.url }] } })
+      })
+      expect(String(fetchFn.mock.calls[0]?.[0])).toContain('/chat/completions')
+    } finally { view.unmount(); await db.delete() }
   })
 
   test('submits the current image prompt to Seedream after editing the composer', async () => {

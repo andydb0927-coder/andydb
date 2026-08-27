@@ -7,6 +7,7 @@ import {
   type ProviderRegistry,
 } from '../generation/model-provider-registry'
 import { AiPlaceholderBadge, AiPlaceholderNotice } from './AiPlaceholderNotice'
+import { isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
 import { optimizePromptLocally } from './local-prompt-optimizer'
 import {
   executePromptCommand,
@@ -32,6 +33,7 @@ interface PromptAssistProps {
   onVideoParameters?(parameters: Record<string, string | number | boolean>): void
   onCreateNode?(kind: Extract<NodeKind, 'image' | 'storyboard' | 'video'>): void
   onApplyAutoLink?(candidate: AutoLinkCandidate): void
+  onOpenAnalysisTool?(toolId: string, prompt?: string): void
 }
 
 export function PromptAssist({
@@ -46,6 +48,7 @@ export function PromptAssist({
   onVideoParameters,
   onCreateNode,
   onApplyAutoLink,
+  onOpenAnalysisTool,
 }: PromptAssistProps) {
   const detectedQuery = slashQuery(prompt)
   const [forcedOpen, setForcedOpen] = useState(false)
@@ -72,6 +75,13 @@ export function PromptAssist({
     const command = commands[index]
     if (!command) return
     if (command.aiProviderId) {
+      if (isImageAnalysisToolId(command.aiProviderId) && onOpenAnalysisTool) {
+        setForcedOpen(false)
+        const scene = detectedQuery !== undefined ? prompt.slice(0, prompt.lastIndexOf('/')).trim() : prompt
+        if (detectedQuery !== undefined) onPromptChange(scene)
+        onOpenAnalysisTool(command.aiProviderId, scene)
+        return
+      }
       setPendingAiCommand(command)
       setForcedOpen(false)
       return

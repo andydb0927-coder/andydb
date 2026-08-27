@@ -30,7 +30,7 @@ test('production selectors contain only unconfigured real models and never gener
   }
   for (const [type, modelLabel, ids, promptLabel, generate] of [
     ['图片', '图片模型', ['seedream-5-pro-api'], '提示词', '生成图片，预计成本 18'],
-    ['视频', '模型', ['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api', 'frame-analysis-api'], '提示词', '生成视频，预计成本 135'],
+    ['视频', '模型', ['seedance-api', 'seedance-prompt-optimization-api', 'deep-motion-capture-api', 'smart-edit-api'], '提示词', '生成视频，预计成本 135'],
     ['文本', '文本模型', ['ark-text-llm'], '文本生成提示词', '生成文本，预计成本 1'],
     ['音频', '音频模型', ['ark-tts', 'ark-audio-gen', 'vocal-background-separation-api', 'audio-sentence-segmentation-api'], '音频生成提示词', '生成音频，预计成本 1'],
   ] as const) {
@@ -55,10 +55,10 @@ test('production selectors contain only unconfigured real models and never gener
         await expect(presets.getByRole('button', { name: label, exact: true })).toBeVisible()
       }
       await presets.getByRole('button', { name: '720全景', exact: true }).click()
-      const notice = page.getByRole('alertdialog', { name: '720全景生成功能待接入' })
-      await expect(notice).toContainText('待接入720全景生成服务')
-      await notice.getByRole('button', { name: '复制提示词到图片节点' }).click()
-      await expect(page.getByRole('textbox', { name: promptLabel, exact: true })).toContainText('无缝等距柱状720全景')
+      const notice = page.getByRole('dialog', { name: '720全景', exact: true })
+      await expect(notice).toContainText('720全景开发验证配置未完成')
+      await expect(notice.getByRole('button', { name: '确认生成' })).toBeDisabled()
+      await expect(notice).toContainText('不保证等距柱状投影')
       await page.keyboard.press('Escape')
       await expect(notice).toHaveCount(0)
       await expect(presetTrigger).toBeFocused()
@@ -69,7 +69,7 @@ test('production selectors contain only unconfigured real models and never gener
   await page.goto('https://catalog-fixture.local/andydb/agents')
   const skillModel = page.getByRole('combobox', { name: '选择模型', exact: true })
   await expect(skillModel).toHaveValue('seedance-api')
-  await expect(skillModel.getByRole('option')).toHaveCount(5)
+  await expect(skillModel.getByRole('option')).toHaveCount(4)
   for (const option of await skillModel.getByRole('option').all()) await expect(option).toHaveJSProperty('disabled', true)
   await expect(skillModel).not.toContainText(/Mock Studio|本地演示|MiniMax|Seedance 2.5/)
   await expect(page.getByRole('button', { name: '开始创作' })).toBeDisabled()

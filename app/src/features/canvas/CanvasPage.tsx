@@ -58,6 +58,9 @@ import {
 import { RegistryGenerationAdapter } from '../generation/registry-generation-adapter'
 import { arkImageUpscaleUnavailable, buildArkImageEditPrompt, imageEditParameters, type ArkImageEditDraft, type ArkImageEditOperation } from '../generation/ark-image-edit-provider'
 import { ImageEditDialog } from './ImageEditDialog'
+import { ArkAnalysisDialog, type ArkAnalysisDraft } from './ArkAnalysisDialog'
+import { imageAnalysisPlan, isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
+import { frameAnalysisId, validateFrameAnalysisRequest } from '../generation/ark-frame-analysis-provider'
 import {
   generationResultAssets,
   type GenerationAdapter,
@@ -526,7 +529,7 @@ function buildGenerationRequest(
   const fallbackProvider = defaultProviderId
     ? providerRegistry.list().find(({ id }) => id === defaultProviderId)
     : undefined
-  const registeredProvider = supportsTarget(configuredProvider)
+  const registeredProvider = supportsTarget(configuredProvider) && !isImageAnalysisToolId(configuredProviderId ?? '') && configuredProviderId !== frameAnalysisId
     ? configuredProvider
     : supportsTarget(fallbackProvider)
       ? fallbackProvider
@@ -867,6 +870,23 @@ export function CanvasPage({
   const [generationFeedback, setGenerationFeedback] = useState<string>()
   const [imageEditSession, setImageEditSession] = useState<{ nodeId: string; asset: Asset; operation: ArkImageEditOperation; projectId: string }>()
   const [videoContinueSession, setVideoContinueSession] = useState<{ nodeId: string; asset: Asset; projectId: string }>()
+  const [analysisSession, setAnalysisSession] = useState<{ nodeId: string; projectId: string; canvasId?: string; toolId: string; prompt: string; source?: Asset; parameters?: GenerationRequest['parameters'] }>()
+  const openAnalysisTool = useCallback((nodeId: string, toolId: string, prompt?: string, savedConfig?: GenerationConfiguration) => {
+    const current = useProjectStore.getState().activeProject
+    const node = current?.nodes.find(candidate => candidate.id === nodeId)
+    if (!current || !node || (!isImageAnalysisToolId(toolId) && toolId !== frameAnalysisId)) return
+    const kind = toolId === frameAnalysisId ? 'video' : 'image'
+    const version = node.versions.find(candidate => candidate.id === node.activeVersionId)
+    const config = savedConfig?.providerId === toolId ? savedConfig : node.generationConfig?.providerId === toolId ? node.generationConfig : undefined
+    const savedSource = config?.referenceAssets.find(asset => asset.kind === kind)
+    const currentAsset = activeNodeAsset(current, nodeId)
+    const upstreamAsset = current.edges.filter(edge => edge.targetNodeId === nodeId).map(edge => activeNodeAsset(current, edge.sourceNodeId)).find(asset => asset?.kind === kind)
+    const source: Asset | undefined = savedSource
+      ? { ...savedSource, kind, id: `analysis-source-${nodeId}` }
+      : currentAsset?.kind === kind ? currentAsset : upstreamAsset
+    setAnalysisSession({ nodeId, projectId: current.id, canvasId: current.activeCanvasId, toolId,
+      prompt: prompt ?? (toolId === frameAnalysisId ? '分析视频的分镜变化与人物动态。' : node.imageGeneration?.prompt ?? version?.prompt ?? ''), source, parameters: config?.parameters ? { ...config.parameters } : undefined })
+  }, [])
   const videoContinueProvider = providerRegistry.list().find(({ id }) => id === arkVideoContinueId)
   const [workflowBatch, setWorkflowBatch] = useState<WorkflowBatchView>()
   const [storyboardSetup, setStoryboardSetup] = useState<StoryboardSetupState>()
@@ -1515,6 +1535,10 @@ export function CanvasPage({
       }
       if (action === 'retry-generation') {
         if (job?.operation) {
+          if (isImageAnalysisToolId(job.generationConfig?.providerId ?? '') || job.generationConfig?.providerId === frameAnalysisId) {
+            openAnalysisTool(node.id, job.generationConfig!.providerId!, job.prompt, job.generationConfig)
+            return
+          }
           const request = job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
             ...job.generationConfig, projectId: currentProject.id, nodeId: node.id, operation: job.operation, prompt: job.prompt,
           } : buildGenerationRequest(
@@ -1557,6 +1581,10 @@ export function CanvasPage({
       }
 
       if (action === 'generate') {
+        if (node.details?.type === 'frame-analysis' || node.videoTool?.kind === 'frame-analysis') {
+          openAnalysisTool(node.id, frameAnalysisId, promptOverride)
+          return
+        }
         const request = buildGenerationRequest(
           currentProject,
           node,
@@ -1629,7 +1657,7 @@ export function CanvasPage({
         generationQueue.enqueue(request)
       }
     },
-    [generationPreferenceStore, generationQueue, projectId, providerRegistry],
+    [generationPreferenceStore, generationQueue, openAnalysisTool, projectId, providerRegistry],
   )
 
   const confirmRemoteGeneration = useCallback(() => {
@@ -2267,6 +2295,39 @@ export function CanvasPage({
     [createConnectedCanvasContent, projectId, selectOnlyNode],
   )
 
+  const submitAnalysis = (draft: ArkAnalysisDraft) => {
+    const current = useProjectStore.getState().activeProject
+    const session = analysisSession
+    if (!current || !session || current.id !== session.projectId || current.activeCanvasId !== session.canvasId || !current.nodes.some(node => node.id === session.nodeId)) {
+      setGenerationFeedback('画布或节点已变化，请重新打开分析工具。')
+      setAnalysisSession(undefined)
+      return
+    }
+    try {
+      if (current.jobs.some(job => job.nodeId === session.nodeId && (job.status === 'queued' || job.status === 'running'))) throw new Error('当前节点已有任务，请等待完成。')
+      const request: GenerationRequest = {
+        projectId: current.id, nodeId: session.nodeId, operation: 'regenerate', targetKind: session.toolId === frameAnalysisId ? 'text' : 'image', providerId: session.toolId,
+        prompt: draft.prompt, parameters: draft.parameters,
+        referenceAssets: draft.source && draft.source.kind !== 'text' ? [{ kind: draft.source.kind, url: draft.source.url, mimeType: draft.source.mimeType }] : [],
+      }
+      const failure = generationEligibilityFailure(request, providerRegistry)
+      if (failure) throw new Error(failure)
+      if (session.toolId === frameAnalysisId) validateFrameAnalysisRequest(request)
+      else imageAnalysisPlan(request)
+      generationQueue.enqueue(request)
+    } catch (error) { setGenerationFeedback(error instanceof Error ? error.message : '分析提交失败。') }
+    setAnalysisSession(undefined)
+  }
+
+  const importAnalysisAsset = async (file: File): Promise<Asset> => {
+    if (libraryRepository.importFile) return libraryRecordToAsset((await libraryRepository.importFile(file)).record)
+    validateAssetFile(file)
+    const record: LibraryAssetRecord = { id: crypto.randomUUID(), name: file.name, kind: file.type.split('/')[0] as LibraryAssetRecord['kind'], mimeType: file.type,
+      url: await readAssetFileAsDataUrl(file), createdAt: new Date().toISOString(), source: 'upload', folderId: 'project', byteSize: file.size }
+    await libraryRepository.save?.(record)
+    return libraryRecordToAsset(record)
+  }
+
   const submitImageEdit = (draft: ArkImageEditDraft) => {
     const current = useProjectStore.getState().activeProject
     const session = imageEditSession
@@ -2438,6 +2499,7 @@ export function CanvasPage({
         data: {
           node,
           providerRegistry,
+          onOpenAnalysisTool: (toolId, prompt) => openAnalysisTool(node.id, toolId, prompt),
           asset,
           imageResults,
           imageReferences,
@@ -2844,6 +2906,7 @@ export function CanvasPage({
     })
   }, [
     handleAction,
+    openAnalysisTool,
     createConnectedCanvasContent,
     createCanvasContent,
     connectImageReference,
@@ -3732,11 +3795,11 @@ export function CanvasPage({
               details: {
                 type: 'frame-analysis',
                 sourceName: '待选择素材',
-                sourceSummary: '尚未绑定视频，可替换为本地演示素材。',
+                sourceSummary: '尚未绑定视频，可选择上游视频或上传 MP4/MOV/AVI。',
                 dimensions: {
                   storyboard: true,
                   motion: true,
-                  music: true,
+                  music: false,
                 },
               },
             },
@@ -5007,7 +5070,9 @@ export function CanvasPage({
         node: {
           id: nodeId,
           kind:
-            targetKind === 'video'
+            config.providerId === frameAnalysisId
+              ? 'storyboard'
+              : targetKind === 'video'
               ? 'video'
               : targetKind === 'image'
                 ? 'image'
@@ -5027,6 +5092,12 @@ export function CanvasPage({
             ? { modelProviderId: generationConfig.providerId }
             : {}),
           generationConfig,
+          ...(config.providerId === frameAnalysisId ? { details: {
+            type: 'frame-analysis' as const,
+            sourceName: '历史视频素材',
+            sourceSummary: '已恢复历史配置，请核对后重新分析。',
+            dimensions: { storyboard: config.parameters?.storyboard !== false, motion: config.parameters?.motion !== false, music: false },
+          } } : {}),
         },
       }
       createCanvasContent(creation)
@@ -5035,6 +5106,11 @@ export function CanvasPage({
       selectOnlyNode(nodeId)
       setWorkspacePanel(undefined)
       setHistoryPlacement(undefined)
+      if (isImageAnalysisToolId(config.providerId ?? '') || config.providerId === frameAnalysisId) {
+        openAnalysisTool(nodeId, config.providerId!, job.prompt, generationConfig)
+        setGenerationFeedback(`已回填“${title}”完整配置，请核对费用后确认。`)
+        return
+      }
       generationQueue.enqueue({
         projectId: currentProject.id,
         nodeId,
@@ -5044,7 +5120,7 @@ export function CanvasPage({
       })
       setGenerationFeedback(`已回填“${title}”完整配置并重新加入本地队列。`)
     },
-    [createCanvasContent, generationQueue, projectId, selectOnlyNode],
+    [createCanvasContent, generationQueue, openAnalysisTool, projectId, selectOnlyNode],
   )
 
   const handlePaneContextMenu = useCallback(
@@ -5995,6 +6071,8 @@ export function CanvasPage({
         {project ? (
           <SelectionContextBar
             project={project}
+            providerRegistry={providerRegistry}
+            onOpenAnalysisTool={openAnalysisTool}
             node={selectedWorkspaceNode}
             onEditImage={(nodeId, operation) => {
               const asset = activeNodeAsset(project, nodeId)
@@ -6199,6 +6277,20 @@ export function CanvasPage({
           consumers={consumers}
           onCancel={cancelDelete}
           onConfirm={confirmDelete}
+        />
+      ) : null}
+      {analysisSession && analysisSession.projectId === project?.id && analysisSession.canvasId === project.activeCanvasId ? (
+        <ArkAnalysisDialog
+          key={`${analysisSession.nodeId}-${analysisSession.toolId}`}
+          provider={providerRegistry.require(analysisSession.toolId)}
+          assets={project.assets}
+          initialSource={analysisSession.source}
+          initialPrompt={analysisSession.prompt}
+          initialParameters={analysisSession.parameters}
+          busy={project.jobs.some(job => job.nodeId === analysisSession.nodeId && (job.status === 'queued' || job.status === 'running'))}
+          onSubmit={submitAnalysis}
+          onImportFile={importAnalysisAsset}
+          onClose={() => setAnalysisSession(undefined)}
         />
       ) : null}
       {imageEditSession && imageEditSession.projectId === project?.id ? (

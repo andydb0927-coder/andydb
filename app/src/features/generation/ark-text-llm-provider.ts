@@ -67,6 +67,11 @@ interface ArkStreamChunk {
   usage?: ArkUsage
 }
 
+export interface ArkChatMessage {
+  role: 'system' | 'user'
+  content: string | Array<{ type: 'video_url'; video_url: { url: string; fps: number } } | { type: 'text'; text: string }>
+}
+
 function envValue(name: string) {
   const env = import.meta.env as Record<string, string | undefined>
   const value = env[name]
@@ -135,14 +140,14 @@ function systemPrompt(request: GenerationRequest) {
   ].join('')
 }
 
-function requestBody(request: GenerationRequest, modelId: string) {
+function requestBody(request: GenerationRequest, modelId: string, messages?: ArkChatMessage[]) {
   const stream = booleanParameter(request.parameters?.stream, false)
   const thinking = request.parameters?.thinking === 'enabled'
     ? 'enabled'
     : 'disabled'
   return {
     model: modelId,
-    messages: [
+    messages: messages ?? [
       { role: 'system', content: systemPrompt(request) },
       { role: 'user', content: request.prompt.trim() },
     ],
@@ -277,6 +282,7 @@ function generationResult(
 
 export function createArkTextLlmProvider(
   options: ArkTextLlmProviderOptions = {},
+  buildMessages?: (request: GenerationRequest) => ArkChatMessage[],
 ): ModelProvider {
   const mode = options.mode ?? envValue('VITE_GENERATION_MODE')
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
@@ -314,7 +320,7 @@ export function createArkTextLlmProvider(
         throw new Error('火山方舟豆包 Provider 仅支持文本生成')
       }
       if (!request.prompt.trim()) throw new Error('豆包文本生成需要提示词')
-      const body = requestBody(request, resolvedModelId)
+      const body = requestBody(request, resolvedModelId, buildMessages?.(request))
       context.onProgress?.(10)
       const response = await fetchFn(createUrl, {
         method: 'POST',

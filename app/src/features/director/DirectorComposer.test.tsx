@@ -67,7 +67,7 @@ describe('complete canvas Agent workspace', () => {
     expect(videoModel).toHaveValue('seedance-api')
     expect(within(imageModel).getAllByRole('option')).toHaveLength(1)
     expect(imageModel).not.toHaveTextContent(/720全景|九宫格|四宫格|25宫格|光影|设定图/)
-    expect(within(videoModel).getAllByRole('option')).toHaveLength(5)
+    expect(within(videoModel).getAllByRole('option')).toHaveLength(4)
     expect(within(imageModel).getByRole('option', { name: /Seedream.*配置未完成/ })).toBeDisabled()
     expect(within(videoModel).getByRole('option', { name: /Seedance.*配置未完成/ })).toBeDisabled()
     expect(screen.getByText('模型选择只保存到本机，不会发起第三方请求。')).toBeVisible()

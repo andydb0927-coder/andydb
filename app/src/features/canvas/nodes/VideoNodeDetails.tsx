@@ -27,7 +27,7 @@ import type {
   VideoGenerationMode,
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
-import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
+import { FrameAnalysisControls } from './FrameAnalysisControls'
 import { PromptAssist } from '../PromptAssist'
 
 type VideoSurface =
@@ -83,7 +83,6 @@ const characterSamples = [
   '古风女主',
 ] as const
 
-const frameAnalysisPlaceholder = defaultProviderRegistry.require('frame-analysis-api')
 
 function enumOptions(
   provider: ModelProvider,
@@ -573,16 +572,7 @@ export function VideoToolDetails({ data }: { data: CreativeNodeData }) {
   if (config.kind === 'frame-analysis') {
     return (
       <section className="video-tool-node-panel nodrag" role="region" aria-label="逐帧拉片参数">
-        <strong>{config.model}</strong>
-        <p>00:03 · 1280×720</p>
-        <button type="button">替换素材</button>
-        {config.dimensions.map((dimension) => <label key={dimension}><input type="checkbox" defaultChecked />{dimension}</label>)}
-        <button type="button" disabled aria-describedby="video-frame-analysis-placeholder-reason">
-          开始拉片<AiPlaceholderBadge compact />
-        </button>
-        <p id="video-frame-analysis-placeholder-reason">
-          {frameAnalysisPlaceholder.disabledReason}，预计成本 {frameAnalysisPlaceholder.pricing.amount} 积分。
-        </p>
+        <FrameAnalysisControls data={data} />
       </section>
     )
   }

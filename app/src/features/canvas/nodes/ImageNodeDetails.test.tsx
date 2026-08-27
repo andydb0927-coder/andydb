@@ -154,13 +154,13 @@ test('opens the complete Liblib image parameter picker and persists its live sum
 
 test('opens the grouped Liblib image template catalog and guards AI templates behind placeholders', async () => {
   const user = userEvent.setup()
-  const data = makeData()
+  const data = makeData({ onOpenAnalysisTool: vi.fn() })
   render(<ImageGenerationPanel {...panelProps(data)} />)
   const panel = screen.getByRole('region', { name: 'L1 生成参数' })
   const trigger = within(panel).getByRole('button', { name: '图片创作模板' })
 
   await user.click(trigger)
-  const dialog = within(panel).getByRole('dialog', { name: '图片创作模板' })
+  const dialog = screen.getByRole('dialog', { name: '图片创作模板' })
   expect(within(dialog).getByRole('group', { name: '分镜叙事' })).toBeVisible()
   expect(within(dialog).getByRole('group', { name: '质感调节' })).toBeVisible()
   expect(within(dialog).getByRole('group', { name: '空间与机位' })).toBeVisible()
@@ -168,14 +168,14 @@ test('opens the grouped Liblib image template catalog and guards AI templates be
   expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual([
     '调度故事板',
     '故事板',
-    '25宫格连贯分镜待接入',
-    '剧情推演四宫格待接入',
+    '25宫格连贯分镜',
+    '剧情推演四宫格',
     '画面推演 - 3秒后',
     '画面推演 - 5秒前',
     '人像质感调节',
-    '电影级光影校正待接入',
-    '720全景待接入',
-    '多机位九宫格待接入',
+    '电影级光影校正',
+    '720全景',
+    '多机位九宫格',
     '角色脸部三视图待接入',
     '角色设定图待接入',
     '角色三视图待接入',
@@ -188,23 +188,18 @@ test('opens the grouped Liblib image template catalog and guards AI templates be
   expect(trigger).toHaveFocus()
 
   await user.click(trigger)
-  const panoramaCatalog = within(panel).getByRole('dialog', {
+  const panoramaCatalog = screen.getByRole('dialog', {
     name: '图片创作模板',
   })
   await user.click(
     within(panoramaCatalog).getByRole('button', { name: '720全景' }),
   )
-  const confirmation = screen.getByRole('alertdialog', {
-    name: '720全景生成功能待接入',
-  })
-  expect(confirmation).toHaveTextContent('待接入720全景生成服务')
-  expect(confirmation).toHaveTextContent('预计成本 36 积分')
+  expect(data.onOpenAnalysisTool).toHaveBeenCalledWith('panorama-720-api', expect.any(String))
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   expect(data.onCreateImageToolNode).not.toHaveBeenCalled()
-  await user.click(within(confirmation).getByRole('button', { name: '关闭' }))
-  expect(trigger).toHaveFocus()
 
   await user.click(trigger)
-  const storyboardCatalog = within(panel).getByRole('dialog', {
+  const storyboardCatalog = screen.getByRole('dialog', {
     name: '图片创作模板',
   })
   await user.click(
@@ -227,11 +222,11 @@ test('keeps every image AI preset in the preset panel without changing the selec
   expect(trigger).toHaveAttribute('title', expect.stringContaining('预设'))
 
   for (const [label, reason] of [
-    ['720全景', '待接入720全景生成服务'],
-    ['多机位九宫格', '待接入多机位九宫格生成服务'],
-    ['剧情推演四宫格', '待接入剧情推演四宫格服务'],
-    ['25宫格连贯分镜', '待接入25宫格连贯分镜服务'],
-    ['电影级光影校正', '待接入电影级光影矫正服务'],
+    ['720全景', '720全景开发验证配置未完成'],
+    ['多机位九宫格', '多机位九宫格开发验证配置未完成'],
+    ['剧情推演四宫格', '剧情推演四宫格开发验证配置未完成'],
+    ['25宫格连贯分镜', '25宫格连贯分镜开发验证配置未完成'],
+    ['电影级光影校正', '电影级光影矫正开发验证配置未完成'],
     ['角色设定图', '待接入设定图生成服务'],
   ]) {
     await user.click(trigger)

@@ -17,6 +17,8 @@ import {
   type SeedreamLiveProviderOptions,
 } from './seedream-live-provider'
 import { createArkImageEditProvider } from './ark-image-edit-provider'
+import { createArkImageAnalysisProviders, isImageAnalysisToolId } from './ark-image-analysis-provider'
+import { createArkFrameAnalysisProvider, frameAnalysisId } from './ark-frame-analysis-provider'
 import { createArkVideoContinueProvider } from './ark-video-continue-provider'
 import {
   createArkTextLlmProvider,
@@ -407,7 +409,7 @@ export class ProviderRegistry {
         providerId: provider.id,
         providerName: provider.name,
         modelName: provider.modelName,
-        cost: providerGenerationCost(provider, request.parameters),
+        cost: result.incomplete && result.usage ? result.usage.cost : providerGenerationCost(provider, request.parameters),
         currency: 'credits',
       },
     }
@@ -623,7 +625,7 @@ export const managedAiPlaceholderCatalog = [
   { id: 'audio-sentence-segmentation-api', name: '音频智能断句切分', modelName: '音频智能断句切分', capability: 'audio-sentence-segmentation', menuCapabilities: ["audio"], cost: 4, disabledReason: '待接入音频智能断句切分服务：当前 Ark 接口不支持；豆包语音 ASR 返回分句文字和时间戳，需另行接入并裁切音频。' },
   { id: 'seedance-prompt-optimization-api', name: 'Seedance提示词优化', modelName: 'Seedance提示词优化', capability: 'prompt-optimization', menuCapabilities: ["text-to-video","image-to-video"], cost: 2, disabledReason: '待接入Seedance提示词优化服务' },
   { id: 'deep-motion-capture-api', name: '深度动作捕捉', modelName: '深度动作捕捉', capability: 'motion-capture', menuCapabilities: ["text-to-video","image-to-video"], cost: 30, disabledReason: '待接入深度动作捕捉服务' },
-  { id: 'smart-edit-api', name: '智能剪辑', modelName: '智能剪辑粗剪/混剪', capability: 'smart-edit', menuCapabilities: ["text-to-video","image-to-video"], cost: 20, disabledReason: '待接入智能剪辑粗剪/混剪服务' },
+  { id: 'smart-edit-api', name: '智能剪辑', modelName: '智能剪辑粗剪/混剪', capability: 'smart-edit', menuCapabilities: ["text-to-video","image-to-video"], cost: 20, disabledReason: '待接入智能剪辑粗剪/混剪服务：Ark 当前不支持；AI MediaKit 为独立服务，需另行配置 Key 与跨服务授权。' },
   { id: 'frame-analysis-api', name: '逐帧拉片', modelName: '逐帧拉片分析', capability: 'frame-analysis', menuCapabilities: ["text-to-video","image-to-video"], cost: 15, disabledReason: '待接入逐帧拉片分析服务' },
   { id: 'setting-image-api', name: '设定图', modelName: '设定图生成', capability: 'setting-image', menuCapabilities: [], cost: 24, disabledReason: '待接入设定图生成服务' },
 ] as const satisfies readonly {
@@ -640,7 +642,7 @@ export type ManagedAiPlaceholderId =
   (typeof managedAiPlaceholderCatalog)[number]['id']
 
 function managedAiPlaceholderProviders() {
-  return managedAiPlaceholderCatalog.map((definition) =>
+  return managedAiPlaceholderCatalog.filter(definition => !isImageAnalysisToolId(definition.id) && definition.id !== frameAnalysisId).map((definition) =>
     placeholderProvider({
       id: definition.id,
       name: definition.name,
@@ -673,6 +675,8 @@ export function createDefaultProviderRegistry(
   return new ProviderRegistry([
     createSeedreamLiveProvider(options.seedream),
     createArkImageEditProvider(options.seedream ? { ...options.seedream, modelId: undefined } : undefined),
+    ...createArkImageAnalysisProviders(options.seedream),
+    createArkFrameAnalysisProvider(options.arkText),
     createSeedanceVideoProvider(options.seedanceVideo),
     createArkVideoContinueProvider(options.seedanceVideo),
     createArkTextLlmProvider(options.arkText),
