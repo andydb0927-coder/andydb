@@ -9,6 +9,8 @@ import type {
 export type GenerationReference = GenerationReferenceConfig
 
 export interface GenerationRequest extends GenerationConfiguration {
+  /** Dispatch-only style prefix for providers with a system-message channel. */
+  systemPromptPrefix?: string
   projectId: string
   nodeId: string
   operation: GenerationOperation

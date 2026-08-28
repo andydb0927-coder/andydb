@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { styleSnapshot } from '../styles/style-model'
 import { scriptDetailsAfterJob, scriptDetailsAfterResult, scriptJobAction } from '../script/script-workflow'
 
 import {
@@ -45,7 +46,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig' | 'appliedStyle'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -229,6 +230,7 @@ function cloneGenerationConfig(job: GenerationJob) {
   if (!job.generationConfig) return undefined
   return {
     ...job.generationConfig,
+    ...(job.generationConfig.style ? { style: styleSnapshot(job.generationConfig.style) } : {}),
     ...(job.generationConfig.parameters
       ? { parameters: { ...job.generationConfig.parameters } }
       : {}),
@@ -834,6 +836,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.modelProviderId === undefined
                     ? {}
                     : { modelProviderId: changes.modelProviderId }),
+                  ...(changes.appliedStyle === undefined ? {} : {
+                    appliedStyle: changes.appliedStyle === null ? null : styleSnapshot(changes.appliedStyle),
+                  }),
                   ...(changes.imageGeneration === undefined
                     ? {}
                     : { imageGeneration: { ...changes.imageGeneration } }),
@@ -875,6 +880,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                     : {
                         generationConfig: {
                           ...changes.generationConfig,
+                          ...(changes.generationConfig.style ? { style: styleSnapshot(changes.generationConfig.style) } : {}),
                           ...(changes.generationConfig.parameters
                             ? { parameters: { ...changes.generationConfig.parameters } }
                             : {}),

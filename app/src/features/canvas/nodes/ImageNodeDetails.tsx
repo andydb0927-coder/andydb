@@ -3,21 +3,19 @@ import {
   ChevronDown,
   Download,
   Grid3X3,
-  Heart,
   Images,
   Languages,
   Maximize2,
   ScanSearch,
-  Search,
   SlidersHorizontal,
   Sparkles,
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
-import { withAppBase } from '../../../app/public-url'
+import { StylePicker, AppliedStyleSummary, nodeAppliedStyle, nodeStyleCompatibilityReason } from '../../styles/StylePicker'
 import {
   defaultImageGenerationSettings,
   type ImageGenerationSettings,
@@ -56,89 +54,6 @@ function downloadUrl(url: string, filename: string) {
   anchor.click()
 }
 
-const styleCategories = [
-  '推荐',
-  '摄影写真',
-  '电商营销',
-  '动漫游戏',
-  '风格插画',
-  '平面设计',
-  '建筑及室内设计',
-  '创意玩法',
-  '文创周边',
-  '小说推文',
-] as const
-
-const styleCards = [
-  {
-    id: 'comic-character-sheet',
-    name: 'J_漫剧素材三视图',
-    author: 'JM32',
-    heat: '4900',
-    commercial: true,
-    model: 'Style Image V8.2',
-    category: '动漫游戏',
-    cover: withAppBase('/demo/character-lin-yuan.png'),
-    recent: true,
-  },
-  {
-    id: 'balanced-boy',
-    name: '男生·三庭五眼比例均衡',
-    author: '小小苏',
-    heat: '415',
-    commercial: true,
-    model: 'Z Image',
-    category: '摄影写真',
-    cover: withAppBase('/demo/shot-rooftop.png'),
-    recent: false,
-  },
-  {
-    id: 'commerce-key-visual',
-    name: '全网免费电商主图',
-    author: '楚逸AICG',
-    heat: '250',
-    commercial: true,
-    model: 'Qwen Image',
-    category: '电商营销',
-    cover: withAppBase('/demo/scene-rain-street.png'),
-    recent: false,
-  },
-  {
-    id: 'portrait-film',
-    name: 'Z-Image 人像写真',
-    author: '光影研究所',
-    heat: '1.8w',
-    commercial: false,
-    model: 'Z Image',
-    category: '摄影写真',
-    cover: withAppBase('/demo/shot-river.png'),
-    recent: true,
-  },
-  {
-    id: 'render-poster',
-    name: '3D 电商渲染级 KV 海报',
-    author: '立体造物',
-    heat: '21.6w',
-    commercial: true,
-    model: 'Lib Image',
-    category: '平面设计',
-    cover: withAppBase('/demo/scene-rain-street.png'),
-    recent: false,
-  },
-  {
-    id: 'storyboard-sheet',
-    name: '分镜脚本故事版分镜',
-    author: '镜头簿',
-    heat: '1500',
-    commercial: true,
-    model: 'Lib Image',
-    category: '小说推文',
-    cover: withAppBase('/demo/shot-rooftop.png'),
-    recent: false,
-  },
-] as const
-
-type StyleTab = 'plaza' | 'favorites' | 'recent'
 
 type ImageParameterKey =
   | 'quality'
@@ -229,168 +144,6 @@ function normalizedImageSettings(
   }
 }
 
-function ImageStyleGallery({ onClose }: { onClose(): void }) {
-  const [tab, setTab] = useState<StyleTab>('plaza')
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<(typeof styleCategories)[number]>('推荐')
-  const [commercialOnly, setCommercialOnly] = useState(false)
-  const [favorites, setFavorites] = useState<Set<string>>(() => new Set())
-  const [detailId, setDetailId] = useState<string>()
-
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      onClose()
-    }
-    window.addEventListener('keydown', handleEscape, true)
-    return () => window.removeEventListener('keydown', handleEscape, true)
-  }, [onClose])
-
-  const filteredCards = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase()
-    return styleCards.filter((card) => {
-      if (tab === 'favorites' && !favorites.has(card.id)) return false
-      if (tab === 'recent' && !card.recent) return false
-      if (category !== '推荐' && card.category !== category) return false
-      if (commercialOnly && !card.commercial) return false
-      return (
-        !normalizedQuery ||
-        `${card.name} ${card.author}`.toLocaleLowerCase().includes(normalizedQuery)
-      )
-    })
-  }, [category, commercialOnly, favorites, query, tab])
-  const detail = styleCards.find(({ id }) => id === detailId)
-
-  return createPortal(
-    <div className="image-style-gallery-backdrop nodrag">
-      <section
-        className="image-style-gallery"
-        role="dialog"
-        aria-modal="true"
-        aria-label="风格广场"
-      >
-        <header className="image-style-gallery__heading">
-          <div>
-            <span>STYLE LIBRARY</span>
-            <h2>风格广场</h2>
-          </div>
-          <button type="button" aria-label="关闭风格广场" onClick={onClose}>
-            <X aria-hidden="true" />
-          </button>
-        </header>
-        <div className="image-style-gallery__tabs" role="tablist" aria-label="风格来源">
-          {([
-            ['plaza', '风格广场'],
-            ['favorites', '我的收藏'],
-            ['recent', '最近使用'],
-          ] as const).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={tab === value}
-              onClick={() => setTab(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="image-style-gallery__search">
-          <Search aria-hidden="true" />
-          <span className="visually-hidden">搜索风格</span>
-          <input
-            type="search"
-            placeholder="搜索风格名称、作者"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-        <nav className="image-style-gallery__categories" aria-label="风格分类">
-          {styleCategories.map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={category === item}
-              onClick={() => setCategory(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
-        <label className="image-style-gallery__commercial">
-          <input
-            type="checkbox"
-            checked={commercialOnly}
-            onChange={(event) => setCommercialOnly(event.target.checked)}
-          />
-          仅看可商用
-        </label>
-        <div className="image-style-gallery__grid">
-          {filteredCards.map((card) => {
-            const favorite = favorites.has(card.id)
-            return (
-              <article key={card.id}>
-                <img src={card.cover} alt="" />
-                <div className="image-style-gallery__card-copy">
-                  <strong>{card.name}</strong>
-                  <span>作者 {card.author}</span>
-                  <span>热度 {card.heat}</span>
-                  <div>
-                    <em>{card.commercial ? '商用' : '非商用'}</em>
-                    <em>{card.model}</em>
-                  </div>
-                </div>
-                <div className="image-style-gallery__card-actions">
-                  <button
-                    type="button"
-                    aria-label={`${favorite ? '取消收藏' : '收藏'} ${card.name}`}
-                    aria-pressed={favorite}
-                    onClick={() =>
-                      setFavorites((current) => {
-                        const next = new Set(current)
-                        if (next.has(card.id)) next.delete(card.id)
-                        else next.add(card.id)
-                        return next
-                      })
-                    }
-                  >
-                    <Heart aria-hidden="true" />收藏
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`查看${card.name}详情`}
-                    onClick={() => setDetailId(card.id)}
-                  >
-                    详情
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-          {!filteredCards.length ? <p role="status">当前筛选下没有风格。</p> : null}
-        </div>
-        {detail ? (
-          <section
-            className="image-style-gallery__detail"
-            role="region"
-            aria-label={`${detail.name}详情`}
-          >
-            <div>
-              <strong>{detail.name}</strong>
-              <span>{detail.author} · {detail.model} · 热度 {detail.heat}</span>
-            </div>
-            <button type="button" aria-label="关闭风格详情" onClick={() => setDetailId(undefined)}>
-              <X aria-hidden="true" />
-            </button>
-          </section>
-        ) : null}
-      </section>
-    </div>,
-    document.body,
-  )
-}
 
 function ImageParameterPicker({
   settings,
@@ -736,7 +489,6 @@ export function ImageGenerationPanel({
   upscaleTriggerRef: RefObject<HTMLButtonElement | null>
 }) {
   const [advanced, setAdvanced] = useState(false)
-  const [styleOpen, setStyleOpen] = useState(false)
   const [marking, setMarking] = useState(false)
   const [composerExpanded, setComposerExpanded] = useState(false)
   const [parametersOpen, setParametersOpen] = useState(false)
@@ -756,7 +508,6 @@ export function ImageGenerationPanel({
   const [prompt, setPrompt] = useState(initialPrompt)
   const promptRef = useRef<HTMLDivElement>(null)
   const promptDraftRef = useRef(initialPrompt)
-  const styleTriggerRef = useRef<HTMLButtonElement>(null)
   const markingTriggerRef = useRef<HTMLButtonElement>(null)
   const parameterTriggerRef = useRef<HTMLButtonElement>(null)
   const templateTriggerRef = useRef<HTMLButtonElement>(null)
@@ -813,15 +564,16 @@ export function ImageGenerationPanel({
     count: settings.count,
   })
   const providerEnabled = isProviderEnabled(selectedProvider)
+  const styleError = nodeStyleCompatibilityReason(data, selectedProvider, 'image')
   const eligible =
     Boolean(prompt.trim() || hasMedia) &&
     cost > 0 &&
     providerEnabled &&
-    !customSizeErrorMessage
+    !customSizeErrorMessage && !styleError
   const generationUnavailableReason = !providerEnabled
     ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
-    : customSizeErrorMessage
-      ? customSizeErrorMessage
+    : customSizeErrorMessage || styleError
+      ? customSizeErrorMessage || styleError
     : !prompt.trim() && !hasMedia
       ? '请输入提示词或添加参考媒体后再生成。'
       : undefined
@@ -833,7 +585,6 @@ export function ImageGenerationPanel({
 
   useEffect(() => {
     setAdvanced(false)
-    setStyleOpen(false)
     setMarking(false)
     setComposerExpanded(false)
     setParametersOpen(false)
@@ -920,10 +671,6 @@ export function ImageGenerationPanel({
     data.onUpdateImageGenerationSettings?.({ [key]: value })
   }
 
-  const closeStyles = () => {
-    setStyleOpen(false)
-    queueMicrotask(() => styleTriggerRef.current?.focus())
-  }
 
   const closeUpscale = () => {
     onUpscalePendingChange(false)
@@ -1021,19 +768,10 @@ export function ImageGenerationPanel({
           </button>
         ) : null}
         {primaryActions.includes('style') ? (
-          <button
-            ref={styleTriggerRef}
-            type="button"
-            aria-expanded={styleOpen}
-            onClick={() => {
-              setMarking(false)
-              setStyleOpen(true)
-            }}
-          >
-            <Sparkles aria-hidden="true" />风格
-          </button>
+          <StylePicker data={data} provider={selectedProvider} target="image" />
         ) : null}
       </div>
+      <AppliedStyleSummary style={nodeAppliedStyle(data)} />
       <button
         type="button"
         className="image-generation-panel__expand"
@@ -1356,7 +1094,6 @@ export function ImageGenerationPanel({
           {generationUnavailableReason}
         </p>
       ) : null}
-      {styleOpen ? <ImageStyleGallery onClose={closeStyles} /> : null}
       {upscalePending ? createPortal(
         <div className="image-result-confirm nodrag">
           <div role="alertdialog" aria-modal="true" aria-label="将添加工具节点">
@@ -1390,6 +1127,7 @@ export function ImageGenerationPanel({
               <X aria-hidden="true" />
             </button>
             <h2>确认真实图片生成</h2>
+            <AppliedStyleSummary style={nodeAppliedStyle(data)} />
             <p>
               {settings.count} 张 × {selectedProvider.sizePolicy?.costMode.amount ?? selectedProvider.pricing.amount} 积分
             </p>

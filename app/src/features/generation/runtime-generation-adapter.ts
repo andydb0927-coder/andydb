@@ -5,6 +5,7 @@ import type {
 } from './generation-adapter'
 import type { GenerationProviderPreferenceStore } from './generation-provider-preference'
 import { isImageAnalysisToolId } from './ark-image-analysis-provider'
+import { prepareStyledRequest } from '../styles/style-model'
 
 export class RuntimeGenerationAdapter implements GenerationAdapter {
   private readonly preferenceStore: GenerationProviderPreferenceStore
@@ -56,7 +57,8 @@ export class RuntimeGenerationAdapter implements GenerationAdapter {
     return this.preferenceStore.read().provider === 'libtv' &&
       !isPinnedArkTool(request.providerId) &&
       (request.targetKind === 'image' || request.targetKind === 'video')
-      ? this.libtv.start(request, signal, onProgress)
+      ? this.libtv.start(prepareStyledRequest(request), signal, onProgress).then(result =>
+        request.style ? { ...result, version: { ...result.version, prompt: request.prompt } } : result)
       : this.demo.start(request, signal, onProgress)
   }
 }

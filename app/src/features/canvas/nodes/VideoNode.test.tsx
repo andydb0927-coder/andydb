@@ -182,7 +182,7 @@ test('renders the verified video generation controls, disabled modes, and cost',
       .getAllByRole('button')
       .map((button) => button.textContent)
       .filter(Boolean),
-  ).toEqual(['参考', '标记', '特效', '主体', '角色库', '运镜', '1'])
+  ).toEqual(['参考', '标记', '特效', '主体', '角色库', '运镜', '风格', '1'])
   const references = within(panel).getByRole('list', { name: '已引用素材' })
   expect(within(references).getByRole('img', { name: '图片节点 1' })).toBeVisible()
   expect(within(panel).getByRole('button', { name: '1 @ 引用' })).toBeVisible()

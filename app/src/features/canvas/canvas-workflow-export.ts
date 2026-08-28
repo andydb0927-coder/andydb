@@ -5,6 +5,7 @@ import type {
   Project,
 } from '../project/model'
 import { safeDownloadFilename } from '../../shared/browser-download'
+import { isAppliedStyle } from '../styles/style-model'
 
 export type CanvasExportScope = 'viewport' | 'all'
 export type CanvasExportFormat = 'png' | 'svg'
@@ -371,6 +372,11 @@ export function parseWorkflowImport(
       continue
     }
     const node = candidateNode as unknown as CanvasNode
+    if ((node.appliedStyle != null && !isAppliedStyle(node.appliedStyle)) ||
+      (node.generationConfig?.style !== undefined && !isAppliedStyle(node.generationConfig.style))) {
+      errors.push(`节点 ${node.title} 的风格配置无效`)
+      continue
+    }
     if (node.details?.type === 'script' && !isScriptDetailsShape(node.details)) {
       errors.push(`节点 ${node.title} 的脚本结构无效`)
       continue

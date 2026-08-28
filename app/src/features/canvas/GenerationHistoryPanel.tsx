@@ -342,6 +342,7 @@ export function GenerationHistoryPanel({
                         <span>{statusCopy[record.job.status]}</span>
                         <strong>{record.title}</strong>
                         <p>{record.job.prompt}</p>
+                        {record.config.style ? <p>已应用风格：{record.config.style.name}</p> : null}
                         <small>
                           {record.job.providerName
                             ? `${record.job.providerName} · `
@@ -464,6 +465,7 @@ export function GenerationHistoryPanel({
           </div>
           <dl>
             <div><dt>提示词</dt><dd>{resendRecord.job.prompt}</dd></div>
+            {resendRecord.config.style ? <div><dt>已应用风格</dt><dd>{resendRecord.config.style.name}</dd></div> : null}
             <div><dt>模型</dt><dd>{resendRecord.job.modelName ?? resendRecord.config.providerId ?? '本地演示模型'}</dd></div>
             {Object.entries(resendRecord.config.parameters ?? {}).map(([name, value]) => (
               <div key={name}><dt>参数</dt><dd>{name}：{String(value)}</dd></div>

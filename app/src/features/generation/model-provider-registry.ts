@@ -1,4 +1,5 @@
 import { withAppBase } from '../../app/public-url'
+import { prepareStyledRequest, styleCompatibilityReason } from '../styles/style-model'
 
 import type {
   ExportResult,
@@ -389,6 +390,8 @@ export class ProviderRegistry {
 
   describe(request: GenerationRequest) {
     const provider = this.resolve(request)
+    const styleError = request.style && styleCompatibilityReason(request.style, request.targetKind, provider.id)
+    if (styleError) throw new Error(styleError)
     return {
       providerId: provider.id,
       providerName: provider.name,
@@ -407,9 +410,11 @@ export class ProviderRegistry {
         provider.disabledReason ?? `${provider.name} API 尚未配置；当前仅提供接口占位。`,
       )
     }
-    const result = await provider.generate(request, context)
+    const prepared = prepareStyledRequest({ ...request, providerId: provider.id })
+    const result = await provider.generate(prepared, context)
     return {
       ...result,
+      ...(request.style ? { version: { ...result.version, prompt: request.prompt } } : {}),
       usage: {
         ...result.usage,
         providerId: provider.id,

@@ -1,4 +1,5 @@
 import { sameSelection, downstreamConsumers } from './canvas-page-selectors'
+import { restoreTaskStyle } from '../styles/style-model'
 import { CanvasGenerationDialogs, type AnalysisSession, type ImageEditSession, type VideoContinueSession } from './CanvasGenerationDialogs'
 import { CanvasProjectDialogs } from './CanvasProjectDialogs'
 import { CanvasNodeEditors, type PendingPlacement, type EditingCard } from './CanvasNodeEditors'
@@ -1212,7 +1213,7 @@ export function CanvasPage({
             openAnalysisTool(node.id, job.generationConfig!.providerId!, job.prompt, job.generationConfig)
             return
           }
-          const request = job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
+          const request = restoreTaskStyle(job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
             ...job.generationConfig, projectId: currentProject.id, nodeId: node.id, operation: job.operation, prompt: job.prompt,
           } : buildGenerationRequest(
             currentProject,
@@ -1220,7 +1221,7 @@ export function CanvasPage({
             job.operation,
             job.prompt,
             providerRegistry,
-          )
+          ), job.generationConfig?.style)
           const eligibilityFailure = generationEligibilityFailure(
             request,
             providerRegistry,
@@ -2509,6 +2510,9 @@ export function CanvasPage({
           },
           onUpdateNodeDetails: (details) => {
             updateNode(node.id, { details })
+          },
+          onSelectStyle: (style) => {
+            updateNode(node.id, { appliedStyle: style })
           },
           onOpenScriptWorkspace: () => setScriptWorkspaceNodeId(node.id),
           onExportDirectorViews: (blob) => exportDirectorViews(node.id, blob),

@@ -57,6 +57,7 @@ export function GenerationConfirmationDialog({
         <dl>
           <div><dt>远程画布</dt><dd>{selection.projectName}</dd></div>
           <div><dt>模型</dt><dd>{modelName}</dd></div>
+          {request.style ? <div><dt>已应用风格</dt><dd>{request.style.name}</dd></div> : null}
           <div><dt>操作</dt><dd>{operationLabels[request.operation]}</dd></div>
           <div>
             <dt>参考素材</dt>

@@ -1,0 +1,46 @@
+
+> app@0.0.0 test:run
+> vitest run
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+AggregateError:
+    at internalConnectMultiple (node:net:1135:18)
+    at internalConnectMultiple (node:net:1211:5)
+    at internalConnectMultiple (node:net:1211:5)
+    at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+    at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+  code: 'EPERM',
+  [errors]: [
+    Error: connect EPERM ::1:3000 - Local (:::0)
+        at internalConnectMultiple (node:net:1207:16)
+        at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+        at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+        at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+      errno: -1,
+      code: 'EPERM',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect EPERM 127.0.0.1:3000 - Local (0.0.0.0:0)
+        at internalConnectMultiple (node:net:1207:16)
+        at internalConnectMultiple (node:net:1211:5)
+        at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+        at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1553:7)
+        at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+      errno: -1,
+      code: 'EPERM',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}
+
+ Test Files  170 passed (170)
+      Tests  1431 passed (1431)
+   Start at  11:49:25
+   Duration  17.27s (transform 6.33s, setup 15.87s, import 19.36s, tests 41.56s, environment 34.74s)

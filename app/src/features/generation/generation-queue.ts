@@ -1,6 +1,7 @@
 import type { GenerationJob, GenerationOperation } from '../project/model'
 import { generationErrorMessage, isGenerationAbort } from './generation-errors'
 import { isActiveTask, isRetryableTask } from './task-status'
+import { styleSnapshot } from '../styles/style-model'
 import type {
   GenerationAdapter,
   GenerationRequest,
@@ -53,6 +54,7 @@ export class GenerationQueue {
 
   enqueue(request: GenerationRequest) {
     if (this.disposed) throw new Error('Generation queue is disposed')
+    if (request.style) request = { ...request, style: styleSnapshot(request.style) }
     this.nextSequence = Math.max(
       this.nextSequence,
       this.options.getLatestSequence?.(request.projectId) ?? 0,
@@ -73,6 +75,7 @@ export class GenerationQueue {
         progress: 0,
         ...(dispatch ?? {}),
         generationConfig: {
+          ...(request.style ? { style: styleSnapshot(request.style) } : {}),
           targetKind: request.targetKind,
           ...(request.providerId || dispatch?.providerId
             ? { providerId: request.providerId ?? dispatch?.providerId }

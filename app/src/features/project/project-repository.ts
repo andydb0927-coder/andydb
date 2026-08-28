@@ -15,6 +15,7 @@ import type {
   ProjectLocation,
 } from '../projects/project-space-model'
 import type { SubjectAsset } from '../subjects/subject-model'
+import type { StyleCard, StylePreference } from '../styles/style-model'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -28,6 +29,8 @@ export class WirelessCanvasDatabase extends Dexie {
   projectFolders!: Table<ProjectFolder, string>
   projectLocations!: Table<ProjectLocation, string>
   subjects!: Table<SubjectAsset, string>
+  styles!: Table<StyleCard, string>
+  stylePreferences!: Table<StylePreference, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -106,6 +109,7 @@ export class WirelessCanvasDatabase extends Dexie {
       projectLocations: 'projectId, folderId, updatedAt',
       subjects: 'id, name, sourceProjectId, updatedAt',
     })
+    this.version(11).stores({ styles: 'id, name', stylePreferences: 'id, lastUsedAt' })
   }
 }
 

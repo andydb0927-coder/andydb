@@ -7,6 +7,7 @@ import type {
 } from './generation-adapter'
 import type { GenerationProviderPreferenceStore } from './generation-provider-preference'
 import { RuntimeGenerationAdapter } from './runtime-generation-adapter'
+import { builtInStyles, styleSnapshot } from '../styles/style-model'
 
 const request: GenerationRequest = {
   projectId: 'project-frost-river',
@@ -39,6 +40,18 @@ function adapter(start: GenerationAdapter['start']): GenerationAdapter {
 }
 
 describe('runtime generation adapter', () => {
+  test('legacy bridge receives the same style prefix and returns an unmodified editable prompt', async () => {
+    const start = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('libtv'))
+    const preference: GenerationProviderPreferenceStore = {
+      read: () => ({ provider: 'libtv', selection: { projectUuid: 'fixture-canvas', projectName: 'Fixture', imageModelKey: 'image', imageModelName: 'Image', videoModelKey: 'video', videoModelName: 'Video' } }),
+      write: () => {},
+    }
+    const runtime = new RuntimeGenerationAdapter(preference, adapter(vi.fn()), adapter(start))
+    const styled = { ...request, style: styleSnapshot(builtInStyles[0]) }
+    const output = await runtime.start(styled, new AbortController().signal)
+    expect(start.mock.calls[0][0].prompt).toBe(`${styled.style.promptFragment}\n\n${request.prompt}`)
+    expect(output.version.prompt).toBe(request.prompt)
+  })
   test.each(['ark-image-edit', 'ark-video-continue'])('pins explicit %s to its registry provider even with a legacy LibTV preference', async (providerId) => {
     const registryStart = vi.fn<GenerationAdapter['start']>().mockResolvedValue(result('ark-edit'))
     const libtvStart = vi.fn<GenerationAdapter['start']>()

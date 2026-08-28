@@ -68,6 +68,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
     settings: Partial<ImageGenerationSettings>,
   ): void
   onSelectModelProvider?(providerId: string): void
+  onSelectStyle?(style: import('../styles/style-model').AppliedStyle | null): void
   onUpdateVideoGenerationParameters?(
     parameters: Record<string, string | number | boolean>,
   ): void

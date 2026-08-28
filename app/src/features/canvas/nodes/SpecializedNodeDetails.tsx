@@ -32,6 +32,7 @@ import {
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
+import { StylePicker, AppliedStyleSummary, nodeAppliedStyle, nodeStyleCompatibilityReason } from '../../styles/StylePicker'
 import { FrameAnalysisControls } from './FrameAnalysisControls'
 import { createDefaultDirectorScene } from '../director-3d-scene'
 import { extractAudioToWav } from '../../media/browser-media-processing'
@@ -379,6 +380,10 @@ function TextDetails({
           onBlur={() => onUpdate({ ...details, prompt, modelProviderId: provider.id, modelVariant: variantId })}
         />
       </label>
+      <div className="text-node-composer__styles">
+        <StylePicker data={data} provider={provider} target="text" />
+        <AppliedStyleSummary style={nodeAppliedStyle(data)} />
+      </div>
       <footer className="text-node-composer__controls">
         <TextModelField
           data={data}
@@ -414,7 +419,7 @@ function TextDetails({
           type="button"
           className="text-node-composer__generate"
           aria-label={`生成文本，预计成本 ${cost}`}
-          disabled={!prompt.trim() || !isProviderEnabled(provider)}
+          disabled={!prompt.trim() || !isProviderEnabled(provider) || Boolean(nodeStyleCompatibilityReason(data, provider, 'text'))}
           title={!isProviderEnabled(provider) ? provider.disabledReason : prompt.trim() ? (provider.kind === 'live' ? '官方 API 开发直连' : '本地演示') : '请输入提示词后生成'}
           onClick={generate}
         >
@@ -564,6 +569,8 @@ function ScriptDetails({
         <span>剧情大纲</span>
         <textarea aria-label="剧情大纲" rows={4} maxLength={3000} value={outline} onChange={(event) => setOutline(event.currentTarget.value)} />
       </label>
+      <StylePicker data={data} provider={provider} target="text" />
+      <AppliedStyleSummary style={nodeAppliedStyle(data)} />
       <label className="specialized-node-details__field">
         <span>场次数量</span>
         <input

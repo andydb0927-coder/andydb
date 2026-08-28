@@ -148,10 +148,12 @@ function requestBody(request: GenerationRequest, modelId: string, messages?: Ark
     : 'disabled'
   return {
     model: modelId,
-    messages: messages ?? [
+    messages: (messages ?? [
       { role: 'system', content: systemPrompt(request) },
       { role: 'user', content: request.prompt.trim() },
-    ],
+    ]).map(message => request.systemPromptPrefix && message.role === 'system' && typeof message.content === 'string'
+      ? { ...message, content: `${request.systemPromptPrefix}\n\n${message.content}` }
+      : message),
     max_tokens: Math.round(
       numberParameter(request.parameters?.maxTokens, 1200, 1, 4096),
     ),

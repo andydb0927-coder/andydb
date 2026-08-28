@@ -138,7 +138,15 @@ export interface GenerationReferenceConfig {
   mimeType: string
 }
 
+export interface AppliedStyle {
+  id: string
+  name: string
+  promptFragment: string
+  compatibility: { targetKinds: Array<'image' | 'video' | 'text'>; providerIds?: string[] }
+}
+
 export interface GenerationConfiguration {
+  style?: AppliedStyle
   targetKind: 'image' | 'video' | 'audio' | 'text'
   providerId?: string
   parameters?: Record<string, string | number | boolean>
@@ -376,6 +384,8 @@ export type CanvasNodeDetails =
   | SmartEditNodeDetails
 
 export interface CanvasNode {
+  /** null explicitly clears a historical style; undefined keeps old projects compatible. */
+  appliedStyle?: AppliedStyle | null
   id: string
   kind: NodeKind
   title: string

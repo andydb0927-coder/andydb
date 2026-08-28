@@ -1,0 +1,16 @@
+.image-style-gallery.style-library { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.style-library__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.style-library__notice, .style-library__actions > span { color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.style-library .image-style-gallery__grid article[data-selected="true"] { outline: 2px solid var(--brand-primary); outline-offset: -2px; }
+.style-library .image-style-gallery__card-actions { flex-wrap: wrap; }
+.style-library__form { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border-default); border-radius: var(--radius-panel); }
+.style-library__form label { display: grid; gap: 6px; }
+.style-library__form input, .style-library__form textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.style-library__cover { max-width: 120px; max-height: 80px; object-fit: cover; }
+.style-library__cover-placeholder { display: grid; place-items: center; height: 132px; background: var(--surface-floating); }
+.applied-style-summary, .style-compatibility-warning { display: block; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.applied-style-summary { color: var(--text-secondary); }
+.style-compatibility-warning { color: var(--status-error); }
+.text-node-composer__styles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block: var(--space-2); }
+.text-node-composer__styles > button { display: inline-flex; align-items: center; gap: var(--space-1); }
+.text-node-composer__styles svg { width: 16px; height: 16px; }

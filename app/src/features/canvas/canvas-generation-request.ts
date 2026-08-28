@@ -3,6 +3,7 @@ import type { GenerationRequest } from '../generation/generation-adapter'
 import { defaultVideoGenerationMode, isProviderEnabled, isVideoGenerationMode, providerDefaultParameters, resolveVideoGenerationMode, type ProviderRegistry } from '../generation/model-provider-registry'
 import { isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
 import { frameAnalysisId } from '../generation/ark-frame-analysis-provider'
+import { styleSnapshot, styleCompatibilityReason } from '../styles/style-model'
 
 export function buildGenerationRequest(
   project: Project,
@@ -18,6 +19,7 @@ export function buildGenerationRequest(
     (candidate) => candidate.id === activeVersion?.assetId,
   )
   const savedConfig = node.generationConfig
+  const selectedStyle = node.appliedStyle === undefined ? savedConfig?.style : node.appliedStyle
   const targetKind =
     operation === 'generate-video'
       ? 'video'
@@ -130,6 +132,7 @@ export function buildGenerationRequest(
     targetKind,
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
+    ...(selectedStyle ? { style: styleSnapshot(selectedStyle) } : {}),
     ...(Object.keys(parameters).length ? { parameters } : {}),
     referenceAssets: generationMode === '文生视频'
       ? []
@@ -156,6 +159,10 @@ export function generationEligibilityFailure(
   request: GenerationRequest,
   providerRegistry: ProviderRegistry,
 ) {
+  if (request.style) {
+    const reason = styleCompatibilityReason(request.style, request.targetKind, request.providerId)
+    if (reason) return reason
+  }
   if (!request.prompt.trim() && request.referenceAssets.length === 0) {
     return '请输入提示词或添加参考素材后再生成。'
   }

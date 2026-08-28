@@ -29,6 +29,7 @@ import type {
 import type { CreativeNodeData } from '../node-types'
 import { FrameAnalysisControls } from './FrameAnalysisControls'
 import { PromptAssist } from '../PromptAssist'
+import { StylePicker, AppliedStyleSummary, nodeAppliedStyle, nodeStyleCompatibilityReason } from '../../styles/StylePicker'
 
 type VideoSurface =
   | 'reference'
@@ -260,9 +261,9 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const selectedProviderEnabled = isProviderEnabled(selectedProvider)
   const generationUnavailableReason = !selectedProviderEnabled
     ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
-    : !prompt.trim() && !data.asset && referenceCount === 0
+    : nodeStyleCompatibilityReason(data, selectedProvider, 'video') ?? (!prompt.trim() && !data.asset && referenceCount === 0
       ? '请输入提示词或添加参考媒体后再生成。'
-      : undefined
+      : undefined)
   const liveConfigurationReason = providers.find(
     ({ id }) => id === 'seedance-api',
   )?.disabledReason
@@ -330,6 +331,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
         <button type="button" onClick={() => setSurface('subjects')}>主体</button>
         <button type="button" onClick={() => setSurface('characters')}>角色库</button>
         <button type="button" onClick={() => setSurface('camera-motion')}>运镜</button>
+        <StylePicker data={data} provider={selectedProvider} target="video" />
         {referenceCount ? (
           <button type="button" className="video-generation-panel__reference-count" aria-label={`${referenceCount} @ 引用`} onClick={() => setSurface('references')}>
             <AtSign aria-hidden="true" />{referenceCount}
@@ -355,6 +357,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
             document.body,
           )
         : null}
+      <AppliedStyleSummary style={nodeAppliedStyle(data)} />
       <label className="video-generation-panel__prompt">
         <span className="visually-hidden">提示词</span>
         {data.videoReferences?.length ? (
