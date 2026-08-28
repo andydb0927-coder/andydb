@@ -1,0 +1,8 @@
+
+Running 3 tests using 2 workers
+
+  ✓  1 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (6.3s)
+  ✓  2 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (6.5s)
+  ✓  3 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (2.2s)
+
+  3 passed (9.6s)

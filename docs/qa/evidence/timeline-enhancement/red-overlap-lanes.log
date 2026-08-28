@@ -1,0 +1,14 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/timeline-enhancements.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/timeline/timeline-enhancements.test.ts (9 tests | 1 failed) 8ms
+     × overlapping clips reuse only a free lane, not the number of prior overlaps 2ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  19:42:08
+   Duration  250ms (transform 41ms, setup 45ms, import 41ms, tests 8ms, environment 95ms)

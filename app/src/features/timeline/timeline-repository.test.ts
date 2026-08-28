@@ -8,6 +8,8 @@ import {
 } from '../project/project-repository'
 import { createTimelineProject } from './timeline-project'
 import { TimelineRepository } from './timeline-repository'
+import { addClip, addSubtitleClip } from './timeline-project'
+import { addAudioTrack, editSubtitle, setAudioEnvelope, setClipPlacement, setTransition } from './timeline-editing'
 
 const databaseNames: string[] = []
 
@@ -22,6 +24,23 @@ afterEach(async () => {
 })
 
 describe('timeline repository', () => {
+  test('persists new transition subtitle and multi-audio fields without changing schema or project data', async () => {
+    const repository = createRepository()
+    let timeline = createTimelineProject({ ...makeProjectFixture(), timeline: [] })
+    const source = { id: 'p', name: 'p', kind: 'image' as const, durationSeconds: 3, source: { type: 'library-asset' as const, url: '/p.png', mimeType: 'image/png' } }
+    timeline = addClip(addClip(timeline, source), source)
+    timeline = setTransition(timeline, timeline.tracks.find(t => t.kind === 'image')!.clips[1].id, { kind: 'black', durationSeconds: 1 })
+    timeline = addSubtitleClip(timeline, '字幕', 1, 2)
+    timeline = editSubtitle(timeline, timeline.tracks.find(t => t.kind === 'subtitle')!.clips[0].id, { text: '字幕', startSeconds: 1, endSeconds: 3, style: { fontSize: 80, bold: true } })
+    timeline = addClip(timeline, { ...source, kind: 'audio' })
+    timeline = addAudioTrack(timeline)
+    const audio = timeline.tracks.find(t => t.kind === 'audio')!.clips[0]
+    timeline = setClipPlacement(timeline, audio.id, timeline.tracks.at(-1)!.id, 1)
+    timeline = setAudioEnvelope(timeline, audio.id, [{ timeSeconds: 0, value: 0 }, { timeSeconds: 3, value: 1 }])
+    await repository.save(timeline)
+    expect(await repository.load(timeline.projectId)).toEqual(timeline)
+    expect(timeline.schemaVersion).toBe(1)
+  })
   test('round-trips and overwrites a complete timeline project', async () => {
     const repository = createRepository()
     const timeline = createTimelineProject(makeProjectFixture())
@@ -70,4 +89,3 @@ describe('timeline repository', () => {
     expect(await repository.load(project.id)).toEqual(timeline)
   })
 })
-

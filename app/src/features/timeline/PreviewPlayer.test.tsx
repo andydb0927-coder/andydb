@@ -11,9 +11,28 @@ import {
   resolveTimelineClips,
   updateClipLayout,
   updateClipPlaybackRate,
+  addSubtitleClip,
 } from './timeline-project'
+import { addAudioTrack, setAudioEnvelope, setClipPlacement } from './timeline-editing'
 
 describe('preview player speed and composition', () => {
+  test('simultaneous audio layers apply separate interpolated volume without stealing subtitle selection', () => {
+    const project = { ...makeProjectFixture(), timeline: [] }
+    const source = { id: 'a', name: 'a', kind: 'audio' as const, durationSeconds: 4, source: { type: 'library-asset' as const, url: '/a.wav', mimeType: 'audio/wav' } }
+    let timeline = addClip(addClip(createTimelineProject(project), source), { ...source, id: 'b', name: 'b' })
+    const audio = timeline.tracks.find(t => t.kind === 'audio')!.clips
+    timeline = addAudioTrack(timeline)
+    timeline = setClipPlacement(timeline, audio[1].id, timeline.tracks.at(-1)!.id, 0)
+    timeline = setAudioEnvelope(timeline, audio[0].id, [{ timeSeconds: 0, value: 0 }, { timeSeconds: 2, value: 1 }])
+    timeline = addSubtitleClip(timeline, '字幕', 0, 3)
+    const subtitle = timeline.tracks.find(t => t.kind === 'subtitle')!.clips[0]
+    const select = vi.fn()
+    render(<PreviewPlayer timeline={timeline} resolved={resolveTimelineClips(timeline, project)} currentTime={1} selectedClipId={subtitle.id} canvasRef={createRef()} onSelectedClipChange={select} onCurrentTimeChange={vi.fn()} />)
+    expect(screen.getByLabelText('音轨播放 a')).toHaveProperty('volume', 0.5)
+    expect(screen.getByLabelText('音轨播放 b')).toHaveProperty('volume', 1)
+    expect(screen.getByTestId('timeline-subtitle')).toHaveTextContent('字幕')
+    expect(select).not.toHaveBeenCalled()
+  })
   test('applies persisted playback rate and picture-in-picture geometry to media', () => {
     const project = { ...makeProjectFixture(), timeline: [] }
     const candidate = libraryTimelineCandidate({

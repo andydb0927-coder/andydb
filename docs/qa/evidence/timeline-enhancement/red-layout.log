@@ -1,0 +1,38 @@
+[WebServer] (node:2256) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:2259) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/timeline-enhancements.spec.ts:79:1 › transitions subtitles and aligned audio envelopes edit and survive refresh at 721px (2.6s)
+
+
+  1) [chromium] › e2e/timeline-enhancements.spec.ts:79:1 › transitions subtitles and aligned audio envelopes edit and survive refresh at 721px
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      123 |     const card = button.closest('li')!, row = card.closest('ol')!
+      124 |     return card.getBoundingClientRect().bottom <= row.getBoundingClientRect().bottom
+    > 125 |   })).toBe(true)
+          |       ^
+      126 |   expect(errors).toEqual([])
+      127 | })
+      128 |
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:125:7
+
+    Error Context: test-results/timeline-enhancements-tran-79dd1-nd-survive-refresh-at-721px-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-tran-79dd1-nd-survive-refresh-at-721px-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-tran-79dd1-nd-survive-refresh-at-721px-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/timeline-enhancements.spec.ts:79:1 › transitions subtitles and aligned audio envelopes edit and survive refresh at 721px

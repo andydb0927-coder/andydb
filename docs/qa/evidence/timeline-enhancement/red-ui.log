@@ -1,0 +1,799 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/TimelineEditor.test.tsx src/features/timeline/TimelineExportPanel.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/timeline/TimelineExportPanel.test.tsx (5 tests | 2 failed) 58ms
+     × reports local composition progress, prevents duplicates and cancels without a download 19ms
+     × composition downloads only completed output and aborts on unmount 3ms
+ ❯ src/features/timeline/TimelineEditor.test.tsx (6 tests | 1 failed) 163ms
+     × edits transitions, subtitle style and multi-track envelope through accessible controls 35ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/timeline/TimelineEditor.test.tsx > professional timeline editor > edits transitions, subtitle style and multi-track envelope through accessible controls
+TestingLibraryElementError: Unable to find a label with the text of: 入场转场
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      aria-label="专业时间线编辑器"
+      class="professional-timeline"
+    >
+      <div
+        class="professional-timeline__heading"
+      >
+        <div>
+          <p>
+            专业剪辑
+          </p>
+          <h2>
+            多轨时间线
+          </h2>
+        </div>
+        <output
+          aria-label="当前剪辑时间"
+        >
+          4.000
+           秒
+        </output>
+      </div>
+      <div
+        class="professional-timeline__ruler"
+      >
+        <input
+          aria-label="时间线播放头"
+          max="8"
+          min="0"
+          step="0.041666666666666664"
+          type="range"
+          value="4"
+        />
+        <div
+          aria-label="时间刻度"
+          class="professional-timeline__ticks"
+        >
+          <time
+            datetime="PT0S"
+          >
+            0
+            s
+          </time>
+          <time
+            datetime="PT1S"
+          >
+            1
+            s
+          </time>
+          <time
+            datetime="PT2S"
+          >
+            2
+            s
+          </time>
+          <time
+            datetime="PT3S"
+          >
+            3
+            s
+          </time>
+          <time
+            datetime="PT4S"
+          >
+            4
+            s
+          </time>
+          <time
+            datetime="PT5S"
+          >
+            5
+            s
+          </time>
+          <time
+            datetime="PT6S"
+          >
+            6
+            s
+          </time>
+          <time
+            datetime="PT7S"
+          >
+            7
+            s
+          </time>
+          <time
+            datetime="PT8S"
+          >
+            8
+            s
+          </time>
+        </div>
+      </div>
+      <div
+        class="professional-timeline__body"
+      >
+        <aside
+          aria-label="素材库与画布片段"
+          class="professional-timeline__sources"
+        >
+          <h3>
+            素材
+          </h3>
+          <article
+            aria-label="music素材"
+            draggable="true"
+          >
+            <strong>
+              music素材
+            </strong>
+            <span>
+              音频
+            </span>
+            <button
+              type="button"
+            >
+              将
+              music素材
+              加入
+              音频
+              轨道
+            </button>
+          </article>
+        </aside>
+        <div
+          class="professional-timeline__tracks"
+        >
+          <section
+            aria-label="视频轨道"
+            class="professional-timeline__track"
+            role="row"
+          >
+            <header
+              role="rowheader"
+            >
+              视频轨道
+            </header>
+            <div
+              aria-label="视频轨道投放区"
+              class="professional-timeline__dropzone"
+            >
+              <ol
+                aria-label="主视频轨"
+              />
+            </div>
+          </section>
+          <section
+            aria-label="音频轨道"
+            class="professional-timeline__track"
+            role="row"
+          >
+            <header
+              role="rowheader"
+            >
+              音频轨道
+            </header>
+            <div
+              aria-label="音频轨道投放区"
+              class="professional-timeline__dropzone"
+            >
+              <ol
+                aria-label="音频轨道"
+              />
+            </div>
+          </section>
+          <section
+            aria-label="图片轨道"
+            class="professional-timeline__track"
+            role="row"
+          >
+            <header
+              role="rowheader"
+            >
+              图片轨道
+            </header>
+            <div
+              aria-label="图片轨道投放区"
+              class="professional-timeline__dropzone"
+            >
+              <ol
+                aria-label="图片轨道"
+              >
+                <li
+                  class="professional-timeline__clip"
+                  data-kind="image"
+                >
+                  <button
+                    aria-label="选择图片 01"
+                    class="professional-timeline__clip-select"
+                    type="button"
+                  >
+                    <span>
+                      one素材
+                    </span>
+                    <small>
+                      4.00
+                      s
+                    </small>
+                  </button>
+                  <div
+                    class="professional-timeline__move"
+                  >
+                    <button
+                      aria-label="将图片 01 前移"
+                      disabled=""
+                      type="button"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-chevron-left"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="m15 18-6-6 6-6"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="将图片 01 后移"
+                      type="button"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-chevron-right"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="m9 18 6-6-6-6"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+                <li
+                  class="professional-timeline__clip"
+                  data-kind="image"
+                >
+                  <button
+                    aria-current="true"
+                    aria-label="选择图片 02"
+                    class="professional-timeline__clip-select"
+                    type="button"
+                  >
+                    <span>
+                      two素材
+                    </span>
+                    <small>
+                      4.00
+                      s
+                    </small>
+                  </button>
+                  <div
+                    class="professional-timeline__move"
+                  >
+                    <button
+                      aria-label="将图片 02 前移"
+                      type="button"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-chevron-left"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="m15 18-6-6 6-6"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="将图片 02 后移"
+                      disabled=""
+                      type="button"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-chevron-right"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="m9 18 6-6-6-6"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </section>
+          <section
+            aria-label="字幕轨道"
+            class="professional-timeline__track"
+            role="row"
+          >
+            <header
+              role="rowheader"
+            >
+              字幕轨道
+            </header>
+            <div
+              aria-label="字幕轨道投放区"
+              class="professional-timeline__dropzone"
+            >
+              <ol
+                aria-label="字幕轨道"
+              />
+            </div>
+          </section>
+        </div>
+      </div>
+      <div
+        class="professional-timeline__tools"
+      >
+        <form
+          class="professional-timeline__subtitle-form"
+        >
+          <label>
+            字幕文本
+            <input
+              value=""
+            />
+          </label>
+          <label>
+            字幕时长
+            <input
+              min="0.1"
+              step="0.1"
+              type="number"
+              value="3"
+            />
+          </label>
+          <button
+            disabled=""
+            type="button"
+          >
+            在播放头添加字幕
+          </button>
+        </form>
+        <section
+          aria-label="片段编辑器"
+          class="professional-timeline__inspector"
+        >
+          <h3>
+            two素材
+          </h3>
+          <label>
+            片段入点
+            <input
+              max="4"
+              min="0"
+              step="0.041666666666666664"
+              type="number"
+              value="0"
+            />
+          </label>
+          <label>
+            片段出点
+            <input
+              max="4"
+              min="0"
+              step="0.041666666666666664"
+              type="number"
+              value="4"
+            />
+          </label>
+          <output
+            aria-label="片段时长"
+          >
+            4.00
+             秒
+          </output>
+          <label>
+            片段变速
+            <input
+              aria-label="片段变速"
+              max="4"
+              min="0.25"
+              step="0.25"
+              type="range"
+              value="1"
+            />
+          </label>
+          <output
+            aria-label="变速倍率"
+          >
+            1.00
+            x
+          </output>
+          <output
+            aria-label="变速后时长"
+          >
+            4.00
+             秒
+          </output>
+          <fieldset
+            class="professional-timeline__layout-controls"
+          >
+            <legend>
+              合成布局
+            </legend>
+            <label>
+              布局模式
+              <select
+                aria-label="布局模式"
+              >
+                <option
+                  value="full"
+                >
+                  主轨全屏
+                </option>
+                <option
+                  value="picture-in-picture"
+                >
+                  画中画副轨
+                </option>
+                <option
+                  value="thirds"
+                >
+                  三分屏
+                </option>
+              </select>
+            </label>
+          </fieldset>
+          <button
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-scissors"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="6"
+                cy="6"
+                r="3"
+              />
+              <path
+                d="M8.12 8.12 12 12"
+              />
+              <path
+                d="M20 4 8.12 15.88"
+              />
+              <circle
+                cx="6"
+                cy="18"
+                r="3"
+              />
+              <path
+                d="M14.8 14.8 20 20"
+              />
+            </svg>
+            在播放头处分割
+          </button>
+          <button
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-trash2 lucide-trash-2"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 11v6"
+              />
+              <path
+                d="M14 11v6"
+              />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+              />
+              <path
+                d="M3 6h18"
+              />
+              <path
+                d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+            </svg>
+            删除当前片段
+          </button>
+        </section>
+      </div>
+    </section>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/timeline/TimelineEditor.test.tsx:71:37
+     69|     render(<Harness initial={initial} candidates={[libraryTimelineCand…
+     70|     await user.click(screen.getByRole('button', { name: '选择图片 02' }))
+     71|     await user.selectOptions(screen.getByLabelText('入场转场'), 'dissolve')
+       |                                     ^
+     72|     fireEvent.change(screen.getByLabelText('转场时长（秒）'), { target: { val…
+     73|     await user.type(screen.getByLabelText('字幕文本'), '字幕验收')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/features/timeline/TimelineExportPanel.test.tsx > timeline export panel > reports local composition progress, prevents duplicates and cancels without a download
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "导出合成视频"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "导出剪辑决策":
+  <section
+    aria-labelledby="timeline-export-title"
+    class="timeline-export"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="timeline-export__note"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "导出剪辑决策":
+  <h2
+    id="timeline-export-title"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "下载时间线 JSON":
+  <button
+    type="button"
+  />
+
+  Name "下载 EDL":
+  <button
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      aria-labelledby="timeline-export-title"
+      class="timeline-export"
+    >
+      <div>
+        <p>
+          浏览器端交付
+        </p>
+        <h2
+          id="timeline-export-title"
+        >
+          导出剪辑决策
+        </h2>
+        <p>
+          未调用云端合成或消耗积分。
+        </p>
+      </div>
+      <div
+        class="timeline-export__actions"
+      >
+        <button
+          type="button"
+        >
+          下载时间线 JSON
+        </button>
+        <button
+          type="button"
+        >
+          下载 EDL
+        </button>
+        <p>
+          当前浏览器不支持预览流录制，可继续导出 JSON / EDL。
+        </p>
+      </div>
+      <p
+        class="timeline-export__note"
+      >
+        MediaRecorder 仅录制预览画布；本阶段不做 FFmpeg 合成与音频混流。
+      </p>
+    </section>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/timeline/TimelineExportPanel.test.tsx:17:28
+     15|     }))
+     16|     render(<TimelineExportPanel timeline={createTimelineProject(makePr…
+     17|     fireEvent.click(screen.getByRole('button', { name: '导出合成视频' }))
+       |                            ^
+     18|     expect(screen.getByRole('progressbar', { name: '合成导出进度' })).toHave…
+     19|     expect(screen.getByRole('button', { name: '导出合成视频' })).toBeDisable…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/features/timeline/TimelineExportPanel.test.tsx > timeline export panel > composition downloads only completed output and aborts on unmount
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "导出合成视频"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "导出剪辑决策":
+  <section
+    aria-labelledby="timeline-export-title"
+    class="timeline-export"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="timeline-export__note"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "导出剪辑决策":
+  <h2
+    id="timeline-export-title"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "下载时间线 JSON":
+  <button
+    type="button"
+  />
+
+  Name "下载 EDL":
+  <button
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      aria-labelledby="timeline-export-title"
+      class="timeline-export"
+    >
+      <div>
+        <p>
+          浏览器端交付
+        </p>
+        <h2
+          id="timeline-export-title"
+        >
+          导出剪辑决策
+        </h2>
+        <p>
+          未调用云端合成或消耗积分。
+        </p>
+      </div>
+      <div
+        class="timeline-export__actions"
+      >
+        <button
+          type="button"
+        >
+          下载时间线 JSON
+        </button>
+        <button
+          type="button"
+        >
+          下载 EDL
+        </button>
+        <p>
+          当前浏览器不支持预览流录制，可继续导出 JSON / EDL。
+        </p>
+      </div>
+      <p
+        class="timeline-export__note"
+      >
+        MediaRecorder 仅录制预览画布；本阶段不做 FFmpeg 合成与音频混流。
+      </p>
+    </section>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/timeline/TimelineExportPanel.test.tsx:30:50
+     28|     const onCompose = vi.fn(async () => new Blob(['video'], { type: 'v…
+     29|     const view = render(<TimelineExportPanel timeline={createTimelineP…
+     30|     await act(async () => fireEvent.click(screen.getByRole('button', {…
+       |                                                  ^
+     31|     expect(onDownload).toHaveBeenCalledOnce()
+     32|     expect(onDownload.mock.calls[0][1]).toBe('霜河渡剪辑-合成.webm')
+ ❯ node_modules/@testing-library/react/dist/act-compat.js:47:24
+ ❯ process.env.NODE_ENV.exports.act node_modules/react/cjs/react.development.js:814:22
+ ❯ node_modules/@testing-library/react/dist/act-compat.js:46:25
+ ❯ src/features/timeline/TimelineExportPanel.test.tsx:30:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 8 passed (11)
+   Start at  19:04:25
+   Duration  502ms (transform 83ms, setup 94ms, import 216ms, tests 221ms, environment 211ms)

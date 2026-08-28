@@ -1,8 +1,10 @@
 import { Scissors, Trash2 } from 'lucide-react'
-import { useMemo, useState, type DragEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 
 import { allClips } from './timeline-selectors'
 import { TimelineClipCard, kindCopy } from './TimelineClipCard'
+import { TimelineEffectsInspector } from './TimelineEffectsInspector'
+import { addAudioTrack, assignClipLanes, setClipPlacement } from './timeline-editing'
 import {
   addClip,
   addSubtitleClip,
@@ -46,6 +48,13 @@ export function TimelineEditor({
 }: TimelineEditorProps) {
   const [subtitle, setSubtitle] = useState('')
   const [subtitleDuration, setSubtitleDuration] = useState(3)
+  const trackScrollers = useRef(new Map<string, HTMLDivElement>())
+  const [clipHeights, setClipHeights] = useState<Record<string, number>>({})
+  const clipLanes = useMemo(() => timeline.tracks.reduce<Record<string, number>>((lanes, track) => ({ ...lanes, ...assignClipLanes(track.clips) }), {}), [timeline.tracks])
+  const onClipHeightChange = useCallback((id: string, height: number) => {
+    setClipHeights(current => current[id] === height ? current : { ...current, [id]: height })
+  }, [])
+  const laneHeight = (track: TimelineProject['tracks'][number]) => Math.max(80, ...track.clips.map(clip => (clipHeights[clip.id] ?? 72) + 8))
   const duration = getTimelineDuration(timeline)
   const selectedClip = useMemo(
     () => allClips(timeline).find((clip) => clip.id === selectedClipId),
@@ -59,26 +68,33 @@ export function TimelineEditor({
   const addCandidate = (
     candidate: TimelineSourceCandidate,
     targetKind?: TimelineTrackKind,
+    targetTrackId?: string,
   ) => {
-    const next = addClip(timeline, candidate, undefined, targetKind)
-    apply(next)
+    let next = addClip(timeline, candidate, undefined, targetKind)
     const added = next.tracks
       .flatMap((track) => track.clips)
       .find((clip) => !allClips(timeline).some(({ id }) => id === clip.id))
     if (added) {
+      if (targetTrackId && added.trackId !== targetTrackId) {
+        const target = timeline.tracks.find(t => t.id === targetTrackId)
+        const end = target?.clips.reduce((max, clip) => Math.max(max, clip.startSeconds + clipDuration(clip)), 0) ?? 0
+        next = setClipPlacement(next, added.id, targetTrackId, end)
+      }
+      apply(next)
       onSelectedClipChange(added.id)
-      onCurrentTimeChange(added.startSeconds)
+      onCurrentTimeChange(next.tracks.flatMap(t => t.clips).find(c => c.id === added.id)!.startSeconds)
     }
   }
 
   const dropCandidate = (
     event: DragEvent<HTMLElement>,
     targetKind: TimelineTrackKind,
+    targetTrackId: string,
   ) => {
     event.preventDefault()
     const id = event.dataTransfer.getData(SOURCE_MIME)
     const candidate = candidates.find((item) => item.id === id)
-    if (candidate && candidate.kind === targetKind) addCandidate(candidate, targetKind)
+    if (candidate && candidate.kind === targetKind) addCandidate(candidate, targetKind, targetTrackId)
   }
 
   const selectClip = (clip: TimelineClip) => {
@@ -180,6 +196,7 @@ export function TimelineEditor({
           <h2>多轨时间线</h2>
         </div>
         <output aria-label="当前剪辑时间">{currentTime.toFixed(3)} 秒</output>
+        <button type="button" onClick={() => apply(addAudioTrack(timeline))}>新增音频轨道</button>
       </div>
 
       <div className="professional-timeline__ruler">
@@ -237,11 +254,14 @@ export function TimelineEditor({
                 <header role="rowheader">{track.name}</header>
                 <div
                   className="professional-timeline__dropzone"
+                  ref={element => { if (element) trackScrollers.current.set(track.id, element); else trackScrollers.current.delete(track.id) }}
+                  onScroll={event => { const left = event.currentTarget.scrollLeft; trackScrollers.current.forEach(element => { if (element.scrollLeft !== left) element.scrollLeft = left }) }}
                   aria-label={`${track.name}投放区`}
                   onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => dropCandidate(event, track.kind)}
+                  onDrop={(event) => dropCandidate(event, track.kind, track.id)}
                 >
-                  <ol aria-label={track.kind === 'video' ? '主视频轨' : track.name}>
+                  <ol aria-label={track.kind === 'video' ? '主视频轨' : track.name} style={{ width: Math.max(720, duration * 80), height: Math.max(laneHeight(track), ...track.clips.map(c => (clipLanes[c.id] + 1) * laneHeight(track))) }}>
+                    <li className="timeline-playhead-line" role="presentation" style={{ left: currentTime * 80 }} />
                     {track.clips.map((clip) => (
                       <TimelineClipCard
                         key={clip.id}
@@ -249,6 +269,10 @@ export function TimelineEditor({
                         track={track}
                         clip={clip}
                         selected={clip.id === selectedClipId}
+                        pixelsPerSecond={80}
+                        laneHeight={laneHeight(track)}
+                        laneIndex={clipLanes[clip.id]}
+                        onHeightChange={onClipHeightChange}
                         onSelect={() => selectClip(clip)}
                         onMove={(direction) => {
                           apply(moveClip(timeline, clip.id, direction))
@@ -293,6 +317,7 @@ export function TimelineEditor({
         {selectedClip ? (
           <section className="professional-timeline__inspector" aria-label="片段编辑器">
             <h3>{selectedClip.name}</h3>
+            <TimelineEffectsInspector key={selectedClip.id} timeline={timeline} clip={selectedClip} onChange={apply} />
             <label>
               片段入点
               <input

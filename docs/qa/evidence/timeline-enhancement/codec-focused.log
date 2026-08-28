@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/timeline-enhancements.spec.ts:79:1 › transitions subtitles and aligned audio envelopes edit and survive refresh at 721px (2.5s)
+  ✓  2 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (2.2s)
+  ✓  3 [chromium] › e2e/timeline-enhancements.spec.ts:190:1 › missing media blocks export with recoverable Chinese feedback and no download (1.5s)
+  ✓  4 [chromium] › e2e/timeline-enhancements.spec.ts:200:1 › video clips use decoded frames during local composition and cancel is reachable at 200 percent equivalent viewport (1.8s)
+
+  4 passed (8.8s)

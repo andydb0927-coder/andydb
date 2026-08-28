@@ -61,6 +61,31 @@ function Harness({
 }
 
 describe('professional timeline editor', () => {
+  test('edits transitions, subtitle style and multi-track envelope through accessible controls', async () => {
+    const user = userEvent.setup()
+    let initial = createTimelineProject({ ...makeProjectFixture(), timeline: [] })
+    initial = addClip(addClip(initial, libraryTimelineCandidate(record('one', 'image', 4))), libraryTimelineCandidate(record('two', 'image', 4)))
+    const onTimelineChange = vi.fn()
+    render(<Harness initial={initial} candidates={[libraryTimelineCandidate(record('music', 'audio', 4))]} onTimelineChange={onTimelineChange} />)
+    await user.click(screen.getByRole('button', { name: '选择图片 02' }))
+    await user.selectOptions(screen.getByLabelText('入场转场'), 'dissolve')
+    fireEvent.change(screen.getByLabelText('转场时长（秒）'), { target: { value: '1.5' } })
+    await user.type(screen.getByLabelText('字幕文本'), '字幕验收')
+    await user.click(screen.getByRole('button', { name: '在播放头添加字幕' }))
+    fireEvent.change(screen.getByLabelText('字幕颜色'), { target: { value: '#ffcc00' } })
+    await user.selectOptions(screen.getByLabelText('字幕位置'), 'top')
+    await user.click(screen.getByRole('button', { name: '新增音频轨道' }))
+    await user.click(screen.getByRole('button', { name: '将music素材加入音频轨道' }))
+    const trackOption = screen.getByRole('option', { name: '音频轨道 2' }) as HTMLOptionElement
+    await user.selectOptions(screen.getByLabelText('所在音频轨'), trackOption.value)
+    fireEvent.change(screen.getByLabelText('关键帧时间（秒）'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText('关键帧音量'), { target: { value: '0.4' } })
+    await user.click(screen.getByRole('button', { name: '添加音量关键帧' }))
+    const latest: TimelineProject = onTimelineChange.mock.calls.at(-1)![0]
+    expect(latest.tracks.find(t => t.kind === 'image')!.clips[1].transitionIn).toEqual({ kind: 'dissolve', durationSeconds: 1.5 })
+    expect(latest.tracks.find(t => t.kind === 'subtitle')!.clips[0].subtitleStyle).toMatchObject({ position: 'top', color: '#ffcc00' })
+    expect(latest.tracks.find(t => t.id === trackOption.value)!.clips[0].volumeKeyframes).toEqual([{ timeSeconds: 2, value: 0.4 }])
+  })
   test('renders four tracks and adds draggable sources by drop or keyboard-equivalent button', async () => {
     const user = userEvent.setup()
     const initial = createTimelineProject({ ...makeProjectFixture(), timeline: [] })

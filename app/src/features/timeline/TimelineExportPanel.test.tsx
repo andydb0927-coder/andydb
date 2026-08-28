@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -7,6 +7,35 @@ import { createTimelineProject } from './timeline-project'
 import { TimelineExportPanel } from './TimelineExportPanel'
 
 describe('timeline export panel', () => {
+  test('reports local composition progress, prevents duplicates and cancels without a download', async () => {
+    const onDownload = vi.fn()
+    const onCompose = vi.fn((signal: AbortSignal, progress: (value: { phase: 'rendering'; fraction: number }) => void) => new Promise<Blob>((_, reject) => {
+      progress({ phase: 'rendering', fraction: 0.4 })
+      signal.addEventListener('abort', () => reject(new DOMException('已取消', 'AbortError')))
+    }))
+    render(<TimelineExportPanel timeline={createTimelineProject(makeProjectFixture())} recordingSupported={false} onCompose={onCompose} onDownload={onDownload} />)
+    fireEvent.click(screen.getByRole('button', { name: '导出合成视频' }))
+    expect(screen.getByRole('progressbar', { name: '合成导出进度' })).toHaveAttribute('value', '0.4')
+    expect(screen.getByRole('button', { name: '导出合成视频' })).toBeDisabled()
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '取消导出' })))
+    expect(screen.getByRole('status')).toHaveTextContent('已取消导出')
+    expect(onCompose).toHaveBeenCalledOnce()
+    expect(onDownload).not.toHaveBeenCalled()
+  })
+
+  test('composition downloads only completed output and aborts on unmount', async () => {
+    const onDownload = vi.fn()
+    const onCompose = vi.fn(async () => new Blob(['video'], { type: 'video/webm' }))
+    const view = render(<TimelineExportPanel timeline={createTimelineProject(makeProjectFixture())} recordingSupported={false} onCompose={onCompose} onDownload={onDownload} />)
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '导出合成视频' })))
+    expect(onDownload).toHaveBeenCalledOnce()
+    expect(onDownload.mock.calls[0][1]).toBe('霜河渡剪辑-合成.webm')
+    const pending = vi.fn((_signal: AbortSignal) => new Promise<Blob>(() => {}))
+    view.rerender(<TimelineExportPanel timeline={createTimelineProject(makeProjectFixture())} recordingSupported={false} onCompose={pending} />)
+    fireEvent.click(screen.getByRole('button', { name: '导出合成视频' }))
+    view.unmount()
+    expect(pending.mock.calls[0][0].aborted).toBe(true)
+  })
   test('downloads JSON and EDL through the client-only boundary', async () => {
     const user = userEvent.setup()
     const onDownload = vi.fn()
@@ -74,4 +103,3 @@ describe('timeline export panel', () => {
     expect(onDownload).toHaveBeenCalledOnce()
   })
 })
-

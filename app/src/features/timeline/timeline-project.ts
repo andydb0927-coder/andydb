@@ -9,6 +9,7 @@ import type {
   TimelineEnvironment,
 } from './timeline-types'
 import { clipDuration } from './timeline-math'
+import { sliceVolumeEnvelope } from './timeline-composition'
 import { activeAsset, trackForCanvasNode } from './timeline-sources'
 
 // 保留原入口，持久化契约与调用方无需随文件拆分迁移。
@@ -46,8 +47,8 @@ function cloneWithTracks(
 function packClips(clips: TimelineClip[]) {
   let cursor = 0
   return clips.map((clip, order) => {
-    const packed = { ...clip, order, startSeconds: cursor }
-    cursor += clipDuration(packed)
+    const packed = { ...clip, order, startSeconds: clip.positionLocked || clip.kind === 'subtitle' ? clip.startSeconds : cursor }
+    cursor = packed.startSeconds + clipDuration(packed)
     return packed
   })
 }
@@ -266,7 +267,7 @@ export function trimClip(
   }
   const clips = target.clips.map((candidate) =>
     candidate.id === clipId
-      ? { ...candidate, sourceInSeconds, sourceOutSeconds }
+      ? { ...candidate, sourceInSeconds, sourceOutSeconds, ...(candidate.volumeKeyframes ? { volumeKeyframes: sliceVolumeEnvelope(candidate.volumeKeyframes, (sourceInSeconds - candidate.sourceInSeconds) / (candidate.playbackRate ?? 1), (sourceOutSeconds - candidate.sourceInSeconds) / (candidate.playbackRate ?? 1)) } : {}) }
       : candidate,
   )
   return cloneWithTracks(
@@ -294,7 +295,7 @@ export function updateClipPlaybackRate(
   const current = target.clips.find((clip) => clip.id === clipId)
   if (!current || (current.playbackRate ?? 1) === playbackRate) return timeline
   const clips = target.clips.map((clip) =>
-    clip.id === clipId ? { ...clip, playbackRate } : clip,
+    clip.id === clipId ? { ...clip, playbackRate, ...(clip.volumeKeyframes ? { volumeKeyframes: clip.volumeKeyframes.map(p => ({ ...p, timeSeconds: p.timeSeconds * (clip.playbackRate ?? 1) / playbackRate })) } : {}) } : clip,
   )
   return cloneWithTracks(
     timeline,
@@ -352,17 +353,20 @@ export function splitClip(
   if (!target || !clip || offsetSeconds <= 0 || offsetSeconds >= clipDuration(clip)) {
     return timeline
   }
-  const sourceSplit = clip.sourceInSeconds + offsetSeconds
+  const sourceSplit = clip.sourceInSeconds + offsetSeconds * (clip.playbackRate ?? 1)
   const clips = [...target.clips]
   clips.splice(
     index,
     1,
-    { ...clip, sourceOutSeconds: sourceSplit },
+    { ...clip, sourceOutSeconds: sourceSplit, ...(clip.volumeKeyframes ? { volumeKeyframes: sliceVolumeEnvelope(clip.volumeKeyframes, 0, offsetSeconds) } : {}) },
     {
       ...clip,
       id: environment.randomId(),
       legacyTimelineItemId: undefined,
       sourceInSeconds: sourceSplit,
+      startSeconds: clip.startSeconds + offsetSeconds,
+      transitionIn: undefined,
+      ...(clip.volumeKeyframes ? { volumeKeyframes: sliceVolumeEnvelope(clip.volumeKeyframes, offsetSeconds, clipDuration(clip)) } : {}),
     },
   )
   return cloneWithTracks(

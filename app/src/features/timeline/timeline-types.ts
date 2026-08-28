@@ -26,6 +26,29 @@ export interface TimelineClip {
   legacyTimelineItemId?: string
   playbackRate?: number
   layout?: TimelineClipLayout
+  transitionIn?: TimelineTransition
+  subtitleStyle?: TimelineSubtitleStyle
+  volumeKeyframes?: TimelineVolumeKeyframe[]
+  /** Explicit timeline placement; do not ripple on trim/speed/delete. */
+  positionLocked?: boolean
+}
+
+export interface TimelineTransition {
+  kind: 'fade' | 'dissolve' | 'black'
+  durationSeconds: number
+}
+
+export interface TimelineSubtitleStyle {
+  fontSize: number
+  color: string
+  background: string
+  position: 'top' | 'center' | 'bottom'
+  bold: boolean
+}
+
+export interface TimelineVolumeKeyframe {
+  timeSeconds: number
+  value: number
 }
 
 export type TimelineClipLayoutMode = 'full' | 'picture-in-picture' | 'thirds'

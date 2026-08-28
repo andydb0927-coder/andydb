@@ -23,6 +23,8 @@ import { useProjectStore } from '../project/project-store'
 import { PreviewPlayer } from './PreviewPlayer'
 import { TimelineEditor } from './TimelineEditor'
 import { TimelineExportPanel } from './TimelineExportPanel'
+import { compositionSupported } from './timeline-browser-composition'
+import { exportTimelineVideo } from './timeline-render-export'
 import { activeAt, allClips, candidateSources } from './timeline-selectors'
 import {
   browserPreviewRecorderFactory,
@@ -94,6 +96,7 @@ export function PreviewPage({
   const [library, setLibrary] = useState<LibraryAssetRecord[]>([])
   const [currentTime, setCurrentTime] = useState(0)
   const [selectedClipId, setSelectedClipId] = useState<string>()
+  const [saveError, setSaveError] = useState<string>()
   const [recordingSupported, setRecordingSupported] = useState(false)
   const [membershipPlan, setMembershipPlan] = useState<MembershipPlanId>('free')
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing' | 'error'>(
@@ -102,6 +105,9 @@ export function PreviewPage({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const saveChainRef = useRef<Promise<void>>(Promise.resolve())
   const revisionRef = useRef(0)
+  const pendingSaveRef = useRef<TimelineProject | undefined>(undefined)
+  const currentProjectIdRef = useRef(projectId)
+  currentProjectIdRef.current = projectId
 
   const effectiveTimelineRepository = useMemo(
     () =>
@@ -120,6 +126,18 @@ export function PreviewPage({
     () => recorderFactory ?? browserPreviewRecorderFactory(),
     [recorderFactory],
   )
+
+  const persistTimeline = useCallback((next: TimelineProject) => {
+    pendingSaveRef.current = next
+    saveChainRef.current = saveChainRef.current
+      .then(() => effectiveTimelineRepository.save(next))
+      .then(() => { if (currentProjectIdRef.current === next.projectId && pendingSaveRef.current === next) setSaveError(undefined) })
+      .catch(() => {
+        if (currentProjectIdRef.current === next.projectId) setSaveError('时间线保存失败，当前编辑仍保留在页面中。请重试保存后再离开。')
+      })
+  }, [effectiveTimelineRepository])
+
+  useEffect(() => { setSaveError(undefined); pendingSaveRef.current = undefined }, [projectId])
 
   useEffect(() => {
     if (!projectId || project) return
@@ -159,9 +177,7 @@ export function PreviewPage({
           const merged = mergeLegacyTimeline(base, project)
           if (revisionRef.current !== startingRevision && current) return current
           if (!stored || merged !== stored) {
-            saveChainRef.current = saveChainRef.current
-              .catch(() => undefined)
-              .then(() => effectiveTimelineRepository.save(merged))
+            persistTimeline(merged)
           }
           return merged
         })
@@ -172,7 +188,7 @@ export function PreviewPage({
     return () => {
       active = false
     }
-  }, [effectiveLibraryRepository, effectiveTimelineRepository, project?.id])
+  }, [effectiveLibraryRepository, effectiveTimelineRepository, persistTimeline, project?.id])
 
   const resolved = useMemo(
     () => (timeline && project ? resolveTimelineClips(timeline, project) : undefined),
@@ -202,15 +218,6 @@ export function PreviewPage({
     )
     return () => { mounted = false }
   }, [membershipStore])
-
-  const persistTimeline = useCallback(
-    (next: TimelineProject) => {
-      saveChainRef.current = saveChainRef.current
-        .catch(() => undefined)
-        .then(() => effectiveTimelineRepository.save(next))
-    },
-    [effectiveTimelineRepository],
-  )
 
   const syncLegacyOrder = useCallback(
     (current: TimelineProject, next: TimelineProject) => {
@@ -278,6 +285,7 @@ export function PreviewPage({
           </Link>
         ) : null}
       </header>
+      {saveError && <div role="alert"><p>{saveError}</p><button type="button" onClick={() => { const next = pendingSaveRef.current; if (next && next.projectId === projectId) persistTimeline(next) }}>重试保存时间线</button></div>}
       {project && timeline && resolved ? (
         <>
           <div className="preview-page__workspace">
@@ -335,9 +343,11 @@ export function PreviewPage({
             />
           ) : null}
           <TimelineExportPanel
+            key={project.id}
             timeline={timeline}
             recordingSupported={recordingSupported}
             membershipPlan={membershipPlan}
+            onCompose={compositionSupported() ? (signal, onProgress) => exportTimelineVideo(timeline, resolved, { signal, onProgress }) : undefined}
             onStartRecording={
               recordingSupported && effectiveRecorderFactory
                 ? () =>

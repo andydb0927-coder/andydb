@@ -1,0 +1,156 @@
+
+Running 5 tests using 5 workers
+
+  ✘  5 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (1.0m)
+  ✘  4 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (1.0m)
+  ✘  2 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (1.0m)
+  ✘  1 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (1.0m)
+  ✘  3 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (1.0m)
+
+
+  1) [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForEvent: Test timeout of 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      140 |   await expect(page.getByText('已取消导出，未下载残缺文件。')).toBeVisible()
+      141 |   expect(downloads).toHaveLength(0)
+    > 142 |   const event = page.waitForEvent('download')
+          |                      ^
+      143 |   await button.click()
+      144 |   await expect(button).toBeDisabled()
+      145 |   const download = await event
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:142:22
+
+    Error Context: test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForEvent: Test timeout of 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      140 |   await expect(page.getByText('已取消导出，未下载残缺文件。')).toBeVisible()
+      141 |   expect(downloads).toHaveLength(0)
+    > 142 |   const event = page.waitForEvent('download')
+          |                      ^
+      143 |   await button.click()
+      144 |   await expect(button).toBeDisabled()
+      145 |   const download = await event
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:142:22
+
+    Error Context: test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForEvent: Test timeout of 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      140 |   await expect(page.getByText('已取消导出，未下载残缺文件。')).toBeVisible()
+      141 |   expect(downloads).toHaveLength(0)
+    > 142 |   const event = page.waitForEvent('download')
+          |                      ^
+      143 |   await button.click()
+      144 |   await expect(button).toBeDisabled()
+      145 |   const download = await event
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:142:22
+
+    Error Context: test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat2/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForEvent: Test timeout of 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      140 |   await expect(page.getByText('已取消导出，未下载残缺文件。')).toBeVisible()
+      141 |   expect(downloads).toHaveLength(0)
+    > 142 |   const event = page.waitForEvent('download')
+          |                      ^
+      143 |   await button.click()
+      144 |   await expect(button).toBeDisabled()
+      145 |   const download = await event
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:142:22
+
+    Error Context: test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat3/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat3/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat3/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForEvent: Test timeout of 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      140 |   await expect(page.getByText('已取消导出，未下载残缺文件。')).toBeVisible()
+      141 |   expect(downloads).toHaveLength(0)
+    > 142 |   const event = page.waitForEvent('download')
+          |                      ^
+      143 |   await button.click()
+      144 |   await expect(button).toBeDisabled()
+      145 |   const download = await event
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/timeline-enhancements.spec.ts:142:22
+
+    Error Context: test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat4/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat4/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/timeline-enhancements-real-23037-s-cancel-drops-partial-file-chromium-repeat4/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+    [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+    [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+    [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file
+    [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file

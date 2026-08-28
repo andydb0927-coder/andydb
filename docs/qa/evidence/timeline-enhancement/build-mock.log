@@ -1,0 +1,74 @@
+
+> app@0.0.0 build:mock
+> tsc -b && VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= vite build && node scripts/github-pages-fallback.mjs
+
+vite v8.2.0 building client environment for production...
+transforming...✓ 2240 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                  0.66 kB │ gzip:   0.37 kB
+dist/assets/subject-repository-D-hXHth1.css      2.55 kB │ gzip:   0.79 kB
+dist/assets/CanvasPage-sAdejObn.css             26.37 kB │ gzip:   4.73 kB
+dist/assets/index-CWcdAwof.css                 355.58 kB │ gzip:  53.64 kB
+dist/assets/timeline-math-D1mNsfnL.js            0.11 kB │ gzip:   0.11 kB
+dist/assets/chevron-left-D_tKnErT.js             0.11 kB │ gzip:   0.13 kB
+dist/assets/chevron-right-DUKKn4Il.js            0.11 kB │ gzip:   0.13 kB
+dist/assets/arrow-left-2aRthHnl.js               0.15 kB │ gzip:   0.15 kB
+dist/assets/arrow-right-C11b6EtX.js              0.15 kB │ gzip:   0.15 kB
+dist/assets/arrow-up-right-aL7Hy8Vk.js           0.15 kB │ gzip:   0.15 kB
+dist/assets/search-L6dnrsPM.js                   0.16 kB │ gzip:   0.16 kB
+dist/assets/bookmark-BIzNY4ZI.js                 0.21 kB │ gzip:   0.18 kB
+dist/assets/copy-C0o21z5_.js                     0.22 kB │ gzip:   0.20 kB
+dist/assets/users-round-BMAZgHRU.js              0.24 kB │ gzip:   0.21 kB
+dist/assets/lock-keyhole-Dl9LDpzI.js             0.24 kB │ gzip:   0.21 kB
+dist/assets/eye-Kw1w2jo9.js                      0.24 kB │ gzip:   0.19 kB
+dist/assets/heart-C6MN3QYz.js                    0.24 kB │ gzip:   0.20 kB
+dist/assets/image-CUsn8YE0.js                    0.25 kB │ gzip:   0.21 kB
+dist/assets/book-open-cd2dHe-u.js                0.27 kB │ gzip:   0.21 kB
+dist/assets/send-D90LTXix.js                     0.27 kB │ gzip:   0.22 kB
+dist/assets/timeline-repository-fPGjvUO7.js      0.30 kB │ gzip:   0.18 kB
+dist/assets/play-Boc85zLu.js                     0.33 kB │ gzip:   0.24 kB
+dist/assets/Button-DVWQNq-L.js                   0.35 kB │ gzip:   0.26 kB
+dist/assets/film-BEbmlzmo.js                     0.39 kB │ gzip:   0.23 kB
+dist/assets/calendar-days-CLmjj73Z.js            0.48 kB │ gzip:   0.25 kB
+dist/assets/wand-sparkles-BHBWX5j4.js            0.50 kB │ gzip:   0.28 kB
+dist/assets/rolldown-runtime-CbXtAM7H.js         0.58 kB │ gzip:   0.36 kB
+dist/assets/SubjectDetailsPage-DMvCOz33.js       1.06 kB │ gzip:   0.67 kB
+dist/assets/membership-repository-5eCqpRg0.js    1.82 kB │ gzip:   0.81 kB
+dist/assets/community-repository-DjsR2F2K.js     1.94 kB │ gzip:   0.72 kB
+dist/assets/TutorialCenterPage-CtPtIIwe.js       2.22 kB │ gzip:   0.97 kB
+dist/assets/PublishedWorkViewPage-bSyjq7NL.js    2.24 kB │ gzip:   1.05 kB
+dist/assets/PublishedWorksPage-QRyvjorb.js       2.62 kB │ gzip:   1.17 kB
+dist/assets/ChallengesPage-HnES34Wh.js           3.36 kB │ gzip:   1.33 kB
+dist/assets/TutorialDetailPage-rrLoxzSV.js       3.45 kB │ gzip:   1.28 kB
+dist/assets/subject-consistency-D1npA622.js      3.82 kB │ gzip:   1.73 kB
+dist/assets/demo-works-cRAyVmsQ.js               5.35 kB │ gzip:   2.26 kB
+dist/assets/CreationProcessPage-Cr5RIAWb.js      5.45 kB │ gzip:   2.34 kB
+dist/assets/tutorial-catalog-GbouyWCh.js         5.58 kB │ gzip:   2.59 kB
+dist/assets/WorkDetailPage-DPVB8baQ.js           6.06 kB │ gzip:   2.45 kB
+dist/assets/MembershipPage-Dw6PJfC5.js           6.17 kB │ gzip:   2.57 kB
+dist/assets/PreviewPlayer-2lp4avdx.js            6.71 kB │ gzip:   2.74 kB
+dist/assets/ChallengeDetailPage-CPfJXT2I.js      7.79 kB │ gzip:   2.22 kB
+dist/assets/HelpCenterPage-DhCuDF7Y.js           7.85 kB │ gzip:   3.57 kB
+dist/assets/jsx-runtime-CIHwb6Jn.js              7.89 kB │ gzip:   2.99 kB
+dist/assets/subject-repository-BhGZRVd0.js       8.36 kB │ gzip:   3.37 kB
+dist/assets/audio-voice-catalog-ChJXxc-t.js      9.01 kB │ gzip:   3.81 kB
+dist/assets/ProjectsPage-Cs9l7XOp.js             9.38 kB │ gzip:   3.34 kB
+dist/assets/timeline-project-D9q_Lif6.js        10.17 kB │ gzip:   3.59 kB
+dist/assets/browser-download-C9nIQhlc.js        11.86 kB │ gzip:   4.13 kB
+dist/assets/AgentsPage-D9wDwbA0.js              14.67 kB │ gzip:   5.60 kB
+dist/assets/ProjectLauncherPage-2jhFLa-e.js     23.40 kB │ gzip:   7.91 kB
+dist/assets/PreviewPage-H_3zKSQ7.js             34.63 kB │ gzip:  12.08 kB
+dist/assets/project-store-BUXB5A5x.js           35.19 kB │ gzip:  10.32 kB
+dist/assets/builtin-skills-BvVXTDn_.js          78.53 kB │ gzip:  26.18 kB
+dist/assets/src-D8uekRiy.js                    171.35 kB │ gzip:  42.85 kB
+dist/assets/index-BMaItJ5P.js                  408.96 kB │ gzip: 132.37 kB
+dist/assets/Director3DViewport-DtyCbYyr.js     554.03 kB │ gzip: 139.43 kB
+dist/assets/CanvasPage-sM0Q6yB9.js             673.39 kB │ gzip: 201.32 kB
+
+✓ built in 289ms
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

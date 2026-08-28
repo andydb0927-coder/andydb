@@ -17,6 +17,7 @@
     "@xyflow/react": "^12.11.2",
     "dexie": "^4.4.4",
     "lucide-react": "^1.28.0",
+    "mediabunny": "1.55.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",

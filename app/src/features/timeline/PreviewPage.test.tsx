@@ -204,6 +204,15 @@ afterEach(async () => {
 })
 
 describe('preview journey', () => {
+  test('failed timeline saves show a retry and retain the last edited snapshot', async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error('quota')).mockResolvedValue(undefined)
+    renderPreviewWithProps({ timelineRepository: { load: async () => undefined, save } })
+    expect(await screen.findByText('时间线保存失败，当前编辑仍保留在页面中。请重试保存后再离开。')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: '重试保存时间线' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: '重试保存时间线' })).not.toBeInTheDocument())
+    expect(save).toHaveBeenCalledTimes(2)
+    expect(save.mock.calls[1][0]).toEqual(save.mock.calls[0][0])
+  })
   test('plays, pauses, and seeks the controlled professional playhead', async () => {
     vi.useFakeTimers()
     renderPreview()

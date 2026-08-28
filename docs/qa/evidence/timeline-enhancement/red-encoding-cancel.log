@@ -1,0 +1,14 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/timeline-render-export.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/timeline/timeline-render-export.test.ts (9 tests | 1 failed) 606ms
+   × cancellation interrupts encoder backpressure without waiting for the queued frame 158ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  19:40:58
+   Duration  1.00s (transform 39ms, setup 91ms, import 37ms, tests 606ms, environment 199ms)

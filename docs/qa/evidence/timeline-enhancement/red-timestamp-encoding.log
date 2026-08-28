@@ -1,0 +1,156 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/timeline-render-export.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/timeline/timeline-render-export.test.ts (8 tests | 7 failed) 1028ms
+   × local composition renders to completion with progress and releases all resources 3ms
+   × final captured frame is flushed before returning the completed artifact 1006ms
+   × encoder backpressure never skips timestamps or truncates the final frame 2ms
+   × cancellation drops partial output and disposes the encoder 8ms
+   × decode/render errors fail explicitly and release without successful output 5ms
+   × encoder failure and empty output never publish a partial artifact 1ms
+   × a cancelled late preparation is released and never starts encoding 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > local composition renders to completion with progress and releases all resources
+TypeError: runtime.cancelFrame is not a function
+ ❯ exportTimelineVideo src/features/timeline/timeline-render-export.ts:115:13
+    113|     return output
+    114|   } finally {
+    115|     runtime.cancelFrame(frame)
+       |             ^
+    116|     try { if (recorder && recorder.state !== 'inactive') recorder.stop…
+    117|     finally { await prepared.dispose() }
+ ❯ src/features/timeline/timeline-render-export.test.ts:15:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > final captured frame is flushed before returning the completed artifact
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/features/timeline/timeline-render-export.test.ts:28:51
+     26|   h.prepared.flush.mockImplementation(() => new Promise<Blob>(resolve …
+     27|   const pending = exportTimelineVideo(h.timeline, h.resolved, { signal…
+     28|   await vi.waitFor(() => expect(h.prepared.flush).toHaveBeenCalledOnce…
+       |                                                   ^
+     29|   expect(h.prepared.dispose).not.toHaveBeenCalled()
+     30|   finish(new Blob(['complete']))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > encoder backpressure never skips timestamps or truncates the final frame
+TypeError: runtime.cancelFrame is not a function
+ ❯ exportTimelineVideo src/features/timeline/timeline-render-export.ts:115:13
+    113|     return output
+    114|   } finally {
+    115|     runtime.cancelFrame(frame)
+       |             ^
+    116|     try { if (recorder && recorder.state !== 'inactive') recorder.stop…
+    117|     finally { await prepared.dispose() }
+ ❯ src/features/timeline/timeline-render-export.test.ts:38:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > cancellation drops partial output and disposes the encoder
+AssertionError: expected TypeError: runtime.cancelFrame is not a f… to match object { name: 'AbortError' }
+
+- Expected
++ Received
+
+- {
+-   "name": "AbortError",
++ TypeError {
++   "message": "runtime.cancelFrame is not a function",
+  }
+
+ ❯ src/features/timeline/timeline-render-export.test.ts:53:102
+     51|   const h = harness(), controller = new AbortController()
+     52|   h.prepared.encode.mockImplementationOnce(async () => { controller.ab…
+     53|   await expect(exportTimelineVideo(h.timeline, h.resolved, { signal: c…
+       |                                                                                                      ^
+     54|   expect(h.prepared.flush).not.toHaveBeenCalled()
+     55|   expect(h.prepared.dispose).toHaveBeenCalledOnce()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > decode/render errors fail explicitly and release without successful output
+AssertionError: expected [Function] to throw error including 'decode failure' but got 'runtime.cancelFrame is not a function'
+
+Expected: "decode failure"
+Received: "runtime.cancelFrame is not a function"
+
+ ❯ src/features/timeline/timeline-render-export.test.ts:61:113
+     59|   const h = harness()
+     60|   h.prepared.render.mockRejectedValueOnce(new Error('decode failure'))
+     61|   await expect(exportTimelineVideo(h.timeline, h.resolved, { signal: n…
+       |                                                                                                                 ^
+     62|   expect(h.prepared.dispose).toHaveBeenCalledOnce()
+     63|   expect(h.prepared.encode).not.toHaveBeenCalled()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > encoder failure and empty output never publish a partial artifact
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/features/timeline/timeline-render-export.test.ts:79:32
+     77|     else h.prepared[failure].mockRejectedValueOnce(new Error('encode f…
+     78|     await expect(exportTimelineVideo(h.timeline, h.resolved, { signal:…
+     79|     expect(h.prepared.dispose).toHaveBeenCalledOnce()
+       |                                ^
+     80|   }
+     81| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  src/features/timeline/timeline-render-export.test.ts > a cancelled late preparation is released and never starts encoding
+AssertionError: expected TypeError: runtime.cancelFrame is not a f… to match object { name: 'AbortError' }
+
+- Expected
++ Received
+
+- {
+-   "name": "AbortError",
++ TypeError {
++   "message": "runtime.cancelFrame is not a function",
+  }
+
+ ❯ src/features/timeline/timeline-render-export.test.ts:86:102
+     84|   const h = harness(), controller = new AbortController()
+     85|   h.runtime.prepare = async () => { controller.abort(); return h.prepa…
+     86|   await expect(exportTimelineVideo(h.timeline, h.resolved, { signal: c…
+       |                                                                                                      ^
+     87|   expect(h.prepared.dispose).toHaveBeenCalledOnce()
+     88|   expect(h.prepared.encode).not.toHaveBeenCalled()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+TypeError: runtime.cancelFrame is not a function
+ ❯ exportTimelineVideo src/features/timeline/timeline-render-export.ts:115:13
+    113|     return output
+    114|   } finally {
+    115|     runtime.cancelFrame(frame)
+       |             ^
+    116|     try { if (recorder && recorder.state !== 'inactive') recorder.stop…
+    117|     finally { await prepared.dispose() }
+ ❯ processTicksAndRejections node:internal/process/task_queues:103:5
+
+This error originated in "src/features/timeline/timeline-render-export.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "final captured frame is flushed before returning the completed artifact". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed (8)
+     Errors  1 error
+   Start at  19:34:57
+   Duration  1.42s (transform 39ms, setup 93ms, import 37ms, tests 1.03s, environment 191ms)

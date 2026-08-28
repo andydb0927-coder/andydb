@@ -1,0 +1,36 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/timeline/timeline-enhancements.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/timeline/timeline-enhancements.test.ts (7 tests | 1 failed) 7ms
+     × speed changes and splitting preserve source-aligned envelope values and locked placement 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/timeline/timeline-enhancements.test.ts > timeline composition contracts > speed changes and splitting preserve source-aligned envelope values and locked placement
+AssertionError: expected 8 to be 4 // Object.is equality
+
+- Expected
++ Received
+
+- 4
++ 8
+
+ ❯ src/features/timeline/timeline-enhancements.test.ts:80:106
+     78|     timeline = setAudioEnvelope(timeline, clip.id, [{ timeSeconds: 0, …
+     79|     timeline = updateClipPlaybackRate(timeline, clip.id, 2)
+     80|     expect(timeline.tracks.find(t => t.kind === 'audio')!.clips[0].vol…
+       |                                                                                                          ^
+     81|     timeline = splitClip(timeline, clip.id, 2)
+     82|     const [left, right] = timeline.tracks.find(t => t.kind === 'audio'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  19:09:21
+   Duration  243ms (transform 38ms, setup 45ms, import 38ms, tests 7ms, environment 95ms)
