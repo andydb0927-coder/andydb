@@ -21,6 +21,7 @@ export type ModelParameterName =
   | 'voice'
   | 'speed'
   | 'volume'
+  | 'pitch'
   | 'sampleRate'
   | 'format'
   | 'negativePrompt'

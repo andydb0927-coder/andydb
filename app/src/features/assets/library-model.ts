@@ -21,6 +21,8 @@ export interface LibraryAssetRecord {
   durationSeconds?: number
   framesPerSecond?: number
   resolution?: string
+  sampleRate?: number
+  audioChannels?: number
 }
 
 export function libraryRecordToAsset(record: LibraryAssetRecord): Asset {
@@ -34,6 +36,8 @@ export function libraryRecordToAsset(record: LibraryAssetRecord): Asset {
     durationSeconds: record.durationSeconds,
     ...(record.framesPerSecond === undefined ? {} : { framesPerSecond: record.framesPerSecond }),
     ...(record.resolution === undefined ? {} : { resolution: record.resolution }),
+    ...(record.sampleRate === undefined ? {} : { sampleRate: record.sampleRate }),
+    ...(record.audioChannels === undefined ? {} : { audioChannels: record.audioChannels }),
   }
 }
 

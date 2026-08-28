@@ -1,4 +1,5 @@
 import { videoProcessingPlan } from './video-processing-plan'
+import { audioProcessingPlan, renderAudioEffects, type AudioEffectOptions } from './audio-processing'
 
 export type ImageGridSize = 2 | 3
 
@@ -18,6 +19,8 @@ export interface ProcessedMedia {
   height?: number
   durationSeconds?: number
   framesPerSecond?: number
+  sampleRate?: number
+  audioChannels?: number
 }
 
 export interface StoryboardLayoutInput {
@@ -42,7 +45,7 @@ export interface StoryboardLayoutOptions {
   rows?: number
 }
 
-export interface AudioSliceOptions {
+export interface AudioSliceOptions extends AudioEffectOptions {
   startSeconds: number
   endSeconds: number
   playbackRate: number
@@ -550,14 +553,17 @@ export function wavDurationSeconds(bytes: Uint8Array) {
 export async function extractAudioToWav(
   sourceUrl: string,
   options?: Partial<AudioSliceOptions>,
+  signal?: AbortSignal,
 ): Promise<ProcessedMedia & { waveform: number[] }> {
-  const response = await fetch(sourceUrl)
+  signal?.throwIfAborted()
+  const response = await fetch(sourceUrl, { signal })
   if (!response.ok) throw new Error(`无法读取媒体音轨（${response.status}）。`)
   const AudioContextConstructor = window.AudioContext
   if (!AudioContextConstructor) throw new Error('当前浏览器不支持 AudioContext 音轨解码。')
   const context = new AudioContextConstructor()
   try {
     const buffer = await context.decodeAudioData(await response.arrayBuffer())
+    signal?.throwIfAborted()
     const channels = Array.from(
       { length: buffer.numberOfChannels },
       (_, index) => buffer.getChannelData(index),
@@ -565,17 +571,26 @@ export async function extractAudioToWav(
     const startSeconds = options?.startSeconds ?? 0
     const endSeconds = options?.endSeconds ?? buffer.duration
     const playbackRate = options?.playbackRate ?? 1
-    const processed = sliceAndResampleChannels(channels, buffer.sampleRate, {
+    const selection = {
       startSeconds,
       endSeconds,
       playbackRate,
-    })
+      ...options,
+    }
+    audioProcessingPlan(channels, buffer.sampleRate, selection)
+    let processed = sliceAndResampleChannels(channels, buffer.sampleRate, selection)
+    if (options?.fadeInSeconds || options?.fadeOutSeconds || options?.normalize) {
+      processed = await renderAudioEffects(processed, buffer.sampleRate, options, signal)
+    }
+    signal?.throwIfAborted()
     const wav = encodePcm16Wav(processed, buffer.sampleRate)
     const waveform = waveformPeaks(processed[0], 64)
     return {
       dataUrl: await blobToDataUrl(new Blob([wav], { type: 'audio/wav' })),
       mimeType: 'audio/wav',
       durationSeconds: wavDurationSeconds(wav),
+      sampleRate: buffer.sampleRate,
+      audioChannels: processed.length,
       waveform,
     }
   } catch (error) {
@@ -583,7 +598,7 @@ export async function extractAudioToWav(
       ? error
       : new Error('无法解码媒体音轨。')
   } finally {
-    void context.close()
+    await context.close()
   }
 }
 

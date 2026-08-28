@@ -664,10 +664,10 @@ test('shows persistent audio duration, voice, speed, and volume controls', async
   expect(within(panel).getByText('00:12')).toBeVisible()
   expect(within(panel).getByRole('button', { name: '音频智能断句切分' })).toBeDisabled()
   expect(within(panel).getByText(/待接入音频智能断句切分服务/, { selector: 'small' })).toBeVisible()
-  await user.selectOptions(within(panel).getByRole('combobox', { name: '音色' }), '沉稳男声')
-  await user.clear(within(panel).getByRole('spinbutton', { name: '语速' }))
-  await user.type(within(panel).getByRole('spinbutton', { name: '语速' }), '1.2')
-  expect(onUpdateNodeDetails).toHaveBeenCalled()
+  await user.selectOptions(within(panel).getByRole('combobox', { name: '音色' }), 'zh_male_m191_uranus_bigtts')
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(expect.objectContaining({ voice: 'zh_male_m191_uranus_bigtts' }))
+  fireEvent.change(within(panel).getByRole('slider', { name: '语速' }), { target: { value: '1.2' } })
+  expect(onUpdateNodeDetails).toHaveBeenLastCalledWith(expect.objectContaining({ speed: 1.2 }))
 })
 
 test('switches between real audio providers with manifest defaults and estimated cost', async () => {
@@ -807,7 +807,7 @@ test('offers waveform selection, preview speed, and real WAV processing for audi
     startSeconds: 1,
     endSeconds: 10,
     playbackRate: 1.5,
-  })
+  }, expect.any(AbortSignal))
 })
 
 test('adds, sorts, and removes director shots with camera hints', async () => {

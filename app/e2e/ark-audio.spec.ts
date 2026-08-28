@@ -83,8 +83,9 @@ test('selects Ark TTS, generates intercepted audio, and restores the persistent 
     '清晨薄雾中的古桥，温暖女声旁白。',
   )
   await panel.getByRole('combobox', { name: '输出格式' }).selectOption('wav')
-  await panel.getByRole('spinbutton', { name: '语速' }).fill('1.2')
-  await panel.getByRole('spinbutton', { name: '音量' }).fill('75')
+  await panel.getByRole('slider', { name: '语速' }).press('ArrowRight')
+  await panel.getByRole('slider', { name: '语速' }).press('ArrowRight')
+  await expect(panel.getByRole('slider', { name: '音量' })).toHaveValue('75')
   await page.getByRole('button', { name: '适配画布' }).click()
   await panel
     .getByRole('button', { name: '生成音频，预计成本 1' })

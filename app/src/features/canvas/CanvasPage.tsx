@@ -1,6 +1,8 @@
 import { sameSelection, downstreamConsumers } from './canvas-page-selectors'
 import { restoreTaskStyle } from '../styles/style-model'
 import { videoVersionHistory } from '../project/video-version-history'
+import { audioVersionHistory, audioVoiceSamples } from '../project/audio-version-history'
+import { audioProcessingErrorMessage } from '../media/audio-processing'
 import { setVideoFrameReference } from '../generation/video-generation-semantics'
 import { CanvasGenerationDialogs, type AnalysisSession, type ImageEditSession, type VideoContinueSession } from './CanvasGenerationDialogs'
 import { CanvasProjectDialogs } from './CanvasProjectDialogs'
@@ -1903,15 +1905,27 @@ export function CanvasPage({
     [saveProcessedAsset, selectOnlyNode],
   )
 
+  const audioProcessingRef = useRef<AbortController | undefined>(undefined)
+  useEffect(() => () => { audioProcessingRef.current?.abort(); audioProcessingRef.current = undefined }, [projectId, project?.activeCanvasId])
   const processAudioNode = useCallback(
-    async (nodeId: string, options: AudioSliceOptions) => {
+    async (nodeId: string, options: AudioSliceOptions, signal?: AbortSignal) => {
       const currentProject = useProjectStore.getState().activeProject
       const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
       const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
-      if (!sourceNode || sourceAsset?.kind !== 'audio') return
-      setGenerationFeedback('正在截取并重采样真实音频…')
+      if (!sourceNode || sourceAsset?.kind !== 'audio') throw new Error('原音频已不存在，请重新选择音频。')
+      if (audioProcessingRef.current) throw new Error('已有音频正在处理，请等待完成或取消。')
+      signal?.throwIfAborted()
+      const controller = new AbortController()
+      const cancel = () => controller.abort()
+      signal?.addEventListener('abort', cancel, { once: true })
+      audioProcessingRef.current = controller
+      const canvasId = currentProject?.activeCanvasId
+      setGenerationFeedback('正在浏览器内截取、变速并离线渲染音频…')
       try {
-        const result = await extractAudioToWav(sourceAsset.url, options)
+        const result = await extractAudioToWav(sourceAsset.url, options, controller.signal)
+        controller.signal.throwIfAborted()
+        const latest = useProjectStore.getState().activeProject
+        if (!latest || latest.id !== currentProject?.id || latest.activeCanvasId !== canvasId || activeNodeAsset(latest, nodeId)?.id !== sourceAsset.id) throw new DOMException('来源音频已变更，处理已取消', 'AbortError')
         const createdId = await saveProcessedAsset(
           nodeId,
           result,
@@ -1919,10 +1933,15 @@ export function CanvasPage({
           `${sourceNode.title} ${options.playbackRate.toFixed(1)}x`,
           { x: 420, y: 200 },
         )
+        if (controller.signal.aborted) return
         selectOnlyNode(createdId)
-        setGenerationFeedback('已导出截取/变速 WAV，结果已写入资产库。')
+        setGenerationFeedback('已导出本地处理 WAV（截取/变速/淡入淡出/归一化），结果已写入资产库。')
       } catch (error) {
-        setGenerationFeedback(error instanceof Error ? error.message : '音频处理失败。')
+        if (!controller.signal.aborted) setGenerationFeedback(audioProcessingErrorMessage(error))
+        throw error
+      } finally {
+        signal?.removeEventListener('abort', cancel)
+        if (audioProcessingRef.current === controller) audioProcessingRef.current = undefined
       }
     },
     [saveProcessedAsset, selectOnlyNode],
@@ -2201,6 +2220,12 @@ export function CanvasPage({
           videoReferences,
           videoFrameAssets,
           videoVersions: node.kind === 'video' ? videoVersionHistory(project, node) : [],
+          audioVersions: node.details?.type === 'audio' ? audioVersionHistory(project, node) : [],
+          audioVoiceSamples: node.details?.type === 'audio' ? audioVoiceSamples(project) : [],
+          onRestoreAudioVersion: (versionId) => {
+            const restored = useProjectStore.getState().restoreAudioVersion(node.id, versionId)
+            setGenerationFeedback(restored ? '已恢复音频版本、音色与生成参数，下游引用已更新；可撤销。' : '当前音频版本无法恢复，请检查任务状态与媒体。')
+          },
           onRestoreVideoVersion: (versionId) => {
             const restored = useProjectStore.getState().restoreVideoVersion(node.id, versionId)
             setGenerationFeedback(restored ? '已恢复视频版本与生成参数，下游引用已更新；可撤销。' : '当前版本无法恢复，请检查任务状态与媒体。')
@@ -2457,7 +2482,7 @@ export function CanvasPage({
             captureRealVideoFrame(node.id, tool, video, seconds),
           onProcessVideo: (options) => processVideoNode(node.id, options),
           onExtractVideoAudio: () => extractVideoAudio(node.id),
-          onProcessAudio: (options) => processAudioNode(node.id, options),
+          onProcessAudio: (options, signal) => processAudioNode(node.id, options, signal),
           onSplitImage: (grid, group) => splitImageNode(node.id, grid, group),
           onSaveImageAnnotations: (annotations) =>
             saveImageAnnotations(node.id, annotations),
@@ -2602,6 +2627,7 @@ export function CanvasPage({
               voice: details.voice,
               speed: details.speed,
               volume: details.volume,
+              pitch: details.pitch ?? 0,
               duration: details.durationSeconds,
               sampleRate: details.sampleRate ?? 24_000,
               format: details.format ?? 'mp3',

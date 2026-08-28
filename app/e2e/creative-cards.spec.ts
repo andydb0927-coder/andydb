@@ -83,6 +83,7 @@ async function createQuickCardAtBlank(
 
 async function createScriptCard(page: Page) {
   await createQuickCardAtBlank(page, '故事脚本生成')
+  await fitCreatedCardsIntoView(page, ['故事脚本 01'])
   await page.getByRole('button', { name: '故事脚本 01', exact: true }).click()
   await page.getByRole('button', { name: '编辑卡片' }).click()
   const dialog = page.getByRole('dialog', { name: '编辑剧本卡' })
@@ -97,6 +98,10 @@ async function createScriptCard(page: Page) {
 
 async function createCharacterCard(page: Page) {
   await createQuickCardAtBlank(page, '角色三视图', true)
+  // A newly placed card may extend beyond the viewport. Reuse the same
+  // measured Fit View precondition used for connection/edit actions below,
+  // instead of clicking while native scroll and canvas placement settle.
+  await fitCreatedCardsIntoView(page, ['角色三视图 01'])
   await page.getByRole('button', { name: '角色三视图 01', exact: true }).click()
   await page.getByRole('button', { name: '编辑卡片' }).click()
   const dialog = page.getByRole('dialog', { name: '编辑角色卡' })
@@ -112,6 +117,7 @@ async function createCharacterCard(page: Page) {
 
 async function createWorldviewCard(page: Page) {
   await createQuickCardAtBlank(page, '世界观卡')
+  await fitCreatedCardsIntoView(page, ['世界观卡 01'])
   await page.getByRole('button', { name: '世界观卡 01', exact: true }).click()
   await page.getByRole('button', { name: '编辑卡片' }).click()
   const dialog = page.getByRole('dialog', { name: '编辑世界观卡' })

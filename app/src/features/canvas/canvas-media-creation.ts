@@ -68,5 +68,7 @@ export function processedMediaRecord(
     height: media.height,
     durationSeconds: media.durationSeconds,
     ...(media.framesPerSecond === undefined ? {} : { framesPerSecond: media.framesPerSecond }),
+    ...(media.sampleRate === undefined ? {} : { sampleRate: media.sampleRate }),
+    ...(media.audioChannels === undefined ? {} : { audioChannels: media.audioChannels }),
   }
 }

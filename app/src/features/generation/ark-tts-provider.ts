@@ -4,6 +4,8 @@ import type {
   GenerationUsage,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { officialAudioVoices } from './audio-voice-catalog'
+import { base64WavMetadata } from '../media/audio-metadata'
 import { assertProviderResponse, fetchProviderResponse } from './generation-errors'
 import {
   resolveModelParameterManifest,
@@ -18,6 +20,7 @@ import {
   envValue,
   providerRate,
   providerVolume,
+  providerPitch,
   resolveSpeechApiBase,
   sampleRateParameter,
   voiceId,
@@ -34,11 +37,12 @@ const parameterManifest: ModelParameterManifest = {
   audioMode: { type: 'enum', defaultValue: 'tts', options: ['tts'] },
   voice: {
     type: 'enum',
-    defaultValue: '温暖女声',
-    options: ['温暖女声', '沉稳男声', '清亮少年', '纪录片旁白'],
+    defaultValue: officialAudioVoices[0].id,
+    options: officialAudioVoices.map(voice => voice.id),
   },
   speed: { type: 'number', defaultValue: 1, min: 0.5, max: 2, step: 0.1 },
   volume: { type: 'number', defaultValue: 75, min: 0, max: 100, step: 1 },
+  pitch: { type: 'number', defaultValue: 0, min: -12, max: 12, step: 1 },
   sampleRate: {
     type: 'enum',
     defaultValue: '24000',
@@ -88,6 +92,9 @@ function requestBody(request: GenerationRequest) {
     req_params: {
       text: request.prompt.trim(),
       speaker: voiceId(request.parameters?.voice),
+      ...(providerPitch(request.parameters?.pitch) === 0 ? {} : {
+        additions: JSON.stringify({ post_process: { pitch: providerPitch(request.parameters?.pitch) } }),
+      }),
       audio_params: {
         format,
         sample_rate: sampleRateParameter(
@@ -137,6 +144,8 @@ function resultFor(
       kind: 'audio',
       url: dataUrlFromBase64(base64, format),
       mimeType: audioMimeType(format),
+      sampleRate: sampleRateParameter(request.parameters?.sampleRate, format, 24_000),
+      ...(format === 'wav' ? base64WavMetadata(base64) : {}),
     },
     version: {
       id: crypto.randomUUID(),

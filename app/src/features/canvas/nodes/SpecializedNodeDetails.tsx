@@ -7,7 +7,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useState } from 'react'
 
 import type {
   AudioNodeDetails,
@@ -35,7 +35,10 @@ import { AiPlaceholderBadge } from '../AiPlaceholderNotice'
 import { StylePicker, AppliedStyleSummary, nodeAppliedStyle, nodeStyleCompatibilityReason } from '../../styles/StylePicker'
 import { FrameAnalysisControls } from './FrameAnalysisControls'
 import { createDefaultDirectorScene } from '../director-3d-scene'
-import { extractAudioToWav } from '../../media/browser-media-processing'
+import { AudioVoicePicker, AudioParameterSliders } from './AudioEnhancementControls'
+import { AudioLocalControls } from './AudioLocalControls'
+import { findAudioVoice, resolveAudioVoiceId } from '../../generation/audio-voice-catalog'
+import { audioOutputSettings } from '../../generation/audio-output-settings'
 
 const Director3DViewport = lazy(async () => {
   const module = await import('../Director3DViewport')
@@ -662,43 +665,12 @@ function AudioDetails({
   const [formatDraft, setFormatDraft] = useState<NonNullable<AudioNodeDetails['format']>>(
     details.format ?? String(initialProvider.parameterSchema.format?.defaultValue ?? 'mp3') as NonNullable<AudioNodeDetails['format']>,
   )
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const [waveform, setWaveform] = useState<number[]>([])
-  const [processingStatus, setProcessingStatus] = useState('')
-  const startSeconds = details.trimStartSeconds ?? 0
-  const endSeconds = details.trimEndSeconds ?? details.durationSeconds
-  const playbackRate = details.playbackRate ?? 1
-  const sampleRate = sampleRateDraft
-  const format = formatDraft
+  const { sampleRate, format, formats, sampleRates } = audioOutputSettings(provider, formatDraft, sampleRateDraft)
+  const voiceReason = findAudioVoice(details.voice) ? '' : '旧音色无法匹配官方音色，请重新选择。'
+  const audioBusy = data.job?.status === 'queued' || data.job?.status === 'running'
   const cost = provider.variants?.length
     ? modelProviderVariantCost(provider, variantId)
     : providerGenerationCost(provider, { duration: durationDraft })
-
-  useEffect(() => {
-    if (data.asset?.kind !== 'audio') return
-    let active = true
-    setProcessingStatus('正在读取真实音频波形…')
-    extractAudioToWav(data.asset.url)
-      .then((result) => {
-        if (!active) return
-        setWaveform(result.waveform ?? [])
-        if (details.durationSeconds <= 0 && (result.durationSeconds ?? 0) > 0) {
-          onUpdate({
-            ...details,
-            durationSeconds: result.durationSeconds!,
-            trimStartSeconds: 0,
-            trimEndSeconds: result.durationSeconds!,
-            playbackRate: details.playbackRate ?? 1,
-          })
-        }
-        setProcessingStatus('')
-      })
-      .catch((error) => {
-        if (!active) return
-        setProcessingStatus(error instanceof Error ? error.message : '无法读取音频波形。')
-      })
-    return () => { active = false }
-  }, [data.asset?.id, data.asset?.kind, data.asset?.url])
 
   const selectModel = (
     nextProvider: ModelProvider,
@@ -733,6 +705,7 @@ function AudioDetails({
           ? (defaults.voice as AudioNodeDetails['voice'])
           : details.voice,
       speed: typeof defaults.speed === 'number' ? defaults.speed : details.speed,
+      pitch: typeof defaults.pitch === 'number' ? defaults.pitch : 0,
       volume: typeof defaults.volume === 'number' ? defaults.volume : details.volume,
       sampleRate: nextSampleRate,
       format: nextFormat,
@@ -740,6 +713,8 @@ function AudioDetails({
   }
 
   const generate = () => {
+    if (audioBusy) return
+    if (voiceReason) { setStatus(voiceReason); return }
     const cleanPrompt = prompt.trim()
     if (!cleanPrompt) {
       setStatus('请输入文本或音频描述后再生成。')
@@ -751,6 +726,7 @@ function AudioDetails({
       modelProviderId: provider.id,
       modelVariant: modelProviderVariant(provider, variantId)?.id,
       prompt: cleanPrompt,
+      voice: resolveAudioVoiceId(details.voice),
       sampleRate,
       format,
       generatedByModel: provider.modelName,
@@ -798,19 +774,11 @@ function AudioDetails({
         <span>当前时长</span>
         <strong>{formatDuration(details.durationSeconds)}</strong>
       </div>
-      <label className="specialized-node-details__field">
-        <span>音色</span>
-        <select aria-label="音色" value={details.voice} onChange={(event) => onUpdate({ ...details, voice: event.currentTarget.value as typeof details.voice })}>
-          {['温暖女声', '沉稳男声', '清亮少年', '纪录片旁白'].map((voice) => <option key={voice}>{voice}</option>)}
-        </select>
-      </label>
+      <AudioVoicePicker value={details.voice} samples={data.audioVoiceSamples ?? []} onChange={voice => onUpdate({ ...details, voice })} />
+      <AudioParameterSliders provider={provider} details={details} onUpdate={onUpdate} />
       <div className="specialized-node-details__split-fields">
-        <label><span>语速</span><input type="number" aria-label="语速" min="0.5" max="2" step="0.1" value={details.speed} onChange={(event) => onUpdate({ ...details, speed: Math.min(2, Math.max(0.5, Number(event.currentTarget.value) || 0.5)) })} /></label>
-        <label><span>音量</span><input type="number" aria-label="音量" min="0" max="100" step="1" value={details.volume} onChange={(event) => onUpdate({ ...details, volume: Math.min(100, Math.max(0, Number(event.currentTarget.value) || 0)) })} /></label>
-      </div>
-      <div className="specialized-node-details__split-fields">
-        <label><span>输出格式</span><select aria-label="输出格式" value={format} onChange={(event) => { const value = event.currentTarget.value as NonNullable<AudioNodeDetails['format']>; setFormatDraft(value); onUpdate({ ...details, format: value }) }}>{['mp3', 'wav', 'pcm', 'ogg_opus'].map((value) => <option key={value}>{value}</option>)}</select></label>
-        <label><span>采样率</span><select aria-label="采样率" value={String(sampleRate)} onChange={(event) => { const value = Number(event.currentTarget.value); setSampleRateDraft(value); onUpdate({ ...details, sampleRate: value }) }}>{[16000, 24000, 32000, 44100, 48000].map((value) => <option key={value} value={value}>{value} Hz</option>)}</select></label>
+        <label><span>输出格式</span><select aria-label="输出格式" value={format} onChange={(event) => { const next = audioOutputSettings(provider, event.currentTarget.value, sampleRate); setFormatDraft(next.format); setSampleRateDraft(next.sampleRate); onUpdate({ ...details, format: next.format, sampleRate: next.sampleRate }) }}>{formats.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label><span>采样率</span><select aria-label="采样率" value={String(sampleRate)} onChange={(event) => { const value = Number(event.currentTarget.value); setSampleRateDraft(value); onUpdate({ ...details, sampleRate: value }) }}>{sampleRates.map((value) => <option key={value} value={value}>{value} Hz</option>)}</select></label>
       </div>
       <label className="specialized-node-details__field">
         <span>目标时长（秒）</span>
@@ -836,33 +804,16 @@ function AudioDetails({
         type="button"
         className="specialized-node-details__primary"
         aria-label={`生成音频，预计成本 ${cost}`}
-        disabled={!prompt.trim() || !isProviderEnabled(provider)}
+        disabled={!prompt.trim() || !isProviderEnabled(provider) || audioBusy || Boolean(voiceReason)}
         title={!isProviderEnabled(provider) ? provider.disabledReason : !prompt.trim() ? '请输入文本或音频描述后生成' : provider.kind === 'live' ? '官方 API 开发直连' : '本地演示'}
         onClick={generate}
       >生成音频</button>
+      {audioBusy ? <small>音频生成处理中，请等待完成或取消当前任务。</small> : null}
+      {voiceReason ? <small>{voiceReason}</small> : null}
       {!prompt.trim() ? <small>请输入文本或音频描述后生成</small> : null}
       {details.generatedByModel ? <p>来源模型：{details.generatedByModel}</p> : null}
       {status ? <p role="status">{status}</p> : null}
-      {data.asset?.kind === 'audio' ? (
-        <section className="audio-processing" aria-label="音频截取与变速">
-          <div className="audio-processing__waveform" role="img" aria-label="真实音频波形">
-            {(waveform.length ? waveform : Array.from({ length: 48 }, () => 0.08)).map((level, index) => (
-              <span key={index} style={{ height: `${Math.max(8, level * 100)}%` }} />
-            ))}
-          </div>
-          <label>入点<input aria-label="音频入点" type="range" min="0" max={Math.max(0, endSeconds - 0.05)} step="0.01" value={startSeconds} onChange={(event) => onUpdate({ ...details, trimStartSeconds: Number(event.currentTarget.value) })} /></label>
-          <label>出点<input aria-label="音频出点" type="range" min={Math.min(details.durationSeconds, startSeconds + 0.05)} max={details.durationSeconds} step="0.01" value={endSeconds} onChange={(event) => onUpdate({ ...details, trimEndSeconds: Number(event.currentTarget.value) })} /></label>
-          <label>变速<input aria-label="音频变速" type="range" min="0.5" max="2" step="0.1" value={playbackRate} onChange={(event) => onUpdate({ ...details, playbackRate: Number(event.currentTarget.value) })} /></label>
-          <p>{startSeconds.toFixed(2)}–{endSeconds.toFixed(2)} 秒 · {playbackRate.toFixed(1)}x</p>
-          <audio ref={audioRef} src={data.asset.url} preload="metadata" onTimeUpdate={(event) => { if (event.currentTarget.currentTime >= endSeconds) event.currentTarget.pause() }} />
-          <div>
-            <button type="button" onClick={() => { const player = audioRef.current; if (!player) return; player.currentTime = startSeconds; player.playbackRate = playbackRate; void player.play() }}>试听选区</button>
-            <button type="button" onClick={() => void data.onProcessAudio?.({ startSeconds, endSeconds, playbackRate })}>截取并导出 WAV</button>
-            <a href={data.asset.url} download={`${data.node.title}.${format}`}>下载音频</a>
-          </div>
-          {processingStatus ? <p role="status">{processingStatus}</p> : null}
-        </section>
-      ) : null}
+      <AudioLocalControls key={data.asset?.id ?? 'empty'} data={data} details={details} onUpdate={onUpdate} />
     </>
   )
 }
@@ -1070,7 +1021,7 @@ export function SpecializedNodeDetailsPanel({ data }: { data: CreativeNodeData }
       ) : null}
 
       {details.type === 'audio' ? (
-        <AudioDetails data={data} details={details} onUpdate={update} />
+        <AudioDetails key={data.node.activeVersionId} data={data} details={details} onUpdate={update} />
       ) : null}
 
       {details.type === 'director' ? <DirectorDetails data={data} details={details} onUpdate={update} /> : null}

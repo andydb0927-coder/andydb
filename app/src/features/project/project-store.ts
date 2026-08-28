@@ -36,6 +36,7 @@ import {
 import { detachLibraryAssetFromProject } from '../assets/library-model'
 import { isActiveTask, isRetryableTask } from '../generation/task-status'
 import { videoVersionHistory } from './video-version-history'
+import { audioVersionHistory, audioDetailsForVersion } from './audio-version-history'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -95,6 +96,7 @@ interface ProjectStore {
   reorderNodes: (orderedNodeIds: string[]) => void
   setActiveImageResult: (nodeId: string, resultId: string) => void
   restoreVideoVersion: (nodeId: string, versionId: string) => boolean
+  restoreAudioVersion: (nodeId: string, versionId: string) => boolean
   updateImageGenerationSettings: (
     nodeId: string,
     changes: Partial<ImageGenerationSettings>,
@@ -1576,6 +1578,31 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       return restored
     },
 
+    restoreAudioVersion: (nodeId, versionId) => {
+      let restored = false
+      commit(project => {
+        const source = project.nodes.find(node => node.id === nodeId)
+        if (source?.details?.type !== 'audio' || source.activeVersionId === versionId || project.jobs.some(job => job.nodeId === nodeId && isActiveTask(job.status))) return project
+        const entry = audioVersionHistory(project, source).find(entry => entry.version.id === versionId)
+        if (!entry) return project
+        const config = entry.version.generationConfig ?? entry.job?.generationConfig
+        const prompt = entry.version.generatedPrompt ?? entry.job?.prompt ?? entry.version.prompt
+        const details = entry.version.audioDetails ? structuredClone(entry.version.audioDetails) : audioDetailsForVersion(source.details, config, prompt, entry.asset, entry.job?.modelName)
+        const downstream = findDownstream(project, nodeId)
+        restored = true
+        return withUpdatedTimestamp({ ...project,
+          nodes: project.nodes.map(node => node.id === nodeId ? { ...node, activeVersionId: versionId, sourceChanged: false, details,
+            versions: node.versions.map(version => version.id === versionId ? { ...version, prompt } : version),
+            generationConfig: config ? structuredClone(config) : undefined,
+            modelProviderId: config?.providerId ?? entry.job?.providerId ?? details.modelProviderId,
+            appliedStyle: config?.style ? structuredClone(config.style) : null,
+          } : downstream.nodeIds.has(node.id) ? { ...node, sourceChanged: true } : node),
+          edges: project.edges.map(edge => downstream.edgeIds.has(edge.id) ? { ...edge, sourceChanged: true } : edge),
+        })
+      })
+      return restored
+    },
+
     appendVersion: (nodeId, version) => {
       commit((project) => {
         const versioned = appendNodeVersion(project, nodeId, version)
@@ -1757,7 +1784,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }
 
       const version: NodeVersion = { ...result.version,
-        ...(result.asset.kind === 'video' ? { generatedPrompt: result.version.prompt } : {}),
+        ...(['video', 'audio'].includes(result.asset.kind) ? { generatedPrompt: result.version.prompt } : {}),
+        ...(result.asset.kind === 'audio' && source.details?.type === 'audio' ? { audioDetails: audioDetailsForVersion(source.details, job.generationConfig, result.version.prompt, result.asset, job.modelName) } : {}),
         ...(job.generationConfig ? { generationConfig: cloneGenerationConfig(job) } : {}),
       }
       const scriptDetails = scriptDetailsAfterResult(source, job, result)
@@ -1793,13 +1821,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                     : {}),
                   ...(result.asset.kind === 'audio' && source.details?.type === 'audio'
                     ? {
-                        details: {
-                          ...source.details,
-                          durationSeconds:
-                            result.asset.durationSeconds ?? source.details.durationSeconds,
-                          generatedByModel:
-                            job.modelName ?? source.details.generatedByModel,
-                        },
+                        details: version.audioDetails,
                       }
                     : {}),
                   ...(scriptDetails ? { details: scriptDetails } : {}),

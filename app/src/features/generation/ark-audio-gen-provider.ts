@@ -4,6 +4,8 @@ import type {
   GenerationUsage,
 } from './generation-adapter'
 import type { ModelProvider } from './model-provider-registry'
+import { officialAudioVoices } from './audio-voice-catalog'
+import { base64WavMetadata } from '../media/audio-metadata'
 import { assertProviderResponse, fetchProviderResponse, readProviderJson } from './generation-errors'
 import {
   resolveModelParameterManifest,
@@ -19,6 +21,7 @@ import {
   httpsAudioUrl,
   providerRate,
   providerVolume,
+  providerPitch,
   resolveSpeechApiBase,
   sampleRateParameter,
   voiceId,
@@ -40,11 +43,12 @@ const parameterManifest: ModelParameterManifest = {
   duration: { type: 'number', defaultValue: 12, min: 1, max: 120, step: 1 },
   voice: {
     type: 'enum',
-    defaultValue: '温暖女声',
-    options: ['温暖女声', '沉稳男声', '清亮少年', '纪录片旁白'],
+    defaultValue: officialAudioVoices[0].id,
+    options: officialAudioVoices.map(voice => voice.id),
   },
   speed: { type: 'number', defaultValue: 1, min: 0.5, max: 2, step: 0.1 },
   volume: { type: 'number', defaultValue: 50, min: 0, max: 100, step: 1 },
+  pitch: { type: 'number', defaultValue: 0, min: -12, max: 12, step: 1 },
   sampleRate: {
     type: 'enum',
     defaultValue: '44100',
@@ -91,7 +95,7 @@ function requestBody(
       ),
       speech_rate: providerRate(request.parameters?.speed),
       loudness_rate: providerVolume(request.parameters?.volume, 50),
-      pitch_rate: 0,
+      pitch_rate: providerPitch(request.parameters?.pitch),
       enable_subtitle: false,
     },
     watermark: {},
@@ -112,10 +116,10 @@ function resultFor(
   const originalDuration = Number(body.original_duration)
   const durationSeconds = Number.isFinite(duration) && duration > 0
     ? duration
-    : audioDuration(request, 12)
+    : undefined
   const billedDuration = Number.isFinite(originalDuration) && originalDuration > 0
     ? originalDuration
-    : durationSeconds
+    : durationSeconds ?? audioDuration(request, 12)
   const assetId = crypto.randomUUID()
   const usage: GenerationUsage = {
     providerId,
@@ -133,6 +137,8 @@ function resultFor(
       url: base64 ? dataUrlFromBase64(base64, format) : remoteUrl!,
       mimeType: audioMimeType(format),
       durationSeconds,
+      sampleRate: sampleRateParameter(request.parameters?.sampleRate, format, format === 'mp3' ? 44_100 : 40_000),
+      ...(format === 'wav' && base64 ? base64WavMetadata(base64) : {}),
     },
     version: {
       id: crypto.randomUUID(),

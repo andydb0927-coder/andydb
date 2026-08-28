@@ -50,6 +50,9 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   videoReferences?: Array<{ id: string; title: string; asset: Asset }>
   videoFrameAssets?: Array<{ title: string; asset: Asset }>
   videoVersions?: import('../project/video-version-history').VideoVersionEntry[]
+  audioVersions?: import('../project/audio-version-history').AudioVersionEntry[]
+  audioVoiceSamples?: import('../project/audio-version-history').AudioVoiceSample[]
+  onRestoreAudioVersion?(versionId: string): void
   onSetVideoFrame?(role: 'first_frame' | 'last_frame', url: string): void
   onRestoreVideoVersion?(versionId: string): void
   incomingReferenceCount?: number
@@ -94,7 +97,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   ): Promise<void> | void
   onProcessVideo?(options: VideoSegmentOptions): Promise<void> | void
   onExtractVideoAudio?(): Promise<void> | void
-  onProcessAudio?(options: AudioSliceOptions): Promise<void> | void
+  onProcessAudio?(options: AudioSliceOptions, signal?: AbortSignal): Promise<void> | void
   onSplitImage?(grid: ImageGridSize, group: boolean): Promise<void> | void
   onSaveImageAnnotations?(annotations: ImageAnnotation[]): void
   onMirrorImage?(axis: 'horizontal' | 'vertical'): void

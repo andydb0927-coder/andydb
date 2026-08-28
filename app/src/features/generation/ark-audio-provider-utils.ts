@@ -1,4 +1,5 @@
 import type { GenerationRequest } from './generation-adapter'
+import { resolveAudioVoiceId } from './audio-voice-catalog'
 
 const officialSpeechApiBase = 'https://openspeech.bytedance.com/api/v3'
 
@@ -34,7 +35,7 @@ export function resolveSpeechApiBase(apiBase: string) {
   return trimmed
 }
 
-export function audioFormat(value: unknown, fallback: 'mp3' | 'wav' = 'mp3') {
+export function audioFormat(value: unknown, fallback: 'mp3' | 'wav' = 'mp3'): 'mp3' | 'wav' | 'pcm' | 'ogg_opus' {
   const normalized = String(value ?? '').trim()
   if (normalized === 'mp3' || normalized === 'wav' || normalized === 'pcm' || normalized === 'ogg_opus') {
     return normalized
@@ -68,6 +69,7 @@ export function sampleRateParameter(
   if (format === 'ogg_opus') return 48_000
   const allowed = new Set([8_000, 16_000, 22_050, 24_000, 32_000, 40_000, 44_100, 48_000])
   const candidate = Math.round(numberParameter(value, fallback, 8_000, 48_000))
+  if (format === 'mp3' && candidate === 40_000) return 44_100
   return allowed.has(candidate) ? candidate : fallback
 }
 
@@ -84,8 +86,11 @@ export function providerVolume(value: unknown, fallback = 50) {
 }
 
 export function voiceId(value: unknown) {
-  const label = String(value ?? '') as OfficialVoiceLabel
-  return officialVoiceIdByLabel[label] ?? officialVoiceIdByLabel['温暖女声']
+  return resolveAudioVoiceId(value)
+}
+
+export function providerPitch(value: unknown) {
+  return Math.round(numberParameter(value, 0, -12, 12))
 }
 
 export function dataUrlFromBase64(

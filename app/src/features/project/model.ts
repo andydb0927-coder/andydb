@@ -60,6 +60,7 @@ export interface NodeVersion {
   /** Immutable generation inputs; older versions resolve these from job history. */
   generationConfig?: GenerationConfiguration
   generatedPrompt?: string
+  audioDetails?: AudioNodeDetails
 }
 
 export interface Asset {
@@ -72,6 +73,8 @@ export interface Asset {
   durationSeconds?: number
   framesPerSecond?: number
   resolution?: string
+  sampleRate?: number
+  audioChannels?: number
 }
 
 export interface ImageResult {
@@ -295,9 +298,11 @@ export interface ScriptNodeDetails {
 export interface AudioNodeDetails {
   type: 'audio'
   durationSeconds: number
-  voice: '温暖女声' | '沉稳男声' | '清亮少年' | '纪录片旁白'
+  /** Official speaker ID; legacy Chinese aliases remain readable. */
+  voice: string
   speed: number
   volume: number
+  pitch?: number
   modelProviderId?: string
   modelVariant?: string
   prompt?: string
@@ -307,6 +312,9 @@ export interface AudioNodeDetails {
   trimStartSeconds?: number
   trimEndSeconds?: number
   playbackRate?: number
+  fadeInSeconds?: number
+  fadeOutSeconds?: number
+  normalize?: boolean
 }
 
 export interface DirectorShot {
