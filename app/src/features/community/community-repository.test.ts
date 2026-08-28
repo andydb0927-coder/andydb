@@ -30,6 +30,22 @@ afterEach(async () => {
 })
 
 describe('community repository', () => {
+  test('persists local visibility and favorites after reopen and republish without changing publication status', async () => {
+    const { community, database } = createRepositories()
+    const project = makeProjectFixture()
+    const work = await community.publish(project, createTimelineProject(project), { author: '小安', tags: [] })
+    await Promise.all([community.setVisibility(work.id, 'public'), community.toggleFavorite(work.id)])
+    database.close()
+    const reopened = new WirelessCanvasDatabase(database.name)
+    const repository = new CommunityRepository(reopened)
+    expect(await repository.get(work.id)).toMatchObject({ visibility: 'public', status: 'published', viewer: { favorited: true } })
+    const republished = await repository.publish(project, createTimelineProject(project), { author: '小安', tags: [] })
+    expect(republished.visibility).toBe('public')
+    expect(republished.viewer.favorited).toBe(true)
+    await repository.setVisibility(work.id, 'private')
+    expect((await repository.get(work.id))?.visibility).toBe('private')
+    reopened.close()
+  })
   test('opens a version 5 database without losing project and timeline data', async () => {
     const name = `wireless-canvas-community-legacy-${crypto.randomUUID()}`
     databaseNames.push(name)

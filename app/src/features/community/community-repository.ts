@@ -13,6 +13,7 @@ import {
   type PublishWorkInput,
   type WorkFilter,
   type WorkStatus,
+  type WorkVisibility,
 } from './community-model'
 import { buildDemoWorks } from './demo-works'
 
@@ -36,6 +37,7 @@ export interface CommunityWorkRepository {
   recordView(workId: string): Promise<PublishedWork | undefined>
   toggleLike(workId: string): Promise<PublishedWork | undefined>
   toggleFavorite(workId: string): Promise<PublishedWork | undefined>
+  setVisibility(workId: string, visibility: WorkVisibility): Promise<PublishedWork | undefined>
 }
 
 export class CommunityRepository implements CommunityWorkRepository {
@@ -156,5 +158,9 @@ export class CommunityRepository implements CommunityWorkRepository {
     return this.update(workId, (work) =>
       toggleWorkFavorite(work, this.environment),
     )
+  }
+
+  async setVisibility(workId: string, visibility: WorkVisibility): Promise<PublishedWork | undefined> {
+    return this.update(workId, (work) => ({ ...work, visibility, updatedAt: this.environment.now() }))
   }
 }

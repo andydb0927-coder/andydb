@@ -7,6 +7,7 @@ import {
 } from '../timeline/timeline-project'
 
 export type WorkStatus = 'published' | 'unlisted'
+export type WorkVisibility = 'public' | 'private'
 export type WorkSort = 'latest' | 'hot'
 
 export interface WorkMetrics {
@@ -35,6 +36,8 @@ export interface PublishedWork {
   localOnly: true
   durationSeconds: number
   status: WorkStatus
+  /** A local label only; no cloud publication or access control. Legacy records are private. */
+  visibility?: WorkVisibility
   publishedAt: string
   updatedAt: string
   projectSnapshot: Project
@@ -153,6 +156,7 @@ export function createPublishedWork(
     localOnly: true,
     durationSeconds: getTimelineDuration(timeline),
     status: 'published',
+    visibility: existing?.visibility ?? 'private',
     publishedAt: existing?.publishedAt ?? timestamp,
     updatedAt: timestamp,
     projectSnapshot: clone(project),

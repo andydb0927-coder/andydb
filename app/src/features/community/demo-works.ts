@@ -151,3 +151,7 @@ export function buildDemoWorks(): PublishedWork[] {
     }
   })
 }
+
+export function isDemoWorkId(workId: string): boolean {
+  return definitions.some(({ id }) => id === workId)
+}
