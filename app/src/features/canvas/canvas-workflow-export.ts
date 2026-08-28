@@ -6,6 +6,7 @@ import type {
 } from '../project/model'
 import { safeDownloadFilename } from '../../shared/browser-download'
 import { isAppliedStyle } from '../styles/style-model'
+import { isSubjectReference } from '../subjects/subject-consistency'
 
 export type CanvasExportScope = 'viewport' | 'all'
 export type CanvasExportFormat = 'png' | 'svg'
@@ -375,6 +376,11 @@ export function parseWorkflowImport(
     if ((node.appliedStyle != null && !isAppliedStyle(node.appliedStyle)) ||
       (node.generationConfig?.style !== undefined && !isAppliedStyle(node.generationConfig.style))) {
       errors.push(`节点 ${node.title} 的风格配置无效`)
+      continue
+    }
+    if ((node.subjectSnapshot !== undefined && !isSubjectReference(node.subjectSnapshot)) ||
+      (node.generationConfig?.subjects !== undefined && (!Array.isArray(node.generationConfig.subjects) || !node.generationConfig.subjects.every(isSubjectReference)))) {
+      errors.push(`节点 ${node.title} 的主体参考配置无效`)
       continue
     }
     if (node.details?.type === 'script' && !isScriptDetailsShape(node.details)) {

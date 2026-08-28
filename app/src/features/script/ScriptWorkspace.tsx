@@ -11,6 +11,8 @@ import { subjectExtractionId } from '../generation/ark-subject-extraction-provid
 import { ScriptWorkflowRunner } from './script-workflow-runner'
 import { scriptBreakdownProviderId, scriptStoryboardProviderId } from './script-workflow'
 import { ScriptStoryboardCards } from './ScriptStoryboardCards'
+import { SimilarSubjectsReview } from '../subjects/SimilarSubjectsReview'
+import type { SimilarSubject } from '../subjects/subject-consistency'
 import './script-workspace.css'
 
 type PendingAction = { kind: 'breakdown' | 'storyboard' | 'images'; cost: number } | { kind: 'subject'; characterId: string; assetId: string; cost: number }
@@ -20,7 +22,7 @@ export function ScriptWorkspace({ project, nodeId, registry, repository, subject
   nodeId: string
   registry: ProviderRegistry
   repository: Pick<ProjectRepository, 'save'>
-  subjects: Pick<SubjectRepository, 'create' | 'get' | 'list'>
+  subjects: Pick<SubjectRepository, 'create' | 'get' | 'list'> & Partial<Pick<SubjectRepository, 'merge'>>
   onClose(): void
   onSent(nodeId: string): void
 }) {
@@ -37,14 +39,21 @@ export function ScriptWorkspace({ project, nodeId, registry, repository, subject
   const previousPending = useRef(false)
   const active = useRef(true)
   const submission = useRef(false)
+  const [similarSubjects, setSimilarSubjects] = useState<SimilarSubject[]>()
+  const similarityDecision = useRef<((value: string | undefined) => void) | undefined>(undefined)
+  const decideSimilarity = (value?: string) => { similarityDecision.current?.(value); similarityDecision.current = undefined; setSimilarSubjects(undefined) }
   const runner = useMemo(() => new ScriptWorkflowRunner({
     projectId: project.id, canvasId: project.activeCanvasId, registry, repository, subjects,
     onChange: state => { if (active.current) { setBusy(state.busy); if (state.message) setMessage(state.message) } },
+    onSimilarSubjects: (_input, candidates) => new Promise(resolve => {
+      if (!active.current) { resolve(undefined); return }
+      similarityDecision.current = resolve; setSimilarSubjects(candidates)
+    }),
   }), [project.id, project.activeCanvasId, registry, repository, subjects])
   useEffect(() => {
     active.current = true
     runner.resume()
-    return () => { active.current = false; runner.dispose() }
+    return () => { active.current = false; similarityDecision.current?.(undefined); similarityDecision.current = undefined; runner.dispose() }
   }, [runner])
   useEffect(() => { if (details?.shots?.length) setEnd(details.shots.length) }, [details?.shots?.length])
   useEffect(() => {
@@ -145,6 +154,9 @@ export function ScriptWorkspace({ project, nodeId, registry, repository, subject
       {pending.kind === 'breakdown' || pending.kind === 'storyboard' ? <p>将替换当前{pending.kind === 'breakdown' ? '拆解与分镜表' : '分镜表'}；旧结果资产与生成历史保留。</p> : null}
       <p>确认后调用已配置的真实API；取消不能撤销服务端已发生的费用。</p>
       <button type="button" onClick={() => setPending(undefined)}>取消</button><button type="button" onClick={() => void submit()}>确认并执行</button>
+    </ConfirmDialog> : null}
+    {similarSubjects ? <ConfirmDialog portal label="确认相似主体" className="subject-details-dialog" overlayClassName="subject-details-backdrop nodrag nowheel" initialFocus="button" focusableSelector="button" onClose={() => decideSimilarity()}>
+      <SimilarSubjectsReview candidates={similarSubjects} onMerge={decideSimilarity} onCreate={() => decideSimilarity('create')} onCancel={() => decideSimilarity()} />
     </ConfirmDialog> : null}
   </>
 }

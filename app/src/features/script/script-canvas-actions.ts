@@ -11,11 +11,13 @@ export function sendScriptShotToCanvas(projectId: string, nodeId: string, shotId
   if (!shot || !asset) throw new Error('请先生成此分镜的图片。')
   if (shot.canvasNodeId && project.nodes.some(n => n.id === shot.canvasNodeId)) return shot.canvasNodeId
   const id = crypto.randomUUID(), versionId = crypto.randomUUID()
+  const confirmedConfig = project.jobs.find(job => job.id === shot.generationJobId)?.generationConfig
   useProjectStore.getState().addNode({
     id, kind: 'image', title: shot.title,
     position: { x: node.position.x + 560, y: node.position.y + (details.shots?.indexOf(shot) ?? 0) * 330 },
     versions: [{ id: versionId, createdAt: new Date().toISOString(), prompt: shot.prompt, assetId: asset.id }],
     activeVersionId: versionId, sourceChanged: false, modelProviderId: 'seedream-5-pro-api',
+    ...(confirmedConfig?.subjects?.length ? { generationConfig: { ...confirmedConfig, parameters: { ...confirmedConfig.parameters, scriptV2Action: '', scriptV2ShotId: '' }, subjects: confirmedConfig.subjects.map(subject => ({ ...subject })) } } : {}),
     imageResults: [{ id: `${id}-result`, assetId: asset.id }], activeResultId: `${id}-result`,
   })
   useProjectStore.getState().updateNode(nodeId, { details: { ...details, shots: details.shots?.map(s => s.id === shotId ? { ...s, canvasNodeId: id } : s) } })

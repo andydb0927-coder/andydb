@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createFixtureCinematicProject, expect, test, type Page } from './provider-fixture'
+import { fitCanvasContent } from './canvas-viewport'
 
 const phase = process.env.QA_EVIDENCE_PHASE === 'before' ? 'before' : 'after'
 const evidence = resolve('..', 'docs/qa/evidence', phase)
@@ -70,11 +71,13 @@ test('stabilization: project edits survive reload without leaking into another p
   await page.getByRole('button', { name: '添加节点', exact: true }).click()
   await page.getByRole('menuitem', { name: '图片', exact: true }).click()
   const firstProject = page.url()
+  await fitCanvasContent(page, page.getByRole('region', { name: '图片 01 生成参数', exact: true }))
   await page.getByRole('textbox', { name: '提示词', exact: true }).fill('项目甲独有的蓝色古桥')
   await page.getByRole('button', { name: '图片生成参数' }).click()
   const parameters = page.getByRole('dialog', { name: '图片生成参数' })
   await parameters.getByRole('button', { name: '21:9', exact: true }).click()
   await parameters.getByRole('button', { name: '2张', exact: true }).click()
+  await expect(parameters.getByRole('button', { name: '2张', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.keyboard.press('Escape')
   await expect(page.getByText('已保存', { exact: true })).toBeVisible()
   await page.reload()

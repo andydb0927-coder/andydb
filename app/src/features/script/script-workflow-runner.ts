@@ -12,13 +12,16 @@ import type { GenerationRequest, GenerationResult } from '../generation/generati
 import { ImageSizeResolver } from '../generation/image-size-resolver'
 import { buildScriptShotRequest, scriptBreakdownProviderId, scriptStoryboardProviderId, scriptShotRange, scriptJobAction, type ScriptImageParameters } from './script-workflow'
 import { sendScriptShotToCanvas } from './script-canvas-actions'
+import { resolveSubjectRequest, findSimilarSubjects, type SimilarSubject } from '../subjects/subject-consistency'
+import type { CreateSubjectInput } from '../subjects/subject-model'
 
 interface RunnerOptions {
   projectId: string
   canvasId?: string
   registry: ProviderRegistry
   repository: Pick<ProjectRepository, 'save'>
-  subjects: Pick<SubjectRepository, 'create' | 'get' | 'list'>
+  subjects: Pick<SubjectRepository, 'create' | 'get' | 'list'> & Partial<Pick<SubjectRepository, 'merge'>>
+  onSimilarSubjects?(input: CreateSubjectInput, candidates: SimilarSubject[]): Promise<'create' | string | undefined>
   onChange?(state: { busy: boolean; message: string }): void
 }
 interface CompletedJob { job: GenerationJob; result?: GenerationResult }
@@ -90,6 +93,7 @@ export class ScriptWorkflowRunner {
     if (['error', 'offline'].includes(useProjectStore.getState().saveStatus)) throw new Error('项目保存失败，已停止后续生成；结果仍在当前页面，请恢复保存后再刷新。')
   }
   private async submit(request: GenerationRequest): Promise<CompletedJob> {
+    request = await resolveSubjectRequest(request, this.options.subjects)
     this.current()
     if (this.cancelled) throw new Error('本轮生成已取消，已完成结果保留。')
     this.validate(request)
@@ -186,11 +190,22 @@ export class ScriptWorkflowRunner {
       })
       if (job.status !== 'succeeded' || !result) throw new Error(job.error ?? '主体提取失败。')
       const parsed = parseSubjectDescription(result.version.textContent ?? '')
-      const subject = await this.options.subjects.create({
+      const input: CreateSubjectInput = {
         name: character.name, description: `${character.description}\n可见外貌：${parsed.appearance}；服装：${parsed.clothing}`.slice(0, 400), tags: parsed.tags,
         coverUrl: asset.url, sampleImages: [asset.url], sourceAssetId: asset.id, sourceProjectId: project.id,
+        width: asset.width, height: asset.height, mimeType: asset.mimeType,
         aiExtraction: { appearance: parsed.appearance, clothing: parsed.clothing, providerId: subjectExtractionId, modelName: provider.modelName, extractedAt: new Date().toISOString(), usage: result.usage },
-      })
+      }
+      const candidates = findSimilarSubjects(input, await this.options.subjects.list())
+      let choice: string | undefined = 'create'
+      if (candidates.length) {
+        if (!this.options.onSimilarSubjects) throw new Error('发现相似主体，请在脚本工作台确认合并或仍新建。')
+        choice = await this.options.onSimilarSubjects(input, candidates)
+      }
+      this.current()
+      if (!choice || this.cancelled || this.disposed) throw new Error('已取消主体保存，未创建或合并记录。')
+      const subject = choice === 'create' ? await this.options.subjects.create(input)
+        : await (this.options.subjects.merge?.(choice, input) ?? Promise.reject(new Error('主体合并暂不可用。')))
       const latest = this.source(nodeId).details
       useProjectStore.getState().updateNode(nodeId, { details: { ...latest, characters: latest.characters?.map(c => c.id === characterId ? { ...c, subjectId: subject.id, referenceAssetId: asset.id } : c) } })
       await this.save()

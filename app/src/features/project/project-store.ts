@@ -46,7 +46,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig' | 'appliedStyle'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig' | 'appliedStyle' | 'subjectId' | 'subjectSnapshot'>
 >
 
 export interface CanvasEdgeInsertion {
@@ -230,6 +230,7 @@ function cloneGenerationConfig(job: GenerationJob) {
   if (!job.generationConfig) return undefined
   return {
     ...job.generationConfig,
+    ...(job.generationConfig.subjects ? { subjects: job.generationConfig.subjects.map(subject => ({ ...subject })) } : {}),
     ...(job.generationConfig.style ? { style: styleSnapshot(job.generationConfig.style) } : {}),
     ...(job.generationConfig.parameters
       ? { parameters: { ...job.generationConfig.parameters } }
@@ -839,6 +840,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                   ...(changes.appliedStyle === undefined ? {} : {
                     appliedStyle: changes.appliedStyle === null ? null : styleSnapshot(changes.appliedStyle),
                   }),
+                  ...(changes.subjectId === undefined ? {} : { subjectId: changes.subjectId }),
+                  ...(changes.subjectSnapshot === undefined ? {} : { subjectSnapshot: { ...changes.subjectSnapshot } }),
                   ...(changes.imageGeneration === undefined
                     ? {}
                     : { imageGeneration: { ...changes.imageGeneration } }),
@@ -880,6 +883,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                     : {
                         generationConfig: {
                           ...changes.generationConfig,
+                          ...(changes.generationConfig.subjects ? { subjects: changes.generationConfig.subjects.map(subject => ({ ...subject })) } : {}),
                           ...(changes.generationConfig.style ? { style: styleSnapshot(changes.generationConfig.style) } : {}),
                           ...(changes.generationConfig.parameters
                             ? { parameters: { ...changes.generationConfig.parameters } }

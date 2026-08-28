@@ -96,6 +96,11 @@ export function buildScriptShotRequest(project: Project, node: CanvasNode, shot:
   })
   return {
     projectId: project.id, nodeId: node.id, operation: 'regenerate', providerId: provider.id, targetKind: 'image',
+    subjects: characters.flatMap(character => {
+      if (!character.subjectId) return []
+      const image = project.assets.find(asset => asset.id === character.referenceAssetId && asset.kind === 'image')
+      return image ? [{ id: character.subjectId, name: character.name, description: character.description.slice(0, 400), coverUrl: image.url, mimeType: image.mimeType }] : []
+    }),
     prompt: `${shot.prompt.trim()}\n景别：${shot.shotSize}；机位：${shot.cameraAngle}；运镜意图：${shot.cameraMovement}。${characters.length ? `\n参考角色：${characters.map(c => `${c.name}（${c.description}）`).join('；')}` : ''}\n输出一张独立分镜画面，不拼宫格。`,
     parameters: { ...Object.fromEntries(Object.entries(provider.parameterSchema).flatMap(([key, definition]) => definition ? [[key, definition.defaultValue]] : [])), ...parameters, count: 1, scriptV2Action: 'shot', scriptV2ShotId: shot.id },
     referenceAssets: references,

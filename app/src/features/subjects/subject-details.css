@@ -1,0 +1,29 @@
+.subject-details-backdrop { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--surface-backdrop); padding: 16px; }
+.subject-details-dialog { width: min(700px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px; background: var(--surface-panel); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: var(--radius-panel); box-shadow: var(--shadow-panel); }
+.subject-details-page { padding: 24px; max-width: 1000px; margin-inline: auto; }
+.subject-details-content { display: grid; gap: 12px; overflow-wrap: anywhere; }
+.subject-details-content h2, .subject-details-content p { margin: 0; }
+.subject-details-content form, .subject-details-content label { display: grid; gap: 8px; }
+.subject-details-content textarea {
+  width: 100%; resize: vertical; min-height: 96px; padding: var(--space-3);
+  background: var(--surface-control); color: var(--text-primary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-button);
+}
+:is(.subject-details-content, .subject-details-dialog, .subject-similarity-list) button {
+  min-height: 36px; padding: 6px 12px; font: inherit; cursor: pointer;
+  color: var(--text-primary); background: var(--surface-control);
+  border: 1px solid var(--border-default); border-radius: var(--radius-button);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+:is(.subject-details-content, .subject-details-dialog, .subject-similarity-list) button:hover:not(:disabled) { background: var(--surface-control-hover); }
+:is(.subject-details-content, .subject-details-dialog, .subject-similarity-list) button:disabled { color: var(--text-disabled); cursor: not-allowed; }
+:is(.subject-details-content, .subject-details-dialog) a { color: var(--brand-secondary-bright); text-underline-offset: 3px; }
+:is(.subject-details-content, .subject-details-dialog, .subject-similarity-list) :is(button, textarea, a):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.subject-details-content small { color: var(--text-muted); line-height: 1.5; }
+.subject-details-dialog .subject-delete-confirm { color: var(--status-error); }
+.subject-details-images { display: flex; flex-wrap: wrap; gap: 8px; }
+.subject-details-images img { width: min(160px, 45%); max-height: 200px; object-fit: contain; border-radius: var(--radius-card); }
+.subject-details-dialog footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+.subject-similarity-list { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border-default); border-radius: var(--radius-card); }
+.subject-similarity-list article { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.subject-similarity-list img { width: 56px; height: 56px; object-fit: cover; }

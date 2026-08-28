@@ -55,6 +55,7 @@ export class GenerationQueue {
   enqueue(request: GenerationRequest) {
     if (this.disposed) throw new Error('Generation queue is disposed')
     if (request.style) request = { ...request, style: styleSnapshot(request.style) }
+    if (request.subjects) request = { ...request, subjects: request.subjects.map(subject => ({ ...subject })) }
     this.nextSequence = Math.max(
       this.nextSequence,
       this.options.getLatestSequence?.(request.projectId) ?? 0,
@@ -75,6 +76,7 @@ export class GenerationQueue {
         progress: 0,
         ...(dispatch ?? {}),
         generationConfig: {
+          ...(request.subjects ? { subjects: request.subjects.map(subject => ({ ...subject })) } : {}),
           ...(request.style ? { style: styleSnapshot(request.style) } : {}),
           targetKind: request.targetKind,
           ...(request.providerId || dispatch?.providerId

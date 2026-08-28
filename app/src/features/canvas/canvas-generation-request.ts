@@ -4,6 +4,7 @@ import { defaultVideoGenerationMode, isProviderEnabled, isVideoGenerationMode, p
 import { isImageAnalysisToolId } from '../generation/ark-image-analysis-provider'
 import { frameAnalysisId } from '../generation/ark-frame-analysis-provider'
 import { styleSnapshot, styleCompatibilityReason } from '../styles/style-model'
+import { collectNodeSubjects } from '../subjects/subject-consistency'
 
 export function buildGenerationRequest(
   project: Project,
@@ -19,6 +20,8 @@ export function buildGenerationRequest(
     (candidate) => candidate.id === activeVersion?.assetId,
   )
   const savedConfig = node.generationConfig
+  const connectedSubjects = collectNodeSubjects(project, node)
+  const subjects = connectedSubjects.length ? connectedSubjects : savedConfig?.subjects
   const selectedStyle = node.appliedStyle === undefined ? savedConfig?.style : node.appliedStyle
   const targetKind =
     operation === 'generate-video'
@@ -132,6 +135,7 @@ export function buildGenerationRequest(
     targetKind,
     ...(registeredProviderId ? { providerId: registeredProviderId } : {}),
     prompt,
+    ...(subjects?.length ? { subjects: subjects.map(subject => ({ ...subject })) } : {}),
     ...(selectedStyle ? { style: styleSnapshot(selectedStyle) } : {}),
     ...(Object.keys(parameters).length ? { parameters } : {}),
     referenceAssets: generationMode === '文生视频'

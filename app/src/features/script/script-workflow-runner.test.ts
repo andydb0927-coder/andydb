@@ -169,3 +169,35 @@ test('empty breakdown and missing storyboard scenes fail before a network reques
   expect(fetchFn).not.toHaveBeenCalled()
   runner.dispose()
 })
+
+test('script extraction asks before merging a similar source without a second AI call', async () => {
+  const fetchFn = vi.fn<typeof fetch>(async () => Response.json(scriptChatFixture({ name: '旅人', appearance: '短发', clothing: '蓝色外套', tags: ['旅人'] })))
+  const setupResult = setup(fetchFn)
+  const { subjects, node, project, registry, repository } = setupResult
+  setupResult.runner.dispose()
+  const source = project.assets.find(asset => asset.kind === 'image')!
+  source.url = 'https://fixture.seedream.invalid/subject-source.png'
+  const existing = await subjects.create({ name: '已有小舟', description: '短发蓝衣', tags: [], coverUrl: source.url, sampleImages: [] })
+  const onSimilarSubjects = vi.fn(async () => existing.id)
+  const runner = new ScriptWorkflowRunner({ projectId: project.id, canvasId: project.activeCanvasId, registry, repository, subjects, onSimilarSubjects })
+  const result = await runner.extractCharacter(node.id, 'character-1', source.id)
+  expect(result.id).toBe(existing.id)
+  expect(onSimilarSubjects).toHaveBeenCalledOnce()
+  expect(fetchFn).toHaveBeenCalledOnce()
+  expect(await subjects.list()).toHaveLength(1)
+  runner.dispose()
+})
+
+test('script shots use latest subject description and sample through the normal persisted queue', async () => {
+  const fetchFn = vi.fn<typeof fetch>(async () => imageResponse(1))
+  const { runner, subjects, node, project, repository } = setup(fetchFn)
+  const image = project.assets.find(asset => asset.kind === 'image')!
+  image.url = 'https://fixture.seedream.invalid/subject-source.png'
+  const subject = await subjects.create({ name: '小舟', description: '旧黑衣', tags: [], coverUrl: image.url, sampleImages: [] })
+  useProjectStore.getState().updateNode(node.id, { details: { ...node.details, characters: node.details.characters.map(character => ({ ...character, subjectId: subject.id, referenceAssetId: image.id })) } })
+  await subjects.update(subject.id, { name: subject.name, description: '银白色外套与长发', tags: [] })
+  await runner.generateShots(node.id, 1, 1, { aspectRatio: '16:9', resolution: '2K' })
+  expect(JSON.parse(String(fetchFn.mock.calls[0][1]?.body)).prompt).toContain('银白色外套与长发')
+  expect((await repository.load(project.id))!.jobs[0].generationConfig?.subjects![0].description).toBe('银白色外套与长发')
+  runner.dispose()
+})

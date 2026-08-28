@@ -1,4 +1,6 @@
 import type { WirelessCanvasDatabase } from '../project/project-repository'
+import type { Project } from '../project/model'
+import { findSimilarSubjects, subjectUsage } from './subject-consistency'
 import {
   normalizeSubjectTags,
   type CreateSubjectInput,
@@ -63,6 +65,29 @@ export class SubjectRepository {
 
   async list(): Promise<SubjectAsset[]> {
     return this.database.subjects.orderBy('updatedAt').reverse().toArray()
+  }
+
+  async findSimilar(input: CreateSubjectInput) { return findSimilarSubjects(input, await this.list()) }
+
+  async usage(subjectId: string, overrides: Project[] = []) {
+    const projects = new Map((await this.database.projects.toArray()).map(project => [project.id, project]))
+    overrides.forEach(project => projects.set(project.id, project))
+    return subjectUsage(subjectId, [...projects.values()])
+  }
+
+  async merge(subjectId: string, input: CreateSubjectInput): Promise<SubjectAsset> {
+    const incoming = normalizedSubjectInput(input)
+    return this.database.transaction('rw', this.database.subjects, async () => {
+      const existing = await this.get(subjectId)
+      if (!existing) throw new Error('主体不存在或已删除，请重新选择。')
+      const updated = { ...existing,
+        description: [...new Set([existing.description, incoming.description].filter(Boolean))].join('\n').slice(0, 400),
+        sampleImages: [...new Set([existing.coverUrl, ...existing.sampleImages, incoming.coverUrl, ...incoming.sampleImages])].slice(0, 8),
+        tags: normalizeSubjectTags([...existing.tags, ...incoming.tags]), updatedAt: this.environment.now(),
+      }
+      await this.database.subjects.put(updated)
+      return updated
+    })
   }
 
   async update(

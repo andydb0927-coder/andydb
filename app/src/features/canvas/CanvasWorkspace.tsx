@@ -51,7 +51,7 @@ import { ImageAnnotationEditor } from './ImageAnnotationEditor'
 import { TutorialQuickGuide } from '../tutorials/TutorialQuickGuide'
 import { PanoramaViewer } from './PanoramaViewer'
 import type { SubjectAsset } from '../subjects/subject-model'
-import type { SubjectRepository } from '../subjects/subject-repository'
+import type { SubjectLibraryRepository } from '../subjects/SubjectDetails'
 import { AiPlaceholderBadge } from './AiPlaceholderNotice'
 import { arkImageUpscaleUnavailable, arkImageCutoutUnavailable, type ArkImageEditOperation } from '../generation/ark-image-edit-provider'
 
@@ -376,7 +376,7 @@ interface WorkspaceSidePanelProps {
   project: Project
   generationPreferenceStore?: GenerationProviderPreferenceStore
   assetRepository: Pick<AssetLibraryRepository, 'list' | 'rename' | 'move' | 'deleteAsset'>
-  subjectRepository?: Pick<SubjectRepository, 'list' | 'update' | 'delete'>
+  subjectRepository?: SubjectLibraryRepository
   historyInsertionMode?: boolean
   onClose(): void
   onApplyCharacters?(characters: CharacterProfile[]): void

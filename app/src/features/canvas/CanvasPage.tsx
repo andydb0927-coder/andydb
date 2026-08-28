@@ -102,6 +102,7 @@ import {
 import type { CreateSubjectFormValue } from '../subjects/CreateSubjectDialog'
 import type { SubjectAsset } from '../subjects/subject-model'
 import { SubjectRepository } from '../subjects/subject-repository'
+import { resolveSubjectRequest, subjectSnapshot, findSimilarSubjects, restoreTaskSubjects } from '../subjects/subject-consistency'
 import {
   buildCreativeCardCreation,
   isCreativeCardKind,
@@ -384,7 +385,7 @@ export interface CanvasPageProps {
   collaborationRepository?: Pick<CollaborationRepository, 'listComments' | 'addComment' | 'resolveComment'>
   communityRepository?: CanvasPublicationRepository
   timelineRepository?: Pick<TimelineProjectRepository, 'load'>
-  subjectRepository?: Pick<SubjectRepository, 'create' | 'get' | 'list' | 'update' | 'delete'>
+  subjectRepository?: Pick<SubjectRepository, 'create' | 'get' | 'list' | 'update' | 'delete'> & Partial<Pick<SubjectRepository, 'usage' | 'merge'>>
 }
 
 export function CanvasPage({
@@ -590,6 +591,8 @@ export function CanvasPage({
   const [editingCard, setEditingCard] = useState<EditingCard>()
   const [pendingSubjectCreation, setPendingSubjectCreation] = useState<PendingSubjectCreation>()
   const [subjectCreationBusy, setSubjectCreationBusy] = useState(false)
+  const subjectSaveInFlight = useRef(false)
+  const pendingSubjectRequests = useRef(new Set<string>())
   const [subjectCreationError, setSubjectCreationError] = useState<string>()
   useEffect(() => {
     setPendingSubjectCreation(pending => pending &&
@@ -1213,7 +1216,7 @@ export function CanvasPage({
             openAnalysisTool(node.id, job.generationConfig!.providerId!, job.prompt, job.generationConfig)
             return
           }
-          const request = restoreTaskStyle(job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
+          const request = restoreTaskSubjects(restoreTaskStyle(job.generationConfig && isPinnedArkTool(job.generationConfig.providerId) ? {
             ...job.generationConfig, projectId: currentProject.id, nodeId: node.id, operation: job.operation, prompt: job.prompt,
           } : buildGenerationRequest(
             currentProject,
@@ -1221,7 +1224,7 @@ export function CanvasPage({
             job.operation,
             job.prompt,
             providerRegistry,
-          ), job.generationConfig?.style)
+          ), job.generationConfig?.style), job.generationConfig?.subjects)
           const eligibilityFailure = generationEligibilityFailure(
             request,
             providerRegistry,
@@ -1266,32 +1269,31 @@ export function CanvasPage({
           promptOverride ?? activeVersion?.prompt ?? currentProject.intent,
           providerRegistry,
         )
-        const eligibilityFailure = generationEligibilityFailure(
-          request,
-          providerRegistry,
-        )
-        if (eligibilityFailure) {
-          setGenerationFeedback(eligibilityFailure)
-          return
+        const submit = (prepared: GenerationRequest) => {
+          const eligibilityFailure = generationEligibilityFailure(prepared, providerRegistry)
+          if (eligibilityFailure) { setGenerationFeedback(eligibilityFailure); return }
+          const selection = currentLibTvSelection(generationPreferenceStore)
+          if (selection) {
+            const activeElement = document.activeElement
+            setPendingRemoteGeneration({ kind: 'enqueue', request: prepared, selection, returnFocusTo: explicitFocusTarget ?? (activeElement instanceof HTMLElement ? activeElement : document.body) })
+            setGenerationFeedback(undefined)
+          } else {
+            generationQueue.enqueue(prepared)
+            setGenerationFeedback('生成任务已提交。')
+          }
         }
-        const selection = currentLibTvSelection(generationPreferenceStore)
-        if (selection) {
-          const activeElement = document.activeElement
-          setPendingRemoteGeneration({
-            kind: 'enqueue',
-            request,
-            selection,
-            returnFocusTo:
-              explicitFocusTarget ??
-              (activeElement instanceof HTMLElement
-                ? activeElement
-                : document.body),
-          })
-          setGenerationFeedback(undefined)
-        } else {
-          setGenerationFeedback('生成任务已提交。')
-          generationQueue.enqueue(request)
-        }
+        if (request.subjects?.length) {
+          const key = `${currentProject.id}:${currentProject.activeCanvasId}:${node.id}`
+          if (pendingSubjectRequests.current.has(key)) return
+          pendingSubjectRequests.current.add(key)
+          setGenerationFeedback('正在读取主体最新特征…')
+          void resolveSubjectRequest(request, subjectRepository).then(prepared => {
+            const latest = useProjectStore.getState().activeProject
+            if (latest?.id === currentProject.id && latest.activeCanvasId === currentProject.activeCanvasId && latest.nodes.some(item => item.id === node.id)) submit(prepared)
+          }).catch(() => {
+            if (useProjectStore.getState().activeProject?.id === currentProject.id) setGenerationFeedback('主体生成准备失败，请检查参考资料后重试；未静默回退。')
+          }).finally(() => pendingSubjectRequests.current.delete(key))
+        } else submit(request)
         return
       }
 
@@ -1331,7 +1333,7 @@ export function CanvasPage({
         generationQueue.enqueue(request)
       }
     },
-    [generationPreferenceStore, generationQueue, openAnalysisTool, projectId, providerRegistry],
+    [generationPreferenceStore, generationQueue, openAnalysisTool, projectId, providerRegistry, subjectRepository],
   )
 
   const confirmRemoteGeneration = useCallback(() => {
@@ -2228,6 +2230,7 @@ export function CanvasPage({
               modelProviderId: providerId,
               generationConfig: {
                 targetKind: node.kind === 'video' ? 'video' : 'image',
+                ...(node.generationConfig?.subjects ? { subjects: node.generationConfig.subjects.map(subject => ({ ...subject })) } : {}),
                 providerId,
                 parameters: {
                   ...providerDefaultParameters(provider),
@@ -2255,6 +2258,7 @@ export function CanvasPage({
               modelProviderId: provider.id,
               generationConfig: {
                 targetKind: 'video',
+                ...(node.generationConfig?.subjects ? { subjects: node.generationConfig.subjects.map(subject => ({ ...subject })) } : {}),
                 providerId: provider.id,
                 parameters: {
                   ...providerDefaultParameters(provider),
@@ -2537,6 +2541,7 @@ export function CanvasPage({
               modelProviderId: details.modelProviderId,
               generationConfig: {
                 targetKind: 'text',
+                ...(node.generationConfig?.subjects ? { subjects: node.generationConfig.subjects.map(subject => ({ ...subject })) } : {}),
                 ...(details.modelProviderId
                   ? { providerId: details.modelProviderId }
                   : {}),
@@ -4474,25 +4479,31 @@ export function CanvasPage({
       modelName: subjectExtractionProvider.modelName, extractedAt: new Date().toISOString(), usage: result.usage }
   }, [pendingSubjectCreation, providerRegistry, subjectExtractionProvider])
 
-  const saveSubject = useCallback((value: CreateSubjectFormValue) => {
+  const saveSubject = useCallback((value: CreateSubjectFormValue, mergeIntoId?: string) => {
     const pending = pendingSubjectCreation
     const currentProject = useProjectStore.getState().activeProject
-    if (!pending || !currentProject || currentProject.id !== projectId || pending.projectId !== currentProject.id || pending.canvasId !== currentProject.activeCanvasId) return
+    if (subjectSaveInFlight.current || !pending || !currentProject || currentProject.id !== projectId || pending.projectId !== currentProject.id || pending.canvasId !== currentProject.activeCanvasId) return
+    subjectSaveInFlight.current = true
     setSubjectCreationBusy(true)
     setSubjectCreationError(undefined)
-    void subjectRepository.create({
+    const input = {
       ...value,
       coverUrl: pending.asset.url,
       sampleImages: [pending.asset.url],
       sourceAssetId: pending.asset.id,
       sourceProjectId: currentProject.id,
-    }).then((subject) => {
+      width: pending.asset.width, height: pending.asset.height, mimeType: pending.asset.mimeType,
+    }
+    const save = mergeIntoId ? subjectRepository.merge?.(mergeIntoId, input) ?? Promise.reject(new Error('主体合并暂不可用。')) : subjectRepository.create(input)
+    void save.then((subject) => {
+      const active = useProjectStore.getState().activeProject
+      if (active?.id !== pending.projectId || active.activeCanvasId !== pending.canvasId) return
       setPendingSubjectCreation(undefined)
       setGenerationFeedback(`主体“${subject.name}”已保存，可跨项目复用。`)
       setWorkspacePanel('characters')
     }).catch((error) => {
       setSubjectCreationError(error instanceof Error ? error.message : '主体保存失败。')
-    }).finally(() => setSubjectCreationBusy(false))
+    }).finally(() => { subjectSaveInFlight.current = false; setSubjectCreationBusy(false) })
   }, [pendingSubjectCreation, projectId, subjectRepository])
 
   const copyContextNodeToSystemClipboard = useCallback(() => {
@@ -5087,10 +5098,12 @@ export function CanvasPage({
 
   const insertSubjectReference = useCallback((
     subject: SubjectAsset,
-    position = canvasCenterPosition(),
+    position?: { x: number; y: number },
   ) => {
     const currentProject = useProjectStore.getState().activeProject
     if (!currentProject || currentProject.id !== projectId) return
+    const target = currentProject.nodes.find(node => node.id === primaryNodeId && (node.kind === 'image' || node.kind === 'video'))
+    const placement = position ?? (target ? { x: target.position.x - 460, y: target.position.y + currentProject.edges.filter(edge => edge.targetNodeId === target.id).length * 280 } : canvasCenterPosition())
     const nodeId = crypto.randomUUID()
     const assetId = crypto.randomUUID()
     const versionId = crypto.randomUUID()
@@ -5099,8 +5112,9 @@ export function CanvasPage({
         id: nodeId,
         kind: 'character',
         title: subject.name,
-        position,
+        position: placement,
         subjectId: subject.id,
+        subjectSnapshot: subjectSnapshot(subject),
         versions: [{
           id: versionId,
           createdAt: new Date().toISOString(),
@@ -5114,15 +5128,23 @@ export function CanvasPage({
         id: assetId,
         kind: 'image',
         url: subject.coverUrl,
-        mimeType: 'image/png',
+        mimeType: subject.mimeType ?? 'image/png',
+        width: subject.width,
+        height: subject.height,
       },
     })
-    selectOnlyNode(nodeId)
-    createdNodeFocusRef.current = nodeId
+    let feedback = `已将主体“${subject.name}”作为引用节点放入画布。`
+    if (target) {
+      const edge = { id: crypto.randomUUID(), sourceNodeId: nodeId, targetNodeId: target.id }
+      const result = target.kind === 'image' ? connectImageReference(edge) : connectNodes(edge)
+      feedback = result.ok ? `已将主体“${subject.name}”连接到“${target.title}”，生成时自动使用参考图和最新特征。` : '主体引用节点已插入，但连接未建立；可手动连接。'
+    }
+    selectOnlyNode(target?.id ?? nodeId)
+    createdNodeFocusRef.current = target?.id ?? nodeId
     setFocusRequestVersion((version) => version + 1)
     setWorkspacePanel(undefined)
-    setGenerationFeedback(`已将主体“${subject.name}”作为引用节点放入画布。`)
-  }, [canvasCenterPosition, createCanvasContent, projectId, selectOnlyNode])
+    setGenerationFeedback(feedback)
+  }, [canvasCenterPosition, createCanvasContent, projectId, selectOnlyNode, primaryNodeId, connectNodes, connectImageReference])
 
   const dropSubjectOnCanvas = useCallback((event: ReactDragEvent) => {
     const subjectId = event.dataTransfer.getData(SUBJECT_DRAG_MIME)
@@ -5134,7 +5156,8 @@ export function CanvasPage({
     })
     void subjectRepository.get(subjectId).then((subject) => {
       if (subject) insertSubjectReference(subject, position)
-    })
+      else setGenerationFeedback('主体不存在或已删除，请重新选择。')
+    }).catch(() => setGenerationFeedback('主体读取失败，请重试；未插入引用节点。'))
   }, [flowInstance, insertSubjectReference, subjectRepository])
 
   const closeAgent = () => {
@@ -5441,6 +5464,7 @@ export function CanvasPage({
           extractionDisabledReason: subjectExtractionProvider?.disabledReason ?? (!subjectExtractionProvider ? subjectExtractionUnavailable : undefined),
           extractionNotice: `自动发送图片至豆包生成主体草稿；按token计费（输入${subjectExtractionProvider?.tokenPricing?.inputPerMillionCny ?? 6}元/百万，输出${subjectExtractionProvider?.tokenPricing?.outputPerMillionCny ?? 30}元/百万），保存前请核对。取消等待不保证免除已产生的费用。`,
           onCancel: closeSubjectCreation, onSubmit: saveSubject,
+          onFindSimilar: async value => findSimilarSubjects({ ...value, coverUrl: pendingSubjectCreation.asset.url, sampleImages: [pendingSubjectCreation.asset.url], width: pendingSubjectCreation.asset.width, height: pendingSubjectCreation.asset.height }, await subjectRepository.list()),
         } : undefined} />
       <div
         ref={viewportRef}

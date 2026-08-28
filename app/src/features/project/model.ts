@@ -145,7 +145,16 @@ export interface AppliedStyle {
   compatibility: { targetKinds: Array<'image' | 'video' | 'text'>; providerIds?: string[] }
 }
 
+export interface SubjectReference {
+  id: string
+  name: string
+  description: string
+  coverUrl: string
+  mimeType: string
+}
+
 export interface GenerationConfiguration {
+  subjects?: SubjectReference[]
   style?: AppliedStyle
   targetKind: 'image' | 'video' | 'audio' | 'text'
   providerId?: string
@@ -384,6 +393,7 @@ export type CanvasNodeDetails =
   | SmartEditNodeDetails
 
 export interface CanvasNode {
+  subjectSnapshot?: SubjectReference
   /** null explicitly clears a historical style; undefined keeps old projects compatible. */
   appliedStyle?: AppliedStyle | null
   id: string

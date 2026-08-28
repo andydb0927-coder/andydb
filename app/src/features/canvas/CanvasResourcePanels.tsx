@@ -24,7 +24,7 @@ import type {
 } from '../assets/library-model'
 import type { Asset, Project } from '../project/model'
 import type { SubjectAsset } from '../subjects/subject-model'
-import type { SubjectRepository } from '../subjects/subject-repository'
+import { SubjectDetailsDialog, SubjectDeleteDialog, type SubjectLibraryRepository } from '../subjects/SubjectDetails'
 
 export const SUBJECT_DRAG_MIME = 'application/x-wireless-canvas-subject'
 
@@ -594,7 +594,7 @@ export function CharacterLibraryPanel({
 }: {
   onApply(characters: CharacterProfile[]): void
   onApplySubject?(subject: SubjectAsset): void
-  subjectRepository?: Pick<SubjectRepository, 'list' | 'update' | 'delete'>
+  subjectRepository?: SubjectLibraryRepository
   currentProjectId?: string
 }) {
   const [gender, setGender] = useState('全部')
@@ -605,6 +605,7 @@ export function CharacterLibraryPanel({
   const [preview, setPreview] = useState<CharacterProfile>()
   const [subjects, setSubjects] = useState<SubjectAsset[]>([])
   const [editingSubject, setEditingSubject] = useState<SubjectAsset>()
+  const [viewingSubject, setViewingSubject] = useState<SubjectAsset>()
   const [deletingSubject, setDeletingSubject] = useState<SubjectAsset>()
   const [subjectFeedback, setSubjectFeedback] = useState<string>()
 
@@ -665,6 +666,7 @@ export function CharacterLibraryPanel({
                     : <small>当前项目主体</small>}
                 </div>
                 <div className="subject-library__actions">
+                  <button type="button" aria-label={`查看主体${subject.name}`} onClick={() => setViewingSubject(subject)}><Eye aria-hidden="true" />详情</button>
                   <button type="button" aria-label={`使用${subject.name}`} onClick={() => onApplySubject?.(subject)}><Send aria-hidden="true" />使用</button>
                   <button type="button" aria-label={`编辑${subject.name}`} onClick={() => setEditingSubject(subject)}><Pencil aria-hidden="true" />编辑</button>
                   <button type="button" aria-label={`删除${subject.name}`} onClick={() => setDeletingSubject(subject)}><Trash2 aria-hidden="true" />删除</button>
@@ -741,23 +743,12 @@ export function CharacterLibraryPanel({
           }}
         />
       ) : null}
-      {deletingSubject ? (
-        <div className="canvas-resource-dialog__overlay" role="dialog" aria-modal="true" aria-label={`删除主体 ${deletingSubject.name}`}>
-          <h3>删除“{deletingSubject.name}”？</h3>
-          <p>这会从本地主体库移除记录，已放入画布的引用节点会保留自己的快照。</p>
-          <div className="subject-library__confirm-actions">
-            <button type="button" onClick={() => setDeletingSubject(undefined)}>取消</button>
-            <button type="button" aria-label="确认删除主体" onClick={() => {
-              if (!subjectRepository) return
-              void subjectRepository.delete(deletingSubject.id).then(() => {
-                setSubjects((current) => current.filter(({ id }) => id !== deletingSubject.id))
-                setDeletingSubject(undefined)
-                setSubjectFeedback('主体已从本地库删除。')
-              }).catch(() => setSubjectFeedback('主体删除失败。'))
-            }}>确认删除</button>
-          </div>
-        </div>
-      ) : null}
+      {viewingSubject && subjectRepository ? <SubjectDetailsDialog subject={viewingSubject} repository={subjectRepository} onClose={() => setViewingSubject(undefined)} onUpdated={updated => {
+        setViewingSubject(updated); setSubjects(current => current.map(subject => subject.id === updated.id ? updated : subject))
+      }} /> : null}
+      {deletingSubject && subjectRepository ? <SubjectDeleteDialog subject={deletingSubject} repository={subjectRepository} onCancel={() => setDeletingSubject(undefined)} onDeleted={() => {
+        setSubjects(current => current.filter(subject => subject.id !== deletingSubject.id)); setDeletingSubject(undefined); setSubjectFeedback('主体已从本地库删除。')
+      }} /> : null}
     </div>
   )
 }

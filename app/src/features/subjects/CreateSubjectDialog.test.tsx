@@ -5,6 +5,20 @@ import { expect, test, vi } from 'vitest'
 
 import { CreateSubjectDialog } from './CreateSubjectDialog'
 
+test('similar subjects require merge or explicit new save; cancel performs no write', async () => {
+  const user = userEvent.setup(), onSubmit = vi.fn()
+  const onFindSimilar = vi.fn(async () => [{ score: 0.9, sameSource: false, subject: { id: 'existing', name: '已有旅人', description: '短发黑衣', tags: [], coverUrl: '/image.png', sampleImages: [], createdAt: '', updatedAt: '' } }])
+  render(<CreateSubjectDialog sourceTitle="图" coverUrl="/image.png" onCancel={vi.fn()} onSubmit={onSubmit} onFindSimilar={onFindSimilar} />)
+  await user.click(screen.getByRole('button', { name: '保存到主体库' }))
+  expect(await screen.findByRole('region', { name: '相似主体提示' })).toBeVisible()
+  expect(onSubmit).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '返回修改' }))
+  expect(onSubmit).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '保存到主体库' }))
+  await user.click(await screen.findByRole('button', { name: '合并到已有旅人' }))
+  expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: '图 主体' }), 'existing')
+})
+
 test('collects local subject metadata while keeping AI extraction explicitly disabled', async () => {
   const user = userEvent.setup()
   const onSubmit = vi.fn()
@@ -38,6 +52,19 @@ const draft = {
   providerId: 'ai-subject-extraction', modelName: '豆包 Seed 2.1 Pro', extractedAt: '2026-08-27T08:00:00.000Z',
   usage: { providerId: 'ai-subject-extraction', providerName: '火山方舟', modelName: '豆包 Seed 2.1 Pro', cost: 1, currency: 'credits' as const, inputTokens: 2000, outputTokens: 300, estimatedCostCny: 0.021 },
 }
+
+test('a similarity lookup never submits stale values after the user edits the form', async () => {
+  let finish!: (value: []) => void
+  const onSubmit = vi.fn()
+  render(<CreateSubjectDialog sourceTitle="图" coverUrl="/demo/image.png" onCancel={vi.fn()} onSubmit={onSubmit} onFindSimilar={() => new Promise(resolve => { finish = resolve })} />)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '保存到主体库' }))
+  await user.type(screen.getByLabelText('主体描述'), '核对期间新写的特征')
+  await act(async () => finish([]))
+  expect(onSubmit).not.toHaveBeenCalled()
+  expect(screen.getByRole('alert')).toHaveTextContent('资料已变更')
+  expect(screen.getByRole('button', { name: '保存到主体库' })).toBeEnabled()
+})
 
 test('auto-extracts exactly once in StrictMode and only saves a reviewed draft on submission', async () => {
   const onExtract = vi.fn(async () => draft)

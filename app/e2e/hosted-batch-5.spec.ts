@@ -1,4 +1,5 @@
 import { expect, test, createFixtureCinematicProject } from './provider-fixture'
+import { fitCanvasContent } from './canvas-viewport'
 
 test('opens membership and help from the platform rail', async ({ page }) => {
   await page.goto('/membership')
@@ -18,6 +19,7 @@ test('shows generation task notifications and persists the read state', async ({
   await page.getByRole('button', { name: '适配画布' }).click()
   await page.getByRole('button', { name: '场景设定', exact: true }).click()
   const composer = page.getByRole('region', { name: '场景设定 生成参数' })
+  await fitCanvasContent(page, composer)
   await composer.getByRole('button', { name: '生成图片，预计成本 18' }).click()
   await page.getByRole('button', { name: '确认生成 1 张图片' }).click()
   await expect(page.getByText('Seedream 5.0 Pro结果已保存到项目与生成历史。')).toBeVisible()

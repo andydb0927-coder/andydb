@@ -55,6 +55,7 @@ const MembershipPage = lazy(() =>
 const HelpCenterPage = lazy(() =>
   import('../features/help/HelpCenterPage').then((m) => ({ default: m.HelpCenterPage })),
 )
+const SubjectDetailsPage = lazy(() => import('../features/subjects/SubjectDetailsPage').then(m => ({ default: m.SubjectDetailsPage })))
 
 export const routes: RouteObject[] = withRouteRecovery([
   {
@@ -72,6 +73,7 @@ export const routes: RouteObject[] = withRouteRecovery([
       { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
       { path: '/membership', element: withSuspense(<MembershipPage />) },
       { path: '/help', element: withSuspense(<HelpCenterPage />) },
+      { path: '/subjects/:subjectId', element: withSuspense(<SubjectDetailsPage />) },
     ],
   },
   {

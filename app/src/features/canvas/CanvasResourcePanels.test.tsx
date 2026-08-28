@@ -252,6 +252,7 @@ test('shows, edits, deletes and reuses locally persisted subjects', async () => 
     updatedAt: '2026-08-27T08:00:00.000Z',
   }]
   const repository = {
+    usage: vi.fn(async () => ({ projects: [], nodeReferences: 0, characterReferences: 0, shotReferences: 0, generationCount: 0 })),
     list: vi.fn(async () => subjects),
     update: vi.fn(async (id: string, changes: Pick<SubjectAsset, 'name' | 'description' | 'tags'>) => {
       subjects = subjects.map((subject) => subject.id === id ? { ...subject, ...changes } : subject)

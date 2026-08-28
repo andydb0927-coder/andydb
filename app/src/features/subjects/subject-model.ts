@@ -19,6 +19,9 @@ export interface SubjectExtractionMetadata {
 export type SubjectExtractionDraft = SubjectVisualDescription & SubjectExtractionMetadata
 
 export interface SubjectAsset {
+  width?: number
+  height?: number
+  mimeType?: string
   id: string
   name: string
   description: string
@@ -33,6 +36,9 @@ export interface SubjectAsset {
 }
 
 export interface CreateSubjectInput {
+  width?: number
+  height?: number
+  mimeType?: string
   name: string
   description: string
   tags: string[]
