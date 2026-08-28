@@ -1,0 +1,494 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/director-enhancement.test.ts src/features/canvas/Director3DViewport.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/canvas/director-enhancement.test.ts (15 tests | 15 failed) 5ms
+     × applies three-point lights without mutating the old scene 2ms
+     × applies side-back lights without mutating the old scene 0ms
+     × applies top lights without mutating the old scene 0ms
+     × applies rim lights without mutating the old scene 0ms
+     × updates only a chosen light, validates finite coordinates and preserves presets from alias mutation 0ms
+     × camera preset close-up is serializable and preserves objects 0ms
+     × camera preset medium is serializable and preserves objects 0ms
+     × camera preset wide is serializable and preserves objects 0ms
+     × camera preset low is serializable and preserves objects 0ms
+     × camera transition interpolates position, target and lens without writes 0ms
+     × adds procedural table asset at ground height 1ms
+     × adds procedural chair asset at ground height 0ms
+     × adds procedural tree asset at ground height 0ms
+     × adds procedural column asset at ground height 0ms
+     × trajectory uses equal-segment linear interpolation and clamps endpoints 0ms
+ ❯ src/features/canvas/Director3DViewport.test.tsx (2 tests | 1 failed) 51ms
+   × light presets, lens and keyframes are editable offline while preview requires WebGL 24ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 16 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/Director3DViewport.test.tsx > light presets, lens and keyframes are editable offline while preview requires WebGL
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "三点布光"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "导演台3D场景":
+  [36m<section[39m
+    [33maria-label[39m=[32m"导演台3D场景"[39m
+    [33mclass[39m=[32m"director-3d"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"director-3d__header"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  [36m<strong />[39m
+
+  Name "":
+  [36m<strong />[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "导出四视图 PNG 到画布":
+  [36m<button[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "添加立方体":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "添加球体":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "添加圆柱":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "添加平面":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "添加人形素模":
+  [36m<button[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "选择人形素模 01":
+  [36m<button[39m
+    [33maria-label[39m=[32m"选择人形素模 01"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "删除人形素模 01":
+  [36m<button[39m
+    [33maria-label[39m=[32m"删除人形素模 01"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "透视投影":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"true"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "正交投影":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "顶部视图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "前视图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "侧视图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "自由视图":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"true"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "运动轨迹（待接入）":
+  [36m<button[39m
+    [33maria-describedby[39m=[32m"director-trajectory-reason"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  img:
+
+  Name "测试 3D视口":
+  [36m<div[39m
+    [33maria-label[39m=[32m"测试 3D视口"[39m
+    [33mclass[39m=[32m"director-3d__viewport nodrag nopan nowheel"[39m
+    [33mdata-renderer[39m=[32m"unavailable"[39m
+    [33mrole[39m=[32m"img"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p />[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"director-3d__disabled-reason"[39m
+    [33mid[39m=[32m"director-trajectory-reason"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  complementary:
+
+  Name "3D对象树面板":
+  [36m<aside[39m
+    [33maria-label[39m=[32m"3D对象树面板"[39m
+    [33mclass[39m=[32m"director-3d__objects"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tree:
+
+  Name "3D对象树":
+  [36m<ul[39m
+    [33maria-label[39m=[32m"3D对象树"[39m
+    [33mrole[39m=[32m"tree"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  treeitem:
+
+  Name "人形素模 01 人形素模":
+  [36m<li[39m
+    [33maria-label[39m=[32m"人形素模 01 人形素模"[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mrole[39m=[32m"treeitem"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "人形素模 01名称":
+  [36m<input[39m
+    [33maria-label[39m=[32m"人形素模 01名称"[39m
+    [33mmaxlength[39m=[32m"40"[39m
+    [33mvalue[39m=[32m"人形素模 01"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  group:
+
+  Name "3D相机控制":
+  [36m<div[39m
+    [33maria-label[39m=[32m"3D相机控制"[39m
+    [33mclass[39m=[32m"director-3d__camera"[39m
+    [33mrole[39m=[32m"group"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-label[39m=[32m"导演台3D场景"[39m
+      [33mclass[39m=[32m"director-3d"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"director-3d__header"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<strong>[39m
+            [0m3D 基础视口[0m
+          [36m</strong>[39m
+          [36m<span>[39m
+            [0m网格地面 · OrbitControls[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m导出四视图 PNG 到画布[0m
+        [36m</button>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"director-3d__workspace"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"测试 3D视口"[39m
+          [33mclass[39m=[32m"director-3d__viewport nodrag nopan nowheel"[39m
+          [33mdata-renderer[39m=[32m"unavailable"[39m
+          [33mrole[39m=[32m"img"[39m
+        [36m>[39m
+          [36m<canvas />[39m
+          [36m<p>[39m
+            [0mWebGL 不可用，对象树与场景数据仍可编辑。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"3D对象树面板"[39m
+          [33mclass[39m=[32m"director-3d__objects"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0m对象树[0m
+          [36m</strong>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"添加3D对象"[39m
+            [33mclass[39m=[32m"director-3d__add-row"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m添加[0m
+              [0m立方体[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m添加[0m
+              [0m球体[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m添加[0m
+              [0m圆柱[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m添加[0m
+              [0m平面[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m添加[0m
+              [0m人形素模[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<ul[39m
+            [33maria-label[39m=[32m"3D对象树"[39m
+            [33mrole[39m=[32m"tree"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33maria-label[39m=[32m"人形素模 01 人形素模"[39m
+              [33maria-selected[39m=[32m"true"[39m
+              [33mrole[39m=[32m"treeitem"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33maria-label[39m=[32m"选择人形素模 01"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m人形素模[0m
+              [36m</button>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"人形素模 01名称"[39m
+                [33mmaxlength[39m=[32m"40"[39m
+                [33mvalue[39m=[32m"人形素模 01"[39m
+              [36m/>[39m
+              [36m<button[39m
+                [33maria-label[39m=[32m"删除人形素模 01"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m删除[0m
+              [36m</button>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</aside>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"3D相机控制"[39m
+        [33mclass[39m=[32m"director-3d__camera"[39m
+        [33mrole[39m=[32m"group"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"true"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m透视投影[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m正交投影[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m顶部[0m
+          [0m视图[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m前[0m
+          [0m视图[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m侧[0m
+          [0m视图[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"true"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m自由[0m
+          [0m视图[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33maria-describedby[39m=[32m"director-trajectory-reason"[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m运动轨迹（待接入）[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"director-3d__disabled-reason"[39m
+        [33mid[39m=[32m"director-trajectory-reason"[39m
+      [36m>[39m
+        [0m待接入运动运镜生成[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/canvas/Director3DViewport.test.tsx:16:27
+     14|   }
+     15|   render(<Harness />)
+     16|   await user.click(screen.getByRole('button', { name: '三点布光', exact: t…
+       |                           ^
+     17|   expect(screen.getByRole('spinbutton', { name: '主光 X' })).toHaveValue…
+     18|   await user.click(screen.getByRole('button', { name: '侧逆光', exact: tr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > applies three-point lights without mutating the old scene
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > applies side-back lights without mutating the old scene
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > applies top lights without mutating the old scene
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > applies rim lights without mutating the old scene
+TypeError: applyDirectorLightingPreset is not a function
+ ❯ src/features/canvas/director-enhancement.test.ts:12:18
+     10|   test.each(['three-point', 'side-back', 'top', 'rim'] as const)('appl…
+     11|     const original = createDefaultDirectorScene()
+     12|     const next = applyDirectorLightingPreset(original, preset)
+       |                  ^
+     13|     expect(next.lighting?.preset).toBe(preset)
+     14|     expect(next.lighting?.lights.length).toBeGreaterThan(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > updates only a chosen light, validates finite coordinates and preserves presets from alias mutation
+TypeError: applyDirectorLightingPreset is not a function
+ ❯ src/features/canvas/director-enhancement.test.ts:21:19
+     19|
+     20|   test('updates only a chosen light, validates finite coordinates and …
+     21|     const scene = applyDirectorLightingPreset(createDefaultDirectorSce…
+       |                   ^
+     22|     const next = moveDirectorLight(scene, 'key', [2, 4, 6])
+     23|     expect(next.lighting?.lights[0].position).toEqual([2, 4, 6])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > camera preset close-up is serializable and preserves objects
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > camera preset medium is serializable and preserves objects
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > camera preset wide is serializable and preserves objects
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > camera preset low is serializable and preserves objects
+TypeError: applyDirectorCameraPreset is not a function
+ ❯ src/features/canvas/director-enhancement.test.ts:33:18
+     31|   test.each(['close-up', 'medium', 'wide', 'low'] as const)('camera pr…
+     32|     const scene = createDefaultDirectorScene()
+     33|     const next = applyDirectorCameraPreset(scene, preset)
+       |                  ^
+     34|     expect(next.camera.preset).toBe(preset)
+     35|     expect(next.camera.focalLength).toBeGreaterThan(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > camera transition interpolates position, target and lens without writes
+TypeError: applyDirectorCameraPreset is not a function
+ ❯ src/features/canvas/director-enhancement.test.ts:42:18
+     40|
+     41|   test('camera transition interpolates position, target and lens witho…
+     42|     const from = applyDirectorCameraPreset(createDefaultDirectorScene(…
+       |                  ^
+     43|     const to = applyDirectorCameraPreset(createDefaultDirectorScene(),…
+     44|     const mid = interpolateDirectorCamera(from, to, .5)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > adds procedural table asset at ground height
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > adds procedural chair asset at ground height
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > adds procedural tree asset at ground height
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > adds procedural column asset at ground height
+AssertionError: the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+ ❯ src/features/canvas/director-enhancement.test.ts:52:32
+     50|
+     51|   test.each(['table', 'chair', 'tree', 'column'] as const)('adds proce…
+     52|     expect(directorAssetKinds).toContain(kind)
+       |                                ^
+     53|     const next = addDirectorSceneObject(createDefaultDirectorScene(), …
+     54|     expect(next.objects.at(-1)).toMatchObject({ id: 'prop', kind, posi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/16]⎯
+
+ FAIL  src/features/canvas/director-enhancement.test.ts > director local scene enhancement > trajectory uses equal-segment linear interpolation and clamps endpoints
+TypeError: sampleDirectorTrajectory is not a function
+ ❯ src/features/canvas/director-enhancement.test.ts:60:12
+     58|   test('trajectory uses equal-segment linear interpolation and clamps …
+     59|     const trajectory = { points: [[0, 1, 0], [10, 3, 0], [10, 3, 10]] …
+     60|     expect(sampleDirectorTrajectory(trajectory, 1)).toEqual([5, 2, 0])
+       |            ^
+     61|     expect(sampleDirectorTrajectory(trajectory, 3)).toEqual([10, 3, 5])
+     62|     expect(sampleDirectorTrajectory(trajectory, 9)).toEqual([10, 3, 10…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/16]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  16 failed | 1 passed (17)
+   Start at  00:15:05
+   Duration  537ms (transform 56ms, setup 211ms, import 107ms, tests 55ms, environment 442ms)
+

@@ -114,7 +114,7 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   onCreateTextToVideoPreset?(): void
   onUpdateEffectTool?(changes: Partial<EffectToolConfig>): void
   onUpdateNodeDetails?(details: CanvasNodeDetails): void
-  onExportDirectorViews?(blob: Blob): Promise<void> | void
+  onExportDirectorViews?(blob: Blob, kind?: 'views' | 'snapshot'): Promise<void> | void
 }
 
 export type CreativeFlowNode = Node<CreativeNodeData, NodeKind>

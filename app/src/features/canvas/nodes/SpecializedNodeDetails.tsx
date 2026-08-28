@@ -914,9 +914,9 @@ function DirectorDetails({
       <Suspense fallback={<p role="status">正在加载 3D 视口…</p>}>
         <Director3DViewport
           title={data.node.title}
-          scene={scene3d}
+          scene={scene3d.trajectory || !details.trajectory ? scene3d : { ...scene3d, trajectory: details.trajectory }}
           onChange={(nextScene) => onUpdate({ ...details, scene3d: nextScene })}
-          onExportViews={(blob) => data.onExportDirectorViews?.(blob)}
+          onExportViews={(blob, kind) => data.onExportDirectorViews?.(blob, kind)}
         />
       </Suspense>
     </>

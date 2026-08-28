@@ -329,6 +329,10 @@ export type Director3DObjectKind =
   | 'cylinder'
   | 'plane'
   | 'humanoid'
+  | 'table'
+  | 'chair'
+  | 'tree'
+  | 'column'
 
 export type Director3DVector = [number, number, number]
 
@@ -344,8 +348,27 @@ export interface Director3DObject {
 
 export type DirectorCameraProjection = 'perspective' | 'orthographic'
 export type DirectorCameraView = 'top' | 'front' | 'side' | 'free'
+export type DirectorCameraPreset = 'close-up' | 'medium' | 'wide' | 'low'
+export type DirectorLightingPreset = 'three-point' | 'side-back' | 'top' | 'rim'
+
+export interface DirectorLight {
+  id: string
+  name: string
+  color: string
+  intensity: number
+  position: Director3DVector
+  target: Director3DVector
+}
+
+export interface DirectorLightingState {
+  preset: DirectorLightingPreset | 'custom' | 'legacy'
+  ambientIntensity: number
+  lights: DirectorLight[]
+}
 
 export interface DirectorCameraState {
+  preset?: DirectorCameraPreset
+  focalLength?: number
   projection: DirectorCameraProjection
   view: DirectorCameraView
   position: Director3DVector
@@ -356,10 +379,13 @@ export interface DirectorCameraState {
 export interface Director3DSceneState {
   objects: Director3DObject[]
   camera: DirectorCameraState
+  lighting?: DirectorLightingState
+  trajectory?: DirectorTrajectory
 }
 
 export interface DirectorTrajectory {
   points: Director3DVector[]
+  durationSeconds?: number
 }
 
 export interface DirectorNodeDetails {

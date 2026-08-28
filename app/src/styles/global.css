@@ -4646,6 +4646,7 @@ select {
 
 .director-3d__header {
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .director-3d__header > div {
@@ -4682,6 +4683,7 @@ select {
   position: relative;
   min-width: 0;
   min-height: 360px;
+  height: 360px;
   overflow: hidden;
   background: var(--surface-canvas);
   touch-action: none;
@@ -4787,6 +4789,80 @@ select {
 .director-3d__camera button:disabled {
   cursor: not-allowed;
 }
+
+.director-3d__settings {
+  padding: var(--space-2);
+  border: 1px solid var(--neutral-white-a11);
+  border-radius: var(--radius-panel);
+  background: var(--neutral-white-a03);
+}
+
+.director-3d__settings summary {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: .75rem;
+  margin-bottom: var(--space-2);
+}
+
+.director-3d__presets,
+.director-3d__light-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.director-3d__presets button,
+.director-3d__keyframes button {
+  min-height: 30px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--neutral-white-a11);
+  border-radius: var(--radius-button);
+  background: var(--neutral-white-a05);
+  color: var(--text-primary);
+  font-size: .625rem;
+}
+
+.director-3d__presets button[aria-pressed='true'] {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 1px rgb(var(--brand-primary-rgb) / 30%);
+}
+
+.director-3d__presets button:hover:not(:disabled),
+.director-3d__keyframes button:hover:not(:disabled) {
+  background: rgb(var(--brand-primary-rgb) / 14%);
+}
+
+.director-3d button:disabled { opacity: .5; cursor: not-allowed; }
+.director-3d small { font-size: .625rem; color: var(--text-muted); }
+.director-3d__presets label,
+.director-3d__light-editor label { display: flex; align-items: center; gap: var(--space-1); font-size: .625rem; }
+.specialized-node-details .director-3d__presets input { width: 64px; min-width: 0; }
+.director-3d__coordinates { display: flex; gap: var(--space-2); }
+.director-3d__coordinates label { display: flex; gap: var(--space-1); align-items: center; font-size: .625rem; }
+.specialized-node-details .director-3d__coordinates input { width: 62px; min-width: 0; }
+.director-3d__keyframes { padding: 0; list-style: none; display: grid; gap: var(--space-2); max-height: 240px; overflow: auto; }
+.director-3d__keyframes li { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.director-3d__keyframes fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.director-3d__light-handle {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 3px;
+  border: 1px solid var(--brand-secondary);
+  border-radius: var(--radius-button);
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
+  font-size: 18px;
+}
+.director-3d__light-handle:active { cursor: grabbing; }
+.director-3d__light-handle span { font-size: 9px; white-space: nowrap; position: absolute; top: 100%; background: var(--surface-canvas); border-radius: var(--radius-button); }
 
 @media (max-width: 800px) {
   .creative-node--director.creative-node--expanded {

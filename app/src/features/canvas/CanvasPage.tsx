@@ -1739,10 +1739,11 @@ export function CanvasPage({
   )
 
   const exportDirectorViews = useCallback(
-    async (nodeId: string, blob: Blob) => {
+    async (nodeId: string, blob: Blob, kind: 'views' | 'snapshot' = 'views') => {
       const currentProject = useProjectStore.getState().activeProject
       const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
-      if (!sourceNode) throw new Error('导演台节点不存在，无法保存四视图。')
+      if (!sourceNode || currentProject?.id !== projectId) throw new Error('导演台项目已切换或节点不存在，无法保存截图。')
+      const label = kind === 'views' ? '四视图' : '场景快照'
       const createdId = await saveProcessedAsset(
         nodeId,
         {
@@ -1752,13 +1753,13 @@ export function CanvasPage({
           height: 720,
         },
         'image',
-        `${sourceNode.title} 四视图`,
+        `${sourceNode.title} ${label}`,
         { x: 520, y: 120 },
       )
       selectOnlyNode(createdId)
-      setGenerationFeedback('导演台四视图 PNG 已生成图片节点并写入资产库。')
+      setGenerationFeedback(`导演台${label} PNG 已生成图片节点并写入资产库。`)
     },
-    [saveProcessedAsset, selectOnlyNode],
+    [projectId, saveProcessedAsset, selectOnlyNode],
   )
 
   const splitImageNode = useCallback(
@@ -2581,7 +2582,7 @@ export function CanvasPage({
             updateNode(node.id, { appliedStyle: style })
           },
           onOpenScriptWorkspace: () => setScriptWorkspaceNodeId(node.id),
-          onExportDirectorViews: (blob) => exportDirectorViews(node.id, blob),
+          onExportDirectorViews: (blob, kind) => exportDirectorViews(node.id, blob, kind),
           onGenerateText: (details, prompt) => {
             const selectedProvider = providerRegistry.list().find(
               ({ id }) => id === details.modelProviderId,
