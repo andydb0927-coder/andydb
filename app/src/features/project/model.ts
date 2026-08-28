@@ -432,7 +432,15 @@ export type CanvasNodeDetails =
   | FrameAnalysisNodeDetails
   | SmartEditNodeDetails
 
+export interface PipelineNodeConfig {
+  action: 'generate' | 'reuse' | 'image-transform'
+  mirrorHorizontal?: boolean
+  mirrorVertical?: boolean
+  rotationQuarterTurns?: number
+}
+
 export interface CanvasNode {
+  pipelineConfig?: PipelineNodeConfig
   subjectSnapshot?: SubjectReference
   /** null explicitly clears a historical style; undefined keeps old projects compatible. */
   appliedStyle?: AppliedStyle | null

@@ -64,6 +64,13 @@ test('dispatches the whole-canvas or selected-group execution command', async ()
   expect(props.onExecuteGroup).toHaveBeenCalledOnce()
 })
 
+test('selected eligible node exposes pipeline execution without replacing group execution', () => {
+  const onExecutePipeline = vi.fn()
+  renderMenu({ targetNodeTitle: '图片起点', onExecutePipeline })
+  fireEvent.click(screen.getByRole('menuitem', { name: '执行下游管线' }))
+  expect(onExecutePipeline).toHaveBeenCalledOnce()
+})
+
 test('opens all nine node types by hover or click and dispatches the shared type', async () => {
   const user = userEvent.setup()
   const props = renderMenu()

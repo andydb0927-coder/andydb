@@ -9,6 +9,7 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
   const user = userEvent.setup()
   const onModeChange = vi.fn()
   const onToggleAgent = vi.fn()
+  const onOpenPipeline = vi.fn()
   render(
     <MemoryRouter>
       <CanvasTopBar
@@ -25,6 +26,7 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
         onOpenNodeList={vi.fn()}
         onModeChange={onModeChange}
         onToggleAgent={onToggleAgent}
+        onOpenPipeline={onOpenPipeline}
       />
     </MemoryRouter>,
   )
@@ -37,6 +39,8 @@ test('switches workspace modes and exposes the agent as a pressed control', asyn
   expect(agent).toHaveAttribute('aria-pressed', 'false')
   await user.click(agent)
   expect(onToggleAgent).toHaveBeenCalledOnce()
+  await user.click(screen.getByRole('button', { name: '管线自动化' }))
+  expect(onOpenPipeline).toHaveBeenCalledOnce()
 })
 
 test('creates, renames, switches, and conditionally deletes project canvases', async () => {

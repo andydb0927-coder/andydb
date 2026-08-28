@@ -10,6 +10,7 @@ import {
   Send,
   Share2,
   Undo2,
+  Workflow,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -48,6 +49,7 @@ interface CanvasTopBarProps {
   onSwitchCanvas?(canvasId: string): void
   onDeleteCanvas?(canvasId: string): void
   onOpenNodeList(trigger: HTMLButtonElement): void
+  onOpenPipeline?(): void
   onModeChange(mode: WorkspaceMode): void
   onToggleAgent(): void
   onOpenPublish?(): void
@@ -76,6 +78,7 @@ export function CanvasTopBar({
   onSwitchCanvas,
   onDeleteCanvas,
   onOpenNodeList,
+  onOpenPipeline,
   onModeChange,
   onToggleAgent,
   onOpenPublish,
@@ -263,6 +266,7 @@ export function CanvasTopBar({
         </button>
       </div>
       <div className="canvas-top-bar__actions">
+        {onOpenPipeline && <button type="button" aria-label="管线自动化" title="管线自动化" onClick={onOpenPipeline}><Workflow aria-hidden="true" /></button>}
         <button
           type="button"
           className="canvas-top-bar__secondary-action"

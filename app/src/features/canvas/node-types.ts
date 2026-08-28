@@ -43,6 +43,7 @@ export interface CreativeNodeProps {
 }
 
 export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeProps {
+  pipelineStep?: Pick<import('../pipeline/pipeline-model').PipelineStep, 'status' | 'progress' | 'error' | 'skipped'>
   providerRegistry?: ProviderRegistry
   asset?: Asset
   imageResults?: Array<{ id: string; asset: Asset }>

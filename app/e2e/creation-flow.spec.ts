@@ -1163,9 +1163,10 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
 
   await imageNode.click({ button: 'right' })
   const nodeMenu = page.getByRole('menu', { name: '画布快捷菜单' })
-  await expect(nodeMenu.getByRole('menuitem')).toHaveCount(8)
+  await expect(nodeMenu.getByRole('menuitem')).toHaveCount(9)
   await expect(nodeMenu.getByRole('menuitem').allTextContents()).resolves.toEqual([
     '合规校验',
+    '执行下游管线',
     '保存到我的资产',
     '创建主体',
     '复制',

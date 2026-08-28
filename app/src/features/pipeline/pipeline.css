@@ -1,0 +1,67 @@
+.pipeline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: var(--surface-backdrop);
+}
+.pipeline-panel {
+  width: min(680px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 20px;
+  color: var(--text-primary);
+  background: var(--surface-panel-strong);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-overlay);
+}
+.pipeline-panel__header, .pipeline-step__heading, .pipeline-buttons, .pipeline-tabs, .pipeline-fields {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pipeline-panel__header, .pipeline-step__heading { justify-content: space-between; }
+.pipeline-panel h2, .pipeline-panel h3 { margin: 0 0 12px; }
+.pipeline-panel p { margin: 10px 0; line-height: 1.5; overflow-wrap: anywhere; }
+.pipeline-panel button, .pipeline-panel input, .pipeline-panel select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  background: var(--surface-control);
+  color: inherit;
+  max-width: 100%;
+}
+.pipeline-panel button:not(:disabled):hover, .pipeline-tabs [aria-selected="true"] { border-color: var(--brand-secondary); }
+.pipeline-panel button:disabled { opacity: 0.5; cursor: not-allowed; }
+.pipeline-panel :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.pipeline-panel label { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.pipeline-panel select { min-width: 120px; }
+.pipeline-tabs { margin-bottom: 18px; }
+.pipeline-steps, .pipeline-history { list-style: none; padding: 0; margin: 12px 0; }
+.pipeline-steps li, .pipeline-template, .pipeline-run { border: 1px solid var(--border-default); border-radius: var(--radius-card); padding: 12px; margin: 10px 0; }
+.pipeline-steps [data-status="failed"] { border-color: var(--status-error); }
+.pipeline-error { color: var(--status-error); }
+.pipeline-run progress { width: 100%; accent-color: var(--brand-secondary); }
+.pipeline-setup summary { cursor: pointer; font-weight: 600; margin: 12px 0; }
+.pipeline-history button { width: 100%; text-align: left; margin-bottom: 8px; }
+.pipeline-node-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 2;
+  pointer-events: none;
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--surface-panel);
+  border: 1px solid var(--brand-secondary);
+  max-width: 90%;
+  font-size: 12px;
+}
+.pipeline-node-badge[data-status="failed"] { border-color: var(--status-error); color: var(--status-error); }
+@media (max-width: 800px) { .pipeline-panel { padding: 14px; } }

@@ -83,6 +83,7 @@ export interface CanvasContextMenuProps {
   onPaste(): void
   onSaveToAssets(): void
   onExecuteGroup(): void
+  onExecutePipeline?(): void
   onComplianceCheck?(): void
   onCreateSubject?(): void
   onCopyNode?(): void
@@ -129,6 +130,7 @@ export function CanvasContextMenu({
   onPaste,
   onSaveToAssets,
   onExecuteGroup,
+  onExecutePipeline,
   onComplianceCheck,
   onCreateSubject,
   onCopyNode,
@@ -212,6 +214,7 @@ export function CanvasContextMenu({
           <button ref={firstItemRef} type="button" role="menuitem" onClick={onComplianceCheck}>
             <ShieldCheck aria-hidden="true" />合规校验
           </button>
+          {onExecutePipeline && <button type="button" role="menuitem" onClick={onExecutePipeline}><Play aria-hidden="true" />执行下游管线</button>}
           <button type="button" role="menuitem" disabled={!canSaveToAssets} onClick={onSaveToAssets}>
             <Save aria-hidden="true" />保存到我的资产
           </button>

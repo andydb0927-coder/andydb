@@ -1,4 +1,6 @@
 import { sameSelection, downstreamConsumers } from './canvas-page-selectors'
+import { usePipelineAutomation } from '../pipeline/use-pipeline-automation'
+import { PipelinePanel } from '../pipeline/PipelinePanel'
 import { restoreTaskStyle } from '../styles/style-model'
 import { videoVersionHistory } from '../project/video-version-history'
 import { audioVersionHistory, audioVoiceSamples } from '../project/audio-version-history'
@@ -418,6 +420,7 @@ export function CanvasPage({
   const activeProject = useProjectStore((state) => state.activeProject)
   const project =
     activeProject?.id === projectId ? activeProject : undefined
+  const pipeline = usePipelineAutomation(project, repository, providerRegistry)
   const [scriptWorkspaceNodeId, setScriptWorkspaceNodeId] = useState<string>()
   useEffect(() => { setScriptWorkspaceNodeId(undefined) }, [projectId, project?.activeCanvasId])
   const workspaceAssetRepository = useMemo(
@@ -2689,16 +2692,24 @@ export function CanvasPage({
     exportDirectorViews,
   ])
 
+  const pipelineFlowNodes = useMemo<CreativeFlowNode[]>(() => {
+    if (!pipeline.run) return projectFlowNodes
+    return projectFlowNodes.map(node => {
+      const step = pipeline.run!.steps.find(step => step.nodeId === node.id)
+      return step ? { ...node, data: { ...node.data, pipelineStep: step } } : node
+    })
+  }, [projectFlowNodes, pipeline.run])
+
   const measuredFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project || nodeMeasurements.projectId !== project.id) {
-      return projectFlowNodes
+      return pipelineFlowNodes
     }
 
-    return projectFlowNodes.map((node) => {
+    return pipelineFlowNodes.map((node) => {
       const measured = nodeMeasurements.measurements[node.id]
       return measured ? { ...node, measured } : node
     })
-  }, [nodeMeasurements, project, projectFlowNodes])
+  }, [nodeMeasurements, project, pipelineFlowNodes])
 
   const flowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project || dragPreview.projectId !== project.id) {
@@ -5495,6 +5506,7 @@ export function CanvasPage({
           if (deleteCanvas(canvasId)) setGenerationFeedback('已删除画布并保留其他画布。')
         }}
         onOpenNodeList={openNodeList}
+        onOpenPipeline={() => pipeline.show(primaryNodeId ?? [...selectedNodeIds][0])}
         onModeChange={changeWorkspaceMode}
         onToggleAgent={() => setAgentOpen((open) => !open)}
         onOpenPublish={openPublishDialog}
@@ -5503,6 +5515,7 @@ export function CanvasPage({
         onExportWorkflow={exportWorkflow}
         onImportWorkflow={openWorkflowImport}
       />
+      {pipeline.open && project && <PipelinePanel project={project} registry={providerRegistry} {...pipeline} actions={pipeline} />}
       <input
         ref={workflowImportInputRef}
         className="canvas-workflow-import-input"
@@ -5728,6 +5741,10 @@ export function CanvasPage({
             onExecuteGroup={() =>
               startWorkflowBatch(selectedCanvasGroup ?? selectionGroupOverlay?.group)
             }
+            onExecutePipeline={contextNode && ['text', 'script', 'image'].includes(contextNode.kind) ? () => {
+              setContextMenu(undefined)
+              pipeline.show(contextNode.id)
+            } : undefined}
             onComplianceCheck={() => {
               setContextMenu(undefined)
               if (contextNode) {

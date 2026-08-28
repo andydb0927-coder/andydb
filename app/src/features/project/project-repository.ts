@@ -16,6 +16,8 @@ import type {
 } from '../projects/project-space-model'
 import type { SubjectAsset } from '../subjects/subject-model'
 import type { StyleCard, StylePreference } from '../styles/style-model'
+import type { PipelineRun } from '../pipeline/pipeline-model'
+import type { PipelineTemplate } from '../pipeline/pipeline-template'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -31,6 +33,8 @@ export class WirelessCanvasDatabase extends Dexie {
   subjects!: Table<SubjectAsset, string>
   styles!: Table<StyleCard, string>
   stylePreferences!: Table<StylePreference, string>
+  pipelineRuns!: Table<PipelineRun, string>
+  pipelineTemplates!: Table<PipelineTemplate, string>
 
   constructor(name = 'wireless-canvas-v1') {
     super(name)
@@ -110,6 +114,7 @@ export class WirelessCanvasDatabase extends Dexie {
       subjects: 'id, name, sourceProjectId, updatedAt',
     })
     this.version(11).stores({ styles: 'id, name', stylePreferences: 'id, lastUsedAt' })
+    this.version(12).stores({ pipelineRuns: 'id, projectId, canvasId, createdAt, status', pipelineTemplates: 'id, name, updatedAt' })
   }
 }
 

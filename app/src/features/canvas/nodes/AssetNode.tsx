@@ -41,6 +41,7 @@ import {
 import type { ReactNode } from 'react'
 
 import { StatusText } from '../../../ui/StatusText'
+import { pipelineStatusCopy } from '../../pipeline/pipeline-model'
 import type {
   TextEditorBlockStyle,
   TextEditorListStyle,
@@ -621,6 +622,9 @@ export function CreativeNodeShell({
           expandableMedia && contextual && !manualTextNode ? ' creative-node--expanded' : ''
         }`}
       >
+        {data.pipelineStep && <span className="pipeline-node-badge" role="status" aria-label={`${node.title}管线状态`} data-status={data.pipelineStep.status} title={data.pipelineStep.error}>
+          {data.pipelineStep.skipped ? '已跳过' : pipelineStatusCopy[data.pipelineStep.status]}{data.pipelineStep.status === 'running' ? ` ${Math.round(data.pipelineStep.progress)}%` : ''}
+        </span>}
         <button
           ref={selectRef}
           type="button"

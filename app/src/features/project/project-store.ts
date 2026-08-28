@@ -48,7 +48,7 @@ export type PersistenceStatus =
 type SaveRepository = Pick<ProjectRepository, 'save'>
 type LoadRepository = Pick<ProjectRepository, 'load'>
 type NodeUpdates = Partial<
-  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig' | 'appliedStyle' | 'subjectId' | 'subjectSnapshot'>
+  Pick<CanvasNode, 'kind' | 'title' | 'position' | 'storyboardDialogue' | 'sourceChanged' | 'modelProviderId' | 'imageGeneration' | 'rotationQuarterTurns' | 'mirrorHorizontal' | 'mirrorVertical' | 'imageAnnotations' | 'imageTool' | 'effectTool' | 'details' | 'generationConfig' | 'appliedStyle' | 'subjectId' | 'subjectSnapshot' | 'pipelineConfig'>
 >
 
 export interface CanvasEdgeInsertion {

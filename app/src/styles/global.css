@@ -11887,7 +11887,7 @@ select {
 
 /* Liblib-inspired canvas workspace shell */
 .canvas-top-bar {
-  grid-template-columns: minmax(260px, 1fr) auto auto minmax(0, 2.2fr);
+  grid-template-columns: minmax(0, 1fr) auto auto max-content;
   gap: var(--space-2);
   background: var(--surface-panel);
 }
@@ -16080,7 +16080,7 @@ select {
 
 @media (max-width: 1050px) {
   .canvas-top-bar {
-    grid-template-columns: minmax(200px, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto max-content;
   }
 
   .canvas-top-bar__history {
@@ -16128,7 +16128,7 @@ select {
   }
 
   .canvas-top-bar {
-    grid-template-columns: minmax(132px, 1fr) auto minmax(188px, auto);
+    grid-template-columns: minmax(0, 1fr) auto max-content;
     gap: var(--space-1);
     padding: 0 var(--space-2);
   }
