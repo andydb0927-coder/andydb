@@ -74,7 +74,9 @@ export function prepareSubjectRequest(request: GenerationRequest): GenerationReq
   if (!request.subjects.every(isSubjectReference)) throw new Error('主体参考资料无效，请重新选择。')
   const subjects = [...new Map(request.subjects.map(subject => [subject.id, subject])).values()]
   const instructions = `保持参考主体一致（以以下特征为准）：\n${subjects.map(subject => `${subject.name}：${subject.description || '保持来源图片中的可见特征'}`).join('\n')}`
-  const referenceAssets = [...new Map([...request.referenceAssets, ...subjects.map(subject => ({ kind: 'image' as const, url: subject.coverUrl, mimeType: subject.mimeType }))].map(reference => [reference.url, reference])).values()]
+  // First/last frames are a closed scene: extra subject images would invalidate it.
+  const frameScene = request.targetKind === 'video' && ['图生视频', '首尾帧'].includes(String(request.parameters?.generationMode))
+  const referenceAssets = frameScene ? request.referenceAssets : [...new Map([...request.referenceAssets, ...subjects.map(subject => ({ kind: 'image' as const, url: subject.coverUrl, mimeType: subject.mimeType }))].map(reference => [reference.url, reference])).values()]
   return request.targetKind === 'text'
     ? { ...request, systemPromptPrefix: [request.systemPromptPrefix, instructions].filter(Boolean).join('\n\n') }
     : { ...request, prompt: `${instructions}\n\n${request.prompt}`, referenceAssets }

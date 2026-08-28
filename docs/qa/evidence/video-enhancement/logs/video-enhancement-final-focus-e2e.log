@@ -1,0 +1,15 @@
+[WebServer] (node:70363) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:70364) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:70365) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › e2e/creation-flow.spec.ts:1779:1 › imports image, video, and audio assets, previews them, and reloads every media node (7.5s)
+  ✓  1 [chromium] › e2e/video-enhancement.spec.ts:24:1 › explicit first/last frames, manifest guidance and video version restoration persist with fixture transport (10.6s)
+  ✓  3 [chromium] › e2e/video-enhancement.spec.ts:89:1 › local rotation, mirror and speed encode a new playable video and preserve the original (2.9s)
+  ✓  4 [chromium] › e2e/video-enhancement.spec.ts:123:1 › 721px pip and three-panel composition export real media without paid traffic (3.1s)
+
+  4 passed (17.4s)

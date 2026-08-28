@@ -48,6 +48,10 @@ export interface CreativeNodeData extends Record<string, unknown>, CreativeNodeP
   imageResults?: Array<{ id: string; asset: Asset }>
   imageReferences?: Array<{ id: string; title: string; asset: Asset }>
   videoReferences?: Array<{ id: string; title: string; asset: Asset }>
+  videoFrameAssets?: Array<{ title: string; asset: Asset }>
+  videoVersions?: import('../project/video-version-history').VideoVersionEntry[]
+  onSetVideoFrame?(role: 'first_frame' | 'last_frame', url: string): void
+  onRestoreVideoVersion?(versionId: string): void
   incomingReferenceCount?: number
   autoLinkCandidates?: AutoLinkCandidate[]
   linkedAutoLinkNodeIds?: string[]

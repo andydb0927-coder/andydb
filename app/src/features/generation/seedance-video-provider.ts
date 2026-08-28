@@ -5,6 +5,7 @@ import type {
 } from './generation-adapter'
 import { assertProviderResponse, fetchProviderResponse, readProviderJson, safeProviderMessage } from './generation-errors'
 import { normalizeTaskStatus } from './task-status'
+import { resolveVideoReferences, videoGuidedPrompt, videoPromptManifest, videoReferenceFailure } from './video-generation-semantics'
 import type {
   ModelProvider,
   VideoGenerationMode,
@@ -22,6 +23,7 @@ const providerName = '火山方舟'
 const modelName = 'Seedance 2.0'
 
 const seedanceVideoParameterManifest: ModelParameterManifest = {
+  ...videoPromptManifest,
   aspectRatio: {
     type: 'enum',
     defaultValue: 'Auto',
@@ -77,6 +79,7 @@ interface SeedanceTaskResponse {
   error?: SeedanceTaskError
   duration?: unknown
   resolution?: unknown
+  framespersecond?: unknown
   usage?: { completion_tokens?: unknown }
 }
 
@@ -177,9 +180,9 @@ function referenceContent(
   references: GenerationReference[],
   generationMode: unknown,
 ) {
-  const mode = String(generationMode ?? '')
-  const imageReferences = references.filter(({ kind }) => kind === 'image')
-  return references.map((reference) => {
+  const reason = videoReferenceFailure(references, generationMode)
+  if (reason) throw new Error(reason)
+  return resolveVideoReferences(references, generationMode).map((reference) => {
     const type = `${reference.kind}_url` as const
     const content = {
       type,
@@ -187,19 +190,7 @@ function referenceContent(
     }
     if (reference.kind === 'video') return { ...content, role: 'reference_video' }
     if (reference.kind === 'audio') return { ...content, role: 'reference_audio' }
-    const imageIndex = imageReferences.indexOf(reference)
-    if (mode === '首尾帧') {
-      if (imageIndex === 0) return { ...content, role: 'first_frame' }
-      if (imageIndex === 1) return { ...content, role: 'last_frame' }
-      return { ...content, role: 'reference_image' }
-    }
-    if (mode === '图生视频' || !mode) {
-      return {
-        ...content,
-        role: imageIndex === 0 ? 'first_frame' : 'reference_image',
-      }
-    }
-    return { ...content, role: 'reference_image' }
+    return { ...content, role: reference.role ?? 'reference_image' }
   })
 }
 
@@ -236,6 +227,8 @@ function liveResult(
       url: httpsResultUrl(task.content?.video_url),
       mimeType: 'video/mp4',
       durationSeconds: Number.isFinite(duration) && duration > 0 ? duration : 5,
+      ...(typeof task.framespersecond === 'number' && Number.isFinite(task.framespersecond) && task.framespersecond > 0 ? { framesPerSecond: task.framespersecond } : {}),
+      ...(typeof task.resolution === 'string' && ['480p', '720p', '1080p', '4k'].includes(task.resolution) ? { resolution: task.resolution } : {}),
     },
     version: {
       id: crypto.randomUUID(),
@@ -301,7 +294,7 @@ export function createSeedanceVideoProvider(
       if (request.targetKind !== 'video') {
         throw new Error('火山方舟 Seedance Provider 仅支持视频生成')
       }
-      const prompt = request.prompt.trim()
+      const prompt = videoGuidedPrompt(request)
       if (!prompt && request.referenceAssets.length === 0) {
         throw new Error('火山方舟 Seedance 需要提示词或参考素材')
       }

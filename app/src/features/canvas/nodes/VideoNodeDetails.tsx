@@ -28,6 +28,8 @@ import type {
 } from '../../generation/model-provider-registry'
 import type { CreativeNodeData } from '../node-types'
 import { FrameAnalysisControls } from './FrameAnalysisControls'
+import { VideoFrameControls, VideoPromptControls } from './VideoEnhancementControls'
+import { videoReferenceFailure } from '../../generation/video-generation-semantics'
 import { PromptAssist } from '../PromptAssist'
 import { StylePicker, AppliedStyleSummary, nodeAppliedStyle, nodeStyleCompatibilityReason } from '../../styles/StylePicker'
 
@@ -261,7 +263,10 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
   const selectedProviderEnabled = isProviderEnabled(selectedProvider)
   const generationUnavailableReason = !selectedProviderEnabled
     ? selectedProvider.disabledReason ?? '当前模型暂不可用。'
-    : nodeStyleCompatibilityReason(data, selectedProvider, 'video') ?? (!prompt.trim() && !data.asset && referenceCount === 0
+    : nodeStyleCompatibilityReason(data, selectedProvider, 'video') ?? (selectedProvider.kind === 'live' ? videoReferenceFailure(
+      data.node.generationConfig?.parameters?.explicitFrameSelection || data.node.generationConfig?.referenceAssets.length
+        ? data.node.generationConfig.referenceAssets
+        : (data.videoReferences ?? []).map(ref => ({ kind: 'image', url: ref.asset.url, mimeType: ref.asset.mimeType })), generationMode) : undefined) ?? (!prompt.trim() && !data.asset && referenceCount === 0
       ? '请输入提示词或添加参考媒体后再生成。'
       : undefined)
   const liveConfigurationReason = providers.find(
@@ -358,6 +363,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
           )
         : null}
       <AppliedStyleSummary style={nodeAppliedStyle(data)} />
+      <VideoFrameControls data={data} mode={generationMode} />
       <label className="video-generation-panel__prompt">
         <span className="visually-hidden">提示词</span>
         {data.videoReferences?.length ? (
@@ -516,6 +522,7 @@ export function VideoGenerationPanel({ data }: { data: CreativeNodeData }) {
       ) : null}
       {advanced ? (
         <div className="video-generation-panel__advanced-settings">
+          <VideoPromptControls data={data} provider={selectedProvider} parameters={parameters} />
           {supportedAdvancedParameters.map(([name, label]) => (
             <label key={name} className="video-generation-panel__autolink">
               <input

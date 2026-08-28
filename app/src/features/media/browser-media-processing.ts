@@ -1,3 +1,5 @@
+import { videoProcessingPlan } from './video-processing-plan'
+
 export type ImageGridSize = 2 | 3
 
 export interface GridCell {
@@ -15,6 +17,7 @@ export interface ProcessedMedia {
   width?: number
   height?: number
   durationSeconds?: number
+  framesPerSecond?: number
 }
 
 export interface StoryboardLayoutInput {
@@ -57,6 +60,12 @@ export interface VideoSegmentOptions {
   endSeconds: number
   crop?: VideoCropRect
   framesPerSecond?: number
+  playbackRate?: number
+  rotationQuarterTurns?: number
+  mirrorHorizontal?: boolean
+  mirrorVertical?: boolean
+  layout?: 'single' | 'pip' | 'triple'
+  secondaryUrls?: string[]
 }
 
 export function calculateGridCells(
@@ -244,11 +253,13 @@ export async function renderStoryboardGroup4K(
   })
 }
 
-function waitForEvent(target: EventTarget, name: string) {
+function waitForEvent(target: EventTarget, name: string, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const cleanup = () => {
+      clearTimeout(timer)
       target.removeEventListener(name, success)
       target.removeEventListener('error', failure)
+      signal?.removeEventListener('abort', abort)
     }
     const success = () => {
       cleanup()
@@ -258,20 +269,25 @@ function waitForEvent(target: EventTarget, name: string) {
       cleanup()
       reject(new Error('媒体解码失败。'))
     }
+    const abort = () => { cleanup(); reject(new DOMException('视频处理已取消', 'AbortError')) }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('媒体加载超时，请检查地址或重试。')) }, 20_000)
     target.addEventListener(name, success, { once: true })
     target.addEventListener('error', failure, { once: true })
+    signal?.addEventListener('abort', abort, { once: true })
+    if (signal?.aborted) abort()
   })
 }
 
-async function seekVideo(video: HTMLVideoElement, seconds: number) {
+async function seekVideo(video: HTMLVideoElement, seconds: number, signal?: AbortSignal) {
   if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
-    await waitForEvent(video, 'loadedmetadata')
+    await waitForEvent(video, 'loadedmetadata', signal)
   }
   const duration = Number.isFinite(video.duration) ? video.duration : seconds
   const target = Math.min(Math.max(0, seconds), Math.max(0, duration - 0.001))
   if (Math.abs(video.currentTime - target) < 0.002) return
+  const seeking = waitForEvent(video, 'seeked', signal)
   video.currentTime = target
-  await waitForEvent(video, 'seeked')
+  await seeking
 }
 
 export async function captureVideoFrame(
@@ -291,18 +307,43 @@ export async function captureVideoFrame(
   }
 }
 
-export async function loadVideoElement(url: string) {
+export async function loadVideoElement(url: string, signal?: AbortSignal) {
   const video = document.createElement('video')
   video.crossOrigin = 'anonymous'
   video.preload = 'auto'
   video.muted = true
   video.playsInline = true
-  video.src = url
-  video.load()
-  if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
-    await waitForEvent(video, 'loadedmetadata')
+  try {
+    signal?.throwIfAborted()
+    const ready = waitForEvent(video, 'loadedmetadata', signal)
+    video.src = url
+    video.load()
+    await ready
+    // MediaRecorder WebM often has no duration header. Decode the end before
+    // validating ranges; do not substitute a guessed/stored duration.
+    if (!Number.isFinite(video.duration)) {
+      const end = waitForEvent(video, 'seeked', signal)
+      video.currentTime = 1e10
+      await end
+      if (!Number.isFinite(video.duration) || video.duration <= 0) {
+        throw new Error('无法读取视频时长，请重新导出或更换素材。')
+      }
+      await seekVideo(video, 0, signal)
+    }
+    return video
+  } catch (error) {
+    video.removeAttribute('src')
+    video.load()
+    throw error
   }
-  return video
+}
+
+export async function readVideoMetadata(url: string, signal: AbortSignal) {
+  const video = await loadVideoElement(url, signal)
+  try {
+    if (!Number.isFinite(video.duration) || video.duration <= 0 || !video.videoWidth || !video.videoHeight) throw new Error('无法读取视频尺寸或时长。')
+    return { width: video.videoWidth, height: video.videoHeight, duration: video.duration }
+  } finally { video.pause(); video.removeAttribute('src'); video.load() }
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
@@ -317,70 +358,115 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
+export async function readVideoThumbnails(url: string, signal: AbortSignal, count = 12) {
+  const video = await loadVideoElement(url, signal)
+  try {
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) await waitForEvent(video, 'loadeddata', signal)
+    if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('无法读取视频时长。')
+    const canvas = createCanvas(160, Math.max(1, Math.round(160 * video.videoHeight / video.videoWidth)))
+    const context = canvasContext(canvas)
+    const thumbnails: string[] = []
+    for (let index = 0; index < count; index++) {
+      signal.throwIfAborted()
+      await seekVideo(video, Math.max(0, video.duration - 0.05) * index / Math.max(1, count - 1), signal)
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      thumbnails.push(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    return thumbnails
+  } finally { video.pause(); video.removeAttribute('src'); video.load() }
+}
+
 export async function recordVideoSegment(
   sourceUrl: string,
   options: VideoSegmentOptions,
+  signal?: AbortSignal,
 ): Promise<ProcessedMedia> {
   if (typeof MediaRecorder === 'undefined') {
     throw new Error('当前浏览器不支持 MediaRecorder 视频导出。')
   }
-  const video = await loadVideoElement(sourceUrl)
-  const duration = Number.isFinite(video.duration) ? video.duration : 0
-  const start = Math.max(0, Math.min(options.startSeconds, duration))
-  const end = Math.max(start + 0.05, Math.min(options.endSeconds, duration))
-  const crop = options.crop ?? { x: 0, y: 0, width: 1, height: 1 }
-  const sourceWidth = video.videoWidth || 1280
-  const sourceHeight = video.videoHeight || 720
-  const sx = Math.round(sourceWidth * crop.x)
-  const sy = Math.round(sourceHeight * crop.y)
-  const sw = Math.max(1, Math.round(sourceWidth * crop.width))
-  const sh = Math.max(1, Math.round(sourceHeight * crop.height))
-  const canvas = createCanvas(sw, sh)
-  const context = canvasContext(canvas)
-  const stream = canvas.captureStream?.(options.framesPerSecond ?? 30)
-  if (!stream) throw new Error('当前浏览器不支持 Canvas 视频流导出。')
-  const preferredMime = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ].find((mime) => MediaRecorder.isTypeSupported?.(mime)) ?? 'video/webm'
-  const recorder = new MediaRecorder(stream, { mimeType: preferredMime })
-  const chunks: Blob[] = []
-  recorder.ondataavailable = (event) => {
-    if (event.data.size) chunks.push(event.data)
-  }
-  const stopped = new Promise<void>((resolve, reject) => {
-    recorder.onstop = () => resolve()
-    recorder.onerror = () => reject(new Error('视频导出失败。'))
-  })
-  await seekVideo(video, start)
-  recorder.start(200)
-  const startedAt = performance.now()
-  const expectedDuration = end - start
-  await video.play()
-  await new Promise<void>((resolve) => {
+  const videos: HTMLVideoElement[] = []
+  let stream: MediaStream | undefined
+  let recorder: MediaRecorder | undefined
+  let frame = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let abort: (() => void) | undefined
+  try {
+    const extraCount = options.layout === 'triple' ? 2 : options.layout === 'pip' ? 1 : 0
+    if (extraCount && options.secondaryUrls?.length !== extraCount) throw new Error(`请选择 ${extraCount} 个副视频。`)
+    for (const url of [sourceUrl, ...(options.secondaryUrls ?? []).slice(0, extraCount)]) videos.push(await loadVideoElement(url, signal))
+    const video = videos[0]
+    const plan = videoProcessingPlan({ width: video.videoWidth, height: video.videoHeight, duration: video.duration }, options)
+    const fps = options.framesPerSecond ?? 30
+    if (!Number.isInteger(fps) || fps < 1 || fps > 60) throw new Error('导出帧率必须在 1–60 之间。')
+    const canvas = createCanvas(plan.width, plan.height)
+    const context = canvasContext(canvas)
+    const mainCanvas = createCanvas(plan.width, plan.height)
+    const mainContext = canvasContext(mainCanvas)
+    stream = canvas.captureStream?.(fps)
+    if (!stream) throw new Error('当前浏览器不支持 Canvas 视频流导出。')
+    const preferredMime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(mime => MediaRecorder.isTypeSupported(mime))
+    if (!preferredMime) throw new Error('当前浏览器没有可用的 WebM 编码器。')
+    recorder = new MediaRecorder(stream, { mimeType: preferredMime })
+    const encoder = recorder
+    const chunks: Blob[] = []
+    encoder.ondataavailable = event => { if (event.data.size) chunks.push(event.data) }
+    for (const [index, item] of videos.entries()) {
+      await seekVideo(item, index === 0 ? options.startSeconds : 0, signal)
+      if (item.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) await waitForEvent(item, 'loadeddata', signal)
+      item.playbackRate = plan.playbackRate
+      item.loop = index !== 0
+    }
     const draw = () => {
-      context.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh)
-      const elapsed = (performance.now() - startedAt) / 1000
-      if (video.currentTime >= end || video.ended || elapsed >= expectedDuration + 1) {
-        video.pause()
-        resolve()
-        return
-      }
-      requestAnimationFrame(draw)
+      mainContext.save()
+      mainContext.clearRect(0, 0, plan.width, plan.height)
+      mainContext.translate(plan.width / 2, plan.height / 2)
+      mainContext.rotate(plan.rotation * Math.PI / 2)
+      mainContext.scale(plan.mirrorHorizontal ? -1 : 1, plan.mirrorVertical ? -1 : 1)
+      const c = plan.crop
+      mainContext.drawImage(video, c.x, c.y, c.width, c.height, -c.width / 2, -c.height / 2, c.width, c.height)
+      mainContext.restore()
+      context.fillStyle = '#000'
+      context.fillRect(0, 0, plan.width, plan.height)
+      plan.layers.forEach((layer, index) => {
+        const source = index === 0 ? mainCanvas : videos[index]
+        const width = index === 0 ? plan.width : videos[index].videoWidth
+        const height = index === 0 ? plan.height : videos[index].videoHeight
+        const scale = Math.min(layer.width / width, layer.height / height)
+        context.drawImage(source, layer.x + (layer.width - width * scale) / 2, layer.y + (layer.height - height * scale) / 2, width * scale, height * scale)
+      })
     }
     draw()
-  })
-  recorder.stop()
-  await stopped
-  stream.getTracks().forEach((track) => track.stop())
-  const blob = new Blob(chunks, { type: preferredMime })
-  return {
-    dataUrl: await blobToDataUrl(blob),
-    mimeType: preferredMime.split(';')[0],
-    width: sw,
-    height: sh,
-    durationSeconds: expectedDuration,
+    await Promise.all(videos.map(item => item.play()))
+    signal?.throwIfAborted()
+    await new Promise<void>((resolve, reject) => {
+      abort = () => reject(new DOMException('视频处理已取消', 'AbortError'))
+      signal?.addEventListener('abort', abort, { once: true })
+      encoder.onstop = () => resolve()
+      encoder.onerror = () => reject(new Error('视频编码失败，请重试。'))
+      timer = setTimeout(() => reject(new Error('视频播放停滞，已取消导出；未写入不完整结果。')), (plan.durationSeconds + 10) * 1000)
+      encoder.start(200)
+      const tick = () => {
+        try {
+          signal?.throwIfAborted()
+          draw()
+          if (video.currentTime >= options.endSeconds - 0.02 || video.ended) { encoder.stop(); return }
+          frame = requestAnimationFrame(tick)
+        } catch (error) { reject(error) }
+      }
+      tick()
+    })
+    signal?.throwIfAborted()
+    if (!chunks.length) throw new Error('视频编码没有输出数据。')
+    const dataUrl = await blobToDataUrl(new Blob(chunks, { type: 'video/webm' }))
+    signal?.throwIfAborted()
+    return { dataUrl, mimeType: 'video/webm', width: plan.width, height: plan.height, durationSeconds: plan.durationSeconds, framesPerSecond: fps }
+  } finally {
+    clearTimeout(timer)
+    cancelAnimationFrame(frame)
+    if (abort) signal?.removeEventListener('abort', abort)
+    if (recorder?.state !== 'inactive' && recorder) recorder.stop()
+    stream?.getTracks().forEach(track => track.stop())
+    videos.forEach(video => { video.pause(); video.removeAttribute('src'); video.load() })
   }
 }
 

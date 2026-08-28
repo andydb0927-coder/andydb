@@ -91,6 +91,25 @@ function renderVideo(data: CreativeNodeData) {
   )
 }
 
+test('live manifest exposes frame assignment and camera guidance with an explicit missing-frame reason', async () => {
+  const user = userEvent.setup()
+  const data = makeData(true)
+  data.providerRegistry = createDefaultProviderRegistry({ seedanceVideo: seedanceVideoConfigFixture })
+  data.node.modelProviderId = 'seedance-api'
+  data.node.generationConfig = { providerId: 'seedance-api', targetKind: 'video', parameters: { generationMode: '首尾帧', explicitFrameSelection: true }, referenceAssets: [] }
+  data.videoFrameAssets = data.videoReferences!.map(ref => ({ title: ref.title, asset: ref.asset }))
+  data.onSetVideoFrame = vi.fn()
+  render(<VideoGenerationPanel data={data} />)
+  expect(screen.getByRole('button', { name: '生成视频，预计成本 135' })).toBeDisabled()
+  expect(screen.getByText('请选择一张首帧图片。')).toBeVisible()
+  await user.selectOptions(screen.getByLabelText('尾帧图片'), '/demo/reference.png')
+  expect(data.onSetVideoFrame).toHaveBeenCalledWith('last_frame', '/demo/reference.png')
+  await user.click(screen.getByRole('button', { name: '展开高级设置' }))
+  await user.selectOptions(screen.getByLabelText('景别'), '近景')
+  expect(data.onUpdateVideoGenerationParameters).toHaveBeenCalledWith({ shotSize: '近景' })
+  expect(screen.getByLabelText('负面词')).toHaveAttribute('maxlength', '500')
+})
+
 test('an empty video prompt cannot submit without a source and becomes usable after typing', async () => {
   const user = userEvent.setup()
   const data = makeData(true)
@@ -116,7 +135,8 @@ test('keeps a video as a folded media card until it becomes the current node', (
   expect(screen.getByLabelText('视频节点 16')).toContainElement(
     document.querySelector('video'),
   )
-  expect(screen.getByText('1280 × 720')).toBeVisible()
+  expect(screen.getByRole('button', { name: '视频节点 16' })).toHaveTextContent('1280 × 720')
+  expect(screen.getByLabelText('视频结果信息')).toHaveTextContent('1280 × 720')
   expect(screen.getByText('1 个结果')).toBeVisible()
   const player = screen.getByRole('group', { name: '视频节点 16 播放器' })
   expect(within(player).getByRole('button', { name: '播放视频节点 16' })).toBeVisible()

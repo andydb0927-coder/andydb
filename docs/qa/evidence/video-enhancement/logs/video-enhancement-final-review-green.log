@@ -1,0 +1,12 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/CanvasWorkspace.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+
+ Test Files  1 passed (1)
+      Tests  19 passed (19)
+   Start at  13:30:08
+   Duration  985ms (transform 216ms, setup 46ms, import 316ms, tests 468ms, environment 98ms)

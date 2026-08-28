@@ -67,5 +67,6 @@ export function processedMediaRecord(
     width: media.width,
     height: media.height,
     durationSeconds: media.durationSeconds,
+    ...(media.framesPerSecond === undefined ? {} : { framesPerSecond: media.framesPerSecond }),
   }
 }

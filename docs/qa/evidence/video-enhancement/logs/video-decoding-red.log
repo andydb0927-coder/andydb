@@ -1,0 +1,63 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/media/video-decoding.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/media/video-decoding.test.ts (3 tests | 2 failed) 7ms
+   × recorded WebM without a duration header resolves real duration before re-editing 4ms
+   × unreadable WebM duration rejects safely and releases the source 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/media/video-decoding.test.ts > recorded WebM without a duration header resolves real duration before re-editing
+AssertionError: expected Infinity to be 0.48 // Object.is equality
+
+- Expected
++ Received
+
+- 0.48
++ Infinity
+
+ ❯ src/features/media/video-decoding.test.ts:30:26
+     28|   const { video } = videoFixture()
+     29|   expect(await loadVideoElement('data:video/webm;base64,fixture')).toB…
+     30|   expect(video.duration).toBe(0.48)
+       |                          ^
+     31|   expect(video.currentTime).toBe(0)
+     32| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/media/video-decoding.test.ts > unreadable WebM duration rejects safely and releases the source
+AssertionError: promise resolved "<video …(4)></video>" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
+- }
++ <video
++   crossorigin="anonymous"
++   muted=""
++   preload="auto"
++   src="data:video/webm;base64,fixture"
++ />
+
+ ❯ src/features/media/video-decoding.test.ts:36:67
+     34| test('unreadable WebM duration rejects safely and releases the source'…
+     35|   const { video, load } = videoFixture(false)
+     36|   await expect(loadVideoElement('data:video/webm;base64,fixture')).rej…
+       |                                                                   ^
+     37|   expect(video.hasAttribute('src')).toBe(false)
+     38|   expect(load).toHaveBeenCalledTimes(2)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  13:11:23
+   Duration  397ms (transform 33ms, setup 99ms, import 29ms, tests 7ms, environment 196ms)

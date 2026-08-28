@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
+import * as mediaProcessing from '../media/browser-media-processing'
 
 import type { Project } from '../project/model'
 import {
@@ -11,6 +12,8 @@ import {
   SelectionContextBar,
   WorkspaceSidePanel,
 } from './CanvasWorkspace'
+
+afterEach(() => vi.restoreAllMocks())
 
 const project: Project = {
   id: 'workspace-project',
@@ -512,6 +515,8 @@ test('opens continuation only for an enabled service and valid source, leaving u
 
 test('submits clip and crop as browser media-processing jobs', async () => {
   const user = userEvent.setup()
+  vi.spyOn(mediaProcessing, 'readVideoMetadata').mockResolvedValue({ width: 320, height: 180, duration: 4 })
+  vi.spyOn(mediaProcessing, 'readVideoThumbnails').mockResolvedValue(Array.from({ length: 12 }, () => 'data:image/png;base64,fixture'))
   const onProcessVideo = vi.fn(async (_options: unknown) => undefined)
   render(
     <SelectionContextBar
@@ -527,10 +532,35 @@ test('submits clip and crop as browser media-processing jobs', async () => {
   await user.click(screen.getByRole('button', { name: '剪辑' }))
   expect(screen.getByRole('dialog', { name: '剪辑内联编辑器' })).toBeVisible()
   await user.click(screen.getByRole('button', { name: '确认剪辑并导出 WebM' }))
-  expect(onProcessVideo).toHaveBeenCalledWith(expect.objectContaining({ startSeconds: 0, endSeconds: 5 }))
+  expect(onProcessVideo).toHaveBeenCalledWith(expect.objectContaining({ startSeconds: 0, endSeconds: 4 }))
   await user.click(screen.getByRole('button', { name: '裁剪' }))
   await user.click(screen.getByRole('button', { name: '生成裁剪并导出 WebM' }))
-  expect(onProcessVideo).toHaveBeenLastCalledWith(expect.objectContaining({ crop: expect.any(Object) }))
+  expect(onProcessVideo).toHaveBeenLastCalledWith(expect.objectContaining({ endSeconds: 4, crop: expect.any(Object) }))
+})
+
+test('Escape cancels local clip processing rather than only dismissing the draft', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(mediaProcessing, 'readVideoMetadata').mockResolvedValue({ width: 320, height: 180, duration: 4 })
+  vi.spyOn(mediaProcessing, 'readVideoThumbnails').mockResolvedValue([])
+  let complete: () => void = () => undefined
+  const processing = new Promise<void>(resolve => { complete = resolve })
+  const onCancelVideoProcessing = vi.fn(() => complete())
+  render(<SelectionContextBar project={project} node={project.nodes[2]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} onProcessVideo={() => processing} onCancelVideoProcessing={onCancelVideoProcessing} />)
+  await user.click(screen.getByRole('button', { name: '剪辑' }))
+  await user.click(screen.getByRole('button', { name: '确认剪辑并导出 WebM' }))
+  await user.keyboard('{Escape}')
+  expect(onCancelVideoProcessing).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('dialog', { name: '剪辑内联编辑器' })).not.toBeInTheDocument()
+})
+
+test('downloads local WebM using its real container extension', async () => {
+  const user = userEvent.setup()
+  const localProject = { ...project, assets: project.assets.map(asset => asset.kind === 'video' ? { ...asset, mimeType: 'video/webm', url: 'data:video/webm;base64,fixture' } : asset) }
+  let downloaded = ''
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloaded = this.download })
+  render(<SelectionContextBar project={localProject} node={localProject.nodes[2]} onCreateToolNode={vi.fn()} onRotateImage={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: '下载' }))
+  expect(downloaded).toBe(`${project.nodes[2].title}.webm`)
 })
 
 test('confirms derived video nodes, extracts audio, and keeps remaining unfinished actions disabled', async () => {

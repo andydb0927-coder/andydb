@@ -40,7 +40,6 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { withAppBase } from '../../../app/public-url'
 import { StatusText } from '../../../ui/StatusText'
 import type {
   TextEditorBlockStyle,
@@ -59,6 +58,7 @@ import {
   ImageToolDetails,
 } from './ImageNodeDetails'
 import { VideoGenerationPanel, VideoToolDetails } from './VideoNodeDetails'
+import { VideoResultInfo, VideoVersionHistory } from './VideoEnhancementControls'
 import { SpecializedNodeDetailsPanel } from './SpecializedNodeDetails'
 import { specializedNodeTypeCopy } from './specialized-node-copy'
 
@@ -435,6 +435,8 @@ export function CreativeNodeShell({
   const [upscalePending, setUpscalePending] = useState(false)
   const [titleDraft, setTitleDraft] = useState(node.title)
   const [videoPlaying, setVideoPlaying] = useState(false)
+  const [videoDimensions, setVideoDimensions] = useState<{ url: string; width: number; height: number }>()
+  const [videoPlaybackError, setVideoPlaybackError] = useState('')
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
   const [videoDuration, setVideoDuration] = useState(
     asset?.kind === 'video' ? asset.durationSeconds ?? 0 : 0,
@@ -648,11 +650,15 @@ export function CreativeNodeShell({
                 ref={videoRef}
                 src={asset.url}
                 className="creative-node__media"
-                poster={withAppBase('/demo/shot-river.png')}
                 muted
                 loop
                 playsInline
                 preload="metadata"
+                onLoadedMetadata={(event) => {
+                  setVideoDimensions({ url: asset.url, width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })
+                  setVideoPlaybackError('')
+                }}
+                onError={() => setVideoPlaybackError('视频加载失败，可能已过期或网络不可用；请重试或从历史重新生成。')}
                 onDurationChange={(event) => {
                   if (Number.isFinite(event.currentTarget.duration)) {
                     setVideoDuration(event.currentTarget.duration)
@@ -695,7 +701,7 @@ export function CreativeNodeShell({
           {videoMedia ? (
             <>
               <span className="creative-node__dimensions">
-                {asset.width ?? 1280} × {asset.height ?? 720}
+                {videoDimensions?.url === asset.url ? `${videoDimensions.width} × ${videoDimensions.height}` : asset.width && asset.height ? `${asset.width} × ${asset.height}` : asset.resolution ?? '分辨率未读取'}
               </span>
               <span className="creative-node__result-count-label">1 个结果</span>
             </>
@@ -739,7 +745,7 @@ export function CreativeNodeShell({
                   const video = videoRef.current
                   if (!video) return
                   if (video.paused) {
-                    void video.play().catch(() => setVideoPlaying(false))
+                    void video.play().catch(() => { setVideoPlaying(false); setVideoPlaybackError('视频无法播放，请重试或检查媒体地址。') })
                   } else {
                     video.pause()
                   }
@@ -772,6 +778,8 @@ export function CreativeNodeShell({
                 <Camera aria-hidden="true" />
               </button>
             </div>
+            <VideoResultInfo asset={asset} duration={videoDuration} dimensions={videoDimensions?.url === asset.url ? videoDimensions : undefined} entry={data.videoVersions?.find(entry => entry.version.id === node.activeVersionId)} />
+            {videoPlaybackError ? <p role="status">{videoPlaybackError}</p> : null}
             {contextual ? (
               <div
                 className="creative-node__video-frame-tools nodrag nowheel"
@@ -928,6 +936,7 @@ export function CreativeNodeShell({
       ) : null}
       {videoGenerationNode && contextual ? (
         <div className="creative-node-composer creative-node-composer--video">
+          <VideoVersionHistory data={data} />
           <VideoGenerationPanel data={data} />
         </div>
       ) : null}

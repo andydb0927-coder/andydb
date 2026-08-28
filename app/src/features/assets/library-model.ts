@@ -19,6 +19,8 @@ export interface LibraryAssetRecord {
   width?: number
   height?: number
   durationSeconds?: number
+  framesPerSecond?: number
+  resolution?: string
 }
 
 export function libraryRecordToAsset(record: LibraryAssetRecord): Asset {
@@ -30,6 +32,8 @@ export function libraryRecordToAsset(record: LibraryAssetRecord): Asset {
     width: record.width,
     height: record.height,
     durationSeconds: record.durationSeconds,
+    ...(record.framesPerSecond === undefined ? {} : { framesPerSecond: record.framesPerSecond }),
+    ...(record.resolution === undefined ? {} : { resolution: record.resolution }),
   }
 }
 

@@ -1,5 +1,7 @@
 import { sameSelection, downstreamConsumers } from './canvas-page-selectors'
 import { restoreTaskStyle } from '../styles/style-model'
+import { videoVersionHistory } from '../project/video-version-history'
+import { setVideoFrameReference } from '../generation/video-generation-semantics'
 import { CanvasGenerationDialogs, type AnalysisSession, type ImageEditSession, type VideoContinueSession } from './CanvasGenerationDialogs'
 import { CanvasProjectDialogs } from './CanvasProjectDialogs'
 import { CanvasNodeEditors, type PendingPlacement, type EditingCard } from './CanvasNodeEditors'
@@ -1838,26 +1840,39 @@ export function CanvasPage({
     [saveProcessedAsset, selectOnlyNode],
   )
 
+  const videoProcessingRef = useRef<AbortController | undefined>(undefined)
+  useEffect(() => () => { videoProcessingRef.current?.abort(); videoProcessingRef.current = undefined }, [projectId, project?.activeCanvasId])
   const processVideoNode = useCallback(
     async (nodeId: string, options: VideoSegmentOptions) => {
       const currentProject = useProjectStore.getState().activeProject
       const sourceNode = currentProject?.nodes.find(({ id }) => id === nodeId)
       const sourceAsset = currentProject ? activeNodeAsset(currentProject, nodeId) : undefined
-      if (!sourceNode || sourceAsset?.kind !== 'video') return
+      if (!sourceNode || sourceAsset?.kind !== 'video') throw new Error('原视频已不存在，请重新选择视频。')
+      if (videoProcessingRef.current) throw new Error('已有视频正在处理，请等待完成或取消。')
+      const controller = new AbortController()
+      videoProcessingRef.current = controller
+      const canvasId = currentProject?.activeCanvasId
       setGenerationFeedback('正在浏览器内逐帧绘制并编码 WebM…')
       try {
-        const result = await recordVideoSegment(sourceAsset.url, options)
+        const result = await recordVideoSegment(sourceAsset.url, options, controller.signal)
+        controller.signal.throwIfAborted()
+        const latest = useProjectStore.getState().activeProject
+        if (latest?.id !== currentProject?.id || latest?.activeCanvasId !== canvasId) throw new DOMException('已切换画布，处理已取消', 'AbortError')
         const createdId = await saveProcessedAsset(
           nodeId,
           result,
           'video',
-          `${sourceNode.title}${options.crop ? ' 裁剪' : ' 截取'}`,
+          `${sourceNode.title}${options.layout ? ' 本地处理' : options.crop ? ' 裁剪' : ' 截取'}`,
           { x: 420, y: 120 },
         )
+        if (controller.signal.aborted) return
         selectOnlyNode(createdId)
-        setGenerationFeedback(`已完成${options.crop ? '帧级裁剪' : '选区截取'}并导出 WebM，结果已入资产库。`)
+        setGenerationFeedback(`已完成${options.layout ? '本地变换与合成' : options.crop ? '帧级裁剪' : '选区截取'}并导出 WebM，结果已入资产库。`)
       } catch (error) {
-        setGenerationFeedback(error instanceof Error ? error.message : '视频处理失败。')
+        if (!controller.signal.aborted) setGenerationFeedback(error instanceof Error ? error.message : '视频处理失败。')
+        throw error
+      } finally {
+        if (videoProcessingRef.current === controller) videoProcessingRef.current = undefined
       }
     },
     [saveProcessedAsset, selectOnlyNode],
@@ -2067,6 +2082,10 @@ export function CanvasPage({
   const projectFlowNodes = useMemo<CreativeFlowNode[]>(() => {
     if (!project) return []
     const rightmostX = Math.max(...project.nodes.map((node) => node.position.x))
+    const videoFrameAssets = project.assets.filter(asset => asset.kind === 'image').map(asset => ({
+      asset,
+      title: project.nodes.find(candidate => candidate.versions.some(version => version.assetId === asset.id))?.title ?? `图片 ${asset.id.slice(0, 8)}`,
+    }))
     return project.nodes.map((node) => {
       const activeVersion = node.versions.find(
         (version) => version.id === node.activeVersionId,
@@ -2180,6 +2199,24 @@ export function CanvasPage({
           imageResults,
           imageReferences,
           videoReferences,
+          videoFrameAssets,
+          videoVersions: node.kind === 'video' ? videoVersionHistory(project, node) : [],
+          onRestoreVideoVersion: (versionId) => {
+            const restored = useProjectStore.getState().restoreVideoVersion(node.id, versionId)
+            setGenerationFeedback(restored ? '已恢复视频版本与生成参数，下游引用已更新；可撤销。' : '当前版本无法恢复，请检查任务状态与媒体。')
+          },
+          onSetVideoFrame: (role, url) => {
+            const current = useProjectStore.getState().activeProject
+            const target = current?.nodes.find(candidate => candidate.id === node.id)
+            if (!current || current.id !== projectId || !target) return
+            const provider = providerRegistry.defaultFor(['text-to-video', 'image-to-video'], target.modelProviderId) ?? providerRegistry.require('seedance-api')
+            const config = target.generationConfig ?? { targetKind: 'video' as const, providerId: provider.id, parameters: providerDefaultParameters(provider), referenceAssets: [] }
+            const mode = config.parameters?.generationMode
+            const previous = buildGenerationRequest(current, target, 'regenerate', '', providerRegistry).referenceAssets
+            const image = current.assets.find(asset => asset.url === url && asset.kind === 'image')
+            const refs = setVideoFrameReference(previous, mode, role, image ? { url: image.url, kind: 'image', mimeType: image.mimeType } : undefined)
+            updateNode(node.id, { generationConfig: { ...config, parameters: { ...config.parameters, explicitFrameSelection: true }, referenceAssets: refs } })
+          },
           incomingReferenceCount: imageReferences.length,
           autoLinkCandidates,
           linkedAutoLinkNodeIds,
@@ -5742,6 +5779,7 @@ export function CanvasPage({
               if (primaryNodeId) createVideoToolNode(primaryNodeId, tool)
             }}
             onProcessVideo={(nodeId, options) => processVideoNode(nodeId, options)}
+            onCancelVideoProcessing={() => videoProcessingRef.current?.abort()}
             onExtractVideoAudio={(nodeId) => extractVideoAudio(nodeId)}
             videoContinueDisabledReason={videoContinueProvider ? videoContinueProvider.disabledReason : '视频续写服务尚未注册。'}
             onContinueVideo={(nodeId) => {

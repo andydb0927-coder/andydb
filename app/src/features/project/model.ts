@@ -57,6 +57,9 @@ export interface NodeVersion {
   assetId?: string
   generationJobId?: string
   textContent?: string
+  /** Immutable generation inputs; older versions resolve these from job history. */
+  generationConfig?: GenerationConfiguration
+  generatedPrompt?: string
 }
 
 export interface Asset {
@@ -67,6 +70,8 @@ export interface Asset {
   width?: number
   height?: number
   durationSeconds?: number
+  framesPerSecond?: number
+  resolution?: string
 }
 
 export interface ImageResult {
@@ -136,6 +141,7 @@ export interface GenerationReferenceConfig {
   url: string
   kind: 'image' | 'video' | 'audio'
   mimeType: string
+  role?: 'first_frame' | 'last_frame' | 'reference_image'
 }
 
 export interface AppliedStyle {

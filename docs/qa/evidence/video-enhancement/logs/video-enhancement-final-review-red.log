@@ -1,0 +1,46 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/canvas/CanvasWorkspace.test.tsx
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/canvas/CanvasWorkspace.test.tsx (19 tests | 2 failed) 471ms
+   × Escape cancels local clip processing rather than only dismissing the draft 24ms
+   × downloads local WebM using its real container extension 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/CanvasWorkspace.test.tsx > Escape cancels local clip processing rather than only dismissing the draft
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ src/features/canvas/CanvasWorkspace.test.tsx:552:35
+    550|   await user.click(screen.getByRole('button', { name: '确认剪辑并导出 WebM' }…
+    551|   await user.keyboard('{Escape}')
+    552|   expect(onCancelVideoProcessing).toHaveBeenCalledTimes(1)
+       |                                   ^
+    553|   expect(screen.queryByRole('dialog', { name: '剪辑内联编辑器' })).not.toBeIn…
+    554| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/canvas/CanvasWorkspace.test.tsx > downloads local WebM using its real container extension
+AssertionError: expected '视频 01.mp4' to be '视频 01.webm' // Object.is equality
+
+Expected: "视频 01.webm"
+Received: "视频 01.mp4"
+
+ ❯ src/features/canvas/CanvasWorkspace.test.tsx:563:22
+    561|   render(<SelectionContextBar project={localProject} node={localProjec…
+    562|   await user.click(screen.getByRole('button', { name: '下载', exact: tru…
+    563|   expect(downloaded).toBe(`${project.nodes[2].title}.webm`)
+       |                      ^
+    564| })
+    565|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 17 passed (19)
+   Start at  13:29:44
+   Duration  1.18s (transform 236ms, setup 93ms, import 358ms, tests 471ms, environment 194ms)

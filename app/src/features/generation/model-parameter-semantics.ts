@@ -23,8 +23,12 @@ export type ModelParameterName =
   | 'volume'
   | 'sampleRate'
   | 'format'
+  | 'negativePrompt'
+  | 'shotSize'
+  | 'cameraMotion'
 
 export type ModelParameterDefinition =
+  | { type: 'text'; defaultValue: string; maxLength: number }
   | {
       type: 'enum'
       defaultValue: string

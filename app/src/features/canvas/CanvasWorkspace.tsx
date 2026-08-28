@@ -732,6 +732,7 @@ interface SelectionContextBarProps {
   onCreateVideoToolNode?(tool: VideoDerivedTool): void
   onSubmitVideoDraft?(tool: string): void
   onProcessVideo?(nodeId: string, options: VideoSegmentOptions): Promise<void> | void
+  onCancelVideoProcessing?(): void
   onExtractVideoAudio?(nodeId: string): Promise<void> | void
   onContinueVideo?(nodeId: string): void
   videoContinueDisabledReason?: string
@@ -751,6 +752,7 @@ export function SelectionContextBar({
   onCreateVideoToolNode,
   onSubmitVideoDraft,
   onProcessVideo,
+  onCancelVideoProcessing,
   onExtractVideoAudio,
   onContinueVideo,
   videoContinueDisabledReason,
@@ -791,6 +793,8 @@ export function SelectionContextBar({
       <VideoMediaContextBar
         node={node}
         asset={asset}
+        videoCandidates={project.assets.filter(asset => asset.kind === 'video').map(asset => ({ asset, title: project.nodes.find(node => node.versions.some(version => version.assetId === asset.id))?.title ?? `视频 ${asset.id.slice(0, 8)}` }))}
+        onCancelProcessing={onCancelVideoProcessing}
         onCreateToolNode={onCreateVideoToolNode}
         onSubmitDraft={onSubmitVideoDraft}
         onProcessVideo={(options) => onProcessVideo?.(node.id, options)}

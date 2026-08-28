@@ -22,3 +22,13 @@ test('whole-group execution remains demo-only and text-to-video clears reference
   expect(forceDemoProvider(request)).toEqual({ ...request, providerId: 'internal-demo' })
   expect(request.providerId).toBe('seedance-api')
 })
+
+test('video frame assignment inherits incoming images but explicit clearing never references its own previous video', () => {
+  const project = makeProjectFixture(), registry = createFixtureProviderRegistry()
+  const node = project.nodes[1]
+  node.kind = 'video'
+  node.generationConfig = { providerId: 'seedance-api', targetKind: 'video', parameters: { generationMode: '首尾帧' }, referenceAssets: [] }
+  expect(buildGenerationRequest(project, node, 'regenerate', '桥', registry).referenceAssets).toEqual([{ kind: 'image', mimeType: 'image/png', url: '/demo/shot-river.png' }])
+  node.generationConfig.parameters!.explicitFrameSelection = true
+  expect(buildGenerationRequest(project, node, 'regenerate', '桥', registry).referenceAssets).toEqual([])
+})

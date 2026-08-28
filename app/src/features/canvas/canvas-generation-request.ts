@@ -5,6 +5,7 @@ import { isImageAnalysisToolId } from '../generation/ark-image-analysis-provider
 import { frameAnalysisId } from '../generation/ark-frame-analysis-provider'
 import { styleSnapshot, styleCompatibilityReason } from '../styles/style-model'
 import { collectNodeSubjects } from '../subjects/subject-consistency'
+import { videoReferenceFailure } from '../generation/video-generation-semantics'
 
 export function buildGenerationRequest(
   project: Project,
@@ -140,14 +141,14 @@ export function buildGenerationRequest(
     ...(Object.keys(parameters).length ? { parameters } : {}),
     referenceAssets: generationMode === '文生视频'
       ? []
-      : savedConfig?.referenceAssets.length
+      : savedConfig?.parameters?.explicitFrameSelection || savedConfig?.referenceAssets.length
         ? savedConfig.referenceAssets.map((reference) => ({ ...reference }))
         : (node.kind === 'image' ||
               node.kind === 'character' ||
-              node.kind === 'scene') &&
+              node.kind === 'scene' || node.kind === 'video') &&
             incomingReferenceAssets.length
           ? incomingReferenceAssets
-          : asset && asset.kind !== 'text'
+          : asset && asset.kind !== 'text' && node.kind !== 'video'
             ? [
                 {
                   url: asset.url,
@@ -177,6 +178,10 @@ export function generationEligibilityFailure(
     if (!provider) return '当前节点绑定的生成模型不存在。'
     if (!isProviderEnabled(provider)) {
       return provider.disabledReason ?? '当前生成模型暂不可用。'
+    }
+    if (request.targetKind === 'video' && provider.kind === 'live') {
+      const reason = videoReferenceFailure(request.referenceAssets, request.parameters?.generationMode)
+      if (reason) return reason
     }
   }
   return undefined

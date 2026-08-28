@@ -35,6 +35,7 @@ import {
 } from './creative-card'
 import { detachLibraryAssetFromProject } from '../assets/library-model'
 import { isActiveTask, isRetryableTask } from '../generation/task-status'
+import { videoVersionHistory } from './video-version-history'
 
 export type PersistenceStatus =
   | 'dirty'
@@ -93,6 +94,7 @@ interface ProjectStore {
   ) => void
   reorderNodes: (orderedNodeIds: string[]) => void
   setActiveImageResult: (nodeId: string, resultId: string) => void
+  restoreVideoVersion: (nodeId: string, versionId: string) => boolean
   updateImageGenerationSettings: (
     nodeId: string,
     changes: Partial<ImageGenerationSettings>,
@@ -1551,6 +1553,29 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       return removed
     },
 
+    restoreVideoVersion: (nodeId, versionId) => {
+      let restored = false
+      commit(project => {
+        const source = project.nodes.find(node => node.id === nodeId)
+        if (!source || source.activeVersionId === versionId || project.jobs.some(job => job.nodeId === nodeId && isActiveTask(job.status))) return project
+        const entry = videoVersionHistory(project, source).find(entry => entry.version.id === versionId)
+        if (!entry) return project
+        const config = entry.version.generationConfig ?? entry.job?.generationConfig
+        const downstream = findDownstream(project, nodeId)
+        restored = true
+        return withUpdatedTimestamp({ ...project,
+          nodes: project.nodes.map(node => node.id === nodeId ? { ...node, activeVersionId: versionId, sourceChanged: false,
+            versions: node.versions.map(version => version.id === versionId ? { ...version, prompt: version.generatedPrompt ?? entry.job?.prompt ?? version.prompt } : version),
+            generationConfig: config ? structuredClone(config) : undefined,
+            modelProviderId: config?.providerId ?? entry.job?.providerId ?? source.modelProviderId,
+            appliedStyle: config?.style ? structuredClone(config.style) : null,
+          } : downstream.nodeIds.has(node.id) ? { ...node, sourceChanged: true } : node),
+          edges: project.edges.map(edge => downstream.edgeIds.has(edge.id) ? { ...edge, sourceChanged: true } : edge),
+        })
+      })
+      return restored
+    },
+
     appendVersion: (nodeId, version) => {
       commit((project) => {
         const versioned = appendNodeVersion(project, nodeId, version)
@@ -1731,7 +1756,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         throw new Error('Generation result reference mismatch')
       }
 
-      const version: NodeVersion = result.version
+      const version: NodeVersion = { ...result.version,
+        ...(result.asset.kind === 'video' ? { generatedPrompt: result.version.prompt } : {}),
+        ...(job.generationConfig ? { generationConfig: cloneGenerationConfig(job) } : {}),
+      }
       const scriptDetails = scriptDetailsAfterResult(source, job, result)
       const assets = [...project.assets, ...generatedAssets]
       let next: Project

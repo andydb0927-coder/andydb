@@ -10,13 +10,15 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { readVideoThumbnails } from '../media/browser-media-processing'
 
-import { withAppBase } from '../../app/public-url'
 import type { Asset, CanvasNode, VideoDerivedTool } from '../project/model'
 import type { VideoSegmentOptions } from '../media/browser-media-processing'
 import { defaultProviderRegistry } from '../generation/model-provider-registry'
 import { AiPlaceholderBadge } from './AiPlaceholderNotice'
 import { videoContinuationSourceFailure, videoReshootUnavailable, videoSubtitleUnavailable } from '../generation/ark-video-continue-provider'
+import { VideoLocalEditor } from './VideoLocalEditor'
+import { useVideoMetadata } from './use-video-metadata'
 
 type VideoMediaSurface =
   | 'clip'
@@ -31,6 +33,7 @@ type VideoMediaSurface =
   | 'subject-replace'
   | 'keying'
   | 'preview'
+  | 'local'
 
 const cropHandles = ['西北', '北', '东北', '东', '东南', '南', '西南', '西'] as const
 const vocalSeparationPlaceholder = defaultProviderRegistry.require(
@@ -46,6 +49,8 @@ interface VideoMediaContextBarProps {
   onExtractAudio?(): Promise<void> | void
   onContinueVideo?(): void
   continueDisabledReason?: string
+  videoCandidates?: Array<{ title: string; asset: Asset }>
+  onCancelProcessing?(): void
 }
 
 function DerivedToolConfirmation({
@@ -76,31 +81,53 @@ function ClipEditor({
   asset,
   onClose,
   onSubmit,
+  onOpenLocal,
 }: {
   asset: Asset
   onClose(): void
   onSubmit(options: VideoSegmentOptions): void
+  onOpenLocal(): void
 }) {
   const [snap, setSnap] = useState(false)
   const [loop, setLoop] = useState(true)
-  const duration = Math.max(0.25, asset.durationSeconds ?? 3)
+  const { metadata, error: metadataError } = useVideoMetadata(asset.url)
+  const duration = metadata?.duration ?? 0
+  const [thumbnails, setThumbnails] = useState<string[]>([])
+  const [thumbnailError, setThumbnailError] = useState('')
   const [startSeconds, setStartSeconds] = useState(0)
-  const [endSeconds, setEndSeconds] = useState(duration)
+  const [endDraft, setEndSeconds] = useState<number>()
+  const endSeconds = endDraft ?? duration
+  useEffect(() => {
+    const controller = new AbortController()
+    void readVideoThumbnails(asset.url, controller.signal).then(frames => {
+      if (!controller.signal.aborted) setThumbnails(frames)
+    }).catch(error => { if (!controller.signal.aborted) setThumbnailError(error instanceof Error ? error.message : '缩略帧读取失败。') })
+    return () => controller.abort()
+  }, [asset.url])
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="剪辑内联编辑器">
       <header><div><span>节点内草稿</span><h2>剪辑</h2></div><button type="button" aria-label="关闭剪辑内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
-      <div className="video-clip-stage"><video src={asset.url} poster={withAppBase('/demo/shot-river.png')} muted loop={loop} preload="metadata" /></div>
+      <p>本地导出仅画面，不含音轨；原视频保留。</p>
+      <div className="video-clip-stage"><video src={asset.url} controls muted preload="metadata" onPlay={event => { if (event.currentTarget.currentTime < startSeconds || event.currentTarget.currentTime >= endSeconds) event.currentTarget.currentTime = startSeconds }} onTimeUpdate={event => {
+        if (!event.currentTarget.paused && event.currentTarget.currentTime >= endSeconds) {
+          if (loop) event.currentTarget.currentTime = startSeconds
+          else event.currentTarget.pause()
+        }
+      }} /></div>
       <div className="video-clip-frames" aria-label="12 张缩略帧">
-        {Array.from({ length: 12 }, (_, index) => <img key={index} src={withAppBase('/demo/shot-river.png')} alt={`剪辑帧 ${index + 1}`} />)}
+        {thumbnails.map((url, index) => <img key={index} src={url} alt={`剪辑帧 ${index + 1}`} />)}
       </div>
-      <label>入点<input aria-label="视频入点" type="range" min="0" max={Math.max(0, endSeconds - 0.1)} step={snap ? 1 : 0.01} value={startSeconds} onChange={(event) => setStartSeconds(Number(event.target.value))} /></label>
-      <label>出点<input aria-label="视频出点" type="range" min={Math.min(duration, startSeconds + 0.1)} max={duration} step={snap ? 1 : 0.01} value={endSeconds} onChange={(event) => setEndSeconds(Number(event.target.value))} /></label>
+      {thumbnailError ? <p role="status">缩略帧读取失败：{thumbnailError}</p> : thumbnails.length ? null : <p role="status">正在读取真实缩略帧…</p>}
+      <label>入点<input disabled={!metadata} aria-label="视频入点" type="range" min="0" max={Math.max(0, endSeconds - 0.1)} step={snap ? 1 : 0.01} value={startSeconds} onChange={(event) => setStartSeconds(Number(event.target.value))} /></label>
+      <label>出点<input disabled={!metadata} aria-label="视频出点" type="range" min={Math.min(duration, startSeconds + 0.1)} max={duration} step={snap ? 1 : 0.01} value={endSeconds} onChange={(event) => setEndSeconds(Number(event.target.value))} /></label>
+      {!metadata ? <p role="status">{metadataError ?? '正在读取视频真实时长，完成后可导出。'}</p> : null}
       <div className="video-inline-editor__readout"><span>{startSeconds.toFixed(2)}–{endSeconds.toFixed(2)} s</span><strong>{Math.max(0, endSeconds - startSeconds).toFixed(2)} s</strong></div>
       <div className="video-inline-editor__toggles">
+        <button type="button" onClick={onOpenLocal}>镜像 / 旋转 / 变速 / 合成</button>
         <button type="button" aria-label="整数秒吸附" aria-pressed={snap} onClick={() => setSnap((value) => !value)}>整数秒吸附</button>
         <button type="button" aria-label="选区循环播放" aria-pressed={loop} onClick={() => setLoop((value) => !value)}>选区循环播放</button>
       </div>
-      <footer><button type="button" onClick={() => { setStartSeconds(0); setEndSeconds(duration); setSnap(false); setLoop(true) }}>取消 / 重置</button><button type="button" onClick={() => onSubmit({ startSeconds, endSeconds })}>确认剪辑并导出 WebM</button></footer>
+      <footer><button type="button" onClick={() => { setStartSeconds(0); setEndSeconds(duration); setSnap(false); setLoop(true) }}>取消 / 重置</button><button type="button" disabled={!metadata} onClick={() => onSubmit({ startSeconds, endSeconds })}>确认剪辑并导出 WebM</button></footer>
     </section>
   )
 }
@@ -108,20 +135,24 @@ function ClipEditor({
 function CropEditor({ asset, onClose, onSubmit }: { asset: Asset; onClose(): void; onSubmit(options: VideoSegmentOptions): void }) {
   const [width, setWidth] = useState(80)
   const [height, setHeight] = useState(80)
-  const duration = Math.max(0.25, asset.durationSeconds ?? 3)
+  const { metadata, error: metadataError } = useVideoMetadata(asset.url)
+  const duration = metadata?.duration ?? 0
+  const size = metadata ?? { width: 0, height: 0 }
   return (
     <section className="video-inline-editor" role="dialog" aria-modal="false" aria-label="裁剪内联编辑器">
       <header><div><span>节点内草稿</span><h2>裁剪</h2></div><button type="button" aria-label="关闭裁剪内联编辑器" onClick={onClose}><X aria-hidden="true" /></button></header>
+      <p>本地导出仅画面，不含音轨；原视频保留。</p>
       <div className="video-crop-stage">
-        <video src={asset.url} poster={withAppBase('/demo/shot-river.png')} muted preload="metadata" />
-        <div className="video-crop-box">
+        <video src={asset.url} muted preload="metadata" />
+        <div className="video-crop-box" style={{ width: `${width}%`, height: `${height}%`, inset: `${(100 - height) / 2}% ${(100 - width) / 2}%` }}>
           {cropHandles.map((handle) => <span key={handle} aria-label={`裁剪控制点 ${handle}`} data-position={handle} />)}
         </div>
       </div>
       <label>裁剪宽度<input aria-label="裁剪宽度" type="range" min="20" max="100" value={width} onChange={(event) => setWidth(Number(event.currentTarget.value))} /></label>
       <label>裁剪高度<input aria-label="裁剪高度" type="range" min="20" max="100" value={height} onChange={(event) => setHeight(Number(event.currentTarget.value))} /></label>
-      <strong>{Math.round((asset.width ?? 1280) * width / 100)} × {Math.round((asset.height ?? 720) * height / 100)}</strong>
-      <footer><button type="button" onClick={onClose}>退出裁剪</button><button type="button" onClick={() => onSubmit({ startSeconds: 0, endSeconds: duration, crop: { x: (100 - width) / 200, y: (100 - height) / 200, width: width / 100, height: height / 100 } })}>生成裁剪并导出 WebM</button></footer>
+      <strong>{size.width && size.height ? `${Math.round(size.width * width / 100)} × ${Math.round(size.height * height / 100)}` : '尺寸读取中'}</strong>
+      {!metadata ? <p role="status">{metadataError ?? '正在读取视频真实尺寸与时长，完成后可导出。'}</p> : null}
+      <footer><button type="button" onClick={onClose}>退出裁剪</button><button type="button" disabled={!metadata} onClick={() => onSubmit({ startSeconds: 0, endSeconds: duration, crop: { x: (100 - width) / 200, y: (100 - height) / 200, width: width / 100, height: height / 100 } })}>生成裁剪并导出 WebM</button></footer>
     </section>
   )
 }
@@ -177,9 +208,16 @@ export function VideoMediaContextBar({
   onExtractAudio,
   onContinueVideo,
   continueDisabledReason,
+  videoCandidates = [],
+  onCancelProcessing,
 }: VideoMediaContextBarProps) {
   const [surface, setSurface] = useState<VideoMediaSurface>()
   const [pendingTool, setPendingTool] = useState<VideoDerivedTool>()
+  const [processingError, setProcessingError] = useState('')
+  const runProcess = async (options: VideoSegmentOptions) => {
+    try { await onProcessVideo?.(options); setSurface(undefined) }
+    catch (error) { setProcessingError(error instanceof Error ? error.message : '视频处理失败，请重试。') }
+  }
   const continuationReason = continueDisabledReason ?? (!onContinueVideo ? '续写操作尚未配置。' :
     videoContinuationSourceFailure({ ...asset, durationSeconds: asset.durationSeconds ?? 5 }))
 
@@ -191,12 +229,13 @@ export function VideoMediaContextBar({
     if (!surface && !pendingTool) return
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (surface === 'clip' || surface === 'crop' || surface === 'local') onCancelProcessing?.()
       setSurface(undefined)
       setPendingTool(undefined)
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [pendingTool, surface])
+  }, [onCancelProcessing, pendingTool, surface])
 
   const submitDraft = (tool: string) => {
     onSubmitDraft?.(tool)
@@ -205,7 +244,8 @@ export function VideoMediaContextBar({
   const downloadCurrent = () => {
     const anchor = document.createElement('a')
     anchor.href = asset.url
-    anchor.download = `${node.title}.mp4`
+    const extension = asset.mimeType.startsWith('video/webm') ? 'webm' : asset.mimeType === 'video/quicktime' ? 'mov' : 'mp4'
+    anchor.download = `${node.title}.${extension}`
     anchor.click()
   }
 
@@ -224,6 +264,8 @@ export function VideoMediaContextBar({
         <button type="button" data-compact="true" aria-label="下载" title="下载" onClick={downloadCurrent}><Download aria-hidden="true" /><span className="visually-hidden">下载</span></button>
         <button type="button" data-compact="true" aria-label="预览" title="预览" onClick={() => setSurface('preview')}><Maximize2 aria-hidden="true" /><span className="visually-hidden">预览</span></button>
       </div>
+      {processingError ? <p role="alert">{processingError}</p> : null}
+      {surface === 'local' ? <VideoLocalEditor asset={asset} candidates={videoCandidates} onClose={() => { onCancelProcessing?.(); setSurface(undefined) }} onSubmit={async options => { if (!onProcessVideo) throw new Error('视频处理入口未连接。'); await onProcessVideo(options) }} /> : null}
       <div className="video-disabled-reasons visually-hidden" role="note" aria-label="视频工具禁用原因">
         <span id="video-reshoot-reason">{videoReshootUnavailable}</span>
         {continuationReason ? <span id="video-extend-reason">智能续写暂未开放：{continuationReason}</span> : null}
@@ -231,8 +273,8 @@ export function VideoMediaContextBar({
         <span id="video-picture-reason">画面编辑暂未开放：尚未接入主体编辑结果。</span>
       </div>
 
-      {surface === 'clip' ? <ClipEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={(options) => { void onProcessVideo?.(options); setSurface(undefined) }} /> : null}
-      {surface === 'crop' ? <CropEditor asset={asset} onClose={() => setSurface(undefined)} onSubmit={(options) => { void onProcessVideo?.(options); setSurface(undefined) }} /> : null}
+      {surface === 'clip' ? <ClipEditor asset={asset} onOpenLocal={() => setSurface('local')} onClose={() => { onCancelProcessing?.(); setSurface(undefined) }} onSubmit={(options) => { setProcessingError(''); void runProcess(options) }} /> : null}
+      {surface === 'crop' ? <CropEditor asset={asset} onClose={() => { onCancelProcessing?.(); setSurface(undefined) }} onSubmit={(options) => { setProcessingError(''); void runProcess(options) }} /> : null}
 
       {surface === 'subtitle-menu' ? (
         <div className="video-tool-menu" role="menu" aria-label="智能去字幕">
@@ -272,8 +314,7 @@ export function VideoMediaContextBar({
         <div className="video-preview-dialog" role="dialog" aria-modal="true" aria-label="视频预览">
           <button type="button" aria-label="关闭视频预览" onClick={() => setSurface(undefined)}><X aria-hidden="true" /></button>
           <h2>{node.title}</h2>
-          <video src={asset.url} poster={withAppBase('/demo/shot-river.png')} controls autoPlay={false} preload="metadata" />
-          <span>0:00 / 0:03 · 1x</span>
+          <video src={asset.url} controls autoPlay={false} preload="metadata" />
         </div>
       ) : null}
 

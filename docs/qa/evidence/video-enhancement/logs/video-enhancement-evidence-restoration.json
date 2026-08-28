@@ -1,0 +1,33 @@
+{
+  "restored": [
+    "design-qa-evidence/node-connections-1440x1024.png",
+    "design-qa-evidence/node-connections-721x778.png",
+    "design-qa-evidence/zoom-200-reachability.png",
+    "docs/qa/evidence/after/canvas-image-1024x900.png",
+    "docs/qa/evidence/after/canvas-image-1280x900.png",
+    "docs/qa/evidence/after/canvas-image-720x450.png",
+    "docs/qa/evidence/after/canvas-资产管理-721.png",
+    "docs/qa/evidence/after/empty-video-generation.png",
+    "docs/qa/evidence/after/project-a-reloaded.png",
+    "docs/qa/evidence/after/timeline-721.png",
+    "docs/qa/evidence/style-system/custom-style-favorite.png",
+    "docs/qa/evidence/style-system/video-style-721.png",
+    "docs/qa/evidence/subject-consistency/delete-impact-721.png",
+    "docs/qa/evidence/subject-consistency/details-page.png"
+  ],
+  "userEvidence": [
+    {
+      "path": "design-qa-evidence/node-connections-1440x1024.png",
+      "unchanged": true
+    },
+    {
+      "path": "design-qa-evidence/node-connections-721x778.png",
+      "unchanged": true
+    },
+    {
+      "path": "design-qa-evidence/zoom-200-reachability.png",
+      "unchanged": true
+    }
+  ],
+  "capturedCurrentRun": "/private/tmp/video-enhancement-batch4.XCfQBz/current-run"
+}
