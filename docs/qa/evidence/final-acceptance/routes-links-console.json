@@ -1,0 +1,3159 @@
+{
+  "routes": [
+    "/",
+    "/projects",
+    "/works",
+    "/agents",
+    "/challenges",
+    "/tutorials",
+    "/membership",
+    "/help",
+    "/tutorials/create-project",
+    "/tutorials/add-node",
+    "/tutorials/connect-nodes",
+    "/tutorials/image-model",
+    "/tutorials/image-prompt",
+    "/tutorials/image-reference",
+    "/tutorials/text-to-video",
+    "/tutorials/image-to-video",
+    "/tutorials/video-frames",
+    "/tutorials/storyboard",
+    "/tutorials/director",
+    "/tutorials/export-publish",
+    "/activity/director-master",
+    "/activity/city-stories",
+    "/activity/story-seed",
+    "/detail/demo-work-frost-river",
+    "/detail/demo-work-frost-river/process",
+    "/detail/demo-work-rooftop-letter",
+    "/detail/demo-work-rooftop-letter/process",
+    "/detail/demo-work-rain-street",
+    "/detail/demo-work-rain-street/process",
+    "/detail/demo-work-soda-summer",
+    "/detail/demo-work-soda-summer/process",
+    "/detail/demo-work-mecha-awakening",
+    "/detail/demo-work-mecha-awakening/process",
+    "/detail/demo-work-one-minute-light",
+    "/detail/demo-work-one-minute-light/process",
+    "/detail/demo-work-paper-moon",
+    "/detail/demo-work-paper-moon/process",
+    "/detail/demo-work-tea-mountain",
+    "/detail/demo-work-tea-mountain/process",
+    "/view/final-work",
+    "/subjects/final-subject",
+    "/project/final-project",
+    "/project/final-project/preview"
+  ],
+  "links": [
+    {
+      "source": "/",
+      "href": "/andydb/projects/new",
+      "label": "新建画布创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/85bff7fe-9a90-4459-9e34-fba6d8c5f361"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/projects",
+      "label": "查看项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/agents",
+      "label": "浏览 Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/challenges",
+      "label": "浏览创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/project/final-project",
+      "label": "终验隔离项目雨夜寻找失踪的弟弟2 个创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/final-project"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/final-work",
+      "label": "查看作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/final-work/process",
+      "label": "查看 终验隔离作品 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-frost-river/process",
+      "label": "查看 霜河渡 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-rooftop-letter/process",
+      "label": "查看 屋顶来信 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-rain-street/process",
+      "label": "查看 雨巷回声 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-soda-summer/process",
+      "label": "查看 汽水盛夏 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-mecha-awakening/process",
+      "label": "查看 机甲苏醒时 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-one-minute-light/process",
+      "label": "查看 一分钟读懂光影 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-paper-moon/process",
+      "label": "查看 纸月亮便利店 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon/process"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/",
+      "href": "/andydb/detail/demo-work-tea-mountain/process",
+      "label": "查看 山岚入茶 的创作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain/process"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/projects/new",
+      "label": "新建项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/73489d51-b4c2-45f2-8f50-1cf6c76a5032"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/project/85bff7fe-9a90-4459-9e34-fba6d8c5f361",
+      "label": "打开 未命名项目 · 2026-08-29 12:31",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/85bff7fe-9a90-4459-9e34-fba6d8c5f361"
+    },
+    {
+      "source": "/projects",
+      "href": "/andydb/project/final-project",
+      "label": "打开 终验隔离项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/final-project"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/dcee54c5-29c8-44e5-afef-5e5ba8cff518"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/works",
+      "href": "/andydb/view/final-work",
+      "label": "查看作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/view/final-work"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/d5548b68-c647-4382-a6f1-9a7c96c0f703"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/agents",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/df4a58e2-b5f5-45ac-acf2-237eeb477b36"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/activity/director-master",
+      "label": "LIGHT\nRELAYLOCAL EDITION / 2026进行中多镜头叙事工作流光影接力导演挑战让三个独立镜头共享一束光、一段动作和同一个情绪落点。活动时间2026.08.01 — 2026.09.30奖金本地荣誉徽章与专题推荐参与人数1,286 人参与查看详情",
+      "destination": "https://final-acceptance.fixture.local/andydb/activity/director-master"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/activity/city-stories",
+      "label": "CITY\nSOUNDLOCAL EDITION / 2026进行中城市声音短片一公里的城市声景从一公里步行路径中收集声音、招牌和行人片段，组成城市肖像。活动时间2026.08.08 — 2026.10.08奖金城市影像专题推荐参与人数834 人参与查看详情",
+      "destination": "https://final-acceptance.fixture.local/andydb/activity/city-stories"
+    },
+    {
+      "source": "/challenges",
+      "href": "/andydb/activity/story-seed",
+      "label": "OBJECT\nSTORYLOCAL EDITION / 2026已颁奖物件叙事短片旧物醒来时选择一件旧物，用画面和声音讲清它被再次发现的那一分钟。活动时间2026.04.12 — 2026.06.20奖金年度作品集入选参与人数2,156 人参与查看详情",
+      "destination": "https://final-acceptance.fixture.local/andydb/activity/story-seed"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/projects/new",
+      "label": "新建项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/3894e1a0-a7df-4245-b03c-62d6c7e53165"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials",
+      "href": "#tutorial-getting-started",
+      "label": "入门",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials#tutorial-getting-started"
+    },
+    {
+      "source": "/tutorials",
+      "href": "#tutorial-image",
+      "label": "图片创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials#tutorial-image"
+    },
+    {
+      "source": "/tutorials",
+      "href": "#tutorial-video",
+      "label": "视频创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials#tutorial-video"
+    },
+    {
+      "source": "/tutorials",
+      "href": "#tutorial-advanced",
+      "label": "高级",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials#tutorial-advanced"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/create-project",
+      "label": "查看教程：新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/add-node",
+      "label": "查看教程：添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "查看教程：建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/image-model",
+      "label": "查看教程：选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "查看教程：编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "查看教程：添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "查看教程：文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "查看教程：图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "查看教程：截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "查看教程：整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/director",
+      "label": "查看教程：使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "查看教程：导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/02ac8dc5-451d-4ee5-b51a-6b7b90cd5181"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/membership",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/45a82dec-5c31-44ab-ab89-f1bbce6edc29"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/help",
+      "href": "/andydb/tutorials",
+      "label": "查看完整教程",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/88500b3c-98ef-41f0-b322-dbee1d096c52"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/add-node",
+      "label": "下一篇：添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/create-project",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/69d621b8-7223-4cb1-a730-6239de8ec0a8"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/create-project",
+      "label": "上一篇：新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "下一篇：建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/add-node",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/dc1d1363-513a-47b7-9ff4-d1cf8992bf3e"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/add-node",
+      "label": "上一篇：添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/image-model",
+      "label": "下一篇：选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/connect-nodes",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/a515a1e2-6f66-4d05-8efc-c8979f95b81d"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "上一篇：建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "下一篇：编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/image-model",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/03992884-f395-4aaa-896e-0cfabc2d52ba"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/image-model",
+      "label": "上一篇：选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "下一篇：添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/image-prompt",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/eda84487-22e6-4b2e-b82b-64cab806fbf5"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "上一篇：编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "下一篇：文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/image-reference",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/423ba96b-ee11-404a-849e-6d68d0b1838b"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "上一篇：添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "下一篇：图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/text-to-video",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/e277bc1a-2c73-4821-8995-3cc53083788b"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "上一篇：文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "下一篇：截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/image-to-video",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/8875903f-faab-47b2-a9ce-b01cdaf88155"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "上一篇：图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "下一篇：整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/video-frames",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/cb598980-1a39-4c57-b586-3cf2d1d93f8c"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "上一篇：截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/director",
+      "label": "下一篇：使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/storyboard",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/1470a380-7b3e-42a7-8da5-1d2584f0f1c8"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "上一篇：整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/director",
+      "label": "使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/director",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "下一篇：导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/68f741f3-69ca-4fe7-a1cf-6c3b612471d4"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials",
+      "label": "返回教程中心",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/create-project",
+      "label": "新建第一个项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/create-project"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/add-node",
+      "label": "添加创作节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/add-node"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/connect-nodes",
+      "label": "建立节点连线",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/connect-nodes"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/image-model",
+      "label": "选择图片模型",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-model"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/image-prompt",
+      "label": "编写图片提示词",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-prompt"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/image-reference",
+      "label": "添加画布参考图",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-reference"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/text-to-video",
+      "label": "文生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/text-to-video"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/image-to-video",
+      "label": "图生视频",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/image-to-video"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/video-frames",
+      "label": "截取首帧、尾帧与当前帧",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/video-frames"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/storyboard",
+      "label": "整理故事板",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/storyboard"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/director",
+      "label": "上一篇：使用导演台",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/director"
+    },
+    {
+      "source": "/tutorials/export-publish",
+      "href": "/andydb/tutorials/export-publish",
+      "label": "导出与本地发布",
+      "destination": "https://final-acceptance.fixture.local/andydb/tutorials/export-publish"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/2f6ab9ba-2fd2-458a-820f-45f7901ea3bf"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/challenges",
+      "label": "返回挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/projects/new?challenge=director-master",
+      "label": "去创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/a5eeb3a5-3d89-4ad5-aa46-4099e2f417c2"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看示例作品：霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看示例作品：屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/activity/director-master",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看示例作品：雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/50fcb763-fab8-435d-b380-e08a9e6c81e4"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/challenges",
+      "label": "返回挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/projects/new?challenge=city-stories",
+      "label": "去创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/69873f80-dd82-4e30-b9e9-fd55410d0d24"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看示例作品：霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看示例作品：屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/activity/city-stories",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看示例作品：雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/15bae2bf-224c-46a8-80fa-61846c253625"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/challenges",
+      "label": "返回挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/projects/new?challenge=story-seed",
+      "label": "去创作",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/0dec47eb-3f9a-43f7-b495-60697a4b1d25"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看示例作品：霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看示例作品：屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/activity/story-seed",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看示例作品：雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-frost-river/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river/process"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-frost-river",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-frost-river/process",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-rooftop-letter/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter/process"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-rooftop-letter/process",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-rain-street/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street/process"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-rain-street",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-rain-street/process",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-soda-summer/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer/process"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-soda-summer/process",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-mecha-awakening/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening/process"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-mecha-awakening/process",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-one-minute-light/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light/process"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-one-minute-light/process",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-paper-moon/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon/process"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-paper-moon/process",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/",
+      "label": "返回首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-tea-mountain/process",
+      "label": "查看制作过程",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain/process"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-paper-moon",
+      "label": "查看推荐作品 纸月亮便利店",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-paper-moon"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-soda-summer",
+      "label": "查看推荐作品 汽水盛夏",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-soda-summer"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "查看推荐作品 山岚入茶",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/final-work",
+      "label": "查看推荐作品 终验隔离作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/final-work"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-frost-river",
+      "label": "查看推荐作品 霜河渡",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-frost-river"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-rooftop-letter",
+      "label": "查看推荐作品 屋顶来信",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rooftop-letter"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-rain-street",
+      "label": "查看推荐作品 雨巷回声",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-rain-street"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-mecha-awakening",
+      "label": "查看推荐作品 机甲苏醒时",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-mecha-awakening"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain",
+      "href": "/andydb/detail/demo-work-one-minute-light",
+      "label": "查看推荐作品 一分钟读懂光影",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-one-minute-light"
+    },
+    {
+      "source": "/detail/demo-work-tea-mountain/process",
+      "href": "/andydb/detail/demo-work-tea-mountain",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/detail/demo-work-tea-mountain"
+    },
+    {
+      "source": "/view/final-work",
+      "href": "/andydb/works",
+      "label": "返回作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/projects/new",
+      "label": "新建画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/a8e1d1a9-5e3c-4e3b-817e-2c050ea4fa00"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/",
+      "label": "无线画布",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/subjects/final-subject",
+      "href": "/andydb/project/final-project",
+      "label": "查看来源项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/final-project"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/projects/new",
+      "label": "新建项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/cc0845d5-27b7-4000-af11-cc971d67d9c7"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/",
+      "label": "首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/project/final-project",
+      "href": "https://reactflow.dev?utm_source=attribution",
+      "label": "React Flow attribution",
+      "external": true
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/projects/new",
+      "label": "新建项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/ed295fd4-acdd-4563-b5a7-aad4a24c24cc"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/",
+      "label": "首页",
+      "destination": "https://final-acceptance.fixture.local/andydb/"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/projects",
+      "label": "项目",
+      "destination": "https://final-acceptance.fixture.local/andydb/projects"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/works",
+      "label": "作品",
+      "destination": "https://final-acceptance.fixture.local/andydb/works"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/agents",
+      "label": "Skills",
+      "destination": "https://final-acceptance.fixture.local/andydb/agents"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/challenges",
+      "label": "创作者挑战赛",
+      "destination": "https://final-acceptance.fixture.local/andydb/challenges"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/membership",
+      "label": "积分会员",
+      "destination": "https://final-acceptance.fixture.local/andydb/membership"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/help",
+      "label": "帮助",
+      "destination": "https://final-acceptance.fixture.local/andydb/help"
+    },
+    {
+      "source": "/project/final-project/preview",
+      "href": "/andydb/project/final-project?focus=shot-1",
+      "label": "返回来源节点",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/final-project?focus=shot-1"
+    }
+  ],
+  "messages": [],
+  "externalRequests": []
+}

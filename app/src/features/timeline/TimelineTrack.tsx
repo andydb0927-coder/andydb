@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import type { Project, TimelineItem } from '../project/model'
 import type { ResolvedTimelineItem } from './timeline-model'
@@ -59,7 +60,7 @@ export function TimelineTrack({
                 <small>{resolved.item.durationSeconds.toFixed(2)}s</small>
               </button>
               {resolved.missing ? (
-                <a href={`/project/${project.id}?focus=${resolved.item.nodeId}`}>返回来源节点</a>
+                <Link to={`/project/${project.id}?focus=${resolved.item.nodeId}`}>返回来源节点</Link>
               ) : null}
               <div className="timeline-track__move">
                 <button

@@ -1,5 +1,7 @@
 # 无线画布线上版全站浏览验收
 
+> 终验索引（2026-08-29）：下文是历史线上验收，不能代替当前构建结果。本轮不部署生产；当前HEAD的本地mock产物、隔离浏览器及完整回归见[全站终验报告](../../qa/final-acceptance-report.md)。
+
 > 本地稳定化补记（2026-08-27，起点f1e098d）：下文为先前线上验收记录。本轮没有访问用户线上项目、没有推送部署；本地mock构建与隔离fixture回归另见[稳定化报告](../../qa/current-product-stabilization-report.md)和[当前功能状态](../../qa/current-feature-status.csv)。不能把本轮本地通过写成线上已经修复。
 
 - 验收时间：2026-08-27（Asia/Shanghai；文件名按任务约定）

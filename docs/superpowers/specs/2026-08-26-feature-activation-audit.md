@@ -1,5 +1,7 @@
 # 无线画布全站功能激活盘点
 
+> 终验索引（2026-08-29）：本文件保留历史原文。14批新功能后的最新源码归类见[149项当前功能状态](../../qa/current-feature-status.csv)，本轮实际浏览器与四道门禁结果见[全站终验报告](../../qa/final-acceptance-report.md)。不要再用下方旧Kling/demo清单推断当前接入情况。
+
 > 稳定化勘误（2026-08-27，起点f1e098d）：以下是历史快照，不再作为当前缺陷清单。最新115项功能状态见[当前功能状态](../../qa/current-feature-status.csv)，稳定化结果见[报告](../../qa/current-product-stabilization-report.md)。资产与live结果已持久化，多画布/帮助/详情页/3D导演台已存在；公开demo模型已移除。真实API本轮只做UI与fixture核查，不代表供应商实测通过。保留原正文以追溯历史。
 
 日期：2026-08-26  

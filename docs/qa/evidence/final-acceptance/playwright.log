@@ -1,0 +1,218 @@
+[WebServer] (node:84674) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 132 tests using 5 workers
+
+(node:84685) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84683) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84684) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84686) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84687) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 [chromium] › e2e/ark-text-llm.spec.ts:25:1 › selects the intercepted Ark text model, generates, and restores its persistent result (5.8s)
+  ✓    5 [chromium] › e2e/ark-image-edit.spec.ts:3:1 › edits an existing image through the intercepted Ark Pro contract and restores it after reload (7.4s)
+  ✓    2 [chromium] › e2e/ark-audio.spec.ts:47:1 › selects Ark TTS, generates intercepted audio, and restores the persistent result (7.6s)
+  ✓    4 [chromium] › e2e/ark-final.spec.ts:20:1 › auto-extracts a reviewed subject without replacing the image and persists structured data for reuse (9.2s)
+  ✓    3 [chromium] › e2e/ark-analysis.spec.ts:5:1 › confirms panoramic and serial nine-grid requests and restores every image from IndexedDB (9.2s)
+  ✓    8 [chromium] › e2e/ark-audio.spec.ts:136:1 › keeps unsupported audio post tools disabled without requests or persistent changes (4.4s)
+  ✓    9 [chromium] › e2e/ark-final.spec.ts:63:1 › shows safe extraction errors, allows manual input and cancels pending analysis without creating subjects (3.3s)
+  ✓    7 [chromium] › e2e/ark-image-edit.spec.ts:70:1 › keeps the original after a rejected erase and retries the saved edit contract at a narrow viewport (5.0s)
+  ✓   10 [chromium] › e2e/ark-analysis.spec.ts:55:1 › confirms reference lighting correction with a prompt bbox at 721px without touching unsupported tools (3.4s)
+  ✓   12 [chromium] › e2e/ark-final.spec.ts:95:1 › exposes honest voice cloning limits and runs local video prompt optimization without networking (2.1s)
+  ✓   13 [chromium] › e2e/canvas-account-menu.spec.ts:3:1 › keeps local settings usable on the compact canvas (2.1s)
+  ✓   16 [chromium] › e2e/canvas-account-menu.spec.ts:49:1 › keeps local settings inside an extra-narrow split preview (1.4s)
+  ✓   14 [chromium] › e2e/ark-analysis.spec.ts:84:1 › uploads a real video fixture for sampled analysis, persists timeline text and reopens the report (4.3s)
+  ✓   15 [chromium] › e2e/canvas-export.spec.ts:20:1 › exports canvas ranges and a complete workflow JSON snapshot (3.1s)
+  ✓    6 [chromium] › e2e/ark-video-continue.spec.ts:39:1 › confirms continuation without reshoot/mask fields, then persists both versions and video history (13.3s)
+  ✓   11 [chromium] › e2e/audio-enhancements.spec.ts:53:1 › official voices and pitch persist; two audio versions preview and restore without more API requests at 721px (7.2s)
+  ✓   18 [chromium] › e2e/creative-cards.spec.ts:188:1 › creates, links, edits, and reloads structured creative cards (9.1s)
+  ✓   17 [chromium] › e2e/creation-flow.spec.ts:148:1 › creator completes the minimum short-film loop (11.4s)
+  ✓   21 [chromium] › e2e/audio-enhancements.spec.ts:120:1 › audio generation pitch and offline fades/normalization produce a real persisted WAV without paid requests (8.5s)
+  ✓   20 [chromium] › e2e/ark-video-continue.spec.ts:92:1 › preserves the source on 401 and retries the saved continuation contract after reload at 721px (10.1s)
+  ✓   24 [chromium] › e2e/hosted-batch-4.spec.ts:9:1 › explains guarded AI presets and applies the local prompt optimizer (2.9s)
+  ✓   25 [chromium] › e2e/hosted-batch-5.spec.ts:4:1 › opens membership and help from the platform rail (1.7s)
+  ✓   22 [chromium] › e2e/hosted-batch-3.spec.ts:3:1 › creates a durable subject from an upload and reuses it in another project (6.2s)
+  ✓   28 [chromium] › e2e/hosted-batch-3.spec.ts:40:1 › opens tutorial detail pages with category and adjacent lesson navigation (1.8s)
+  ✓   26 [chromium] › e2e/hosted-batch-4.spec.ts:29:1 › keeps smart edit unavailable and gates real frame analysis behind video selection (3.5s)
+  ✓   29 [chromium] › e2e/hosted-batch-3.spec.ts:53:1 › binds challenge tags into the new project and renders the complete activity document (1.4s)
+  ✓   27 [chromium] › e2e/hosted-batch-5.spec.ts:17:1 › shows generation task notifications and persists the read state (7.5s)
+  ✓   23 [chromium] › e2e/creation-flow.spec.ts:202:1 › filters, previews, reuses, resends, and batches generation history (11.2s)
+  ✓   30 [chromium] › e2e/libtv-generation.spec.ts:42:1 › runs the complete LibTV provider path behind intercepted local evidence (5.0s)
+  ✓   31 [chromium] › e2e/managed-canvas.spec.ts:46:1 › executes a selected workflow group and exposes the same command in the canvas menu (4.6s)
+  ✓   19 [chromium] › e2e/director-enhancements.spec.ts:30:1 › director lights drag, camera presets, asset drop, trajectory and PNG persist without any AI request (23.0s)
+  ✓   34 [chromium] › e2e/p0-b-interactions.spec.ts:9:1 › executes Slash parameters and creates a local AutoLink reference edge (2.3s)
+  ✓   32 [chromium] › e2e/node-connections.spec.ts:459:1 › keeps the visibility toggle fully targetable at the normal layout (2.9s)
+  ✓   35 [chromium] › e2e/managed-canvas.spec.ts:68:1 › opens a draggable and zoomable 720 panorama viewer from an image result (2.2s)
+  ✓   33 [chromium] › e2e/creation-flow.spec.ts:273:1 › keeps one image node expanded and persists a confirmed main result (5.7s)
+  ✓   39 [chromium] › e2e/managed-canvas.spec.ts:91:1 › converts any two selected nodes to a configurable storyboard group (2.7s)
+  ✓   38 [chromium] › e2e/node-connections.spec.ts:472:1 › toggles connection visibility with focused Enter and Space activation (3.6s)
+  ✓   37 [chromium] › e2e/p0-b-interactions.spec.ts:32:1 › keeps nodes, connections, and viewport isolated across project canvases (4.5s)
+  ✓   42 [chromium] › e2e/node-connections.spec.ts:505:1 › hides and restores dependency visuals without changing connection data (3.0s)
+  ✓   36 [chromium] › e2e/director-enhancements.spec.ts:115:1 › director controls stay reachable at 721px and keyboard light positioning saves (8.3s)
+  ✓   43 [chromium] › e2e/p0-b-interactions.spec.ts:61:1 › persists clip speed and picture-in-picture composition in the preview timeline (3.1s)
+  ✓   40 [chromium] › e2e/creation-flow.spec.ts:321:1 › uploads an image-to-image reference, links a canvas reference, and does not fake unsupported upscaling (4.6s)
+  ✓   41 [chromium] › e2e/pipeline-automation.spec.ts:48:1 › topology runs fresh text → image → real local transform; templates and history survive refresh (6.6s)
+  ✓   46 [chromium] › e2e/platform-foundation-batch3.spec.ts:13:1 › timeline extraction preserves edited playback, JSON/EDL exports and saved state (4.6s)
+  ✓   45 [chromium] › e2e/platform-foundation-batch2.spec.ts:3:1 › extracted dock, resources and export overlays keep their entry points and dismiss behavior (4.9s)
+  ✓   47 [chromium] › e2e/creation-flow.spec.ts:367:1 › renames a media node and accepts prompt input from the composer (4.9s)
+  ✓   48 [chromium] › e2e/pipeline-automation.spec.ts:101:1 › failure pauses with a Chinese reason; retry only failed step, then skip remaining step (3.0s)
+  ✓   44 [chromium] › e2e/node-connections.spec.ts:533:1 › preserves hidden connection data for the H hand tool and real L handle flow (6.6s)
+  ✓   50 [chromium] › e2e/platform-foundation-batch2.spec.ts:22:1 › menu and Slash share preset defaults and confirmation focus at 721px without generating on cancel (3.5s)
+  ✓   52 [chromium] › e2e/pipeline-automation.spec.ts:128:1 › pause completes active step, cancel preserves results; controls remain reachable at 721px (3.9s)
+  ✓   53 [chromium] › e2e/node-connections.spec.ts:603:1 › keeps the visibility control reachable at 721 by 778 and reloads visible (4.3s)
+  ✓   51 [chromium] › e2e/creation-flow.spec.ts:435:1 › persists image parameters and creates a canvas-selected media reference (6.8s)
+  ✓   49 [chromium] › e2e/platform-foundation-batch3.spec.ts:73:1 › central route recovery preserves deep pages and project data after a 404 (7.8s)
+  ✓   57 [chromium] › e2e/creation-flow.spec.ts:515:1 › guards AI image templates and still inserts a confirmed local tool node (3.5s)
+  ✓   58 [chromium] › e2e/platform-foundation-batch3.spec.ts:98:1 › controlled director input retains proposal gating, dependency confirmation and focus return (3.8s)
+  ✓   54 [chromium] › e2e/platform-foundation-batch2.spec.ts:54:1 › Agent preferences and panel lifecycle do not mutate director 3D scene and camera (8.5s)
+  ✓   55 [chromium] › e2e/pipeline-automation.spec.ts:155:1 › refresh suspends an unfinished pipeline without automatically resending; project histories are isolated (7.5s)
+  ✓   60 [chromium] › e2e/platform-shell.spec.ts:3:1 › keeps creation-to-preview usable through platform navigation (4.7s)
+  ✓   62 [chromium] › e2e/pipeline-automation.spec.ts:176:1 › reload interrupts an active provider request; manual resume never repeats completed upstream (5.1s)
+  ✓   61 [chromium] › e2e/public-model-catalog.spec.ts:8:1 › production selectors contain only unconfigured real models and never generate demo results (5.7s)
+  ✓   63 [chromium] › e2e/platform-shell.spec.ts:58:1 › keeps the empty-canvas starter reachable at 721 by 778 (2.4s)
+  ✓   59 [chromium] › e2e/creation-flow.spec.ts:545:1 › keeps video drafts local and inserts confirmed derived nodes atomically (8.2s)
+  ✓   56 [chromium] › e2e/node-connections.spec.ts:648:1 › creates, rejects, deletes, undoes, and restores dependency connections (13.5s)
+  ✓   64 [chromium] › e2e/publication.spec.ts:36:1 › publishes locally, lists the work, copies its share link and renders the read-only view (4.6s)
+  ✓   65 [chromium] › e2e/script-v2.spec.ts:70:1 › script v2 completes persisted breakdown, editable storyboard, serial images, subjects and canvas delivery (5.4s)
+  ✓   66 [chromium] › e2e/seedance-video-mode.spec.ts:4:1 › selects the live Seedance 2.0 provider and submits the official task contract (5.2s)
+  ✓   68 [chromium] › e2e/node-connections.spec.ts:860:1 › exposes real handles as named buttons and connects them by keyboard (6.1s)
+  ✓   69 [chromium] › e2e/stabilization-audit.spec.ts:21:1 › stabilization: zoom controls have readable icons in default and hover states (2.8s)
+  ✓   67 [chromium] › e2e/creation-flow.spec.ts:614:1 › keyboard and list view preserve core actions in a strict small layout (7.6s)
+  ✓   70 [chromium] › e2e/script-v2.spec.ts:119:1 › script v2 preserves partial success and retry reachability at 721x778 (4.3s)
+  ✓   72 [chromium] › e2e/node-connections.spec.ts:895:1 › drops a source connection on blank canvas to create one referenced downstream node (3.9s)
+  ✓   71 [chromium] › e2e/style-system.spec.ts:26:1 › style custom card, favorite, selected highlight, actual image prefix and raw history survive reload (5.3s)
+  ✓   74 [chromium] › e2e/creation-flow.spec.ts:678:1 › exposes the full shortcut panel and executes guarded canvas keyboard actions (5.8s)
+  ✓   76 [chromium] › e2e/node-connections.spec.ts:937:1 › inserts a contextual media node from the edge midpoint and undoes the graph replacement once (3.8s)
+  ✓   73 [chromium] › e2e/stabilization-audit.spec.ts:67:1 › stabilization: project edits survive reload without leaking into another project (8.0s)
+  ✓   75 [chromium] › e2e/script-v2.spec.ts:119:1 › script v2 preserves partial success and retry reachability at 720x450 (5.4s)
+  ✓   77 [chromium] › e2e/style-system.spec.ts:80:1 › video style goes into Seedance content prompt and incompatible styles are disabled at 721px (6.0s)
+  ✓   78 [chromium] › e2e/creation-flow.spec.ts:805:1 › marquee-selects every node with the left mouse button and exposes combination controls (3.0s)
+  ✓   79 [chromium] › e2e/node-connections.spec.ts:972:1 › keeps edge hit and delete targets screen-sized at Fit View and minZoom (2.8s)
+  ✓   82 [chromium] › e2e/style-system.spec.ts:101:1 › text style is a real system prefix and does not replace the user prompt (2.7s)
+  ✓   80 [chromium] › e2e/stabilization-audit.spec.ts:99:1 › stabilization: timeline editing and project return are recoverable at narrow widths (5.7s)
+  ✓   83 [chromium] › e2e/creation-flow.spec.ts:874:1 › creates an undoable node copy at the real Option-drag drop point (3.7s)
+  ✓   84 [chromium] › e2e/node-connections.spec.ts:1016:3 › keeps the dependency edge hit band at 24px at zoom 0.35 (3.6s)
+  ✓   86 [chromium] › e2e/stabilization-audit.spec.ts:125:1 › stabilization: node-list regeneration must preserve prompt eligibility (2.3s)
+  ✓   85 [chromium] › e2e/timeline-enhancements.spec.ts:79:1 › transitions subtitles and aligned audio envelopes edit and survive refresh at 721px (4.2s)
+  ✓   88 [chromium] › e2e/node-connections.spec.ts:1016:3 › keeps the dependency edge hit band at 24px at zoom 1 (3.4s)
+  ✓   87 [chromium] › e2e/creation-flow.spec.ts:911:1 › keeps the selected node primary action inside a 200% zoom layout viewport (3.7s)
+  ✓   81 [chromium] › e2e/subject-consistency.spec.ts:38:1 › subject details, edited identity and automatic image reference reach the wire and persist across projects (11.9s)
+  ✓   91 [chromium] › e2e/node-connections.spec.ts:1016:3 › keeps the dependency edge hit band at 24px at zoom 1.8 (2.9s)
+  ✓   89 [chromium] › e2e/stabilization-audit.spec.ts:144:1 › stabilization: four image results and remaining node panels render without page errors (8.3s)
+  ✓   92 [chromium] › e2e/creation-flow.spec.ts:991:3 › keeps the generated selection clear of the AI Director at 721×778 (7.2s)
+  ✓   93 [chromium] › e2e/subject-consistency.spec.ts:92:1 › same-source extraction offers explicit merge, cancel does not write and merge preserves identity (8.2s)
+  ✓   94 [chromium] › e2e/node-connections.spec.ts:1052:1 › cancels active toolbar choices before native handle drags (8.0s)
+  ✓   98 [chromium] › e2e/ui-primitives.spec.ts:38:1 › Button text reaches WCAG AA contrast in default and hover states (607ms)
+  ✓   90 [chromium] › e2e/timeline-enhancements.spec.ts:129:1 › real local WebM contains dissolved pixels, burned subtitles and both audio tracks; cancel drops partial file (12.0s)
+  ✓   99 [chromium] › e2e/ui-primitives.spec.ts:62:1 › Button shows a 2px visible outline when focused by keyboard (294ms)
+  ✓  100 [chromium] › e2e/timeline-enhancements.spec.ts:190:1 › missing media blocks export with recoverable Chinese feedback and no download (2.1s)
+  ✓   96 [chromium] › e2e/creation-flow.spec.ts:991:3 › keeps the generated selection clear of the AI Director at 720×778 (7.3s)
+  ✓  102 [chromium] › e2e/timeline-enhancements.spec.ts:200:1 › video clips use decoded frames during local composition and cancel is reachable at 200 percent equivalent viewport (4.6s)
+  ✓   97 [chromium] › e2e/subject-consistency.spec.ts:124:1 › 721px deletion reports storyboard and character impact; removing library record preserves project data (7.6s)
+(node:85753) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  104 [chromium] › e2e/works-sharing.spec.ts:34:1 › portfolio filters/sorts, persists favorites and local visibility and counts real frozen job records (2.6s)
+  ✓  103 [chromium] › e2e/creation-flow.spec.ts:1070:1 › creates canvas nodes with Liblib context interactions, persistence, drag, and 200% reachability (9.6s)
+  ✓  106 [chromium] › e2e/works-sharing.spec.ts:67:1 › work detail exports a real PNG and importable JSON package, copy link and related navigation (4.3s)
+  ✓  101 [chromium] › e2e/video-enhancement.spec.ts:24:1 › explicit first/last frames, manifest guidance and video version restoration persist with fixture transport (15.3s)
+  ✓  107 [chromium] › e2e/creation-flow.spec.ts:1295:1 › inserts local effects, managed assets, and filtered characters from the dock libraries (5.6s)
+  ✓  108 [chromium] › e2e/works-sharing.spec.ts:101:1 › portfolio/detail actions remain reachable at 721 and 390px, help explains local boundaries (5.5s)
+  ✓  109 [chromium] › e2e/video-enhancement.spec.ts:89:1 › local rotation, mirror and speed encode a new playable video and preserve the original (4.4s)
+  ✓  111 [chromium] › e2e/works-sharing.spec.ts:127:1 › expired cover export reports failure instead of producing an empty download (2.6s)
+  ✓  110 [chromium] › e2e/creation-flow.spec.ts:1374:1 › keeps storyboard dialogue, section state, node order, and canvas linkage in sync (4.9s)
+  ✓  112 [chromium] › e2e/video-enhancement.spec.ts:126:1 › 721px pip and three-panel composition export real media without paid traffic (3.9s)
+  ✓  113 [chromium] › e2e/creation-flow.spec.ts:1433:1 › edits and persists all specialized Liblib node detail panels (9.2s)
+  ✓  114 [chromium] › e2e/creation-flow.spec.ts:1534:1 › writes and persists content directly inside a Liblib manual text node (3.1s)
+  ✓  115 [chromium] › e2e/creation-flow.spec.ts:1561:1 › creates a connected Liblib text-to-video preset from the text node shortcut (2.3s)
+  ✓  116 [chromium] › e2e/creation-flow.spec.ts:1582:1 › shows only real image and video models with their supported parameters (2.9s)
+  ✓  117 [chromium] › e2e/creation-flow.spec.ts:1608:1 › shows the exact Seedream size and all four fixture-intercepted live results (3.4s)
+  ✓  118 [chromium] › e2e/creation-flow.spec.ts:1684:1 › matches Liblib result action policies and exposes the inline video player (4.2s)
+  ✓  119 [chromium] › e2e/creation-flow.spec.ts:1738:1 › persists image mirror and annotations, then creates real 2x2 slices and a storyboard group (3.8s)
+  ✓  120 [chromium] › e2e/creation-flow.spec.ts:1783:1 › imports image, video, and audio assets, previews them, and reloads every media node (7.3s)
+  ✓   95 [chromium] › e2e/stabilization-audit.spec.ts:199:1 › stabilization: all site routes survive viewport and equivalent zoom matrix (2.7m)
+  ✓  121 [chromium] › e2e/stabilization-audit.spec.ts:229:1 › stabilization: navigation failures have a recoverable Chinese screen (1.2s)
+  ✓  122 [chromium] › e2e/stabilization-audit.spec.ts:237:1 › stabilization: rapid new-project clicks create one project (1.2s)
+  ✓  123 [chromium] › e2e/stabilization-audit.spec.ts:252:1 › stabilization: product headings remain readable with either system color preference (1.5s)
+  ✓  124 [chromium] › e2e/stabilization-audit.spec.ts:267:1 › stabilization: Skills controls do not force horizontal page overflow (3.0s)
+  ✓  125 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 1440x900 (4.1s)
+  ✓  126 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 1280x900 (4.5s)
+  ✓  127 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 1024x900 (4.4s)
+  ✓  128 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 800x778 (4.3s)
+  ✓  129 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 721x778 (3.1s)
+  ✓  130 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 720x450 (4.1s)
+  ✓  131 [chromium] › e2e/stabilization-audit.spec.ts:277:3 › stabilization: canvas panels and editing at 390x844 (739ms)
+  ✘  105 [chromium] › e2e/final-acceptance.spec.ts:88:1 › final acceptance: every catalog route and rendered link has a clean reachable destination (6.7m)
+(node:89233) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  132 [chromium] › e2e/final-acceptance.spec.ts:139:1 › final acceptance: five viewport primary routes and canvas actions remain reachable without warnings (53.0s)
+
+
+  1) [chromium] › e2e/final-acceptance.spec.ts:88:1 › final acceptance: every catalog route and rendered link has a clean reachable destination
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 14
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "failure": "expect(received).toBeGreaterThan(expected)
+    +
+    + Expected: > 0
+    + Received:   0
+    +
+    + Call Log:
+    + - Timeout 5000ms exceeded while waiting on the predicate",
+    +     "href": "/project/final-project?focus=shot-1",
+    +     "label": "返回来源节点",
+    +     "source": "/project/final-project/preview",
+    +   },
+    + ]
+
+      132 |     }
+      133 |   } finally { await save('routes-links-console.json', { routes, links, messages, externalRequests: requests }) }
+    > 134 |   expect(links.filter(link => link.failure)).toEqual([])
+          |                                              ^
+      135 |   expect(messages).toEqual([])
+      136 |   expect(requests).toEqual([])
+      137 | })
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/final-acceptance.spec.ts:134:46
+
+    Error Context: test-results/final-acceptance-final-acc-1c4c7-clean-reachable-destination-chromium/error-context.md
+
+  2) [chromium] › e2e/final-acceptance.spec.ts:139:1 › final acceptance: five viewport primary routes and canvas actions remain reachable without warnings
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 7
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "overflow": 101,
+    +     "route": "/project/final-project/preview",
+    +     "width": 721,
+    +   },
+    + ]
+
+      176 |   } finally { await save('viewport-console.json', { results, messages, externalRequests: requests }) }
+      177 |   // The agreed 390px criterion is no blank screen; desktop/tablet must avoid page overflow.
+    > 178 |   expect(results.filter(result => result.width !== 390 && result.overflow > 1)).toEqual([])
+          |                                                                                 ^
+      179 |   expect(messages).toEqual([])
+      180 |   expect(requests).toEqual([])
+      181 | })
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/final-acceptance.spec.ts:178:81
+
+    Error Context: test-results/final-acceptance-final-acc-442f5--reachable-without-warnings-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/final-acceptance.spec.ts:88:1 › final acceptance: every catalog route and rendered link has a clean reachable destination
+    [chromium] › e2e/final-acceptance.spec.ts:139:1 › final acceptance: five viewport primary routes and canvas actions remain reachable without warnings
+  130 passed (9.6m)

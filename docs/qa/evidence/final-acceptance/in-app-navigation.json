@@ -1,0 +1,130 @@
+{
+  "links": [
+    {
+      "label": "打开 平台骨架",
+      "url": "http://127.0.0.1:4191/andydb/",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "只需一张画布 连接你的多种创意想法"
+      }
+    },
+    {
+      "label": "打开 账号与空间",
+      "url": "http://127.0.0.1:4191/andydb/#login",
+      "state": {
+        "anchorExists": false,
+        "hash": "#login",
+        "heading": "只需一张画布 连接你的多种创意想法"
+      }
+    },
+    {
+      "label": "打开 项目首页",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 画布与工作流",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 模型与真实生成",
+      "url": "http://127.0.0.1:4191/andydb/agents",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "Skill 全开，故事走起"
+      }
+    },
+    {
+      "label": "打开 素材与历史",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 剧本、角色与世界观",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 工作流与模板",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 时间线与专业编辑",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 导出、发布与分享",
+      "url": "http://127.0.0.1:4191/andydb/projects",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "全部项目"
+      }
+    },
+    {
+      "label": "打开 发现、作品与社区",
+      "url": "http://127.0.0.1:4191/andydb/challenges",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "创作者挑战赛"
+      }
+    },
+    {
+      "label": "打开 协作与会员",
+      "url": "http://127.0.0.1:4191/andydb/#membership",
+      "state": {
+        "anchorExists": false,
+        "hash": "#membership",
+        "heading": "只需一张画布 连接你的多种创意想法"
+      }
+    },
+    {
+      "label": "打开 Agent、Skill 与 CLI",
+      "url": "http://127.0.0.1:4191/andydb/agents",
+      "state": {
+        "anchorExists": null,
+        "hash": "",
+        "heading": "Skill 全开，故事走起"
+      }
+    }
+  ],
+  "external": {
+    "href": "https://reactflow.dev?utm_source=attribution",
+    "heading": "Wire your ideas with React Flow",
+    "result": "opened"
+  },
+  "previewBacklink": {
+    "from": "http://127.0.0.1:4191/andydb/project/e022f170-65bf-4d62-9f35-b271e4f97611/preview",
+    "result": "navigates outside /andydb; Vite base URL help page"
+  }
+}

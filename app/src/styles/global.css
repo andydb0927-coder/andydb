@@ -7446,6 +7446,10 @@ select {
 
 .professional-timeline__ruler {
   margin: var(--space-4) 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
 }
 
 .professional-timeline__ruler input {
@@ -7455,10 +7459,10 @@ select {
 
 .professional-timeline__ticks {
   display: flex;
-  min-width: max-content;
+  width: max-content;
+  min-width: 100%;
   justify-content: space-between;
   gap: 42px;
-  overflow: hidden;
   font-variant-numeric: tabular-nums;
 }
 

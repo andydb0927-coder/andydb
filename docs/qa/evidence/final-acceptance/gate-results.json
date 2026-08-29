@@ -1,0 +1,24 @@
+{
+  "date": "2026-08-29",
+  "timezone": "Asia/Shanghai",
+  "startingHead": "ba7b58451840f299dd56b4897bec1e6d919656d9",
+  "branch": "codex/platform-shell-phase",
+  "productCodeChanged": true,
+  "gates": [
+    { "order": 1, "command": "npm run typecheck", "exitCode": 0 },
+    { "order": 2, "command": "npm run test:run", "exitCode": 0, "files": 199, "passed": 1603, "failed": 0 },
+    { "order": 3, "command": "npm run build:mock", "exitCode": 0 },
+    { "order": 4, "command": "PLAYWRIGHT_PORT=4189 PLAYWRIGHT_OFFLINE_DIST=dist npx playwright test", "exitCode": 0, "passed": 132, "failed": 0, "total": 132 }
+  ],
+  "baselineE2E": { "passed": 130, "failed": 0, "unchanged": true },
+  "newAuditE2E": { "passed": 2, "failed": 0 },
+  "verifiedFixes": ["BUG-014", "BUG-015", "BUG-016", "BUG-017"],
+  "statusCounts": { "REAL_LOCAL": 110, "LIVE_API": 14, "MOCK": 3, "STATIC": 8, "PARTIAL": 8, "PLACEHOLDER": 8, "BROKEN": 0, "NOT_IMPLEMENTED": 2 },
+  "routes": { "opened": 43, "failed": 0 },
+  "automaticInternalLinks": { "checked": 518, "passed": 518, "failed": 0 },
+  "taskCatalogueTargets": { "checked": 13, "passed": 13, "failed": 0 },
+  "routeConsole": { "error": 0, "warning": 0, "pageerror": 0 },
+  "viewportConsole": { "error": 0, "warning": 0, "pageerror": 0 },
+  "viewportPageChecks": { "total": 55, "rendered": 55, "overflowCases": 0, "requiredNonPhoneOverflowFailures": 0 },
+  "finalAcceptance": "PASSED"
+}

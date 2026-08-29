@@ -59,4 +59,10 @@ describe('platform task catalogue', () => {
     ].includes(task.targetPath))).toBe(true)
     expect(Object.keys(defaultPlatformTaskStatuses)).toHaveLength(13)
   })
+
+  test('routes account and membership tasks to implemented local pages', () => {
+    expect(platformTasks.find((task) => task.id === 'account-space')?.targetPath).toBe('/projects')
+    expect(platformTasks.find((task) => task.id === 'collaboration-membership')?.targetPath).toBe('/membership')
+    expect(platformTasks.every((task) => !task.targetPath.startsWith('/#'))).toBe(true)
+  })
 })

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { clipDuration } from './timeline-math'
 import type { TimelineClip, TimelineTrack, TimelineTrackKind } from './timeline-types'
 
@@ -69,9 +70,9 @@ export function TimelineClipCard({
         {clip.kind === 'audio' && clip.volumeKeyframes?.length ? <svg role="img" aria-label="音量包络" viewBox="0 0 100 24" height="24" width="100%" preserveAspectRatio="none"><polyline fill="none" stroke="currentColor" strokeWidth="1.5" points={clip.volumeKeyframes.map(p => `${p.timeSeconds / Math.max(0.01, clipDuration(clip)) * 100},${24 - p.value * 23}`).join(' ')} /></svg> : null}
       </button>
       {selected && clip.source.nodeId ? (
-        <a href={`/project/${projectId}?focus=${clip.source.nodeId}`}>
+        <Link to={`/project/${projectId}?focus=${clip.source.nodeId}`}>
           返回来源节点
-        </a>
+        </Link>
       ) : null}
       <div className="professional-timeline__move">
         <button

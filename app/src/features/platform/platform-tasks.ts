@@ -13,7 +13,7 @@ export const platformTasks = [
     order: 2,
     title: '账号与空间',
     description: '身份、个人空间、团队入口与权限边界',
-    targetPath: '/#login',
+    targetPath: '/projects',
   },
   {
     id: 'project-home',
@@ -83,7 +83,7 @@ export const platformTasks = [
     order: 12,
     title: '协作与会员',
     description: '评论、成员、权限与权益门禁',
-    targetPath: '/#membership',
+    targetPath: '/membership',
   },
   {
     id: 'agent-skill-cli',

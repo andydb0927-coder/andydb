@@ -153,6 +153,42 @@ test('exposes local publish, share, preview and export actions', async () => {
   expect(onImportWorkflow).toHaveBeenCalledOnce()
 })
 
+test('closes the publish menu on Escape or outside interaction and restores focus', async () => {
+  const user = userEvent.setup()
+  const onToggleAgent = vi.fn()
+  render(
+    <MemoryRouter>
+      <CanvasTopBar
+        projectTitle="工作台演示"
+        saveStatus="saved"
+        canUndo={false}
+        canRedo={false}
+        mode="workflow"
+        agentOpen={false}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onRenameProject={vi.fn()}
+        onOpenNodeList={vi.fn()}
+        onModeChange={vi.fn()}
+        onToggleAgent={onToggleAgent}
+      />
+    </MemoryRouter>,
+  )
+
+  const trigger = screen.getByRole('button', { name: '发布与分享' })
+  await user.click(trigger)
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('menu', { name: '发布与分享菜单' })).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+
+  await user.click(trigger)
+  const agent = screen.getByRole('button', { name: 'Agent' })
+  await user.click(agent)
+  expect(screen.queryByRole('menu', { name: '发布与分享菜单' })).not.toBeInTheDocument()
+  expect(agent).toHaveFocus()
+  expect(onToggleAgent).toHaveBeenCalledOnce()
+})
+
 test('edits the project title without presenting fake commerce controls', async () => {
   const user = userEvent.setup()
   const onRenameProject = vi.fn()

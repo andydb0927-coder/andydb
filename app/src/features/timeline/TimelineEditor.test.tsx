@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, test, vi } from 'vitest'
 
 import type { LibraryAssetRecord } from '../assets/library-model'
@@ -44,19 +45,21 @@ function Harness({
   const [currentTime, setCurrentTime] = useState(0)
   const [selectedClipId, setSelectedClipId] = useState<string>()
   return (
-    <TimelineEditor
-      projectId={initial.projectId}
-      timeline={timeline}
-      candidates={candidates}
-      currentTime={currentTime}
-      selectedClipId={selectedClipId}
-      onTimelineChange={(next) => {
-        setTimeline(next)
-        onTimelineChange(next)
-      }}
-      onCurrentTimeChange={setCurrentTime}
-      onSelectedClipChange={setSelectedClipId}
-    />
+    <MemoryRouter basename="/andydb" initialEntries={['/andydb/project/project-frost-river/preview']}>
+      <TimelineEditor
+        projectId={initial.projectId}
+        timeline={timeline}
+        candidates={candidates}
+        currentTime={currentTime}
+        selectedClipId={selectedClipId}
+        onTimelineChange={(next) => {
+          setTimeline(next)
+          onTimelineChange(next)
+        }}
+        onCurrentTimeChange={setCurrentTime}
+        onSelectedClipChange={setSelectedClipId}
+      />
+    </MemoryRouter>
   )
 }
 
@@ -165,7 +168,7 @@ describe('professional timeline editor', () => {
     expect(screen.getByLabelText('时间线播放头')).toHaveValue('0')
     expect(screen.getByRole('link', { name: '返回来源节点' })).toHaveAttribute(
       'href',
-      '/project/project-frost-river?focus=shot-1',
+      '/andydb/project/project-frost-river?focus=shot-1',
     )
   })
 

@@ -12,7 +12,7 @@ import {
   Undo2,
   Workflow,
 } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 import { StatusText } from '../../ui/StatusText'
@@ -93,12 +93,35 @@ export function CanvasTopBar({
   const [titleDraft, setTitleDraft] = useState(projectTitle)
   const [editingCanvasId, setEditingCanvasId] = useState<string>()
   const [canvasTitleDraft, setCanvasTitleDraft] = useState('')
+  const shareMenuRootRef = useRef<HTMLDivElement>(null)
+  const shareMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const availableCanvases = canvases?.length
     ? canvases
     : [{ id: 'legacy-canvas', title: '画布 1' } as ProjectCanvas]
   const activeCanvas = availableCanvases.find(({ id }) => id === activeCanvasId) ?? availableCanvases[0]
 
   useEffect(() => setTitleDraft(projectTitle), [projectTitle])
+
+  useEffect(() => {
+    if (!shareMenuOpen) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (shareMenuRootRef.current?.contains(event.target as Node)) return
+      setShareMenuOpen(false)
+    }
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setShareMenuOpen(false)
+      shareMenuTriggerRef.current?.focus()
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [shareMenuOpen])
 
   const submitTitle = (event?: FormEvent) => {
     event?.preventDefault()
@@ -276,8 +299,9 @@ export function CanvasTopBar({
           节点列表
         </button>
         <CanvasAccountMenu generationJobs={generationJobs} />
-        <div className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
+        <div ref={shareMenuRootRef} className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button
+            ref={shareMenuTriggerRef}
             type="button"
             aria-label="发布与分享"
             aria-expanded={shareMenuOpen}
