@@ -8,6 +8,7 @@ const fixtureGenerationEnvironment = [
   'VITE_SEEDREAM_API_BASE=https://fixture.seedream.invalid/api/v3',
   'VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-260128',
   'VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128',
+  'VITE_ARK_TTS_API_KEY=playwright-fixture-speech-key',
 ].join(' ')
 
 export default defineConfig({

@@ -17,7 +17,8 @@ import {
 
 const configurationError = 'Seedream 开发验证配置未完成'
 const defaultApiBase = 'https://ark.cn-beijing.volces.com/api/v3'
-const defaultModelId = 'doubao-seedream-5-0-260128'
+export const seedreamLiveModelId = 'doubao-seedream-5-0-pro-260628'
+const legacySeedreamModelId = 'doubao-seedream-5-0-260128'
 
 export const seedreamImageSizePolicy: ImageSizePolicy = {
   aspectOptions: [...standardImageAspectRatios, '自适应', '自定义'],
@@ -215,7 +216,9 @@ export function createSeedreamLiveProvider(
   )
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
-  const resolvedModelId = modelId || defaultModelId
+  const resolvedModelId = !modelId || modelId === legacySeedreamModelId
+    ? seedreamLiveModelId
+    : modelId
   const createUrl = `${resolvedApiBase}/images/generations`
 
   return {

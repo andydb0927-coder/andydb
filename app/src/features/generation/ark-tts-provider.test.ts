@@ -105,6 +105,22 @@ describe('Ark TTS live provider', () => {
     expect(provider(vi.fn<typeof fetch>(), { mode: 'mock' }).disabledReason)
       .toBe('火山方舟豆包语音开发验证未启用')
     expect(provider(vi.fn<typeof fetch>(), { apiKey: '' }).disabledReason)
-      .toBe('火山方舟豆包语音开发验证配置未完成')
+      .toBe('豆包语音合成待专用资源授权：请配置 Speech API Key')
+  })
+
+  test('does not treat the shared Ark key as a dedicated Speech API key', () => {
+    vi.stubEnv('VITE_SEEDREAM_API_KEY', 'fixture-ark-only-key')
+    vi.stubEnv('VITE_ARK_TTS_API_KEY', '')
+    try {
+      const liveProvider = createArkTtsProvider({
+        mode: 'seedream-direct-dev',
+      })
+      expect(liveProvider.disabledReason).toBe(
+        '豆包语音合成待专用资源授权：请配置 Speech API Key',
+      )
+    } finally {
+      vi.stubEnv('VITE_SEEDREAM_API_KEY', '')
+      vi.stubEnv('VITE_ARK_TTS_API_KEY', '')
+    }
   })
 })

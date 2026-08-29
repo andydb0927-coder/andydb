@@ -30,7 +30,7 @@ const providerId = 'ark-tts'
 const providerName = '火山方舟'
 const modelName = '豆包语音合成 2.0'
 const defaultModelId = 'seed-tts-2.0'
-const missingConfiguration = '火山方舟豆包语音开发验证配置未完成'
+const missingConfiguration = '豆包语音合成待专用资源授权：请配置 Speech API Key'
 const disabledMode = '火山方舟豆包语音开发验证未启用'
 
 const parameterManifest: ModelParameterManifest = {
@@ -161,7 +161,9 @@ export function createArkTtsProvider(
   options: ArkTtsProviderOptions = {},
 ): ModelProvider {
   const mode = options.mode ?? envValue('VITE_GENERATION_MODE')
-  const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
+  // The Ark API key is not a Speech API credential. TTS must use the key
+  // issued after enabling the dedicated Doubao Speech resource.
+  const apiKey = options.apiKey ?? envValue('VITE_ARK_TTS_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_ARK_TTS_MODEL_ID')
   const enabledMode = audioDevelopmentModeEnabled(mode)
@@ -178,7 +180,9 @@ export function createArkTtsProvider(
     apiDisplayName: '豆包语音',
     kind: 'live',
     ...(enabled ? {} : { disabledReason }),
-    modelNotice: '官方按字符计费：3 元/万字符。',
+    modelNotice: enabled
+      ? '豆包语音专用资源已授权；官方按字符计费：3 元/万字符。'
+      : '待专用资源授权：Ark API Key 不能直接调用 OpenSpeech TTS。',
     capabilities: ['audio'],
     parameterManifest,
     parameterSchema: resolveModelParameterManifest(parameterManifest),

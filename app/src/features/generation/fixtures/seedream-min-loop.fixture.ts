@@ -4,7 +4,7 @@ export const seedreamMinLoopConfigFixture = {
   mode: 'seedream-direct-dev',
   apiKey: 'fixture-seedream-api-key',
   apiBase: 'https://fixture.seedream.invalid/api/v3',
-  modelId: 'doubao-seedream-5-0-260128',
+  modelId: 'doubao-seedream-5-0-pro-260628',
 } as const
 
 export const seedreamMinLoopGenerationRequestFixture: GenerationRequest = {
@@ -24,7 +24,7 @@ export const seedreamMinLoopGenerationRequestFixture: GenerationRequest = {
 }
 
 export const seedreamMinLoopCreateRequestFixture = {
-  model: 'doubao-seedream-5-0-260128',
+  model: 'doubao-seedream-5-0-pro-260628',
   prompt: '雨夜街道上的电影感人像，霓虹灯倒映在湿润路面',
   size: '2816x1584',
   response_format: 'url',
@@ -33,7 +33,7 @@ export const seedreamMinLoopCreateRequestFixture = {
 } as const
 
 export const seedreamMinLoopSuccessFixture = {
-  model: 'doubao-seedream-5-0-260128',
+  model: 'doubao-seedream-5-0-pro-260628',
   created: 1_766_000_000,
   data: [
     {

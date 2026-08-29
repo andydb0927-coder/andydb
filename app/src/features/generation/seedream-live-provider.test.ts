@@ -33,6 +33,47 @@ function createProvider(fetchFn: typeof fetch, overrides = {}) {
 }
 
 describe('Seedream live provider', () => {
+  test('uses the current Seedream 5.0 Pro model id when no override is configured', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(seedreamMinLoopSuccessFixture),
+    )
+    const provider = createSeedreamLiveProvider({
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-seedream-api-key',
+      apiBase: 'https://fixture.seedream.invalid/api/v3',
+      fetchFn,
+    })
+
+    await provider.generate(seedreamMinLoopGenerationRequestFixture, {
+      signal: new AbortController().signal,
+    })
+
+    expect(JSON.parse(String(fetchFn.mock.calls[0]?.[1]?.body))).toMatchObject({
+      model: 'doubao-seedream-5-0-pro-260628',
+    })
+  })
+
+  test('migrates the retired Seedream 5.0 model override to the current Pro model id', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(seedreamMinLoopSuccessFixture),
+    )
+    const provider = createSeedreamLiveProvider({
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-seedream-api-key',
+      apiBase: 'https://fixture.seedream.invalid/api/v3',
+      modelId: 'doubao-seedream-5-0-260128',
+      fetchFn,
+    })
+
+    await provider.generate(seedreamMinLoopGenerationRequestFixture, {
+      signal: new AbortController().signal,
+    })
+
+    expect(JSON.parse(String(fetchFn.mock.calls[0]?.[1]?.body))).toMatchObject({
+      model: 'doubao-seedream-5-0-pro-260628',
+    })
+  })
+
   test('maps a text-to-image request to the official synchronous API and returns a project image', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
