@@ -135,6 +135,39 @@ describe('Seedance video live provider', () => {
     expect(fetchFn).not.toHaveBeenCalled()
   })
 
+  test('requires an account-callable model or endpoint id instead of falling back to the public experience id', async () => {
+    const fetchFn = vi.fn<typeof fetch>()
+    const provider = createSeedanceVideoProvider({
+      mode: 'seedream-direct-dev',
+      apiKey: 'fixture-ark-api-key',
+      apiBase: 'https://fixture.ark.invalid/api/v3',
+      modelId: '',
+      fetchFn,
+    })
+
+    expect(provider.disabledReason).toBe(
+      '火山方舟 Seedance 2.0 待开通：请配置账号可调用的模型或推理接入点 ID',
+    )
+    await expect(
+      provider.generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('火山方舟 Seedance 2.0 待开通')
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  test('maps a missing or unopened video model to an actionable 404 message', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ error: { code: 'NotFound', message: 'fixture secret' } }, { status: 404 }),
+    )
+
+    await expect(
+      createProvider(fetchFn).generate(seedanceVideoGenerationRequestFixture, {
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('火山方舟 Seedance 模型未开通或模型/接入点不可用（404）')
+  })
+
   test.each([
     [seedanceVideoUnauthorizedFixture, '火山方舟 Seedance 鉴权失败（401）'],
     [seedanceVideoForbiddenFixture, '火山方舟 Seedance 访问被拒绝（403）'],

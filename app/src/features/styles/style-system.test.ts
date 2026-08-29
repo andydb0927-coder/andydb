@@ -91,7 +91,9 @@ describe('style request contract', () => {
           : { status: 'succeeded', content: { video_url: 'https://media.fixture.invalid/video-style.mp4' }, duration: 5 })
     })
     const options = { mode: 'seedream-direct-dev', apiKey: 'fixture-only', apiBase: 'https://fixture.ark.invalid/api/v3', fetchFn, pollIntervalMs: 0 }
-    const provider = kind === 'image' ? createSeedreamLiveProvider(options) : createSeedanceVideoProvider(options)
+    const provider = kind === 'image'
+      ? createSeedreamLiveProvider(options)
+      : createSeedanceVideoProvider({ ...options, modelId: 'doubao-seedance-2-0-260128' })
     const registry = new ProviderRegistry().register(provider)
     const original = { ...request(kind), providerId: provider.id, parameters: {} }
     const result = await registry.generate(original, { signal: new AbortController().signal })

@@ -145,14 +145,14 @@ VITE_GENERATION_MODE=seedream-direct-dev
 VITE_SEEDREAM_API_KEY=temporary-development-api-key
 VITE_SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
 VITE_SEEDREAM_MODEL_ID=doubao-seedream-5-0-pro-260628
-VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+VITE_ARK_VIDEO_MODEL_ID=<开通管理中账号可调用的 Seedance Model ID 或 Endpoint ID>
 VITE_ARK_TEXT_MODEL_ID=<控制台已开通的豆包文本模型或接入点 ID>
 VITE_ARK_TTS_API_KEY=<开通豆包语音资源后签发的专用 Speech API Key>
 VITE_ARK_TTS_MODEL_ID=seed-tts-2.0
 VITE_ARK_AUDIO_MODEL_ID=seed-audio-1.0
 ```
 
-启用后，模型菜单的“官方 API 已接（开发直连）”分组会开放 Seedream 5.0 Pro、Seedance 2.0 与已配置的豆包文本模型；只有另行配置 `VITE_ARK_TTS_API_KEY` 时才开放豆包语音合成 2.0。图片调用 `/images/generations`，视频调用 `/contents/generations/tasks` 并轮询任务；语音调用 `openspeech.bytedance.com/api/v3/tts/*`。成功结果写入节点版本、项目资产和生成历史。未配置对应 Key 时真实模型保持禁用并显示明确原因，不会回退为 Mock 伪装成功。
+启用后，模型菜单的“官方 API 已接（开发直连）”分组会开放 Seedream 5.0 Pro 与已配置的豆包文本模型；Seedance 还必须配置账号在“开通管理/模型列表”中确认可调用的 Model ID 或 Endpoint ID。公开体验页中的模型 ID 不作为代码默认值，也不能证明当前账号已经获得 API 权限。只有另行配置 `VITE_ARK_TTS_API_KEY` 时才开放豆包语音合成 2.0。图片调用 `/images/generations`，视频调用 `/contents/generations/tasks` 并轮询任务；语音调用 `openspeech.bytedance.com/api/v3/tts/*`。成功结果写入节点版本、项目资产和生成历史。未配置对应 Key/模型 ID 时真实模型保持禁用并显示明确原因，不会回退为 Mock 伪装成功。
 
 这些变量只允许使用低额度、可随时撤销的开发凭证；不得提交到 Git，不得配置到公开 Preview/Production 静态站点。验证完成后应立即撤销或轮换。
 
@@ -164,7 +164,7 @@ VITE_ARK_AUDIO_MODEL_ID=seed-audio-1.0
 ARK_API_KEY=production-secret
 ARK_API_BASE=https://ark.cn-beijing.volces.com/api/v3
 ARK_IMAGE_MODEL_ID=doubao-seedream-5-0-pro-260628
-ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+ARK_VIDEO_MODEL_ID=<服务端账号已开通的视频 Model ID 或 Endpoint ID>
 ARK_TEXT_MODEL_ID=<控制台已开通的豆包文本模型或接入点 ID>
 SPEECH_API_KEY=<豆包语音资源专用 Key>
 ARK_TTS_MODEL_ID=seed-tts-2.0

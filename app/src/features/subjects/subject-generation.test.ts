@@ -30,7 +30,11 @@ test.each(['image', 'video', 'text'] as const)('%s dispatch uses confirmed ident
         : init?.method === 'POST' ? { id: 'subject-video' } : { status: 'succeeded', content: { video_url: 'https://media.fixture.invalid/video-subject.mp4' }, duration: 5 })
   })
   const options = { mode: 'seedream-direct-dev', apiKey: 'fixture-only', apiBase: 'https://fixture.subject.invalid/api/v3', fetchFn, pollIntervalMs: 0 }
-  const provider = kind === 'image' ? createSeedreamLiveProvider(options) : kind === 'video' ? createSeedanceVideoProvider(options) : createArkTextLlmProvider(options)
+  const provider = kind === 'image'
+    ? createSeedreamLiveProvider(options)
+    : kind === 'video'
+      ? createSeedanceVideoProvider({ ...options, modelId: 'doubao-seedance-2-0-260128' })
+      : createArkTextLlmProvider(options)
   const registry = new ProviderRegistry().register(provider)
   const original = { projectId: 'p', nodeId: 'n', targetKind: kind, operation: 'regenerate' as const, prompt: '清晨古桥', providerId: provider.id, parameters: { generationMode: '全能参考' }, referenceAssets: [], subjects: [{ ...subject }], style }
   const success = vi.fn()

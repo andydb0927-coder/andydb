@@ -11,7 +11,7 @@
 VITE_GENERATION_MODE=seedream-direct-dev
 VITE_SEEDREAM_API_KEY=<临时、低额度、可撤销的火山方舟 Key>
 VITE_SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
-VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+VITE_ARK_VIDEO_MODEL_ID=<开通管理中账号可调用的 Seedance Model ID 或 Endpoint ID>
 ```
 
 确认：
@@ -40,7 +40,7 @@ git status --short -- app/.env.local
 | Git commit |  |
 | 运行地址 | `http://127.0.0.1:4173/` |
 | Provider | `seedance-api` |
-| 模型 ID | `doubao-seedance-2-0-260128` 或覆盖值 |
+| 模型 ID | 账号“开通管理/模型列表”确认可调用的 Model ID 或 Endpoint ID；公共体验 ID 不作为默认值 |
 | 模式 / 比例 / 时长 / 清晰度 / 声音 |  |
 | 创建任务耗时 |  |
 | 轮询次数与状态序列 |  |

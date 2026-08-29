@@ -8,7 +8,12 @@ import { createArkTtsProvider } from './ark-tts-provider'
 import { createArkAudioGenProvider } from './ark-audio-gen-provider'
 import { seedanceVideoCreateSuccessFixture, seedanceVideoSuccessFixture } from './fixtures/seedance-video.fixture'
 
-const configuration = { mode: 'seedream-direct-dev', apiKey: 'fixture-only-key', apiBase: 'https://fixture.invalid/api/v3' }
+const configuration = {
+  mode: 'seedream-direct-dev',
+  apiKey: 'fixture-only-key',
+  apiBase: 'https://fixture.invalid/api/v3',
+  modelId: 'doubao-seedance-2-0-260128',
+}
 const request: GenerationRequest = {
   projectId: 'fixture-project', nodeId: 'fixture-node', operation: 'regenerate',
   targetKind: 'image', prompt: '清晨的桥', referenceAssets: [],

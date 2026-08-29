@@ -52,7 +52,7 @@ export function createFixtureProviderRegistry() {
   const options = { mode: 'seedream-direct-dev', apiKey: 'fixture-only', apiBase: 'https://fixture.ark.invalid/api/v3', fetchFn }
   return createDefaultProviderRegistry({
     seedream: options,
-    seedanceVideo: { ...options, pollIntervalMs: 0 },
+    seedanceVideo: { ...options, modelId: 'doubao-seedance-2-0-260128', pollIntervalMs: 0 },
     arkText: options,
     arkTts: options,
     arkAudio: options,

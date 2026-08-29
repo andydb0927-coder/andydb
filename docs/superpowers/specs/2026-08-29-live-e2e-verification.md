@@ -114,6 +114,8 @@ doubao-seedream-5-0-pro-260628
 
 本次新发现的 404 与 Seedream/TTS 两项修复无关。响应未提供可区分“模型未开通、模型 ID 失效或账号路由不可用”的结构化细节，因此不能在没有新授权的情况下通过改 ID 试错。该项保留为后续单独查证事项。
 
+后续专项查证已于当日完成，见第 9 节：官方公开体验页仍使用 `doubao-seedance-2-0-260128`，不存在可证实的 `doubao-seedance-2-0-260628`；上次 404 不能靠猜测 ID 修复。当前账号环境没有配置可调用的视频 Model/Endpoint ID，因此按“待开通”处理，没有再次发起生成。
+
 ## 5. 步骤 3：豆包 TTS
 
 ### 计划摘要
@@ -179,4 +181,37 @@ doubao-seedream-5-0-pro-260628
 - Seedream：**已修复并真实验证通过**。
 - 豆包图生文：**真实验证通过**。
 - 豆包 TTS：**待专用 Speech 资源授权**；当前禁用提示准确，无假成功。
-- Seedance：创建任务 404，**本轮如实失败且未重试**；需独立查证当前账号可用的精确模型/接入点后再安排一次获批验证。
+- Seedance：官方公开体验 ID 仍是 `doubao-seedance-2-0-260128`，但体验 ID 不等于账号 API 权限；当前环境没有账号可调用的视频 Model/Endpoint ID，已改为**待开通并显式配置后才启用**，本专项没有再次试错。
+
+## 9. Seedance 2.0 专项查证（2026-08-29）
+
+### 9.1 官方证据
+
+1. [视频生成 API Explorer](https://api.volcengine.com/api-explorer/?action=CreateContentsGenerationsTasks&groupName=%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90API&serviceCode=ark&version=2024-01-01)确认创建端点仍为 `POST /api/v3/contents/generations/tasks`，`model` 必须填写模型列表中的 Model ID 或账号已配置的 Endpoint ID。
+2. [火山方舟模型广场](https://console.volcengine.com/ark/region:cn-beijing/model?view=DEFAULT_VIEW&groupType=ModelGroups)当前仍展示 Doubao-Seedance-2.0，但其“立即体验”进入的[官方体验页](https://console.volcengine.com/ark/region:cn-beijing/experience/gen_video?model=doubao-seedance-2-0-260128)明确使用 `doubao-seedance-2-0-260128`。这排除了“2.0 已从 260128 更新为 260628”的猜测。
+3. 同一模型广场对 Doubao-Seedance-2.5 明确标注“API 正式上线/全面开放”，其[官方体验页](https://console.volcengine.com/ark/region:cn-beijing/experience/gen_video?model=doubao-seedance-2-5-260628)使用 `doubao-seedance-2-5-260628`。2.5 是不同模型，不能在没有产品决策授权时冒充 2.0 自动替换。
+4. [Seedance 2.0 高级创作权益包说明](https://www.volcengine.com/docs/82379/2377608?lang=zh)说明相关高级 API/资产权益面向邀测企业用户，并要求企业认证和资料审核；公开体验能力不能据此推断为当前账号已经获得 API 权限。
+
+### 9.2 账号与环境结论
+
+- 上一轮使用公共体验 ID `doubao-seedance-2-0-260128` 创建任务，真实返回 HTTP 404，且没有任务 ID。
+- 本机 `app/.env.local` 已配置开发模式和 Ark Key，但**没有**配置 `VITE_ARK_VIDEO_MODEL_ID`。
+- 当前浏览器控制台会话未登录，无法从“开通管理”读取账号授权清单；结合真实 404，不能把公共体验 ID 当作账号可调用 ID。
+- 结论：Seedance 2.0 当前标记为**待账号开通/待取得可调用 Model ID 或 Endpoint ID**。本专项没有发起新的图片或视频请求，没有产生新费用。
+
+### 9.3 代码修正
+
+1. 删除 `seedance-video-provider` 内置的公共体验 ID fallback。
+2. 仅当 `seedream-direct-dev`、Ark Key 和 `VITE_ARK_VIDEO_MODEL_ID` 三项都存在时启用 Provider。
+3. 缺 Model/Endpoint ID 时显示：`火山方舟 Seedance 2.0 待开通：请配置账号可调用的模型或推理接入点 ID`。
+4. HTTP 404 改为明确中文原因：`火山方舟 Seedance 模型未开通或模型/接入点不可用（404）`。
+5. 视频续写 Provider 同步取消体验 ID fallback，避免从隐藏工具入口绕过配置门。
+
+### 9.4 预算审计
+
+| 项目 | 调用前预估 | 实际请求 | 实际费用 |
+| --- | ---: | ---: | ---: |
+| Seedance 2.0 专项复验 | ¥4.97 | 0 | ¥0.00 |
+| 备用新首帧 Seedream | ¥0.30 | 0 | ¥0.00 |
+
+没有账号可调用的 Model/Endpoint ID，因此满足“查证优先、未开通不试错”的停止条件。上一轮累计费用仍为 **¥0.311184**，本专项新增 **¥0.00**，未触发 ¥14.00 停止线。

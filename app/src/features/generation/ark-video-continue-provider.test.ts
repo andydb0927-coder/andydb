@@ -65,7 +65,7 @@ describe('Ark video continuation: fixture-only contract', () => {
     expect(registry.require('ark-video-continue').disabledReason).toBeUndefined()
     expect(registry.menuProvidersFor(['text-to-video', 'image-to-video', 'video-continue']).map(p => p.id)).not.toContain('ark-video-continue')
     const fetchFn = vi.fn<typeof fetch>()
-    for (const overrides of [{ mode: 'mock' }, { apiKey: '' }, { modelId: 'doubao-seedance-2-5-260628' }]) {
+    for (const overrides of [{ mode: 'mock' }, { apiKey: '' }, { modelId: '' }, { modelId: 'doubao-seedance-2-5-260628' }]) {
       const disabled = provider(fetchFn, overrides)
       expect(disabled.disabledReason).toBeTruthy()
       await expect(disabled.generate(request, context())).rejects.toThrow(disabled.disabledReason!)

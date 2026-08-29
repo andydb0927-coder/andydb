@@ -11,13 +11,15 @@
 - [查询视频生成任务列表](https://www.volcengine.com/docs/82379/1521675)
 - [视频生成模型计费说明](https://www.volcengine.com/docs/82379/1544106)
 
-## 2. 模型选择
+## 2. 模型选择与账号开通边界（2026-08-29 复核）
 
-本次默认模型 ID 选用 `doubao-seedance-2-0-260128`。
+官方模型广场当前仍将 Doubao-Seedance-2.0 的体验页指向 `doubao-seedance-2-0-260128`，因此没有证据支持把它机械替换为不存在的 `doubao-seedance-2-0-260628`。但体验页 ID 不等于当前账号已获得视频生成 API 权限。官方模型广场只对 Doubao-Seedance-2.5 标注“API 正式上线/全面开放”，其当前体验 ID 为 `doubao-seedance-2-5-260628`；本项目没有获得把 2.0 产品自动升级为 2.5 的授权，因此不擅自切换模型。
 
-理由：用户指定接入 Seedance 2.0；通用款支持文本、图片、视频和音频组合输入，支持原生音画同步、4–15 秒时长、最高 4K 以及参考图控制，适合作为画布文生视频与图生视频共用的首个真实 Provider。模型 ID 可由 `VITE_ARK_VIDEO_MODEL_ID` 覆盖，代码中不散落硬编码。
+项目不再内置 Seedance 2.0 默认 Model ID。只有在账号的“开通管理/模型列表”确认可调用后，才把对应 Model ID 或 Endpoint ID 写入 `VITE_ARK_VIDEO_MODEL_ID`。未配置时 Provider 明确显示“待开通”，不会使用公共体验 ID 发起试错请求。
 
-> 官方页面已出现更新的 Seedance 2.5 信息，但本阶段不擅自切换型号；先按负责人指定的 Seedance 2.0 建立稳定闭环。
+- [火山方舟模型广场](https://console.volcengine.com/ark/region:cn-beijing/model?view=DEFAULT_VIEW&groupType=ModelGroups)
+- [Seedance 2.0 官方体验页（当前公开体验 ID）](https://console.volcengine.com/ark/region:cn-beijing/experience/gen_video?model=doubao-seedance-2-0-260128)
+- [视频生成 API Explorer](https://api.volcengine.com/api-explorer/?action=CreateContentsGenerationsTasks&groupName=%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90API&serviceCode=ark&version=2024-01-01)
 
 ## 3. 创建任务
 
@@ -33,7 +35,7 @@ Content-Type: application/json
 
 ```json
 {
-  "model": "doubao-seedance-2-0-260128",
+  "model": "<账号已开通的 Seedance Model ID 或 Endpoint ID>",
   "content": [
     { "type": "text", "text": "清晨薄雾中的古桥，镜头缓慢向前推进" }
   ],
@@ -119,10 +121,10 @@ Seedance 2.0 无输入视频时的公开单价：
 VITE_GENERATION_MODE=seedream-direct-dev
 VITE_SEEDREAM_API_KEY=<仅本地开发验证使用>
 VITE_SEEDREAM_API_BASE=https://ark.cn-beijing.volces.com/api/v3
-VITE_ARK_VIDEO_MODEL_ID=doubao-seedance-2-0-260128
+VITE_ARK_VIDEO_MODEL_ID=<开通管理中账号可调用的 Seedance Model ID 或 Endpoint ID>
 ```
 
 - 视频与图片复用火山方舟平台级 Key 和 API base。
-- 缺少 Key 或 base 时 Provider 保持禁用并显示明确原因，绝不静默回退 Mock。
+- 缺少 Key 或账号可调用的 Model/Endpoint ID 时 Provider 保持禁用并显示明确原因，绝不静默回退 Mock，也不使用公共体验 ID 猜测调用。
 - `VITE_` 变量会进入前端产物，只允许本地受控验证；生产部署必须改为服务端代理并由服务端注入 Key。
 - 测试使用固定 fixture 与 `fetch` 拦截，不读取真实密钥、不产生真实费用。

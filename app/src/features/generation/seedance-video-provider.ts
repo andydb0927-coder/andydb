@@ -16,8 +16,8 @@ import {
 } from './model-parameter-semantics'
 
 const configurationError = '火山方舟 Seedance 开发验证配置未完成'
+const modelAccessError = '火山方舟 Seedance 2.0 待开通：请配置账号可调用的模型或推理接入点 ID'
 const defaultApiBase = 'https://ark.cn-beijing.volces.com/api/v3'
-const defaultModelId = 'doubao-seedance-2-0-260128'
 const providerId = 'seedance-api'
 const providerName = '火山方舟'
 const modelName = 'Seedance 2.0'
@@ -262,14 +262,17 @@ export function createSeedanceVideoProvider(
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_ARK_VIDEO_MODEL_ID')
-  const enabled = Boolean(
-    generationModeEnabled(mode, 'seedream-direct-dev') && apiKey,
-  )
+  const directModeEnabled = generationModeEnabled(mode, 'seedream-direct-dev')
+  const disabledReason = !directModeEnabled || !apiKey
+    ? configurationError
+    : !modelId
+      ? modelAccessError
+      : undefined
+  const enabled = disabledReason === undefined
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const pollIntervalMs = options.pollIntervalMs ?? 2_000
   const maxPollAttempts = options.maxPollAttempts ?? 150
   const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
-  const resolvedModelId = modelId || defaultModelId
   const createUrl = `${resolvedApiBase}/contents/generations/tasks`
 
   return {
@@ -278,8 +281,8 @@ export function createSeedanceVideoProvider(
     modelName,
     apiDisplayName: 'Seedance',
     kind: 'live',
-    ...(enabled ? {} : { disabledReason: configurationError }),
-    modelNotice: '火山方舟官方 Seedance 2.0，支持 4–15 秒、音画同步与最高 4K。',
+    ...(disabledReason ? { disabledReason } : {}),
+    modelNotice: 'Seedance 2.0 公共体验 ID 不代表账号已开通 API；请使用开通管理中可调用的模型或推理接入点 ID。',
     supportedVideoModes,
     capabilities: ['text-to-video', 'image-to-video'],
     parameterManifest: seedanceVideoParameterManifest,
@@ -289,7 +292,7 @@ export function createSeedanceVideoProvider(
     pricing: { amount: 135, currency: 'credits', unit: 'generation' },
     officialApiEndpoint: createUrl,
     async generate(request, context) {
-      if (!enabled) throw new Error(configurationError)
+      if (!enabled) throw new Error(disabledReason ?? configurationError)
       context.signal.throwIfAborted()
       if (request.targetKind !== 'video') {
         throw new Error('火山方舟 Seedance Provider 仅支持视频生成')
@@ -313,7 +316,7 @@ export function createSeedanceVideoProvider(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: resolvedModelId,
+          model: modelId,
           content,
           duration: durationSetting(request.parameters?.duration),
           ratio: aspectRatioSetting(request.parameters?.aspectRatio),
@@ -323,6 +326,9 @@ export function createSeedanceVideoProvider(
         }),
         signal: context.signal,
       })
+      if (response.status === 404) {
+        throw new Error('火山方舟 Seedance 模型未开通或模型/接入点不可用（404）')
+      }
       await assertProviderResponse(response, 'seedance')
       const createBody = await readProviderJson(response, '火山方舟 Seedance 响应格式异常') as SeedanceCreateResponse
       const taskId = createBody.id ?? createBody.data?.id

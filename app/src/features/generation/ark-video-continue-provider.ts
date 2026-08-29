@@ -77,7 +77,7 @@ export function buildArkVideoContinuePrompt(request: GenerationRequest) {
 
 export function createArkVideoContinueProvider(options: SeedanceVideoProviderOptions & { timeoutMs?: number } = {}): ModelProvider {
   const configuredModel = options.modelId ?? import.meta.env.VITE_ARK_VIDEO_MODEL_ID
-  const modelId = configuredModel?.trim() || arkVideoContinueModelId
+  const modelId = configuredModel?.trim() ?? ''
   const delegate = createSeedanceVideoProvider({ ...options, modelId })
   const disabledReason = delegate.disabledReason ? '火山方舟视频续写开发验证配置未完成'
     : modelId !== arkVideoContinueModelId ? '当前模型的视频续写契约尚未核对，请配置 Seedance 2.0（doubao-seedance-2-0-260128）。' : undefined
