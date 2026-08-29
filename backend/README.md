@@ -1,6 +1,6 @@
 # 无线画布 Cloudflare Workers 后端骨架
 
-本目录是与 `app/` 完全独立的 Hono + TypeScript Cloudflare Worker。第一批只提供设备鉴权和四类上游 API 安全代理，不保存项目数据，也不在源码、配置文件或响应中暴露供应商密钥。
+本目录是与 `app/` 完全独立的 Hono + TypeScript Cloudflare Worker。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV 数据存储层；不会在源码、配置文件或响应中暴露供应商密钥。
 
 ## 本地启动
 
@@ -8,6 +8,7 @@
 cd backend
 npm install
 cp .dev.vars.example .dev.vars
+npx wrangler d1 migrations apply wireless-canvas --local
 npm run dev
 ```
 
@@ -30,6 +31,10 @@ npm run test:run
 | POST | `/api/proxy/video` | Bearer 设备 token | 视频任务创建请求白名单与代理 | Ark Seedance `/contents/generations/tasks` |
 | POST | `/api/proxy/text` | Bearer 设备 token | 文本对话请求白名单与代理 | Ark 豆包 `/chat/completions` |
 | POST | `/api/proxy/tts` | Bearer 设备 token | 语音合成请求白名单与代理 | OpenSpeech `/tts/unidirectional` |
+| GET/POST | `/api/data/projects` | Bearer 设备 token | 当前设备的项目列表、创建项目 | D1 + KV |
+| GET/PUT/DELETE | `/api/data/projects/:id` | Bearer 设备 token | 读取、乐观锁更新、删除项目 | D1 + KV |
+| GET/POST | `/api/data/assets` | Bearer 设备 token | 资产元数据列表、创建资产 | D1 |
+| GET/PUT/DELETE | `/api/data/assets/:id` | Bearer 设备 token | 读取、乐观锁更新、删除资产元数据 | D1 |
 
 第一批视频路由只代理“创建任务”；任务查询会在前端正式迁移后补充，避免本批改变现有 `app/` 行为。四条路由均拒绝客户端传入上游 Key、上游 URL或模型 ID；这些值只从 Worker Bindings 读取。
 
@@ -43,6 +48,8 @@ npm run test:run
 
 这是第一阶段的轻量准入机制，不等同于正式账号体系。生产阶段应增加邀请码状态存储、token 撤销、速率限制、滥用审计和可选的账号登录。
 
+数据路由中的 `user_token` 实际保存已验证设备 token 里的 `deviceId` 所有者键，不保存完整 Bearer token，也不保存邀请码。
+
 ## Worker 配置与 Secrets
 
 `wrangler.toml` 只保存非敏感端点、模型/接入点 ID、超时和 token 有效期。以下值必须使用 Secret：
@@ -55,6 +62,25 @@ npx wrangler secret put OPENSPEECH_API_KEY
 ```
 
 其中 Seedance 必须把 `SEEDANCE_MODEL_ID` 换成当前账号已开通的模型或推理接入点 ID；OpenSpeech Key 是语音资源凭证，不能用 Ark Key 冒充。
+
+## D1 与 KV 初始化
+
+先在 Cloudflare 创建资源，并把返回的真实 ID 替换进 `wrangler.toml`：
+
+```bash
+npx wrangler d1 create wireless-canvas
+npx wrangler kv namespace create SNAPSHOT_CACHE
+npx wrangler d1 migrations apply wireless-canvas --remote
+```
+
+本地开发使用 Wrangler 的本地 D1/KV，不会连接生产资源：
+
+```bash
+npx wrangler d1 migrations apply wireless-canvas --local
+npm run dev:mock
+```
+
+迁移文件位于 `migrations/`。D1 会在 `d1_migrations` 表记录已应用版本；绑定名分别为 `DB` 和 `SNAPSHOT_CACHE`。
 
 ## 错误契约
 
@@ -71,24 +97,29 @@ npx wrangler secret put OPENSPEECH_API_KEY
 
 上游 `401/403/404/408/429` 分别映射为安全中文错误；超时返回 HTTP 504，其余供应商错误返回 HTTP 502。上游原始错误正文不会透传，避免泄露账户、模型和请求细节。
 
-## 数据模型草案
+## 数据模型与快照策略
 
-本批不创建数据库；以下是后续 D1/R2/Queues 接入时的稳定边界：
-
-| 实体 | 建议主键 | 核心字段 | 存储候选 |
+| 表 | 主键 | 核心字段 | 当前职责 |
 | --- | --- | --- | --- |
-| Device | `device_id` | `created_at/status/last_seen_at` | D1 |
-| Invite | `code_hash` | `status/max_uses/used_count/expires_at` | D1 |
-| Project | `project_id` | `owner_device_id/title/snapshot_version/updated_at` | D1 + R2 |
-| Asset | `asset_id` | `project_id/kind/mime_type/r2_key/metadata` | D1 + R2 |
-| GenerationTask | `task_id` | `provider/kind/status/request_hash/cost/error_code` | D1 + Queues |
-| DeviceTokenRevocation | `token_hash` | `device_id/expires_at/revoked_at` | KV 或 D1 |
+| `projects` | `id` | `user_token/name/data_json/snapshot_kv_key/version/updated_at` | 项目元数据和权威画布快照索引 |
+| `projects_nodes` | `(project_id,id)` | `user_token/name/data_json/updated_at` | 预留节点级索引；权威数据仍是项目快照，避免破坏旧格式 |
+| `assets` | `id` | `user_token/project_id/name/data_json/version/updated_at` | 图片、视频、音频、文本资产元数据 |
+| `history` | `id` | `user_token/project_id/name/data_json/updated_at` | 预留生成与操作历史持久化 |
 
-供应商请求和响应只保存必要的任务元数据；原始 Key 永不入库。项目快照继续采用现有前端格式，后续同步层必须保持向后兼容和幂等写入。
+`data_json` 原样保存现有 IndexedDB `Project`/资产对象，因此旧节点、连线、多画布、版本、任务和新增字段都能向后兼容。API 不拆解或重写画布内容。
+
+- 小于 64 KiB 的项目快照直接写入 D1。
+- 大快照先写唯一版本 KV key，再把元数据和 `snapshot_kv_key` 写入 D1。
+- KV 写入失败时明确回退到 D1 `data_json`，API 响应的 `storage` 为 `d1-fallback`。
+- KV 引用存在但内容不可读时返回 `SNAPSHOT_UNAVAILABLE`，不会伪造空画布。
+- 更新请求必须携带当前 `version`；D1 使用条件更新，过期写入返回 HTTP 409 和最新版本号。
+- 每次并发写使用不同 KV key，失败写入只清理自己的临时快照，避免误删胜出版本。
+
+KV 适合作为大体积快照的读取层，但具有最终一致性；项目版本与所有权判断始终以 D1 为准。供应商原始 Key 永不入库。
 
 ## 测试隔离
 
-Vitest 通过 `createApp({ fetchFn })` 注入内存 fixture，覆盖每条代理的未鉴权、参数校验、上游 `401/403/404` 与超时，不会访问火山方舟或 OpenSpeech，也不会产生费用。
+Vitest 通过 `createApp({ fetchFn, dataRepository, snapshotStore })` 注入内存 fixture，覆盖代理错误、数据 CRUD、设备隔离、乐观锁并发冲突、D1 映射和 KV 回退，不会访问火山方舟、OpenSpeech 或 Cloudflare 远程资源，也不会产生费用。
 
 ## 官方参考
 
@@ -96,3 +127,6 @@ Vitest 通过 `createApp({ fetchFn })` 注入内存 fixture，覆盖每条代理
 - [Cloudflare Workers Vitest integration](https://developers.cloudflare.com/workers/testing/vitest-integration/)
 - [Cloudflare 本地 Secrets 与 `.dev.vars`](https://developers.cloudflare.com/workers/local-development/environment-variables/)
 - [Wrangler 配置](https://developers.cloudflare.com/workers/wrangler/configuration/)
+- [Cloudflare D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/)
+- [Cloudflare D1 Workers Binding API](https://developers.cloudflare.com/d1/worker-api/)
+- [Cloudflare Workers KV bindings](https://developers.cloudflare.com/kv/concepts/kv-bindings/)

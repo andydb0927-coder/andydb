@@ -10,8 +10,9 @@ import {
   type UpstreamRequest,
 } from './proxy-contracts'
 import { forwardUpstream } from './upstream'
+import { registerDataRoutes, type DataRouteOptions } from './data/data-routes'
 
-export interface AppOptions {
+export interface AppOptions extends Omit<DataRouteOptions, 'now'> {
   fetchFn?: typeof fetch
   now?: () => number
   timeoutMs?: number
@@ -97,6 +98,15 @@ export function createApp(options: AppOptions = {}) {
   registerProxy('/api/proxy/video', 'video', videoUpstreamRequest)
   registerProxy('/api/proxy/text', 'text', textUpstreamRequest)
   registerProxy('/api/proxy/tts', 'tts', ttsUpstreamRequest)
+
+  registerDataRoutes(app, {
+    now,
+    ...(options.dataRepository === undefined ? {} : { dataRepository: options.dataRepository }),
+    ...(options.snapshotStore === undefined ? {} : { snapshotStore: options.snapshotStore }),
+    ...(options.snapshotThresholdBytes === undefined
+      ? {}
+      : { snapshotThresholdBytes: options.snapshotThresholdBytes }),
+  })
 
   app.notFound(() => errorResponse(404, 'ROUTE_NOT_FOUND', '请求的接口不存在。'))
   app.onError((error) => {

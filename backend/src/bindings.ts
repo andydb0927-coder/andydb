@@ -3,6 +3,8 @@ export interface WorkerBindings {
   INVITE_CODES: string
   ARK_API_KEY: string
   OPENSPEECH_API_KEY: string
+  DB?: D1Database
+  SNAPSHOT_CACHE?: KVNamespace
   ARK_API_BASE?: string
   OPENSPEECH_API_BASE?: string
   SEEDREAM_MODEL_ID?: string
@@ -11,6 +13,7 @@ export interface WorkerBindings {
   OPENSPEECH_RESOURCE_ID?: string
   DEVICE_TOKEN_TTL_SECONDS?: string
   UPSTREAM_TIMEOUT_MS?: string
+  SNAPSHOT_KV_THRESHOLD_BYTES?: string
 }
 
 export interface AppVariables {
