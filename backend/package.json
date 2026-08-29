@@ -1,0 +1,22 @@
+{
+  "name": "wireless-canvas-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:mock": "DEVICE_TOKEN_SECRET=local-device-secret-change-me INVITE_CODES=LOCAL-DEMO ARK_API_KEY=mock-ark-key OPENSPEECH_API_KEY=mock-openspeech-key wrangler dev --local",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.13.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260829.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.127.1"
+  }
+}

@@ -1,0 +1,24 @@
+name = "wireless-canvas-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-29"
+workers_dev = true
+preview_urls = false
+send_metrics = false
+
+[vars]
+ARK_API_BASE = "https://ark.cn-beijing.volces.com/api/v3"
+OPENSPEECH_API_BASE = "https://openspeech.bytedance.com/api/v3"
+SEEDREAM_MODEL_ID = "doubao-seedream-5-0-pro-260628"
+SEEDANCE_MODEL_ID = "replace-with-account-enabled-endpoint-id"
+ARK_TEXT_MODEL_ID = "doubao-seed-2-1-pro-260628"
+OPENSPEECH_RESOURCE_ID = "seed-tts-2.0"
+DEVICE_TOKEN_TTL_SECONDS = "86400"
+UPSTREAM_TIMEOUT_MS = "30000"
+
+[secrets]
+required = [
+  "DEVICE_TOKEN_SECRET",
+  "INVITE_CODES",
+  "ARK_API_KEY",
+  "OPENSPEECH_API_KEY",
+]

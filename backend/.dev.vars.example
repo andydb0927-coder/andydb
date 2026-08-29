@@ -1,0 +1,5 @@
+# Copy to .dev.vars for `npm run dev`. This file contains fake local values only.
+DEVICE_TOKEN_SECRET=replace-with-a-long-random-local-secret
+INVITE_CODES=LOCAL-DEMO
+ARK_API_KEY=mock-ark-key
+OPENSPEECH_API_KEY=mock-openspeech-key
