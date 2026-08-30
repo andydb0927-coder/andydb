@@ -19,13 +19,12 @@ SNAPSHOT_KV_THRESHOLD_BYTES = "65536"
 [[d1_databases]]
 binding = "DB"
 database_name = "wireless-canvas"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "751dc60d-52af-4de8-9115-71266e26560e"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "SNAPSHOT_CACHE"
-id = "00000000000000000000000000000000"
-preview_id = "00000000000000000000000000000000"
+id = "a0029b898cd94292a921ea43f62ac0a6"
 
 [secrets]
 required = [
