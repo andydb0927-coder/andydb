@@ -11,6 +11,8 @@
   --accent: var(--brand-primary);
   --focus-ring: var(--brand-secondary-bright);
   --selection-ring: 0 0 0 2px rgb(var(--brand-primary-rgb) / 42%);
+  --connection-preview-rgb: 91 199 255;
+  --connection-preview: #5bc7ff;
 
   /* Dark surfaces and readable text. */
   --surface-canvas: #0d0c0b;
@@ -6639,6 +6641,33 @@ select {
   stroke: rgb(190 193 201 / 64%);
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
+}
+
+.canvas-reference-connection-preview {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.canvas-reference-connection-preview path {
+  fill: none;
+  stroke: var(--connection-preview);
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgb(var(--connection-preview-rgb) / 70%));
+}
+
+.canvas-reference-connection-preview circle {
+  fill: var(--surface-canvas);
+  stroke: var(--connection-preview);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 5px rgb(var(--connection-preview-rgb) / 78%));
 }
 
 .react-flow__edge-path.dependency-edge {

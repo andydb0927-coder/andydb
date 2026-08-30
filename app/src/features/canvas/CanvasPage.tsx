@@ -13,6 +13,7 @@ import { CanvasWorkspacePanels } from './CanvasWorkspacePanels'
 import { ScriptWorkspace } from '../script/ScriptWorkspace'
 import { sendScriptShotToCanvas } from '../script/script-canvas-actions'
 import { CanvasWorkflowTools, CanvasWorkflowBatchStatus, type WorkflowBatchView } from './CanvasWorkflowTools'
+import { ReferenceConnectionPreview } from './ReferenceConnectionPreview'
 import { buildGenerationRequest, generationEligibilityFailure, isWorkflowGeneratableNode, forceDemoProvider } from './canvas-generation-request'
 import { buildMediaAssetCreation, activeNodeAsset, processedMediaRecord } from './canvas-media-creation'
 import {
@@ -25,6 +26,7 @@ import {
   type Connection,
   type EdgeChange,
   type NodeChange,
+  type OnConnectStart,
   type OnNodeDrag,
   type OnConnectEnd,
   type ReactFlowInstance,
@@ -252,6 +254,7 @@ interface NodeTypePickerState {
   returnFocusTo?: HTMLElement
   mode: NodeTypePickerMode
   sourceNodeId?: string
+  sourcePosition?: CanvasNodePosition
   edgeInsertions?: Array<{
     edgeId: string
     position: CanvasNodePosition
@@ -620,6 +623,10 @@ export function CanvasPage({
   const contextUploadInputRef = useRef<HTMLInputElement>(null)
   const workflowImportInputRef = useRef<HTMLInputElement>(null)
   const nativeConnectionActiveRef = useRef(false)
+  const nativeConnectionStartRef = useRef<{
+    nodeId: string
+    position: CanvasNodePosition
+  } | undefined>(undefined)
   const placementTriggerRef = useRef<HTMLElement>(null)
   const connectionTriggerRef = useRef<HTMLElement>(null)
   const imageReferenceTriggerRef = useRef<HTMLButtonElement>(null)
@@ -708,6 +715,7 @@ export function CanvasPage({
 
   useEffect(() => {
     nativeConnectionActiveRef.current = false
+    nativeConnectionStartRef.current = undefined
     setWorkspaceMode('workflow')
     setWorkspacePanel(undefined)
     setAgentOpen(false)
@@ -748,6 +756,7 @@ export function CanvasPage({
 
     return () => {
       nativeConnectionActiveRef.current = false
+      nativeConnectionStartRef.current = undefined
       connectionTriggerRef.current = null
       imageReferenceTriggerRef.current = null
       optionDragCloneRef.current = undefined
@@ -3109,6 +3118,8 @@ export function CanvasPage({
   const handleConnectEnd: OnConnectEnd = useCallback(
     (event, state) => {
       nativeConnectionActiveRef.current = false
+      const connectionStart = nativeConnectionStartRef.current
+      nativeConnectionStartRef.current = undefined
       if (state.isValid || !state.fromNode) return
       if (!state.toNode) {
         if (state.fromHandle?.type === 'target' || !flowInstance || !project) return
@@ -3124,9 +3135,24 @@ export function CanvasPage({
         const viewport = viewportRef.current
         const rect = viewport?.getBoundingClientRect()
         const hasBounds = Boolean(rect && rect.width > 0 && rect.height > 0)
+        const position = flowInstance.screenToFlowPosition({ x: clientX, y: clientY })
+        const sourceNode = project.nodes.find(({ id }) => id === state.fromNode?.id)
+        const measured =
+          nodeMeasurements.projectId === project.id
+            ? nodeMeasurements.measurements[state.fromNode.id]
+            : undefined
+        const sourcePosition =
+          connectionStart?.nodeId === state.fromNode.id
+            ? connectionStart.position
+            : sourceNode
+              ? {
+                  x: sourceNode.position.x + (measured?.width ?? 320),
+                  y: sourceNode.position.y + Math.min((measured?.height ?? 280) / 2, 180),
+                }
+              : undefined
         setNodeTypePicker({
           projectId: project.id,
-          position: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+          position,
           anchor: {
             x: clientX - (hasBounds ? rect!.left : 0),
             y: clientY - (hasBounds ? rect!.top : 0),
@@ -3138,6 +3164,7 @@ export function CanvasPage({
             findCanvasNodeControl(viewport, state.fromNode.id) ?? viewport ?? undefined,
           mode: 'reference',
           sourceNodeId: state.fromNode.id,
+          sourcePosition,
         })
         setActiveTool('select')
         return
@@ -3149,13 +3176,29 @@ export function CanvasPage({
         'drag',
       )
     },
-    [attemptConnection, flowInstance, project],
+    [attemptConnection, flowInstance, nodeMeasurements, project],
   )
 
-  const handleConnectStart = useCallback(() => {
+  const handleConnectStart: OnConnectStart = useCallback((event, params) => {
     nativeConnectionActiveRef.current = true
+    nativeConnectionStartRef.current = undefined
+    const touch = 'touches' in event ? event.touches[0] : undefined
+    const clientX = 'clientX' in event ? event.clientX : touch?.clientX
+    const clientY = 'clientY' in event ? event.clientY : touch?.clientY
+    if (
+      params.handleType === 'source' &&
+      params.nodeId &&
+      flowInstance &&
+      clientX !== undefined &&
+      clientY !== undefined
+    ) {
+      nativeConnectionStartRef.current = {
+        nodeId: params.nodeId,
+        position: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+      }
+    }
     if (connectionTool.phase !== 'idle') cancelConnection(false)
-  }, [cancelConnection, connectionTool.phase])
+  }, [cancelConnection, connectionTool.phase, flowInstance])
 
   const canvasPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -5639,6 +5682,18 @@ export function CanvasPage({
           <Controls showInteractive={false} position="top-right" />
           {minimapVisible ? <MiniMap aria-label="画布小地图" pannable zoomable /> : null}
           <ViewportPortal>
+            {nodeTypePicker?.mode === 'reference' &&
+            nodeTypePicker.sourceNodeId &&
+            nodeTypePicker.sourcePosition ? (
+              <ReferenceConnectionPreview
+                source={nodeTypePicker.sourcePosition}
+                target={nodeTypePicker.position}
+                sourceTitle={
+                  project?.nodes.find(({ id }) => id === nodeTypePicker.sourceNodeId)?.title ??
+                  nodeTypePicker.sourceNodeId
+                }
+              />
+            ) : null}
             {selectionGroupOverlay ? (
               <CanvasGroupOverlay
                 key={selectionGroupOverlay.group.nodeIds.join(':')}

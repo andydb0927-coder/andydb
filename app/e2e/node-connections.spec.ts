@@ -912,17 +912,45 @@ test('opens the LibLib downstream menu and creates a connected node at the drop 
 
   const picker = page.getByRole('menu', { name: '引用该节点生成' })
   await expect(picker).toBeVisible()
+  await expect(page.getByRole('img', {
+    name: '待完成连接：角色参考',
+  })).toBeVisible()
   await expect(picker.getByRole('menuitem', { name: '参考节点' })).toBeDisabled()
   await picker.getByRole('menuitem', { name: '文本', exact: true }).click()
 
   await expect(page.getByRole('button', { name: '文本 01', exact: true })).toBeVisible()
   await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('img', {
+    name: '待完成连接：角色参考',
+  })).toHaveCount(0)
   await expect(picker).toHaveCount(0)
   await expect(page.getByText('已保存', { exact: true })).toBeVisible()
 
+  const sourceHandleAfterFirstReference = page.getByRole('button', {
+    name: '从角色参考建立连接',
+  })
+  const sourceBoxAfterFirstReference = await sourceHandleAfterFirstReference.boundingBox()
+  const secondDropPoint = await findBlankCanvasPoint(page, true)
+  expect(sourceBoxAfterFirstReference).not.toBeNull()
+  await page.mouse.move(
+    sourceBoxAfterFirstReference!.x + sourceBoxAfterFirstReference!.width / 2,
+    sourceBoxAfterFirstReference!.y + sourceBoxAfterFirstReference!.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(secondDropPoint.x, secondDropPoint.y, { steps: 14 })
+  await page.mouse.up()
+  const secondPicker = page.getByRole('menu', { name: '引用该节点生成' })
+  await expect(secondPicker).toBeVisible()
+  await secondPicker.getByRole('menuitem', { name: '图片', exact: true }).click()
+  await expect(page.getByRole('button', { name: '图片 01', exact: true })).toBeVisible()
+  await expect(page.getByLabel('角色参考 → 图片 01', { exact: true })).toHaveCount(1)
+  await expect(page.getByLabel(/^角色参考 → /)).toHaveCount(3)
+
   await page.keyboard.press('Meta+z')
-  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toHaveCount(0)
-  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '图片 01', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('角色参考 → 图片 01', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toBeVisible()
+  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(1)
 })
 
 test('inserts a contextual media node from the edge midpoint and undoes the graph replacement once', async ({

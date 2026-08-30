@@ -370,7 +370,9 @@ function initializeFlow(
   const fitView = vi.fn().mockResolvedValue(true)
   const zoomIn = vi.fn().mockResolvedValue(true)
   const zoomOut = vi.fn().mockResolvedValue(true)
-  const screenToFlowPosition = vi.fn(() => flowPosition)
+  const screenToFlowPosition = vi.fn(
+    (_position: { x: number; y: number }) => flowPosition,
+  )
   act(() =>
     latestFlowProps?.onInit?.({
       fitView,
@@ -2597,9 +2599,13 @@ describe('creative canvas', () => {
   test('opens the recorded downstream picker when a source connection ends on blank canvas', async () => {
     const user = userEvent.setup()
     renderCanvas()
-    initializeFlow({ x: 860, y: 420 })
+    const flow = initializeFlow({ x: 860, y: 420 })
+    flow.screenToFlowPosition.mockImplementation(({ x, y }) => ({ x, y }))
 
-    act(() => latestFlowProps?.onConnectStart?.({}, {}))
+    act(() => latestFlowProps?.onConnectStart?.(
+      { clientX: 320, clientY: 220 },
+      { nodeId: 'video', handleType: 'source' },
+    ))
     act(() => {
       latestFlowProps?.onConnectEnd?.(
         { clientX: 640, clientY: 360 },
@@ -2613,11 +2619,17 @@ describe('creative canvas', () => {
 
     const picker = screen.getByRole('menu', { name: '引用该节点生成' })
     expect(picker).toHaveTextContent('视频片段')
+    expect(
+      screen.getByRole('img', { name: '待完成连接：视频片段' }),
+    ).toBeVisible()
     await user.click(within(picker).getByRole('menuitem', { name: '图片' }))
+    expect(
+      screen.queryByRole('img', { name: '待完成连接：视频片段' }),
+    ).not.toBeInTheDocument()
 
     const currentProject = useProjectStore.getState().activeProject
     const created = currentProject?.nodes.find(
-      ({ title, position }) => title.startsWith('图片') && position.x === 860 && position.y === 420,
+      ({ title, position }) => title.startsWith('图片') && position.x === 640 && position.y === 360,
     )
     expect(created).toBeDefined()
     expect(currentProject?.edges).toContainEqual(
@@ -2629,6 +2641,55 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().activeProject?.nodes).not.toContainEqual(
       expect.objectContaining({ id: created?.id }),
     )
+  })
+
+  test('allows one source node to create repeated downstream references without a fan-out limit', async () => {
+    const user = userEvent.setup()
+    renderCanvas()
+    const flow = initializeFlow()
+    flow.screenToFlowPosition.mockImplementation(({ x, y }) => ({ x, y }))
+
+    const createReference = async (
+      clientX: number,
+      clientY: number,
+      nodeType: '文本' | '图片',
+    ) => {
+      act(() => latestFlowProps?.onConnectStart?.(
+        { clientX: 310, clientY: 210 },
+        { nodeId: 'video', handleType: 'source' },
+      ))
+      act(() => latestFlowProps?.onConnectEnd?.(
+        { clientX, clientY },
+        {
+          isValid: false,
+          fromNode: { id: 'video' },
+          fromHandle: { type: 'source' },
+        },
+      ))
+      await user.click(
+        within(screen.getByRole('menu', { name: '引用该节点生成' }))
+          .getByRole('menuitem', { name: nodeType }),
+      )
+    }
+
+    await createReference(610, 330, '文本')
+    await createReference(760, 470, '图片')
+
+    const currentProject = useProjectStore.getState().activeProject
+    const createdNodeIds = currentProject?.nodes
+      .filter(({ position }) =>
+        (position.x === 610 && position.y === 330) ||
+        (position.x === 760 && position.y === 470),
+      )
+      .map(({ id }) => id) ?? []
+    expect(createdNodeIds).toHaveLength(2)
+    expect(
+      currentProject?.edges.filter(
+        ({ sourceNodeId, targetNodeId }) =>
+          sourceNodeId === 'video' && createdNodeIds.includes(targetNodeId),
+      ),
+    ).toHaveLength(2)
+    expect(useProjectStore.getState().past).toHaveLength(2)
   })
 
   test('normalizes an invalid drag that starts from a target handle', async () => {
