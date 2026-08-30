@@ -1,5 +1,10 @@
 import type { WorkerBindings } from './bindings'
-import { isAbortError, upstreamErrorResponse, upstreamTimeoutResponse } from './errors'
+import {
+  isAbortError,
+  upstreamErrorResponse,
+  upstreamNetworkErrorResponse,
+  upstreamTimeoutResponse,
+} from './errors'
 import type { UpstreamRequest } from './proxy-contracts'
 
 export interface UpstreamOptions {
@@ -25,6 +30,29 @@ function forwardedHeaders(response: Response) {
   return headers
 }
 
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
+function stringField(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+async function upstreamErrorCode(response: Response) {
+  try {
+    const body = record(await response.json())
+    const error = record(body?.error)
+    return stringField(error?.code) ??
+      stringField(error?.type) ??
+      stringField(body?.code) ??
+      stringField(body?.error_code)
+  } catch {
+    return undefined
+  }
+}
+
 export async function forwardUpstream(
   request: UpstreamRequest,
   env: WorkerBindings,
@@ -37,14 +65,16 @@ export async function forwardUpstream(
       ...request.init,
       signal: controller.signal,
     })
-    if (!response.ok) return upstreamErrorResponse(response.status)
+    if (!response.ok) {
+      return upstreamErrorResponse(response.status, await upstreamErrorCode(response))
+    }
     return new Response(response.body, {
       status: response.status,
       headers: forwardedHeaders(response),
     })
   } catch (error) {
     if (isAbortError(error) || controller.signal.aborted) return upstreamTimeoutResponse()
-    return upstreamErrorResponse(502)
+    return upstreamNetworkErrorResponse()
   } finally {
     clearTimeout(timeout)
   }

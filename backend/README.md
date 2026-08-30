@@ -100,12 +100,13 @@ npm run dev:mock
 {
   "error": {
     "code": "UPSTREAM_ACCESS_DENIED",
-    "message": "上游服务拒绝访问，请确认资源已开通。"
+    "message": "上游服务拒绝访问，请确认资源已开通。",
+    "upstreamStatus": 403
   }
 }
 ```
 
-上游 `401/403/404/408/429` 分别映射为安全中文错误；超时返回 HTTP 504，其余供应商错误返回 HTTP 502。上游原始错误正文不会透传，避免泄露账户、模型和请求细节。
+上游 `401/403/404/408/429` 分别映射为安全中文错误；`AccountOverdueError` 单独映射为 `UPSTREAM_ACCOUNT_OVERDUE`，`AuthenticationError` 映射为 `UPSTREAM_AUTH_FAILED`。只要收到了上游 HTTP 响应，安全错误中就会带 `upstreamStatus`；DNS/断网等没有上游响应的错误不会伪造该字段。超时返回 HTTP 504，其余供应商错误返回 HTTP 502。上游原始错误正文不会透传，避免泄露账户、模型和请求细节。
 
 ## 数据模型与快照策略
 

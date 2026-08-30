@@ -226,9 +226,10 @@ describe.each(proxyCases)('$name代理', ({
   })
 
   it.each([
-    [401, 'UPSTREAM_AUTH_FAILED', '上游服务鉴权失败，请检查服务配置。'],
+    [401, 'UPSTREAM_AUTH_FAILED', '上游鉴权失败，请检查服务端Key配置。'],
     [403, 'UPSTREAM_ACCESS_DENIED', '上游服务拒绝访问，请确认资源已开通。'],
-    [404, 'UPSTREAM_NOT_FOUND', '上游模型或接口不存在，请检查服务配置。'],
+    [404, 'UPSTREAM_NOT_FOUND', '模型或接入点不可用。'],
+    [429, 'UPSTREAM_RATE_LIMITED', '请求过于频繁。'],
   ] as const)('把上游 %s 映射为安全中文错误', async (
     upstreamStatus,
     code,
@@ -242,8 +243,50 @@ describe.each(proxyCases)('$name代理', ({
 
     expect(response.status).toBe(502)
     const responseText = await response.text()
-    expect(JSON.parse(responseText)).toEqual({ error: { code, message } })
+    expect(JSON.parse(responseText)).toEqual({
+      error: { code, message, upstreamStatus },
+    })
     expect(responseText).not.toContain('sensitive')
+  })
+
+  it.each([
+    [403, 'AccountOverdueError', 'UPSTREAM_ACCOUNT_OVERDUE', '火山方舟账号余额不足，请前往控制台充值后重试。'],
+    [403, 'AuthenticationError', 'UPSTREAM_AUTH_FAILED', '上游鉴权失败，请检查服务端Key配置。'],
+  ] as const)('把上游 %s + %s 精确映射', async (
+    upstreamStatus,
+    upstreamCode,
+    code,
+    message,
+  ) => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ error: { code: upstreamCode, message: 'sensitive upstream detail' } }),
+      { status: upstreamStatus, headers: { 'Content-Type': 'application/json' } },
+    ))
+    const response = await authorizedRequest(path, validBody, { fetchFn })
+
+    expect(response.status).toBe(502)
+    const responseText = await response.text()
+    expect(JSON.parse(responseText)).toEqual({
+      error: { code, message, upstreamStatus },
+    })
+    expect(responseText).not.toContain('sensitive')
+  })
+
+  it('未识别的上游错误保留通用映射并附带状态码', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ error: { code: 'UnknownProviderError', message: 'sensitive' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    ))
+    const response = await authorizedRequest(path, validBody, { fetchFn })
+
+    expect(response.status).toBe(502)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: 'UPSTREAM_FAILED',
+        message: '上游服务暂时不可用，请稍后重试。',
+        upstreamStatus: 500,
+      },
+    })
   })
 
   it('上游超时映射为 504 中文错误', async () => {
