@@ -118,7 +118,7 @@ export function cloudStorageConfiguration(): CloudStorageConfiguration {
   const storage = typeof window === 'undefined' ? undefined : window.localStorage
   return {
     backendUrl: normalizedBackendUrl(
-      envValue('VITE_BACKEND_URL') || storage?.getItem(runtimeBackendUrlKey) || '',
+      storage?.getItem(runtimeBackendUrlKey) || envValue('VITE_BACKEND_URL') || '',
     ),
     inviteCode: envValue('VITE_BACKEND_INVITE_CODE') || storage?.getItem(CLOUD_RUNTIME_INVITE_CODE_KEY)?.trim() || '',
   }

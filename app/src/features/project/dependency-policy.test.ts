@@ -19,37 +19,6 @@ const kinds: NodeKind[] = [
   'preview',
   'worldview',
 ]
-const allowed = new Set([
-  'character:storyboard',
-  'character:video',
-  'scene:storyboard',
-  'scene:video',
-  'text:storyboard',
-  'text:video',
-  'image:storyboard',
-  'image:video',
-  'preview:storyboard',
-  'preview:video',
-  'storyboard:video',
-  'video:image',
-  'video:storyboard',
-  'script:script',
-  'script:character-card',
-  'script:worldview',
-  'script:storyboard',
-  'script:video',
-  'character-card:script',
-  'character-card:character-card',
-  'character-card:worldview',
-  'character-card:storyboard',
-  'character-card:video',
-  'worldview:script',
-  'worldview:character-card',
-  'worldview:worldview',
-  'worldview:storyboard',
-  'worldview:video',
-])
-
 function node(id: string, kind: NodeKind): CanvasNode {
   return {
     id,
@@ -81,16 +50,13 @@ function project(sourceKind: NodeKind, targetKind: NodeKind): Project {
 describe('dependency connection policy', () => {
   test.each(
     kinds.flatMap((source) => kinds.map((target) => [source, target] as const)),
-  )('%s -> %s follows the approved type matrix', (sourceKind, targetKind) => {
+  )('%s -> %s can form a dependency regardless of node kind', (sourceKind, targetKind) => {
     const result = validateDependencyConnection(
       project(sourceKind, targetKind),
       'source',
       'target',
     )
-    expect(result.ok).toBe(allowed.has(`${sourceKind}:${targetKind}`))
-    if (!result.ok && !allowed.has(`${sourceKind}:${targetKind}`)) {
-      expect(result.reason).toBe('incompatible-types')
-    }
+    expect(result).toEqual({ ok: true })
   })
 
   test('reports missing, self, duplicate, and legacy-backed cycles without mutation', () => {
@@ -143,7 +109,7 @@ describe('dependency connection policy', () => {
     })
   })
 
-  test('accepts media-backed canvas references without widening normal dependency types', () => {
+  test('keeps image-reference media validation separate from unrestricted dependencies', () => {
     const referenceProject = project('image', 'image')
     referenceProject.assets.push({
       id: 'source-asset',
@@ -166,7 +132,7 @@ describe('dependency connection policy', () => {
 
     expect(
       validateDependencyConnection(referenceProject, 'source', 'target'),
-    ).toEqual({ ok: false, reason: 'incompatible-types' })
+    ).toEqual({ ok: true })
     expect(
       validateImageReferenceConnection(referenceProject, 'source', 'target'),
     ).toEqual({ ok: true })

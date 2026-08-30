@@ -6,6 +6,7 @@ import {
   appendNodeVersion,
   defaultImageGenerationSettings,
   type CanvasCreation,
+  type CanvasConnectionDraft,
   type CanvasGroup,
   type CanvasViewportState,
   type CanvasNode,
@@ -120,6 +121,12 @@ interface ProjectStore {
     offset?: CanvasNode['position'],
   ) => string[]
   deleteNode: (nodeId: string) => void
+  addConnectionDraft: (draft: CanvasConnectionDraft) => boolean
+  removeConnectionDraft: (draftId: string) => boolean
+  connectConnectionDraft: (
+    draftId: string,
+    targetNodeId: string,
+  ) => ConnectionValidationResult
   connectNodes: (edge: DependencyEdge) => ConnectionValidationResult
   connectImageReference: (edge: DependencyEdge) => ConnectionValidationResult
   disconnectNodes: (edgeId: string) => boolean
@@ -163,15 +170,19 @@ function withCanvasCollection(project: Project): Project {
       ? project.activeCanvasId
       : project.canvases[0].id
     const timestamp = project.updatedAt || new Date().toISOString()
+    const activeCanvas = project.canvases.find(({ id }) => id === activeCanvasId)
+    const connectionDrafts = project.connectionDrafts ?? activeCanvas?.connectionDrafts ?? []
     return {
       ...project,
       activeCanvasId,
+      connectionDrafts,
       canvases: project.canvases.map((canvas) =>
         canvas.id === activeCanvasId
           ? {
               ...canvas,
               nodes: project.nodes,
               edges: project.edges,
+              connectionDrafts,
               groups: project.groups ?? [],
               updatedAt: timestamp,
             }
@@ -184,11 +195,13 @@ function withCanvasCollection(project: Project): Project {
   return {
     ...project,
     activeCanvasId: id,
+    connectionDrafts: project.connectionDrafts ?? [],
     canvases: [{
       id,
       title: '画布 1',
       nodes: project.nodes,
       edges: project.edges,
+      connectionDrafts: project.connectionDrafts ?? [],
       groups: project.groups ?? [],
       viewport: defaultCanvasViewport,
       createdAt: timestamp,
@@ -209,6 +222,7 @@ function syncActiveCanvasSnapshot(project: Project): Project {
             ...canvas,
             nodes: normalized.nodes,
             edges: normalized.edges,
+            connectionDrafts: normalized.connectionDrafts ?? [],
             groups: normalized.groups ?? [],
             updatedAt: timestamp,
           }
@@ -226,6 +240,7 @@ function loadCanvasSnapshot(project: Project, canvasId: string): Project {
     activeCanvasId: canvas.id,
     nodes: canvas.nodes,
     edges: canvas.edges,
+    connectionDrafts: canvas.connectionDrafts ?? [],
     groups: canvas.groups,
   })
 }
@@ -508,6 +523,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           title: `画布 ${normalized.canvases!.length + 1}`,
           nodes: [],
           edges: [],
+          connectionDrafts: [],
           groups: [],
           viewport: { ...defaultCanvasViewport },
           createdAt: timestamp,
@@ -519,6 +535,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           canvases: [...normalized.canvases!, nextCanvas],
           nodes: [],
           edges: [],
+          connectionDrafts: [],
           groups: [],
         })
       })
@@ -578,6 +595,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           activeCanvasId: fallback.id,
           nodes: fallback.nodes,
           edges: fallback.edges,
+          connectionDrafts: fallback.connectionDrafts ?? [],
           groups: fallback.groups,
         })
       })
@@ -1468,6 +1486,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             (edge) =>
               edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId,
           ),
+          connectionDrafts: (project.connectionDrafts ?? []).filter(
+            (draft) => draft.sourceNodeId !== nodeId,
+          ),
           timeline: project.timeline.filter((item) => item.nodeId !== nodeId),
           jobs: project.jobs.filter((job) => job.nodeId !== nodeId),
           ...(project.groups
@@ -1486,6 +1507,78 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             : {}),
         })
       })
+    },
+
+    addConnectionDraft: (draft) => {
+      let added = false
+      commit((project) => {
+        if (
+          !project.nodes.some(({ id }) => id === draft.sourceNodeId) ||
+          !Number.isFinite(draft.position.x) ||
+          !Number.isFinite(draft.position.y) ||
+          (project.connectionDrafts ?? []).some(({ id }) => id === draft.id)
+        ) {
+          return project
+        }
+        added = true
+        return withUpdatedTimestamp({
+          ...project,
+          connectionDrafts: [...(project.connectionDrafts ?? []), draft],
+        })
+      })
+      return added
+    },
+
+    removeConnectionDraft: (draftId) => {
+      let removed = false
+      commit((project) => {
+        const drafts = project.connectionDrafts ?? []
+        if (!drafts.some(({ id }) => id === draftId)) return project
+        removed = true
+        return withUpdatedTimestamp({
+          ...project,
+          connectionDrafts: drafts.filter(({ id }) => id !== draftId),
+        })
+      })
+      return removed
+    },
+
+    connectConnectionDraft: (draftId, targetNodeId) => {
+      let result: ConnectionValidationResult = {
+        ok: false,
+        reason: 'missing-node',
+      }
+      commit((project) => {
+        const draft = (project.connectionDrafts ?? []).find(
+          ({ id }) => id === draftId,
+        )
+        if (!draft) return project
+        result = validateDependencyConnection(
+          project,
+          draft.sourceNodeId,
+          targetNodeId,
+        )
+        if (!result.ok) return project
+        const connected = {
+          ...project,
+          connectionDrafts: (project.connectionDrafts ?? []).filter(
+            ({ id }) => id !== draftId,
+          ),
+          edges: [
+            ...project.edges,
+            {
+              id: crypto.randomUUID(),
+              sourceNodeId: draft.sourceNodeId,
+              targetNodeId,
+              sourceChanged: false,
+            },
+          ],
+        }
+        return withUpdatedTimestamp(
+          markDependencyConsumersChanged(connected, targetNodeId),
+        )
+      })
+      return result
     },
 
     connectNodes: (edge) => {

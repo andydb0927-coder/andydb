@@ -174,6 +174,50 @@ describe('project domain', () => {
     expect(useProjectStore.getState().deleteCanvas(firstCanvasId)).toBe(false)
   })
 
+  test('persists dangling connections per canvas and completes one atomically', () => {
+    const project = useProjectStore.getState().activeProject!
+    const sourceNodeId = project.nodes[0].id
+    const targetNodeId = project.nodes[1].id
+    const draft = {
+      id: 'draft-shot-audio',
+      sourceNodeId,
+      position: { x: 860, y: 420 },
+    }
+
+    expect(useProjectStore.getState().addConnectionDraft(draft)).toBe(true)
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([
+      draft,
+    ])
+
+    const secondCanvasId = useProjectStore.getState().createCanvas()!
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([])
+    const firstCanvasId = useProjectStore.getState().activeProject!.canvases![0].id
+    expect(useProjectStore.getState().switchCanvas(firstCanvasId)).toBe(true)
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([
+      draft,
+    ])
+
+    const completed = useProjectStore
+      .getState()
+      .connectConnectionDraft(draft.id, targetNodeId)
+    expect(completed).toEqual({ ok: false, reason: 'duplicate' })
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([
+      draft,
+    ])
+
+    useProjectStore.getState().disconnectNodes('edge-shot-to-audio')
+    expect(
+      useProjectStore.getState().connectConnectionDraft(draft.id, targetNodeId),
+    ).toEqual({ ok: true })
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([])
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
+      expect.objectContaining({ sourceNodeId, targetNodeId }),
+    )
+
+    expect(useProjectStore.getState().switchCanvas(secondCanvasId)).toBe(true)
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([])
+  })
+
   test('appends a node version without changing prior versions or asset records', () => {
     const projectWithFixture = makeProjectFixture()
 

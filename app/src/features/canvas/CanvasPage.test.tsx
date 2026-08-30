@@ -2448,7 +2448,7 @@ describe('creative canvas', () => {
     expect(screen.queryByText('此连接会形成循环依赖')).not.toBeInTheDocument()
   })
 
-  test('keeps an acyclic incompatible toolbar source for a valid retry', async () => {
+  test('keeps a toolbar source after a self-connection for a valid retry', async () => {
     const user = userEvent.setup()
     act(() => activate({ ...makeCanvasProject(), edges: [] }))
     renderCanvas()
@@ -2456,10 +2456,10 @@ describe('creative canvas', () => {
 
     await user.click(connect)
     await user.click(screen.getByRole('button', { name: '分镜 02' }))
-    await user.click(screen.getByRole('button', { name: '角色参考' }))
+    await user.click(screen.getByRole('button', { name: '分镜 02' }))
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      '这两种节点不能建立生成依赖',
+      '节点不能连接到自身',
     )
     expect(connect).toHaveAttribute('aria-pressed', 'true')
     expect(
@@ -2476,7 +2476,7 @@ describe('creative canvas', () => {
     ).toBe(true)
     expect(useProjectStore.getState().past).toHaveLength(1)
     expect(
-      screen.queryByText('这两种节点不能建立生成依赖'),
+      screen.queryByText('节点不能连接到自身'),
     ).not.toBeInTheDocument()
     expect(connect).toHaveFocus()
   })
@@ -2594,7 +2594,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
-  test('opens the recorded downstream picker when a source connection ends on blank canvas', async () => {
+  test('keeps a dropped source connection visible until it connects to any node', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow({ x: 860, y: 420 })
@@ -2605,29 +2605,38 @@ describe('creative canvas', () => {
         { clientX: 640, clientY: 360 },
         {
           isValid: false,
-          fromNode: { id: 'video' },
+          fromNode: { id: 'character' },
           fromHandle: { type: 'source' },
         },
       )
     })
 
-    const picker = screen.getByRole('menu', { name: '引用该节点生成' })
-    expect(picker).toHaveTextContent('视频片段')
-    await user.click(within(picker).getByRole('menuitem', { name: '图片' }))
-
-    const currentProject = useProjectStore.getState().activeProject
-    const created = currentProject?.nodes.find(
-      ({ title, position }) => title.startsWith('图片') && position.x === 860 && position.y === 420,
+    expect(screen.queryByRole('menu', { name: '引用该节点生成' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '连接线已保留，请选择任意目标节点',
     )
-    expect(created).toBeDefined()
-    expect(currentProject?.edges).toContainEqual(
-      expect.objectContaining({ sourceNodeId: 'video', targetNodeId: created?.id }),
-    )
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([
+      expect.objectContaining({
+        sourceNodeId: 'character',
+        position: { x: 860, y: 420 },
+      }),
+    ])
     expect(useProjectStore.getState().past).toHaveLength(1)
 
+    await user.click(screen.getByRole('button', { name: '成片预览' }))
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([])
+    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
+      expect.objectContaining({
+        sourceNodeId: 'character',
+        targetNodeId: 'preview',
+      }),
+    )
+
     act(() => useProjectStore.getState().undo())
-    expect(useProjectStore.getState().activeProject?.nodes).not.toContainEqual(
-      expect.objectContaining({ id: created?.id }),
+    expect(useProjectStore.getState().activeProject?.connectionDrafts).toHaveLength(1)
+    expect(useProjectStore.getState().activeProject?.edges).not.toContainEqual(
+      expect.objectContaining({ sourceNodeId: 'character', targetNodeId: 'preview' }),
     )
   })
 

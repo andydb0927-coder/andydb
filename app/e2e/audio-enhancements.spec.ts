@@ -177,10 +177,13 @@ test('audio generation pitch and offline fades/normalization produce a real pers
   const source = saved.nodes.find(node => node.title === '音频 01')!
   expect(source.details).toMatchObject({ fadeInSeconds: 0.2, fadeOutSeconds: 0.2, normalize: true, playbackRate: 2, pitch: -3 })
   const output = saved.nodes.find(node => node.title === '音频 01 2.0x')!
-  // Local audio outputs are independent assets, not unsupported audio→audio
-  // generation dependencies. Preserve the established graph contract.
+  // Local processing preserves the source dependency now that every canvas
+  // node kind can be connected through the shared graph policy.
   expect(output.versions.find(version => version.id === output.activeVersionId)?.assetId).toBe(audio[1].id)
-  expect(saved.edges).toEqual([])
+  expect(saved.edges).toContainEqual(expect.objectContaining({
+    sourceNodeId: source.id,
+    targetNodeId: output.id,
+  }))
   await page.reload()
   expect((await readProject(page)).assets.filter(asset => asset.kind === 'audio')).toHaveLength(2)
   await page.getByRole('button', { name: '音频 01 2.0x', exact: true }).click()

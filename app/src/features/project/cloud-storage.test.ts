@@ -7,6 +7,7 @@ import {
   CloudProjectStorage,
   DeviceTokenManager,
   HybridProjectStorage,
+  cloudStorageConfiguration,
   type ProjectStorage,
 } from './cloud-storage'
 
@@ -46,7 +47,17 @@ function jsonResponse(value: unknown, status = 200) {
 }
 
 describe('cloud project storage', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    vi.unstubAllEnvs()
+  })
+
+  test('uses an explicit runtime backend URL ahead of the build-time default', () => {
+    vi.stubEnv('VITE_BACKEND_URL', 'https://build.example')
+    localStorage.setItem('wireless-canvas.cloud.backend-url', '/fixture-cloud')
+
+    expect(cloudStorageConfiguration().backendUrl).toBe('/fixture-cloud')
+  })
 
   test('registers one device token, persists it and reuses the Authorization header', async () => {
     const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

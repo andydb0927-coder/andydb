@@ -730,10 +730,8 @@ test('creates, rejects, deletes, undoes, and restores dependency connections', a
   await expect(page.getByRole('status')).toHaveText('请选择目标节点')
   await text.focus()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('status')).toContainText(
-    '这两种节点不能建立生成依赖',
-  )
-  await page.keyboard.press('Escape')
+  await expect(page.getByLabel('视频 01 → 文本 01', { exact: true })).toHaveCount(1)
+  await expect(connect).toHaveAttribute('aria-pressed', 'false')
   await expect(connect).toBeFocused()
 
   await text.click()
@@ -892,11 +890,13 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
   await expect(page.getByRole('status').filter({ hasText: '请选择目标节点' })).toHaveCount(0)
 })
 
-test('drops a source connection on blank canvas to create one referenced downstream node', async ({
+test('keeps a blank-dropped connection across reload and connects it to any node', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1024 })
   await createCinematicProject(page)
+  await openAddNodeAtBlank(page, '文本')
+  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toBeVisible()
 
   const sourceHandle = page.getByRole('button', {
     name: '从角色参考建立连接',
@@ -913,25 +913,19 @@ test('drops a source connection on blank canvas to create one referenced downstr
   await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 14 })
   await page.mouse.up()
 
-  const picker = page.getByRole('menu', { name: '引用该节点生成' })
-  await expect(picker).toContainText('角色参考')
-  await picker.getByRole('menuitem', { name: '图片', exact: true }).click()
+  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('连接线已保留')
+  await clickBlankCanvas(page)
+  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
+  await expect(page.getByText('已保存', { exact: true })).toBeVisible()
 
-  await expect(
-    page.getByRole('button', { name: '图片 01', exact: true }),
-  ).toBeVisible()
-  await expect(
-    page.getByLabel('角色参考 → 图片 01', { exact: true }),
-  ).toHaveCount(1)
-  await expect(page.getByLabel('1 个上游参考')).toBeVisible()
-
-  await page.getByRole('button', { name: '撤销' }).click()
-  await expect(
-    page.getByRole('button', { name: '图片 01', exact: true }),
-  ).toHaveCount(0)
-  await expect(
-    page.getByLabel('角色参考 → 图片 01', { exact: true }),
-  ).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
+  await page.getByRole('button', { name: '继续连接：角色参考' }).click()
+  await page.getByRole('button', { name: '文本 01', exact: true }).click()
+  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toHaveCount(0)
 })
 
 test('inserts a contextual media node from the edge midpoint and undoes the graph replacement once', async ({

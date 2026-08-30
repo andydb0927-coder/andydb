@@ -496,6 +496,12 @@ export interface DependencyEdge {
   sourceChanged?: boolean
 }
 
+export interface CanvasConnectionDraft {
+  id: string
+  sourceNodeId: string
+  position: { x: number; y: number }
+}
+
 export interface CanvasViewportState {
   x: number
   y: number
@@ -507,6 +513,7 @@ export interface ProjectCanvas {
   title: string
   nodes: CanvasNode[]
   edges: DependencyEdge[]
+  connectionDrafts?: CanvasConnectionDraft[]
   groups: CanvasGroup[]
   viewport: CanvasViewportState
   createdAt: string
@@ -571,6 +578,7 @@ export interface Project {
   assets: Asset[]
   nodes: CanvasNode[]
   edges: DependencyEdge[]
+  connectionDrafts?: CanvasConnectionDraft[]
   timeline: TimelineItem[]
   jobs: GenerationJob[]
   exportJobs: ExportJob[]
@@ -594,6 +602,7 @@ export function createProject(title: string, intent: string): Project {
     assets: [],
     nodes: [],
     edges: [],
+    connectionDrafts: [],
     timeline: [],
     jobs: [],
     exportJobs: [],
@@ -604,6 +613,7 @@ export function createProject(title: string, intent: string): Project {
       title: '画布 1',
       nodes: [],
       edges: [],
+      connectionDrafts: [],
       groups: [],
       viewport: { x: 0, y: 0, zoom: 1 },
       createdAt: timestamp,
