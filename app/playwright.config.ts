@@ -14,7 +14,7 @@ const fixtureGenerationEnvironment = [
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
-  reporter: 'list',
+  reporter: process.env.GITHUB_ACTIONS ? [['list'], ['github']] : 'list',
   use: {
     baseURL,
     trace: 'retain-on-failure',
