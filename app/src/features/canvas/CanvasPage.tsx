@@ -3742,7 +3742,7 @@ export function CanvasPage({
             sourceNode.id,
             creation,
             crypto.randomUUID(),
-            type === 'image' ? 'image-reference' : 'dependency',
+            'dependency',
           )
         ) return
         createdNodeFocusRef.current = creation.node.id

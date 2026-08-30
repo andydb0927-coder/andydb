@@ -2692,6 +2692,72 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(2)
   })
 
+  test('allows an empty image node to prebuild text, image, and video reference branches', async () => {
+    const user = userEvent.setup()
+    const project = makeCanvasProject()
+    const emptyImage: Project['nodes'][number] = {
+      id: 'empty-image',
+      kind: 'image',
+      title: '待生成图片',
+      position: { x: 1560, y: 760 },
+      versions: [{
+        id: 'version-empty-image',
+        createdAt: project.createdAt,
+        prompt: '',
+      }],
+      activeVersionId: 'version-empty-image',
+      sourceChanged: false,
+    }
+    act(() => activate({ ...project, nodes: [...project.nodes, emptyImage] }))
+    renderCanvas()
+    const flow = initializeFlow()
+    flow.screenToFlowPosition.mockImplementation(({ x, y }) => ({ x, y }))
+
+    const createReference = async (
+      clientX: number,
+      clientY: number,
+      nodeType: '文本' | '图片' | '视频',
+    ) => {
+      act(() => latestFlowProps?.onConnectStart?.(
+        { clientX: 310, clientY: 210 },
+        { nodeId: emptyImage.id, handleType: 'source' },
+      ))
+      act(() => latestFlowProps?.onConnectEnd?.(
+        { clientX, clientY },
+        {
+          isValid: false,
+          fromNode: { id: emptyImage.id },
+          fromHandle: { type: 'source' },
+        },
+      ))
+      await user.click(
+        within(screen.getByRole('menu', { name: '引用该节点生成' }))
+          .getByRole('menuitem', { name: nodeType }),
+      )
+    }
+
+    await createReference(610, 330, '文本')
+    await createReference(760, 470, '图片')
+    await createReference(900, 610, '视频')
+
+    const currentProject = useProjectStore.getState().activeProject
+    const createdNodeIds = currentProject?.nodes
+      .filter(({ position }) => [
+        [610, 330],
+        [760, 470],
+        [900, 610],
+      ].some(([x, y]) => position.x === x && position.y === y))
+      .map(({ id }) => id) ?? []
+    expect(createdNodeIds).toHaveLength(3)
+    expect(
+      currentProject?.edges.filter(
+        ({ sourceNodeId, targetNodeId }) =>
+          sourceNodeId === emptyImage.id && createdNodeIds.includes(targetNodeId),
+      ),
+    ).toHaveLength(3)
+    expect(useProjectStore.getState().past).toHaveLength(3)
+  })
+
   test('normalizes an invalid drag that starts from a target handle', async () => {
     let finishSave: (() => void) | undefined
     const save = vi.fn(
