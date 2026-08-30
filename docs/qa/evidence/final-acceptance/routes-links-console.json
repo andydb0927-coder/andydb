@@ -49,7 +49,7 @@
       "source": "/",
       "href": "/andydb/projects/new",
       "label": "新建画布创作",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/f5f9368d-87e3-4d5b-8cbe-6895d32fa0bc"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/9f66aec0-2022-4c8f-87ea-363abb5f6881"
     },
     {
       "source": "/",
@@ -211,7 +211,7 @@
       "source": "/projects",
       "href": "/andydb/projects/new",
       "label": "新建项目",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/e44c9e32-7dee-4c8d-ae95-0f67f5a3a18f"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/b9172114-c88e-425b-8389-4c376a325d68"
     },
     {
       "source": "/projects",
@@ -257,9 +257,9 @@
     },
     {
       "source": "/projects",
-      "href": "/andydb/project/f5f9368d-87e3-4d5b-8cbe-6895d32fa0bc",
-      "label": "打开 未命名项目 · 2026-08-29 13:10",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/f5f9368d-87e3-4d5b-8cbe-6895d32fa0bc"
+      "href": "/andydb/project/9f66aec0-2022-4c8f-87ea-363abb5f6881",
+      "label": "打开 未命名项目 · 2026-08-30 12:05",
+      "destination": "https://final-acceptance.fixture.local/andydb/project/9f66aec0-2022-4c8f-87ea-363abb5f6881"
     },
     {
       "source": "/projects",
@@ -271,7 +271,7 @@
       "source": "/works",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/065623ff-e1bd-4d35-b748-ab20e545407b"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/5469d60c-5306-4706-9fc6-b120474a77dd"
     },
     {
       "source": "/works",
@@ -325,7 +325,7 @@
       "source": "/agents",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/495b9061-607e-4401-bfe5-3f5772817e41"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/94334025-9c7d-496d-a1f8-7d7444660449"
     },
     {
       "source": "/agents",
@@ -373,7 +373,7 @@
       "source": "/challenges",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/edf459f7-7fd3-4247-8a16-93c1c1679aa9"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/5e19f01d-5c9f-4432-8c96-ab466000cb99"
     },
     {
       "source": "/challenges",
@@ -439,7 +439,7 @@
       "source": "/tutorials",
       "href": "/andydb/projects/new",
       "label": "新建项目",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/a8fa43f8-acdf-4f5d-8e9f-99cea24ffedf"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/36d1dc3f-fa42-4ea0-af8a-c84611ae4a9a"
     },
     {
       "source": "/tutorials",
@@ -583,7 +583,7 @@
       "source": "/membership",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/6af5ddb8-bc5e-47b5-bdec-570f2a0ddfb0"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/3724203b-3b3b-4ea9-91d3-b793d36e30d8"
     },
     {
       "source": "/membership",
@@ -631,7 +631,7 @@
       "source": "/help",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/0b0c478a-e399-4e49-8b8b-e5ce46fec0c0"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/602a2411-ef62-46e5-9576-653edddad371"
     },
     {
       "source": "/help",
@@ -685,7 +685,7 @@
       "source": "/tutorials/create-project",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/719a24f2-237c-4d8e-a559-0b54414ea228"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/662db208-562c-4d5e-be57-ae6a3a9d9413"
     },
     {
       "source": "/tutorials/create-project",
@@ -811,7 +811,7 @@
       "source": "/tutorials/add-node",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/2256c197-3e36-4d5a-a5c4-a350b0844891"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/9f743767-19b9-4909-aadd-2648c90a191a"
     },
     {
       "source": "/tutorials/add-node",
@@ -937,7 +937,7 @@
       "source": "/tutorials/connect-nodes",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/36428300-dae2-482f-b29c-d2a749cc0713"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/614103f9-6e64-4fd2-823d-8513bea4feca"
     },
     {
       "source": "/tutorials/connect-nodes",
@@ -1063,7 +1063,7 @@
       "source": "/tutorials/image-model",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/83b8029b-c979-442a-abec-142a55150561"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/d7aca300-f800-491d-8aa3-dc2bdc26e90f"
     },
     {
       "source": "/tutorials/image-model",
@@ -1189,7 +1189,7 @@
       "source": "/tutorials/image-prompt",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/e55885ca-fd8c-4dec-b870-ecd9b31fdafb"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/7c09f354-af91-4590-ab36-07dfdd6fb7d2"
     },
     {
       "source": "/tutorials/image-prompt",
@@ -1315,7 +1315,7 @@
       "source": "/tutorials/image-reference",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/433a2ed5-59fa-4669-8848-7ac3bd7fc66d"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/bad621e0-7cdd-4725-8c74-fb0140c1dcef"
     },
     {
       "source": "/tutorials/image-reference",
@@ -1441,7 +1441,7 @@
       "source": "/tutorials/text-to-video",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/7ffa9a06-98fd-486a-9081-b95be6f64c11"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/90edaeaa-1633-47cf-8514-bea795620244"
     },
     {
       "source": "/tutorials/text-to-video",
@@ -1567,7 +1567,7 @@
       "source": "/tutorials/image-to-video",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/36edc926-e5f4-4dbb-83e1-835e80f93528"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/0b009ec2-798f-4445-a764-461b4412273d"
     },
     {
       "source": "/tutorials/image-to-video",
@@ -1693,7 +1693,7 @@
       "source": "/tutorials/video-frames",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/12550123-2445-4265-b283-f5125d13aa5d"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/757946d8-aabd-4cab-b68e-6ba5f8093bc9"
     },
     {
       "source": "/tutorials/video-frames",
@@ -1819,7 +1819,7 @@
       "source": "/tutorials/storyboard",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/653b950e-f792-4f7f-942b-5aec0190206f"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/3f4fa961-c2de-4cd2-9dfb-a486a05e37f7"
     },
     {
       "source": "/tutorials/storyboard",
@@ -1945,7 +1945,7 @@
       "source": "/tutorials/director",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/c79a279c-0d0f-4722-9f58-f0fdebf5c8b0"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/f789b8db-da35-4f9a-8d6f-1d854abfce0b"
     },
     {
       "source": "/tutorials/director",
@@ -2071,7 +2071,7 @@
       "source": "/tutorials/export-publish",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/7a06362b-af5d-4da9-a722-05d7be9d01c6"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/965d05b5-1a08-4272-986d-f4c74ffc30c2"
     },
     {
       "source": "/tutorials/export-publish",
@@ -2197,7 +2197,7 @@
       "source": "/activity/director-master",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/713e92fa-b1c1-43e2-951d-0dc12b68b4af"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/3d90fdf4-b365-4928-904d-410a82bec64f"
     },
     {
       "source": "/activity/director-master",
@@ -2245,7 +2245,7 @@
       "source": "/activity/director-master",
       "href": "/andydb/projects/new?challenge=director-master",
       "label": "去创作",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/423ac0da-6366-41dc-979a-17de8026d337"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/85703e2f-a972-4165-8a9c-93cbadbb1373"
     },
     {
       "source": "/activity/director-master",
@@ -2269,7 +2269,7 @@
       "source": "/activity/city-stories",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/31169004-4f67-410c-a33f-3ae0ba9dd2be"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/28475082-0c2d-42d5-b86b-ea1947c49e7d"
     },
     {
       "source": "/activity/city-stories",
@@ -2317,7 +2317,7 @@
       "source": "/activity/city-stories",
       "href": "/andydb/projects/new?challenge=city-stories",
       "label": "去创作",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/a0eac146-eca7-49c1-8fe1-a416e6a61687"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/57aa25f7-8e56-4d96-9a51-e63e7e8350f4"
     },
     {
       "source": "/activity/city-stories",
@@ -2341,7 +2341,7 @@
       "source": "/activity/story-seed",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/c2e82079-60cd-4af0-be0e-072c974f8329"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/3dc9b44e-bde1-4eb1-a01b-bd138a662a5e"
     },
     {
       "source": "/activity/story-seed",
@@ -2389,7 +2389,7 @@
       "source": "/activity/story-seed",
       "href": "/andydb/projects/new?challenge=story-seed",
       "label": "去创作",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/b32c0922-da70-4203-bd70-68f2531cc5bf"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/e5b6b849-853c-4dda-a9df-5308b047c6c3"
     },
     {
       "source": "/activity/story-seed",
@@ -2995,7 +2995,7 @@
       "source": "/subjects/final-subject",
       "href": "/andydb/projects/new",
       "label": "新建画布",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/c6f68782-8f8b-4c9f-b8a3-7a4bd70bd399"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/e37ac203-b26b-44bf-842e-5c6ea79fb595"
     },
     {
       "source": "/subjects/final-subject",
@@ -3103,7 +3103,7 @@
       "source": "/project/final-project/preview",
       "href": "/andydb/projects/new",
       "label": "新建项目",
-      "destination": "https://final-acceptance.fixture.local/andydb/project/f7c3ad3e-8bcd-44c6-97db-cd4138798af3"
+      "destination": "https://final-acceptance.fixture.local/andydb/project/320e8f87-5e5f-4448-8d34-995e67e5c3b5"
     },
     {
       "source": "/project/final-project/preview",
