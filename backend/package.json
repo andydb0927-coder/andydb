@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "dev:mock": "DEVICE_TOKEN_SECRET=local-device-secret-change-me INVITE_CODES=LOCAL-DEMO ARK_API_KEY=mock-ark-key OPENSPEECH_API_KEY=mock-openspeech-key wrangler dev --local",
+    "dev:mock": "DEVICE_TOKEN_SECRET=local-device-secret-change-me INVITE_CODES=LOCAL-DEMO ADMIN_TOKEN=local-admin-secret-change-me ARK_API_KEY=mock-ark-key OPENSPEECH_API_KEY=mock-openspeech-key wrangler dev --local",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"

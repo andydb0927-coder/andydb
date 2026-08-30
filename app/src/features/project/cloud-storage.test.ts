@@ -156,4 +156,19 @@ describe('cloud project storage', () => {
     expect(migration.isMigrated(first)).toBe(true)
     expect(migration.isMigrated(second)).toBe(false)
   })
+
+  test('迁移标记按 user_id 隔离，换账号后不会误判已迁移', async () => {
+    const local = new MemoryProjectStorage()
+    const cloud = new MemoryProjectStorage()
+    const project = { ...makeProjectFixture(), id: 'project-account-scope', title: '账号隔离项目' }
+    await local.save(project)
+    localStorage.setItem('wireless-canvas.cloud.account', JSON.stringify({ userId: 'user-a' }))
+    const migration = new CloudMigrationService({ local, cloud, storage: localStorage })
+
+    await migration.migrate()
+    expect(migration.isMigrated(project)).toBe(true)
+
+    localStorage.setItem('wireless-canvas.cloud.account', JSON.stringify({ userId: 'user-b' }))
+    expect(migration.isMigrated(project)).toBe(false)
+  })
 })

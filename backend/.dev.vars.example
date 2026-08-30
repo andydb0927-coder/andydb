@@ -1,5 +1,7 @@
 # Copy to .dev.vars for `npm run dev`. This file contains fake local values only.
 DEVICE_TOKEN_SECRET=replace-with-a-long-random-local-secret
+# 可选：仅用于兼容旧设备准入，正式邀请码由 D1 管理
 INVITE_CODES=LOCAL-DEMO
+ADMIN_TOKEN=replace-with-a-separate-admin-secret
 ARK_API_KEY=mock-ark-key
 OPENSPEECH_API_KEY=mock-openspeech-key

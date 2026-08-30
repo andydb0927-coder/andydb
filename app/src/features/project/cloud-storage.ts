@@ -49,10 +49,11 @@ export interface ProjectCloudMigration {
 }
 
 const deviceIdKey = 'wireless-canvas.cloud.device-id'
-const deviceTokenKey = 'wireless-canvas.cloud.device-token'
+export const CLOUD_DEVICE_TOKEN_KEY = 'wireless-canvas.cloud.device-token'
 const migrationMarkerKey = 'wireless-canvas.cloud.migrated-projects'
+const cloudAccountCacheKey = 'wireless-canvas.cloud.account'
 const runtimeBackendUrlKey = 'wireless-canvas.cloud.backend-url'
-const runtimeInviteCodeKey = 'wireless-canvas.cloud.invite-code'
+export const CLOUD_RUNTIME_INVITE_CODE_KEY = 'wireless-canvas.cloud.invite-code'
 
 function envValue(name: string) {
   const env = import.meta.env as Record<string, string | undefined>
@@ -119,7 +120,7 @@ export function cloudStorageConfiguration(): CloudStorageConfiguration {
     backendUrl: normalizedBackendUrl(
       envValue('VITE_BACKEND_URL') || storage?.getItem(runtimeBackendUrlKey) || '',
     ),
-    inviteCode: envValue('VITE_BACKEND_INVITE_CODE') || storage?.getItem(runtimeInviteCodeKey)?.trim() || '',
+    inviteCode: envValue('VITE_BACKEND_INVITE_CODE') || storage?.getItem(CLOUD_RUNTIME_INVITE_CODE_KEY)?.trim() || '',
   }
 }
 
@@ -160,13 +161,13 @@ export class DeviceTokenManager {
     const body = record(await responseJson(response))
     const token = typeof body?.token === 'string' ? body.token.trim() : ''
     if (!token) throw new Error('设备验证响应格式不正确')
-    this.storage.setItem(deviceTokenKey, token)
+    this.storage.setItem(CLOUD_DEVICE_TOKEN_KEY, token)
     return token
   }
 
   async token(forceRefresh = false) {
-    if (forceRefresh) this.storage.removeItem(deviceTokenKey)
-    const existing = this.storage.getItem(deviceTokenKey)?.trim()
+    if (forceRefresh) this.storage.removeItem(CLOUD_DEVICE_TOKEN_KEY)
+    const existing = this.storage.getItem(CLOUD_DEVICE_TOKEN_KEY)?.trim()
     if (existing) return existing
     this.pending ??= this.register().finally(() => {
       this.pending = undefined
@@ -359,6 +360,15 @@ function migrationMarkers(storage: Storage) {
   }
 }
 
+function migrationOwnerScope(storage: Storage) {
+  try {
+    const account = record(JSON.parse(storage.getItem(cloudAccountCacheKey) ?? 'null'))
+    return typeof account?.userId === 'string' ? account.userId : 'device'
+  } catch {
+    return 'device'
+  }
+}
+
 export class CloudMigrationService implements ProjectCloudMigration {
   readonly enabled = true
   private readonly local: ProjectStorage
@@ -372,13 +382,15 @@ export class CloudMigrationService implements ProjectCloudMigration {
   }
 
   isMigrated(project: Project) {
-    return migrationMarkers(this.storage)[project.id] === project.updatedAt
+    const marker = migrationMarkers(this.storage)[project.id]
+    const scope = migrationOwnerScope(this.storage)
+    return marker === `${scope}:${project.updatedAt}` || (scope === 'device' && marker === project.updatedAt)
   }
 
   private markMigrated(project: Project) {
     this.storage.setItem(migrationMarkerKey, JSON.stringify({
       ...migrationMarkers(this.storage),
-      [project.id]: project.updatedAt,
+      [project.id]: `${migrationOwnerScope(this.storage)}:${project.updatedAt}`,
     }))
   }
 

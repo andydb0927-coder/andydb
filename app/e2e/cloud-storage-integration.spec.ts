@@ -18,6 +18,17 @@ async function configureCloud(page: Page) {
 function installCloudFixture(page: Page) {
   const projects = new Map<string, CloudProjectRecord>()
   const writes: string[] = []
+  const account = {
+    userId: 'user-cloud-migration-e2e',
+    createdAt: '2026-08-30T09:00:00.000Z',
+    usage: { imageCount: 0, videoSeconds: 0, textTokens: 0, audioCharacters: 0 },
+    quota: {
+      imageCount: { used: 0, limit: 10, remaining: 10 },
+      videoSeconds: { used: 0, limit: 60, remaining: 60 },
+      textTokens: { used: 0, limit: 10_000, remaining: 10_000 },
+      audioCharacters: { used: 0, limit: 5_000, remaining: 5_000 },
+    },
+  }
   void page.route('**/fixture-cloud/api/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -28,6 +39,14 @@ function installCloudFixture(page: Page) {
       return
     }
     expect(request.headers().authorization).toBe('Bearer e2e-device-token')
+    if (path === '/api/account/register' && method === 'POST') {
+      await route.fulfill({ status: 201, json: account })
+      return
+    }
+    if (path === '/api/account/me' && method === 'GET') {
+      await route.fulfill({ status: 200, json: account })
+      return
+    }
     if (path === '/api/data/projects' && method === 'GET') {
       await route.fulfill({
         status: 200,
@@ -79,6 +98,10 @@ function installCloudFixture(page: Page) {
 test('云端迁移逐项目执行并对未变化项目保持幂等', async ({ page }) => {
   await configureCloud(page)
   const fixture = installCloudFixture(page)
+  await page.goto('/login')
+  await page.getByRole('textbox', { name: '邀请码' }).fill('FIXTURE-INVITE')
+  await page.getByRole('button', { name: '登录云端账号' }).click()
+  await expect(page.getByText('user-cloud-migration-e2e')).toBeVisible()
   await page.goto('/projects/new')
   await expect(page).toHaveURL(/\/project\//u)
   await page.goto('/projects')

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Button } from '../../ui/Button'
+import { useOptionalCloudAccount } from '../account/CloudAccountProvider'
 import type { Project } from '../project/model'
 import {
   ProjectRepository,
@@ -74,6 +75,8 @@ export function ProjectsPage({
   projectSpaceRepository = defaultProjectSpaceRepository,
   cloudMigration = defaultCloudMigration,
 }: ProjectsPageProps) {
+  const cloudAccount = useOptionalCloudAccount()
+  const cloudLoginRequired = Boolean(cloudAccount?.configured && !cloudAccount.account)
   const [directory, setDirectory] = useState<DirectoryState>({ status: 'loading' })
   const [folderFilter, setFolderFilter] = useState<FolderFilter>('all')
   const [query, setQuery] = useState('')
@@ -240,7 +243,11 @@ export function ProjectsPage({
           </p>
         </div>
         <div className="projects-page__header-actions">
-          {cloudMigration?.enabled ? (
+          {cloudMigration?.enabled && cloudLoginRequired ? (
+            <Link className="projects-page__cloud-login focus-visible" to="/login">
+              登录后迁移
+            </Link>
+          ) : cloudMigration?.enabled ? (
             <Button disabled={migrating || directory.status !== 'loaded'} onClick={() => void migrateProjects()}>
               {migrating ? '正在迁移' : '迁移到云端'}
             </Button>

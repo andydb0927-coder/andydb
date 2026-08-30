@@ -22,6 +22,10 @@ export interface DataRouteOptions {
   snapshotStore?: SnapshotStore
   snapshotThresholdBytes?: number
   now: () => number
+  resolveOwnerId?: (
+    env: AppEnv['Bindings'],
+    deviceId: string,
+  ) => Promise<string>
 }
 
 function jsonResponse(value: unknown, status = 200) {
@@ -116,6 +120,17 @@ function conflictResponse(kind: '项目' | '资产', currentVersion?: number) {
 
 export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions) {
   app.use('/api/data/*', deviceAuthMiddleware(options.now))
+  app.use('/api/data/*', async (context, next) => {
+    const deviceId = context.get('deviceId')
+    const ownerId = options.resolveOwnerId
+      ? await options.resolveOwnerId(context.env, deviceId)
+      : deviceId
+    context.set('ownerId', ownerId)
+    await next()
+  })
+
+  const ownerId = (context: { get(key: 'deviceId' | 'ownerId'): string | undefined }) =>
+    context.get('ownerId') ?? context.get('deviceId') ?? ''
 
   const service = (env: AppEnv['Bindings']) => {
     const repository = options.dataRepository ?? (env.DB ? new D1DataRepository(env.DB) : undefined)
@@ -150,7 +165,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
 
   app.get('/api/data/projects', async (context) => {
     const result = await withService(context.env, async (data) => ({
-      projects: (await data.listProjects(context.get('deviceId'))).map(publicProjectMetadata),
+      projects: (await data.listProjects(ownerId(context))).map(publicProjectMetadata),
     }))
     return result instanceof Response ? result : jsonResponse(result)
   })
@@ -158,7 +173,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.post('/api/data/projects', async (context) => {
     const input = projectInput(await requestJson(context.req.raw))
     if (!input) return errorResponse(400, 'INVALID_REQUEST', '项目数据格式不正确。')
-    const result = await withService(context.env, (data) => data.createProject(context.get('deviceId'), input))
+    const result = await withService(context.env, (data) => data.createProject(ownerId(context), input))
     if (result instanceof Response) return result
     if (result.status === 'conflict') return conflictResponse('项目')
     return jsonResponse({ ...publicProject(result.project), storage: result.storage }, 201)
@@ -167,7 +182,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.get('/api/data/projects/:id', async (context) => {
     const projectId = id(context.req.param('id'))
     if (!projectId) return errorResponse(400, 'INVALID_REQUEST', '项目 ID 格式不正确。')
-    const result = await withService(context.env, (data) => data.getProject(context.get('deviceId'), projectId))
+    const result = await withService(context.env, (data) => data.getProject(ownerId(context), projectId))
     if (result instanceof Response) return result
     return result
       ? jsonResponse(publicProject(result))
@@ -178,7 +193,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
     const projectId = id(context.req.param('id'))
     const input = projectId ? projectUpdate(await requestJson(context.req.raw), projectId) : undefined
     if (!input) return errorResponse(400, 'INVALID_REQUEST', '项目数据或 version 格式不正确。')
-    const result = await withService(context.env, (data) => data.updateProject(context.get('deviceId'), input))
+    const result = await withService(context.env, (data) => data.updateProject(ownerId(context), input))
     if (result instanceof Response) return result
     if (result.status === 'missing') return errorResponse(404, 'PROJECT_NOT_FOUND', '项目不存在或无权访问。')
     if (result.status === 'conflict') return conflictResponse('项目', result.currentVersion)
@@ -188,7 +203,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.delete('/api/data/projects/:id', async (context) => {
     const projectId = id(context.req.param('id'))
     if (!projectId) return errorResponse(400, 'INVALID_REQUEST', '项目 ID 格式不正确。')
-    const result = await withService(context.env, (data) => data.deleteProject(context.get('deviceId'), projectId))
+    const result = await withService(context.env, (data) => data.deleteProject(ownerId(context), projectId))
     if (result instanceof Response) return result
     return result
       ? new Response(null, { status: 204 })
@@ -197,7 +212,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
 
   app.get('/api/data/assets', async (context) => {
     const result = await withService(context.env, async (data) => ({
-      assets: (await data.listAssets(context.get('deviceId'))).map(publicAsset),
+      assets: (await data.listAssets(ownerId(context))).map(publicAsset),
     }))
     return result instanceof Response ? result : jsonResponse(result)
   })
@@ -205,7 +220,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.post('/api/data/assets', async (context) => {
     const input = assetInput(await requestJson(context.req.raw))
     if (!input) return errorResponse(400, 'INVALID_REQUEST', '资产元数据格式不正确。')
-    const result = await withService(context.env, (data) => data.createAsset(context.get('deviceId'), input))
+    const result = await withService(context.env, (data) => data.createAsset(ownerId(context), input))
     if (result instanceof Response) return result
     return result
       ? jsonResponse(publicAsset(result), 201)
@@ -215,7 +230,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.get('/api/data/assets/:id', async (context) => {
     const assetId = id(context.req.param('id'))
     if (!assetId) return errorResponse(400, 'INVALID_REQUEST', '资产 ID 格式不正确。')
-    const result = await withService(context.env, (data) => data.getAsset(context.get('deviceId'), assetId))
+    const result = await withService(context.env, (data) => data.getAsset(ownerId(context), assetId))
     if (result instanceof Response) return result
     return result
       ? jsonResponse(publicAsset(result))
@@ -226,7 +241,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
     const assetId = id(context.req.param('id'))
     const input = assetId ? assetUpdate(await requestJson(context.req.raw), assetId) : undefined
     if (!input) return errorResponse(400, 'INVALID_REQUEST', '资产元数据或 version 格式不正确。')
-    const result = await withService(context.env, (data) => data.updateAsset(context.get('deviceId'), input))
+    const result = await withService(context.env, (data) => data.updateAsset(ownerId(context), input))
     if (result instanceof Response) return result
     if (result.status === 'missing') return errorResponse(404, 'ASSET_NOT_FOUND', '资产不存在或无权访问。')
     if (result.status === 'conflict') return conflictResponse('资产', result.currentVersion)
@@ -236,7 +251,7 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
   app.delete('/api/data/assets/:id', async (context) => {
     const assetId = id(context.req.param('id'))
     if (!assetId) return errorResponse(400, 'INVALID_REQUEST', '资产 ID 格式不正确。')
-    const result = await withService(context.env, (data) => data.deleteAsset(context.get('deviceId'), assetId))
+    const result = await withService(context.env, (data) => data.deleteAsset(ownerId(context), assetId))
     if (result instanceof Response) return result
     return result
       ? new Response(null, { status: 204 })

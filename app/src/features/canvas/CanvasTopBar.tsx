@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom'
 
 import { StatusText } from '../../ui/StatusText'
 import { CanvasAccountMenu } from '../account/CanvasAccountMenu'
+import { CloudAccountBadge } from '../account/CloudAccountBadge'
 import type { PersistenceStatus } from '../project/project-store'
 import type { GenerationJob, ProjectCanvas } from '../project/model'
 import type { WorkspaceMode } from './CanvasWorkspace'
@@ -298,6 +299,7 @@ export function CanvasTopBar({
           <ListTree aria-hidden="true" />
           节点列表
         </button>
+        <CloudAccountBadge compact />
         <CanvasAccountMenu generationJobs={generationJobs} />
         <div ref={shareMenuRootRef} className="canvas-top-bar__menu-wrap canvas-top-bar__publish-wrap">
           <button

@@ -56,6 +56,7 @@ const HelpCenterPage = lazy(() =>
   import('../features/help/HelpCenterPage').then((m) => ({ default: m.HelpCenterPage })),
 )
 const SubjectDetailsPage = lazy(() => import('../features/subjects/SubjectDetailsPage').then(m => ({ default: m.SubjectDetailsPage })))
+const CloudLoginPage = lazy(() => import('../features/account/CloudLoginPage').then(m => ({ default: m.CloudLoginPage })))
 
 export const routes: RouteObject[] = withRouteRecovery([
   {
@@ -73,6 +74,7 @@ export const routes: RouteObject[] = withRouteRecovery([
       { path: '/activity/:challengeId', element: withSuspense(<ChallengeDetailPage />) },
       { path: '/membership', element: withSuspense(<MembershipPage />) },
       { path: '/help', element: withSuspense(<HelpCenterPage />) },
+      { path: '/login', element: withSuspense(<CloudLoginPage />) },
       { path: '/subjects/:subjectId', element: withSuspense(<SubjectDetailsPage />) },
     ],
   },

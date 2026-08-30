@@ -15787,6 +15787,84 @@ select {
   margin: 0;
 }
 
+.cloud-account-badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  display: inline-flex;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+
+.cloud-account-badge:hover {
+  background: var(--surface-control-hover);
+  border-color: var(--brand-gold);
+}
+
+.cloud-account-badge > svg { height: 17px; width: 17px; }
+.cloud-account-badge > span { display: grid; line-height: 1.2; }
+.cloud-account-badge strong { font-size: 0.75rem; font-weight: 650; }
+.cloud-account-badge small { color: var(--text-muted); font-size: 0.6875rem; }
+.cloud-account-badge--guest { color: var(--brand-gold); font-size: 0.75rem; font-weight: 650; }
+
+.cloud-login-page { max-width: 980px; }
+.cloud-login-card,
+.cloud-account-details { margin-top: var(--space-6); max-width: 760px; }
+.cloud-login-card { display: grid; gap: var(--space-4); }
+.cloud-login-card > svg { color: var(--brand-gold); height: 36px; width: 36px; }
+.cloud-login-card label { color: var(--text-secondary); font-size: 0.8125rem; font-weight: 650; }
+.cloud-login-card input {
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  text-transform: uppercase;
+}
+.cloud-login-card [role='alert'] { color: var(--status-error); }
+.cloud-login-card button { justify-self: start; }
+.cloud-account-details { display: grid; gap: var(--space-5); }
+.cloud-account-details__identity { align-items: center; display: flex; gap: var(--space-3); }
+.cloud-account-details__identity > svg { color: var(--status-success); height: 30px; width: 30px; }
+.cloud-account-details__identity > div { display: grid; gap: 2px; }
+.cloud-account-details__identity span { color: var(--text-muted); font-size: 0.75rem; }
+.cloud-account-details__quota { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cloud-account-details__quota article {
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.cloud-account-details__quota progress { accent-color: var(--brand-primary); max-width: 100%; width: 100%; }
+.cloud-account-details__quota span { color: var(--text-muted); font-size: 0.75rem; }
+.cloud-login-page__continue { color: var(--brand-gold); justify-self: start; }
+.projects-page__cloud-login {
+  align-items: center;
+  background: var(--surface-control);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-button);
+  color: var(--text-primary);
+  display: inline-flex;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+.projects-page__cloud-login:hover { background: var(--surface-control-hover); border-color: var(--brand-primary); }
+
+@media (max-width: 800px) {
+  .cloud-account-details__quota { grid-template-columns: 1fr; }
+  .canvas-top-bar__actions > .cloud-account-badge { display: none; }
+}
+
 @media (max-width: 900px) {
   .membership-page__hero,
   .help-center__hero {

@@ -1,6 +1,7 @@
 export interface WorkerBindings {
   DEVICE_TOKEN_SECRET: string
-  INVITE_CODES: string
+  INVITE_CODES?: string
+  ADMIN_TOKEN?: string
   ARK_API_KEY: string
   OPENSPEECH_API_KEY: string
   DB?: D1Database
@@ -18,6 +19,8 @@ export interface WorkerBindings {
 
 export interface AppVariables {
   deviceId: string
+  ownerId?: string
+  userId?: string
 }
 
 export interface AppEnv {

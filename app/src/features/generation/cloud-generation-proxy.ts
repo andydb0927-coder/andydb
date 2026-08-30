@@ -1,4 +1,5 @@
 import { DeviceTokenManager } from '../project/cloud-storage'
+import { CLOUD_ACCOUNT_USAGE_EVENT } from '../account/cloud-account'
 
 export type CloudProxyKind = 'image' | 'video' | 'text' | 'tts'
 
@@ -67,6 +68,9 @@ export async function cloudProxyRequest(
   if (response.status === 401 && retryAuth) {
     await tokenManager.token(true)
     return cloudProxyRequest(kind, path, init, options, false)
+  }
+  if (response.ok && init.method?.toUpperCase() !== 'GET' && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CLOUD_ACCOUNT_USAGE_EVENT))
   }
   return response
 }

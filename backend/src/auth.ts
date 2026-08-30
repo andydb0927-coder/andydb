@@ -62,9 +62,9 @@ function validDeviceId(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9._:-]{8,128}$/u.test(value)
 }
 
-export function inviteCodeAllowed(value: unknown, configuredCodes: string) {
+export function inviteCodeAllowed(value: unknown, configuredCodes?: string) {
   if (typeof value !== 'string' || !value.trim()) return false
-  const allowedCodes = configuredCodes
+  const allowedCodes = (configuredCodes ?? '')
     .split(',')
     .map((code) => code.trim())
     .filter(Boolean)

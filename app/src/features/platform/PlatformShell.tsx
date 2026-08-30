@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { PlatformTaskDrawer } from './PlatformTaskDrawer'
+import { CloudAccountBadge } from '../account/CloudAccountBadge'
 
 export type PlatformShellMode = 'standard' | 'workspace'
 
@@ -123,6 +124,7 @@ export function PlatformShell({ mode = 'standard' }: { mode?: PlatformShellMode 
               <Link className="launcher-header__membership focus-visible" to="/projects/new">
                 新建画布
               </Link>
+              <CloudAccountBadge />
             </nav>
           </header>
         ) : null}

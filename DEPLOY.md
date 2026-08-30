@@ -166,15 +166,17 @@ VITE_ARK_AUDIO_MODEL_ID=seed-audio-1.0
 
 ```dotenv
 VITE_BACKEND_URL=https://canvas-api.example.workers.dev
-VITE_BACKEND_INVITE_CODE=<受控预览邀请码>
+# 可选：旧受控预览兼容；新账号由用户在 /login 输入 D1 邀请码
+VITE_BACKEND_INVITE_CODE=<legacy-preview-invite>
 VITE_GENERATION_MODE=cloud-proxy
 ```
 
 - 项目读写使用 `/api/data/projects`；本地 IndexedDB 永远先写，云端失败不会阻断保存或刷新恢复。
 - 图片、视频、文本生成分别使用 `/api/proxy/image`、`/api/proxy/video`、`/api/proxy/text`；视频轮询使用 `/api/proxy/video/:taskId`。
 - 首次云端请求调用 `/api/auth/device`，设备 token 只保存在该浏览器 `localStorage`，后续请求统一携带 `Authorization: Bearer ...`。
-- “迁移到云端”按项目串行执行，已迁移且未变化的项目会跳过；失败项目保留在本地并显示原因。
-- `VITE_BACKEND_INVITE_CODE` 适合当前简单设备准入和受控 Preview，不是秘密。正式账号体系上线后应改为用户输入/登录签发，不能把长期有效的生产邀请码嵌入公开静态包。
+- 用户先在 `/login` 输入 D1 邀请码，同一邀请码的多设备共享 `user_id` 和四类配额。
+- “迁移到云端”只在登录后按项目串行执行，幂等标记按 `user_id` 隔离；失败项目保留本地并显示原因。
+- `VITE_BACKEND_INVITE_CODE` 只是旧受控 Preview 兼容项，不是秘密；新部署不应把长期有效邀请码嵌入公开静态包。
 
 `cloud-proxy` 模式不读取浏览器中的 Ark/OpenSpeech Key。供应商密钥、模型 ID、D1/KV 绑定和设备 token 签名密钥只配置在 `backend/` 对应的 Worker Secrets/Bindings，详见 `backend/README.md`。
 

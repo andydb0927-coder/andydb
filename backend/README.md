@@ -12,7 +12,7 @@ npx wrangler d1 migrations apply wireless-canvas --local
 npm run dev
 ```
 
-`npm run dev:mock` 可直接以假密钥启动本地 Worker，用于验证路由、鉴权和中文错误映射；假密钥请求真实上游会得到安全化的鉴权错误，不会产生费用。`.dev.vars` 已被忽略，禁止提交真实密钥。
+`npm run dev:mock` 可直接以假密钥启动本地 Worker，用于验证路由、鉴权和中文错误映射；假密钥请求真实上游会得到安全化的鉴权错误，不会产生费用。`.dev.vars` 已被忽略，禁止提交真实密钥。首次使用前需先应用 `0001` 与 `0002` 两个 D1 迁移。
 
 质量门禁：
 
@@ -27,6 +27,10 @@ npm run test:run
 | --- | --- | --- | --- | --- |
 | GET | `/api/health` | 无 | Worker 存活检查 | 无 |
 | POST | `/api/auth/device` | 邀请码 | 以 `deviceId + inviteCode` 换取短期设备 token | 无 |
+| POST | `/api/account/register` | Bearer 设备 token | 邀请码注册或绑定设备，返回 `user_id` 与配额 | D1 |
+| GET | `/api/account/me` | Bearer 设备 token | 查询当前用户四类用量与剩余配额 | D1 |
+| GET/POST | `/api/admin/invites` | Bearer 管理端 token | 列出或创建邀请码及配额 | D1 |
+| PUT/DELETE | `/api/admin/invites/:code` | Bearer 管理端 token | 调整配额/状态或停用邀请码 | D1 |
 | POST | `/api/proxy/image` | Bearer 设备 token | 图片生成请求白名单与代理 | Ark Seedream `/images/generations` |
 | POST | `/api/proxy/video` | Bearer 设备 token | 视频任务创建请求白名单与代理 | Ark Seedance `/contents/generations/tasks` |
 | GET | `/api/proxy/video/:taskId` | Bearer 设备 token | 查询指定 Seedance 视频任务 | Ark Seedance `/contents/generations/tasks/:taskId` |
@@ -39,19 +43,20 @@ npm run test:run
 
 视频路由同时代理“创建任务”和按任务 ID 轮询，浏览器不会在任一步接触 Ark Key。四类代理均拒绝客户端传入上游 Key、上游 URL 或模型 ID；这些值只从 Worker Bindings 读取。
 
-## 鉴权方案
+## 账号与鉴权方案
 
 1. 客户端生成并长期保存一个非敏感 `deviceId`（8–128 位字母、数字或 `._:-`）。
-2. 首次访问向 `/api/auth/device` 提交 `deviceId` 与邀请码。
-3. Worker 用 `INVITE_CODES` 校验邀请码，再用 `DEVICE_TOKEN_SECRET` 对 `{deviceId, issuedAt, expiresAt}` 做 HMAC-SHA256 签名。
-4. 客户端后续使用 `Authorization: Bearer v1.<payload>.<signature>` 调用代理；默认 24 小时过期。
-5. 邀请码、签名密钥与供应商密钥均为 Worker Secret。响应与日志只返回安全化中文错误，不回显上游正文或密钥。
+2. 首次访问向 `/api/auth/device` 提交 `deviceId` 与 D1 邀请码，换取 HMAC-SHA256 签名的短期设备 token。`INVITE_CODES` 只是可选的旧设备准入兼容项。
+3. 客户端携带设备 token 调用 `/api/account/register`；同一邀请码首次生成一个 `user_id`，后续设备绑定到同一用户。
+4. 客户端后续使用 `Authorization: Bearer v1.<payload>.<signature>` 调用数据与代理路由；默认 24 小时过期。
+5. 账号以 `user_id` 聚合图片张数、视频秒数、文本 token 和音频字符用量。代理在发起上游前原子预留配额；上游失败回滚，文本成功按响应中真实 `total_tokens` 校准。超限时在调用上游前返回中文 403。
+6. `ADMIN_TOKEN`、签名密钥与供应商密钥均为 Worker Secret。响应与日志只返回安全化中文错误，不回显上游正文或密钥。
 
 前端首次启用云端时会生成随机 `deviceId`，以邀请码换取设备 token，并把 `deviceId/token` 保存在当前浏览器 `localStorage`。token 过期收到 401 时会重新验证一次；项目快照始终先写 IndexedDB，网络中断不会清空本地数据。
 
-这是第一阶段的轻量准入机制，不等同于正式账号体系。生产阶段应增加邀请码状态存储、token 撤销、速率限制、滥用审计和可选的账号登录。
+这是不收集手机号/邮箱的简单账号，适合受控测试；正式商用前仍应加入 token 撤销、速率限制、滥用审计与可恢复身份。
 
-数据路由中的 `user_token` 实际保存已验证设备 token 里的 `deviceId` 所有者键，不保存完整 Bearer token，也不保存邀请码。
+数据路由中的 `user_token` 是历史字段名：设备已登录时写稳定 `user_id`，旧未登录设备仍用 `deviceId` 作兼容所有者键。它不保存完整 Bearer token，也不保存邀请码。
 
 ## Worker 配置与 Secrets
 
@@ -59,10 +64,12 @@ npm run test:run
 
 ```bash
 npx wrangler secret put DEVICE_TOKEN_SECRET
-npx wrangler secret put INVITE_CODES
+npx wrangler secret put ADMIN_TOKEN
 npx wrangler secret put ARK_API_KEY
 npx wrangler secret put OPENSPEECH_API_KEY
 ```
+
+`INVITE_CODES` 只用于兼容批次1的静态预览邀请码，新环境可不配置。管理员使用 `ADMIN_TOKEN` 调用 `/api/admin/invites` 创建 D1 邀请码。
 
 其中 Seedance 必须把 `SEEDANCE_MODEL_ID` 换成当前账号已开通的模型或推理接入点 ID；OpenSpeech Key 是语音资源凭证，不能用 Ark Key 冒充。
 
@@ -108,6 +115,10 @@ npm run dev:mock
 | `projects_nodes` | `(project_id,id)` | `user_token/name/data_json/updated_at` | 预留节点级索引；权威数据仍是项目快照，避免破坏旧格式 |
 | `assets` | `id` | `user_token/project_id/name/data_json/version/updated_at` | 图片、视频、音频、文本资产元数据 |
 | `history` | `id` | `user_token/project_id/name/data_json/updated_at` | 预留生成与操作历史持久化 |
+| `account_invites` | `code` | `enabled/user_id/四类配额/updated_at` | 邀请码、账号归属与配额策略 |
+| `account_users` | `id` | `invite_code/created_at/updated_at` | 邀请码对应的稳定 `user_id` |
+| `account_devices` | `device_id` | `user_id/last_seen_at` | 多设备共享同一账号 |
+| `account_usage` | `user_id` | `image_count/video_seconds/text_tokens/audio_characters` | 可原子预留/回滚的用量账本 |
 
 `data_json` 原样保存现有 IndexedDB `Project`/资产对象，因此旧节点、连线、多画布、版本、任务和新增字段都能向后兼容。API 不拆解或重写画布内容。
 
