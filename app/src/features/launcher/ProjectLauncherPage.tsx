@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
 import {
-  ProjectRepository,
+  createDefaultProjectStorage,
+  type ProjectRepository,
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import {
@@ -57,7 +58,7 @@ interface LauncherOperation {
 }
 
 const defaultDatabase = new WirelessCanvasDatabase()
-const defaultRepository = new ProjectRepository(defaultDatabase)
+const defaultRepository = createDefaultProjectStorage(defaultDatabase)
 const defaultHomeContentRepository = new HomeContentRepository(defaultDatabase)
 const defaultCommunityRepository = new CommunityRepository(defaultDatabase)
 

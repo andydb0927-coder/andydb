@@ -2,7 +2,8 @@ import { redirect, type LoaderFunctionArgs } from 'react-router-dom'
 
 import { createProject, type Project } from '../project/model'
 import {
-  ProjectRepository,
+  createDefaultProjectStorage,
+  type ProjectRepository,
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import { buildRecipeProject } from '../project/example-project'
@@ -11,7 +12,7 @@ import { getCreatorChallenge } from '../challenges/challenge-catalog'
 
 type QuickCreateRepository = Pick<ProjectRepository, 'save'>
 
-const defaultRepository = new ProjectRepository(new WirelessCanvasDatabase())
+const defaultRepository = createDefaultProjectStorage(new WirelessCanvasDatabase())
 // Coalesce only an in-flight save, not later intentional project creation.
 // Repository scoping keeps tests and independent workspaces isolated.
 const pendingCreations = new WeakMap<QuickCreateRepository, Map<string, Promise<Response>>>()

@@ -2,7 +2,7 @@ import { Coins, Crown, LockKeyhole, ReceiptText, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import type { Project } from '../project/model'
-import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
+import { createDefaultProjectStorage, type ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
 import {
   membershipPlans,
   type MembershipSubscription,
@@ -19,7 +19,7 @@ type MembershipPageState =
   | { status: 'error'; message: string }
 
 const defaultDatabase = new WirelessCanvasDatabase()
-const defaultProjectRepository = new ProjectRepository(defaultDatabase)
+const defaultProjectRepository = createDefaultProjectStorage(defaultDatabase)
 const defaultMembershipStore = new MembershipRepository(defaultDatabase)
 
 const featureLabels = {

@@ -8,6 +8,12 @@ import {
   ProjectRepository,
   WirelessCanvasDatabase,
 } from '../project/project-repository'
+import {
+  createCloudMigrationService,
+  createHybridProjectStorage,
+  type MigrationProgress,
+  type ProjectCloudMigration,
+} from '../project/cloud-storage'
 import type { ProjectFolder, ProjectLocation } from './project-space-model'
 import { ProjectSpaceRepository } from './project-space-repository'
 
@@ -31,7 +37,9 @@ type FolderFilter = 'all' | 'unclassified' | string
 type ProjectSort = 'updated' | 'name'
 
 const defaultDatabase = new WirelessCanvasDatabase()
-const defaultProjectRepository = new ProjectRepository(defaultDatabase)
+const defaultLocalProjectRepository = new ProjectRepository(defaultDatabase)
+const defaultProjectRepository = createHybridProjectStorage(defaultLocalProjectRepository)
+const defaultCloudMigration = createCloudMigrationService(defaultLocalProjectRepository)
 const defaultProjectSpaceRepository = new ProjectSpaceRepository(defaultDatabase)
 const emptyProjects: Project[] = []
 const emptyFolders: ProjectFolder[] = []
@@ -58,11 +66,13 @@ function projectThumbnail(project: Project) {
 export interface ProjectsPageProps {
   projectRepository?: ProjectDirectoryRepository
   projectSpaceRepository?: ProjectSpaceStore
+  cloudMigration?: ProjectCloudMigration
 }
 
 export function ProjectsPage({
   projectRepository = defaultProjectRepository,
   projectSpaceRepository = defaultProjectSpaceRepository,
+  cloudMigration = defaultCloudMigration,
 }: ProjectsPageProps) {
   const [directory, setDirectory] = useState<DirectoryState>({ status: 'loading' })
   const [folderFilter, setFolderFilter] = useState<FolderFilter>('all')
@@ -72,6 +82,9 @@ export function ProjectsPage({
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [movingProjectId, setMovingProjectId] = useState<string>()
   const [actionMessage, setActionMessage] = useState('')
+  const [migrationProgress, setMigrationProgress] = useState<MigrationProgress>()
+  const [migrationMessage, setMigrationMessage] = useState('')
+  const [migrating, setMigrating] = useState(false)
   const mountedRef = useRef(false)
   const requestIdRef = useRef(0)
 
@@ -184,6 +197,31 @@ export function ProjectsPage({
     }
   }
 
+  const migrateProjects = async () => {
+    if (!cloudMigration?.enabled || migrating) return
+    setMigrating(true)
+    setMigrationMessage('')
+    setMigrationProgress(undefined)
+    try {
+      const summary = await cloudMigration.migrate((progress) => {
+        if (mountedRef.current) setMigrationProgress(progress)
+      })
+      if (!mountedRef.current) return
+      setMigrationMessage(
+        summary.failed
+          ? `迁移完成：${summary.succeeded} 个成功，${summary.skipped} 个已是最新，${summary.failed} 个失败；本地数据均已保留。${summary.failures[0]?.projectTitle ?? '项目'}：${summary.failures[0]?.message ?? '云端暂不可用'}`
+          : `迁移完成：${summary.succeeded} 个成功，${summary.skipped} 个已是最新`,
+      )
+      await loadDirectory(false)
+    } catch (error) {
+      if (mountedRef.current) {
+        setMigrationMessage(readableError(error, '迁移未完成，本地数据已保留'))
+      }
+    } finally {
+      if (mountedRef.current) setMigrating(false)
+    }
+  }
+
   return (
     <main className="platform-page projects-page">
       <header className="projects-page__header">
@@ -196,14 +234,36 @@ export function ProjectsPage({
               : '整理当前设备上的创作项目'}
           </p>
           <p className="projects-page__boundary">
-            数据保存在当前浏览器，不会自动同步到云端。
+            {cloudMigration?.enabled
+              ? '项目优先保存在当前浏览器；云端不可用时仍可继续创作。'
+              : '数据保存在当前浏览器，不会自动同步到云端。'}
           </p>
         </div>
-        <Link className="projects-page__create focus-visible" to="/projects/new">
-          <Plus aria-hidden="true" />
-          开始创作
-        </Link>
+        <div className="projects-page__header-actions">
+          {cloudMigration?.enabled ? (
+            <Button disabled={migrating || directory.status !== 'loaded'} onClick={() => void migrateProjects()}>
+              {migrating ? '正在迁移' : '迁移到云端'}
+            </Button>
+          ) : null}
+          <Link className="projects-page__create focus-visible" to="/projects/new">
+            <Plus aria-hidden="true" />
+            开始创作
+          </Link>
+        </div>
       </header>
+
+      {cloudMigration?.enabled && (migrationProgress || migrationMessage) ? (
+        <div className="projects-page__migration" role="status">
+          {migrating && migrationProgress ? (
+            <>
+              <progress value={migrationProgress.completed} max={migrationProgress.total} />
+              <span>
+                正在迁移 {migrationProgress.projectTitle}（{migrationProgress.completed}/{migrationProgress.total}）
+              </span>
+            </>
+          ) : migrationMessage}
+        </div>
+      ) : null}
 
       {directory.status === 'loading' ? (
         <div className="platform-page__state" role="status">正在读取本地项目…</div>
@@ -326,7 +386,12 @@ export function ProjectsPage({
                     </div>
                     <div className="project-directory-card__heading">
                       <div>
-                        <h2 id={titleId}>{project.title}</h2>
+                        <h2 id={titleId}>
+                          {project.title}
+                          {cloudMigration?.isMigrated(project) ? (
+                            <span className="project-directory-card__cloud-status">已迁移</span>
+                          ) : null}
+                        </h2>
                         <p>{formatUpdatedAt(project.updatedAt)}</p>
                       </div>
                       <span>{project.nodes.length} 节点 · {project.assets.length} 素材</span>

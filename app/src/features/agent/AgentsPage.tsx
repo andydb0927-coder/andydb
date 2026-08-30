@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Send, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
+import { createDefaultProjectStorage, type ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
 import { defaultProviderRegistry, groupProvidersForMenu, isProviderEnabled, type ProviderRegistry } from '../generation/model-provider-registry'
 import type { Project } from '../project/model'
 import { TimelineRepository } from '../timeline/timeline-repository'
@@ -38,7 +38,7 @@ export interface AgentsPageProps {
 }
 
 const database = new WirelessCanvasDatabase()
-const defaultRepository = new ProjectRepository(database)
+const defaultRepository = createDefaultProjectStorage(database)
 const defaultTimelineRepository = new TimelineRepository(database)
 
 const skillCategories = [

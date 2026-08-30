@@ -113,6 +113,15 @@ export function videoUpstreamRequest(value: unknown, env: WorkerBindings): Upstr
   }
 }
 
+export function videoTaskUpstreamRequest(taskId: string, env: WorkerBindings): UpstreamRequest | undefined {
+  const normalizedTaskId = taskId.trim()
+  if (!/^[A-Za-z0-9._:-]{4,128}$/u.test(normalizedTaskId)) return undefined
+  return {
+    url: `${normalizedBaseUrl(env.ARK_API_BASE, 'https://ark.cn-beijing.volces.com/api/v3')}/contents/generations/tasks/${encodeURIComponent(normalizedTaskId)}`,
+    init: { method: 'GET', headers: arkHeaders(env) },
+  }
+}
+
 export function textUpstreamRequest(value: unknown, env: WorkerBindings): UpstreamRequest | undefined {
   const input = record(value)
   const prompt = text(input?.prompt, 8_000)

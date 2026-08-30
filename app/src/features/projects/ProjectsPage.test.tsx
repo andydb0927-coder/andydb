@@ -195,4 +195,31 @@ describe('projects page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('文件夹名称已存在')
     expect(screen.getByText('月下茶席')).toBeVisible()
   })
+
+  test('migrates local projects to cloud with progress and persisted status feedback', async () => {
+    const user = userEvent.setup()
+    const repositories = createRepositories()
+    const cloudMigration = {
+      enabled: true,
+      isMigrated: vi.fn((project: Project) => project.id === 'project-old'),
+      migrate: vi.fn(async (onProgress: (progress: { completed: number; total: number; projectTitle: string }) => void) => {
+        onProgress({ completed: 1, total: 2, projectTitle: '月下茶席' })
+        onProgress({ completed: 2, total: 2, projectTitle: '海边来信' })
+        return { total: 2, succeeded: 1, failed: 0, skipped: 1, failures: [] }
+      }),
+    }
+
+    render(
+      <MemoryRouter>
+        <ProjectsPage {...repositories} cloudMigration={cloudMigration} />
+      </MemoryRouter>,
+    )
+    await screen.findByText('月下茶席')
+    expect(screen.getByText('已迁移')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '迁移到云端' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('迁移完成：1 个成功，1 个已是最新')
+    expect(cloudMigration.migrate).toHaveBeenCalledTimes(1)
+  })
 })

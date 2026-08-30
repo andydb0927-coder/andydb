@@ -18,6 +18,7 @@ import type { SubjectAsset } from '../subjects/subject-model'
 import type { StyleCard, StylePreference } from '../styles/style-model'
 import type { PipelineRun } from '../pipeline/pipeline-model'
 import type { PipelineTemplate } from '../pipeline/pipeline-template'
+import { createHybridProjectStorage } from './cloud-storage'
 
 export class WirelessCanvasDatabase extends Dexie {
   projects!: Table<Project, string>
@@ -158,4 +159,14 @@ export class ProjectRepository {
   async listAll(): Promise<Project[]> {
     return this.database.projects.orderBy('updatedAt').reverse().toArray()
   }
+
+  async delete(projectId: string): Promise<void> {
+    await this.database.projects.delete(projectId)
+  }
+}
+
+export function createDefaultProjectStorage(
+  database: WirelessCanvasDatabase = new WirelessCanvasDatabase(),
+) {
+  return createHybridProjectStorage(new ProjectRepository(database))
 }

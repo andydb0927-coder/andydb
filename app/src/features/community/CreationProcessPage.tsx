@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import type { Project } from '../project/model'
-import { ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
+import { createDefaultProjectStorage, type ProjectRepository, WirelessCanvasDatabase } from '../project/project-repository'
 import { CommunityRepository, type CommunityWorkRepository } from './community-repository'
 import type { PublishedWork } from './community-model'
 
@@ -24,7 +24,7 @@ export interface CreationProcessPageProps {
 
 const database = new WirelessCanvasDatabase()
 const defaultCommunityRepository = new CommunityRepository(database)
-const defaultProjectRepository = new ProjectRepository(database)
+const defaultProjectRepository = createDefaultProjectStorage(database)
 const defaultEnvironment: ProcessEnvironment = {
   now: () => new Date().toISOString(),
   randomId: () => crypto.randomUUID(),

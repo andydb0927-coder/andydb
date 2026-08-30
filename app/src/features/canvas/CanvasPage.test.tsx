@@ -499,9 +499,12 @@ describe('creative canvas', () => {
     await user.click(screen.getByRole('button', { name: '发布与分享' }))
     await user.click(screen.getByRole('menuitem', { name: '在LibTV上发布' }))
     const dialog = screen.getByRole('dialog', { name: '发布作品' })
-    await user.clear(within(dialog).getByRole('textbox', { name: '作品标题' }))
-    await user.type(within(dialog).getByRole('textbox', { name: '作品标题' }), '雨夜追寻 · 发布版')
-    await user.type(within(dialog).getByRole('textbox', { name: '作品简介' }), '画布发布闭环验收。')
+    fireEvent.change(within(dialog).getByRole('textbox', { name: '作品标题' }), {
+      target: { value: '雨夜追寻 · 发布版' },
+    })
+    fireEvent.change(within(dialog).getByRole('textbox', { name: '作品简介' }), {
+      target: { value: '画布发布闭环验收。' },
+    })
     await user.click(within(dialog).getByRole('button', { name: '发布到本地作品' }))
 
     await waitFor(() => expect(publish).toHaveBeenCalledOnce())

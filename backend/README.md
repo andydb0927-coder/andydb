@@ -29,6 +29,7 @@ npm run test:run
 | POST | `/api/auth/device` | 邀请码 | 以 `deviceId + inviteCode` 换取短期设备 token | 无 |
 | POST | `/api/proxy/image` | Bearer 设备 token | 图片生成请求白名单与代理 | Ark Seedream `/images/generations` |
 | POST | `/api/proxy/video` | Bearer 设备 token | 视频任务创建请求白名单与代理 | Ark Seedance `/contents/generations/tasks` |
+| GET | `/api/proxy/video/:taskId` | Bearer 设备 token | 查询指定 Seedance 视频任务 | Ark Seedance `/contents/generations/tasks/:taskId` |
 | POST | `/api/proxy/text` | Bearer 设备 token | 文本对话请求白名单与代理 | Ark 豆包 `/chat/completions` |
 | POST | `/api/proxy/tts` | Bearer 设备 token | 语音合成请求白名单与代理 | OpenSpeech `/tts/unidirectional` |
 | GET/POST | `/api/data/projects` | Bearer 设备 token | 当前设备的项目列表、创建项目 | D1 + KV |
@@ -36,7 +37,7 @@ npm run test:run
 | GET/POST | `/api/data/assets` | Bearer 设备 token | 资产元数据列表、创建资产 | D1 |
 | GET/PUT/DELETE | `/api/data/assets/:id` | Bearer 设备 token | 读取、乐观锁更新、删除资产元数据 | D1 |
 
-第一批视频路由只代理“创建任务”；任务查询会在前端正式迁移后补充，避免本批改变现有 `app/` 行为。四条路由均拒绝客户端传入上游 Key、上游 URL或模型 ID；这些值只从 Worker Bindings 读取。
+视频路由同时代理“创建任务”和按任务 ID 轮询，浏览器不会在任一步接触 Ark Key。四类代理均拒绝客户端传入上游 Key、上游 URL 或模型 ID；这些值只从 Worker Bindings 读取。
 
 ## 鉴权方案
 
@@ -45,6 +46,8 @@ npm run test:run
 3. Worker 用 `INVITE_CODES` 校验邀请码，再用 `DEVICE_TOKEN_SECRET` 对 `{deviceId, issuedAt, expiresAt}` 做 HMAC-SHA256 签名。
 4. 客户端后续使用 `Authorization: Bearer v1.<payload>.<signature>` 调用代理；默认 24 小时过期。
 5. 邀请码、签名密钥与供应商密钥均为 Worker Secret。响应与日志只返回安全化中文错误，不回显上游正文或密钥。
+
+前端首次启用云端时会生成随机 `deviceId`，以邀请码换取设备 token，并把 `deviceId/token` 保存在当前浏览器 `localStorage`。token 过期收到 401 时会重新验证一次；项目快照始终先写 IndexedDB，网络中断不会清空本地数据。
 
 这是第一阶段的轻量准入机制，不等同于正式账号体系。生产阶段应增加邀请码状态存储、token 撤销、速率限制、滥用审计和可选的账号登录。
 

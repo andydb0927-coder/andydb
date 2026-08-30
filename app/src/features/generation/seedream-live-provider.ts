@@ -14,6 +14,12 @@ import {
   standardImageAspectRatios,
   type ModelParameterManifest,
 } from './model-parameter-semantics'
+import {
+  cloudProxyBackendUrl,
+  cloudProxyConfigured,
+  cloudProxyModeEnabled,
+  cloudProxyRequest,
+} from './cloud-generation-proxy'
 
 const configurationError = 'Seedream 开发验证配置未完成'
 const defaultApiBase = 'https://ark.cn-beijing.volces.com/api/v3'
@@ -101,6 +107,8 @@ export interface SeedreamLiveProviderOptions {
   apiBase?: string
   modelId?: string
   fetchFn?: typeof fetch
+  backendUrl?: string
+  inviteCode?: string
 }
 
 interface SeedreamOutput {
@@ -211,15 +219,18 @@ export function createSeedreamLiveProvider(
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_SEEDREAM_MODEL_ID')
-  const enabled = Boolean(
-    generationModeEnabled(mode, 'seedream-direct-dev') && apiKey,
-  )
+  const cloudMode = cloudProxyModeEnabled(mode)
+  const enabled = cloudMode
+    ? cloudProxyConfigured({ mode, backendUrl: options.backendUrl })
+    : Boolean(generationModeEnabled(mode, 'seedream-direct-dev') && apiKey)
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
   const resolvedModelId = !modelId || modelId === legacySeedreamModelId
     ? seedreamLiveModelId
     : modelId
-  const createUrl = `${resolvedApiBase}/images/generations`
+  const createUrl = cloudMode
+    ? `${cloudProxyBackendUrl(options.backendUrl)}/api/proxy/image`
+    : `${resolvedApiBase}/images/generations`
 
   return {
     id: 'seedream-5-pro-api',
@@ -265,15 +276,31 @@ export function createSeedreamLiveProvider(
         : 1
       for (let index = 0; index < requestCount; index += 1) {
         context.signal.throwIfAborted()
-        const response = await fetchProviderResponse(fetchFn, 'seedream', createUrl, {
+        const requestInit: RequestInit = {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
+          headers: cloudMode
+            ? { 'Content-Type': 'application/json' }
+            : {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+          body: JSON.stringify(cloudMode
+            ? {
+                prompt,
+                size: body.size,
+                referenceImages: references.filter((value) => value.startsWith('https://')),
+              }
+            : body),
           signal: context.signal,
-        })
+        }
+        const response = cloudMode
+          ? await cloudProxyRequest('image', '/api/proxy/image', requestInit, {
+              mode,
+              backendUrl: options.backendUrl,
+              inviteCode: options.inviteCode,
+              fetchFn,
+            })
+          : await fetchProviderResponse(fetchFn, 'seedream', createUrl, requestInit)
         await assertProviderResponse(response, 'seedream')
         const responseBody = await readProviderJson(response, 'Seedream 响应格式异常') as SeedreamResponse
         if (Array.isArray(responseBody.data)) outputs.push(...responseBody.data)

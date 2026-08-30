@@ -120,7 +120,8 @@ import {
   validateDependencyConnection,
 } from '../project/dependency-policy'
 import {
-  ProjectRepository,
+  createDefaultProjectStorage,
+  type ProjectRepository,
   WirelessCanvasDatabase,
 } from '../project/project-repository'
 import { useProjectStore } from '../project/project-store'
@@ -326,7 +327,7 @@ type PendingRemoteGeneration =
     }
 
 const defaultDatabase = new WirelessCanvasDatabase()
-const defaultRepository = new ProjectRepository(defaultDatabase)
+const defaultRepository = createDefaultProjectStorage(defaultDatabase)
 const defaultLibraryRepository = new AssetLibraryRepository(defaultDatabase)
 const defaultCollaborationRepository = new CollaborationRepository(defaultDatabase)
 const defaultCommunityRepository = new CommunityRepository(defaultDatabase)

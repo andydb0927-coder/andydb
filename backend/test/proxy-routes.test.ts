@@ -263,3 +263,27 @@ describe.each(proxyCases)('$name代理', ({
     })
   })
 })
+
+describe('视频任务轮询代理', () => {
+  it('用设备 token 查询白名单 Seedance 任务端点', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ id: 'task-fixture-0001', status: 'succeeded' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    const token = await deviceToken({ fetchFn })
+    const response = await createApp({ fetchFn }).request(
+      '/api/proxy/video/task-fixture-0001',
+      { headers: { Authorization: `Bearer ${token}` } },
+      env,
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://fixture.ark.invalid/api/v3/contents/generations/tasks/task-fixture-0001',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({ Authorization: `Bearer ${env.ARK_API_KEY}` }),
+      }),
+    )
+  })
+})

@@ -4,12 +4,12 @@
 
 当前版本是可直接静态托管的 Vite 单页应用。部署产物为 `app/dist`，可发布到 Vercel、Netlify 或任何支持 SPA 路由回退的静态托管服务。
 
-公开静态部署仍保持 Mock 默认模式；本地开发环境可显式开启火山方舟 Seedream、Seedance 与豆包的短期真实 API 验证：
+公开静态部署默认保持 Mock 模式；配置 Cloudflare Worker 后可显式开启云存储与服务端生成代理。本地开发环境仍可单独开启火山方舟 Seedream、Seedance 与豆包的短期直连验证：
 
 - 未配置开发验证模式时，真实模型禁用并显示配置未完成，模型菜单不再提供演示模型；
 - `seedream-direct-dev` 仅供本机短期验证，不能用于公开静态部署；
-- 不新增后端、数据库、对象存储或远端任务队列；
-- 项目数据保存在当前浏览器的本地存储中，不提供跨浏览器、跨设备同步；
+- 未配置 `VITE_BACKEND_URL` 时项目只保存在当前浏览器；配置后仍先写 IndexedDB，再与云端 D1/KV 合并同步；
+- 云端不可用会自动回退本地，项目页可用“迁移到云端”逐项目重试，不删除失败项目；
 - 本地开发专用的 LibTV bridge 依赖 Vite 开发服务器，静态部署不提供该 bridge，线上预览保持 mock 构建、真实生成禁用。
 
 ## 2. 构建契约
@@ -125,13 +125,17 @@ npx serve dist -l 4173
 
 ### 当前静态演示部署
 
-当前版本无需环境变量即可构建和运行。以下变量是后续接入时的命名预留，不代表现有代码已经读取它们：
+当前版本无需环境变量即可构建和运行。以下变量用于静态演示和可选的 Worker 接入：
 
 ```dotenv
 VITE_APP_ENV=preview
 VITE_PUBLIC_SITE_URL=https://canvas-preview.example.com
 VITE_GENERATION_MODE=mock
 VITE_GENERATION_API_BASE=/api
+# 可选；未配置时保持纯本地 IndexedDB
+VITE_BACKEND_URL=https://canvas-api.example.workers.dev
+# 仅限受控预览邀请码；VITE_ 变量会进入公开前端产物，不能当生产秘密
+VITE_BACKEND_INVITE_CODE=preview-invite
 ```
 
 只有可以公开给浏览器的配置才能使用 `VITE_` 前缀。Vite 会在构建时把这些值写入浏览器可下载的 JavaScript，不能把长期有效的生产密钥放入任何 `VITE_*` 变量。
@@ -156,7 +160,25 @@ VITE_ARK_AUDIO_MODEL_ID=seed-audio-1.0
 
 这些变量只允许使用低额度、可随时撤销的开发凭证；不得提交到 Git，不得配置到公开 Preview/Production 静态站点。验证完成后应立即撤销或轮换。
 
-### 生产服务端代理预留
+### Cloudflare Worker 云存储与生产代理
+
+前端通过以下配置启用 Worker：
+
+```dotenv
+VITE_BACKEND_URL=https://canvas-api.example.workers.dev
+VITE_BACKEND_INVITE_CODE=<受控预览邀请码>
+VITE_GENERATION_MODE=cloud-proxy
+```
+
+- 项目读写使用 `/api/data/projects`；本地 IndexedDB 永远先写，云端失败不会阻断保存或刷新恢复。
+- 图片、视频、文本生成分别使用 `/api/proxy/image`、`/api/proxy/video`、`/api/proxy/text`；视频轮询使用 `/api/proxy/video/:taskId`。
+- 首次云端请求调用 `/api/auth/device`，设备 token 只保存在该浏览器 `localStorage`，后续请求统一携带 `Authorization: Bearer ...`。
+- “迁移到云端”按项目串行执行，已迁移且未变化的项目会跳过；失败项目保留在本地并显示原因。
+- `VITE_BACKEND_INVITE_CODE` 适合当前简单设备准入和受控 Preview，不是秘密。正式账号体系上线后应改为用户输入/登录签发，不能把长期有效的生产邀请码嵌入公开静态包。
+
+`cloud-proxy` 模式不读取浏览器中的 Ark/OpenSpeech Key。供应商密钥、模型 ID、D1/KV 绑定和设备 token 签名密钥只配置在 `backend/` 对应的 Worker Secrets/Bindings，详见 `backend/README.md`。
+
+### 生产服务端 Secrets
 
 生产环境必须由同源服务端代理或 Serverless Function 保管密钥；这些变量不带 `VITE_` 前缀，也不得返回给浏览器：
 

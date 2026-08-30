@@ -9,6 +9,12 @@ import {
   resolveModelParameterManifest,
   type ModelParameterManifest,
 } from './model-parameter-semantics'
+import {
+  cloudProxyBackendUrl,
+  cloudProxyConfigured,
+  cloudProxyModeEnabled,
+  cloudProxyRequest,
+} from './cloud-generation-proxy'
 
 const missingConfiguration = '火山方舟文本开发验证配置未完成'
 const disabledMode = '火山方舟文本开发验证未启用'
@@ -46,6 +52,8 @@ export interface ArkTextLlmProviderOptions {
   apiBase?: string
   modelId?: string
   fetchFn?: typeof fetch
+  backendUrl?: string
+  inviteCode?: string
 }
 
 interface ArkUsage {
@@ -269,11 +277,18 @@ export function createArkTextLlmProvider(
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_ARK_TEXT_MODEL_ID')
-  const modeEnabled = generationModeEnabled(mode)
-  const enabled = modeEnabled && Boolean(apiKey)
-  const disabledReason = modeEnabled ? missingConfiguration : disabledMode
+  const cloudMode = cloudProxyModeEnabled(mode)
+  const modeEnabled = generationModeEnabled(mode) || cloudMode
+  const enabled = cloudMode
+    ? cloudProxyConfigured({ mode, backendUrl: options.backendUrl })
+    : modeEnabled && Boolean(apiKey)
+  const disabledReason = cloudMode
+    ? '文本云代理配置未完成'
+    : modeEnabled ? missingConfiguration : disabledMode
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
-  const createUrl = `${normalizedBaseUrl(apiBase || defaultApiBase)}/chat/completions`
+  const createUrl = cloudMode
+    ? `${cloudProxyBackendUrl(options.backendUrl)}/api/proxy/text`
+    : `${normalizedBaseUrl(apiBase || defaultApiBase)}/chat/completions`
   const resolvedModelId = modelId || defaultModelId
 
   return {
@@ -303,17 +318,34 @@ export function createArkTextLlmProvider(
       if (!request.prompt.trim()) throw new Error('豆包文本生成需要提示词')
       const body = requestBody(request, resolvedModelId, buildMessages?.(request))
       context.onProgress?.(10)
-      const response = await fetchProviderResponse(fetchFn, 'ark-text', createUrl, {
+      const requestInit: RequestInit = {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        headers: cloudMode
+          ? { 'Content-Type': 'application/json' }
+          : {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+        body: JSON.stringify(cloudMode
+          ? {
+              prompt: request.prompt,
+              ...(request.systemPromptPrefix ? { system: request.systemPromptPrefix } : {}),
+              maxTokens: body.max_tokens,
+              temperature: body.temperature,
+            }
+          : body),
         signal: context.signal,
-      })
+      }
+      const response = cloudMode
+        ? await cloudProxyRequest('text', '/api/proxy/text', requestInit, {
+            mode,
+            backendUrl: options.backendUrl,
+            inviteCode: options.inviteCode,
+            fetchFn,
+          })
+        : await fetchProviderResponse(fetchFn, 'ark-text', createUrl, requestInit)
       await assertProviderResponse(response, 'ark-text')
-      const parsed = body.stream
+      const parsed = !cloudMode && body.stream
         ? await readSseResult(response)
         : await readJsonResult(response)
       context.onProgress?.(90)

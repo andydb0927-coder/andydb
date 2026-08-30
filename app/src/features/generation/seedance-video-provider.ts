@@ -14,6 +14,12 @@ import {
   resolveModelParameterManifest,
   type ModelParameterManifest,
 } from './model-parameter-semantics'
+import {
+  cloudProxyBackendUrl,
+  cloudProxyConfigured,
+  cloudProxyModeEnabled,
+  cloudProxyRequest,
+} from './cloud-generation-proxy'
 
 const configurationError = '火山方舟 Seedance 开发验证配置未完成'
 const modelAccessError = '火山方舟 Seedance 2.0 待开通：请配置账号可调用的模型或推理接入点 ID'
@@ -60,6 +66,8 @@ export interface SeedanceVideoProviderOptions {
   fetchFn?: typeof fetch
   pollIntervalMs?: number
   maxPollAttempts?: number
+  backendUrl?: string
+  inviteCode?: string
 }
 
 interface SeedanceCreateResponse {
@@ -262,18 +270,25 @@ export function createSeedanceVideoProvider(
   const apiKey = options.apiKey ?? envValue('VITE_SEEDREAM_API_KEY')
   const apiBase = options.apiBase ?? envValue('VITE_SEEDREAM_API_BASE')
   const modelId = options.modelId ?? envValue('VITE_ARK_VIDEO_MODEL_ID')
+  const cloudMode = cloudProxyModeEnabled(mode)
   const directModeEnabled = generationModeEnabled(mode, 'seedream-direct-dev')
-  const disabledReason = !directModeEnabled || !apiKey
-    ? configurationError
-    : !modelId
-      ? modelAccessError
-      : undefined
+  const disabledReason = cloudMode
+    ? cloudProxyConfigured({ mode, backendUrl: options.backendUrl })
+      ? undefined
+      : '视频云代理配置未完成'
+    : !directModeEnabled || !apiKey
+      ? configurationError
+      : !modelId
+        ? modelAccessError
+        : undefined
   const enabled = disabledReason === undefined
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const pollIntervalMs = options.pollIntervalMs ?? 2_000
   const maxPollAttempts = options.maxPollAttempts ?? 150
   const resolvedApiBase = normalizedBaseUrl(apiBase || defaultApiBase)
-  const createUrl = `${resolvedApiBase}/contents/generations/tasks`
+  const createUrl = cloudMode
+    ? `${cloudProxyBackendUrl(options.backendUrl)}/api/proxy/video`
+    : `${resolvedApiBase}/contents/generations/tasks`
 
   return {
     id: providerId,
@@ -309,23 +324,44 @@ export function createSeedanceVideoProvider(
           request.parameters?.generationMode,
         ),
       ]
-      const response = await fetchProviderResponse(fetchFn, 'seedance', createUrl, {
+      const requestInit: RequestInit = {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelId,
-          content,
-          duration: durationSetting(request.parameters?.duration),
-          ratio: aspectRatioSetting(request.parameters?.aspectRatio),
-          resolution,
-          generate_audio: booleanSetting(request.parameters?.sound, true),
-          watermark: booleanSetting(request.parameters?.watermark, false),
-        }),
+        headers: cloudMode
+          ? { 'Content-Type': 'application/json' }
+          : {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+        body: JSON.stringify(cloudMode
+          ? {
+              prompt,
+              duration: durationSetting(request.parameters?.duration),
+              aspectRatio: aspectRatioSetting(request.parameters?.aspectRatio),
+              resolution,
+              sound: booleanSetting(request.parameters?.sound, true),
+              referenceImages: request.referenceAssets
+                .filter(({ kind, url }) => kind === 'image' && url.startsWith('https://'))
+                .map(({ url }) => url),
+            }
+          : {
+              model: modelId,
+              content,
+              duration: durationSetting(request.parameters?.duration),
+              ratio: aspectRatioSetting(request.parameters?.aspectRatio),
+              resolution,
+              generate_audio: booleanSetting(request.parameters?.sound, true),
+              watermark: booleanSetting(request.parameters?.watermark, false),
+            }),
         signal: context.signal,
-      })
+      }
+      const response = cloudMode
+        ? await cloudProxyRequest('video', '/api/proxy/video', requestInit, {
+            mode,
+            backendUrl: options.backendUrl,
+            inviteCode: options.inviteCode,
+            fetchFn,
+          })
+        : await fetchProviderResponse(fetchFn, 'seedance', createUrl, requestInit)
       if (response.status === 404) {
         throw new Error('火山方舟 Seedance 模型未开通或模型/接入点不可用（404）')
       }
@@ -337,14 +373,25 @@ export function createSeedanceVideoProvider(
       }
       context.onProgress?.(10)
 
-      const statusUrl = `${createUrl}/${encodeURIComponent(taskId)}`
+      const statusPath = `/api/proxy/video/${encodeURIComponent(taskId)}`
+      const statusUrl = cloudMode
+        ? `${cloudProxyBackendUrl(options.backendUrl)}${statusPath}`
+        : `${createUrl}/${encodeURIComponent(taskId)}`
       for (let attempt = 0; attempt < maxPollAttempts; attempt += 1) {
         await waitForPoll(pollIntervalMs, context.signal)
-        const statusResponse = await fetchProviderResponse(fetchFn, 'seedance', statusUrl, {
+        const statusInit: RequestInit = {
           method: 'GET',
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: cloudMode ? {} : { Authorization: `Bearer ${apiKey}` },
           signal: context.signal,
-        })
+        }
+        const statusResponse = cloudMode
+          ? await cloudProxyRequest('video', statusPath, statusInit, {
+              mode,
+              backendUrl: options.backendUrl,
+              inviteCode: options.inviteCode,
+              fetchFn,
+            })
+          : await fetchProviderResponse(fetchFn, 'seedance', statusUrl, statusInit)
         await assertProviderResponse(statusResponse, 'seedance')
         const task = await readProviderJson(statusResponse, '火山方舟 Seedance 响应格式异常') as SeedanceTaskResponse
         const status = normalizeTaskStatus(task.status, { pending: 'queued', expired: 'failed' })

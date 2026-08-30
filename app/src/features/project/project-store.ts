@@ -23,7 +23,7 @@ import {
   validateDependencyConnection,
   validateImageReferenceConnection,
 } from './dependency-policy'
-import { ProjectRepository } from './project-repository'
+import { createDefaultProjectStorage, type ProjectRepository } from './project-repository'
 import {
   generationResultAssets,
   type GenerationResult,
@@ -149,7 +149,7 @@ interface ProjectStore {
   ) => Promise<boolean>
 }
 
-const defaultRepository = new ProjectRepository()
+const defaultRepository = createDefaultProjectStorage()
 
 function withUpdatedTimestamp(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() }

@@ -6,6 +6,7 @@ import {
   imageUpstreamRequest,
   textUpstreamRequest,
   ttsUpstreamRequest,
+  videoTaskUpstreamRequest,
   videoUpstreamRequest,
   type UpstreamRequest,
 } from './proxy-contracts'
@@ -98,6 +99,20 @@ export function createApp(options: AppOptions = {}) {
   registerProxy('/api/proxy/video', 'video', videoUpstreamRequest)
   registerProxy('/api/proxy/text', 'text', textUpstreamRequest)
   registerProxy('/api/proxy/tts', 'tts', ttsUpstreamRequest)
+
+  app.get('/api/proxy/video/:taskId', async (context) => {
+    if (!requiredConfiguration('video', context.env)) {
+      return errorResponse(503, 'PROVIDER_NOT_CONFIGURED', '上游服务配置未完成。')
+    }
+    const upstream = videoTaskUpstreamRequest(context.req.param('taskId'), context.env)
+    if (!upstream) {
+      return errorResponse(400, 'INVALID_REQUEST', '视频任务 ID 不合法。')
+    }
+    return forwardUpstream(upstream, context.env, {
+      fetchFn,
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+    })
+  })
 
   registerDataRoutes(app, {
     now,
