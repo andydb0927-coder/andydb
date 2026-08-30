@@ -174,7 +174,6 @@ import {
   type WorkspacePanel,
 } from './CanvasWorkspace'
 import { CanvasGroupOverlay } from './CanvasGroupOverlay'
-import { PersistentConnectionDraft } from './PersistentConnectionDraft'
 import { StoryboardGroupDialog } from './StoryboardGroupDialog'
 import { createWorkflowBatchPlan } from './workflow-batch'
 import type {
@@ -462,13 +461,6 @@ export function CanvasPage({
   const deleteCanvas = useProjectStore((state) => state.deleteCanvas)
   const updateCanvasViewport = useProjectStore((state) => state.updateCanvasViewport)
   const connectNodes = useProjectStore((state) => state.connectNodes)
-  const addConnectionDraft = useProjectStore((state) => state.addConnectionDraft)
-  const removeConnectionDraft = useProjectStore(
-    (state) => state.removeConnectionDraft,
-  )
-  const connectConnectionDraft = useProjectStore(
-    (state) => state.connectConnectionDraft,
-  )
   const connectImageReference = useProjectStore(
     (state) => state.connectImageReference,
   )
@@ -549,8 +541,6 @@ export function CanvasPage({
   const [connectionTool, setConnectionTool] = useState<ConnectionToolState>({
     phase: 'idle',
   })
-  const [activeConnectionDraftId, setActiveConnectionDraftId] =
-    useState<string>()
   const [connectionFeedback, setConnectionFeedback] = useState<string>()
   const [imageReferenceTargetId, setImageReferenceTargetId] = useState<string>()
   const [connectionsVisible, setConnectionsVisible] = useState(true)
@@ -661,7 +651,6 @@ export function CanvasPage({
       setSelectedEdgeIds(new Set())
       setNodeMeasurements({ measurements: {} })
       setConnectionTool({ phase: 'idle' })
-      setActiveConnectionDraftId(undefined)
     }
     if (typeof flowInstance.setViewport === 'function') {
       void flowInstance.setViewport(activeCanvas.viewport, { duration: 0 })
@@ -1427,18 +1416,14 @@ export function CanvasPage({
     [handleAction, requestDelete],
   )
 
-  const cancelConnection = useCallback((restoreFocus = true, removeDraft = true) => {
+  const cancelConnection = useCallback((restoreFocus = true) => {
     const trigger = connectionTriggerRef.current
-    if (removeDraft && activeConnectionDraftId) {
-      removeConnectionDraft(activeConnectionDraftId)
-    }
     setConnectionTool(cancelConnectionTool())
-    setActiveConnectionDraftId(undefined)
     setConnectionFeedback(undefined)
     setActiveTool('select')
     connectionTriggerRef.current = null
     if (restoreFocus) queueMicrotask(() => trigger?.focus())
-  }, [activeConnectionDraftId, removeConnectionDraft])
+  }, [])
 
   const endImageReferenceSelection = useCallback(
     (returnToNode: boolean) => {
@@ -1462,7 +1447,7 @@ export function CanvasPage({
 
   const startImageReferenceSelection = useCallback(
     (targetNodeId: string, trigger: HTMLButtonElement) => {
-      if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       imageReferenceTriggerRef.current = trigger
       setSelectedEdgeIds(new Set())
       setConnectionFeedback(undefined)
@@ -1488,27 +1473,16 @@ export function CanvasPage({
       targetNodeId: string,
       origin: 'drag' | 'tool',
     ) => {
-      const draft = activeConnectionDraftId
-        ? useProjectStore
-            .getState()
-            .activeProject?.connectionDrafts?.find(
-              ({ id }) => id === activeConnectionDraftId,
-            )
-        : undefined
-      const result =
-        draft?.sourceNodeId === sourceNodeId
-          ? connectConnectionDraft(draft.id, targetNodeId)
-          : connectNodes({
-              id: crypto.randomUUID(),
-              sourceNodeId,
-              targetNodeId,
-            })
+      const result = connectNodes({
+        id: crypto.randomUUID(),
+        sourceNodeId,
+        targetNodeId,
+      })
       if (!result.ok) {
         setConnectionFeedback(connectionFailureMessage(result.reason))
         return false
       }
       setConnectionFeedback(undefined)
-      setActiveConnectionDraftId(undefined)
       if (origin === 'tool') {
         setConnectionTool(cancelConnectionTool())
         setActiveTool('select')
@@ -1516,7 +1490,7 @@ export function CanvasPage({
       }
       return true
     },
-    [activeConnectionDraftId, connectConnectionDraft, connectNodes],
+    [connectNodes],
   )
 
   const handleNodeSelection = useCallback(
@@ -2752,82 +2726,6 @@ export function CanvasPage({
     })
   }, [dragPreview, measuredFlowNodes, project])
 
-  const persistentConnectionDrafts = useMemo(
-    () =>
-      (project?.connectionDrafts ?? []).flatMap((draft) => {
-        const source = flowNodes.find(({ id }) => id === draft.sourceNodeId)
-        if (!source) return []
-        const width = source.measured?.width ?? 280
-        const height = source.measured?.height ?? 180
-        return [
-          {
-            draft,
-            sourceTitle: source.data.node.title,
-            sourcePosition: {
-              x: source.position.x + width,
-              y: source.position.y + height / 2,
-            },
-          },
-        ]
-      }),
-    [flowNodes, project?.connectionDrafts],
-  )
-
-  const activateConnectionDraft = useCallback(
-    (draftId: string, trigger: HTMLButtonElement) => {
-      const currentProject = useProjectStore.getState().activeProject
-      const draft = currentProject?.connectionDrafts?.find(
-        ({ id }) => id === draftId,
-      )
-      if (!draft) return
-      connectionTriggerRef.current = trigger
-      setActiveConnectionDraftId(draft.id)
-      setConnectionTool({
-        phase: 'selecting-target',
-        sourceNodeId: draft.sourceNodeId,
-      })
-      setConnectionFeedback(
-        '连接线已保留，请选择任意目标节点；按 Esc 可取消。',
-      )
-      setActiveTool('connect')
-    },
-    [],
-  )
-
-  const deleteConnectionDraft = useCallback(
-    (draftId: string) => {
-      const currentProject = useProjectStore.getState().activeProject
-      const draft = currentProject?.connectionDrafts?.find(
-        ({ id }) => id === draftId,
-      )
-      if (!draft || !removeConnectionDraft(draftId)) return
-      if (activeConnectionDraftId === draftId) {
-        setActiveConnectionDraftId(undefined)
-        setConnectionTool(cancelConnectionTool())
-        setConnectionFeedback(undefined)
-        setActiveTool('select')
-      }
-      queueMicrotask(() => {
-        findCanvasNodeControl(
-          viewportRef.current,
-          draft.sourceNodeId,
-        )?.focus()
-      })
-    },
-    [activeConnectionDraftId, removeConnectionDraft],
-  )
-
-  useEffect(() => {
-    if (
-      !activeConnectionDraftId ||
-      project?.connectionDrafts?.some(({ id }) => id === activeConnectionDraftId)
-    ) return
-    setActiveConnectionDraftId(undefined)
-    setConnectionTool(cancelConnectionTool())
-    setConnectionFeedback(undefined)
-    setActiveTool('select')
-  }, [activeConnectionDraftId, project?.connectionDrafts])
-
   const canvasGroupOverlays = useMemo(
     () =>
       (project?.groups ?? []).flatMap((group) => {
@@ -2934,7 +2832,7 @@ export function CanvasPage({
       })
       if (edgeInsertions.length === 0) return
       const triggerBounds = trigger.getBoundingClientRect()
-      if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       setContextMenu(undefined)
       setNodeTypePicker({
         projectId: currentProject.id,
@@ -3223,27 +3121,25 @@ export function CanvasPage({
         const clientX = pointer.clientX ?? touch?.clientX
         const clientY = pointer.clientY ?? touch?.clientY
         if (clientX === undefined || clientY === undefined) return
-        const draftId = crypto.randomUUID()
-        const position = flowInstance.screenToFlowPosition({ x: clientX, y: clientY })
-        if (!addConnectionDraft({
-          id: draftId,
-          sourceNodeId: state.fromNode.id,
-          position,
-        })) return
-        const sourceControl = findCanvasNodeControl(
-          viewportRef.current,
-          state.fromNode.id,
-        )
-        connectionTriggerRef.current = sourceControl ?? viewportRef.current
-        setActiveConnectionDraftId(draftId)
-        setConnectionTool({
-          phase: 'selecting-target',
+        const viewport = viewportRef.current
+        const rect = viewport?.getBoundingClientRect()
+        const hasBounds = Boolean(rect && rect.width > 0 && rect.height > 0)
+        setNodeTypePicker({
+          projectId: project.id,
+          position: flowInstance.screenToFlowPosition({ x: clientX, y: clientY }),
+          anchor: {
+            x: clientX - (hasBounds ? rect!.left : 0),
+            y: clientY - (hasBounds ? rect!.top : 0),
+          },
+          bounds: hasBounds
+            ? { width: rect!.width, height: rect!.height }
+            : { width: window.innerWidth, height: Math.max(0, window.innerHeight - 56) },
+          returnFocusTo:
+            findCanvasNodeControl(viewport, state.fromNode.id) ?? viewport ?? undefined,
+          mode: 'reference',
           sourceNodeId: state.fromNode.id,
         })
-        setConnectionFeedback(
-          '连接线已保留，请选择任意目标节点；按 Esc 可取消。',
-        )
-        setActiveTool('connect')
+        setActiveTool('select')
         return
       }
       const startsFromTarget = state.fromHandle?.type === 'target'
@@ -3253,12 +3149,12 @@ export function CanvasPage({
         'drag',
       )
     },
-    [addConnectionDraft, attemptConnection, flowInstance, project],
+    [attemptConnection, flowInstance, project],
   )
 
   const handleConnectStart = useCallback(() => {
     nativeConnectionActiveRef.current = true
-    if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+    if (connectionTool.phase !== 'idle') cancelConnection(false)
   }, [cancelConnection, connectionTool.phase])
 
   const canvasPoint = useCallback(
@@ -3323,7 +3219,7 @@ export function CanvasPage({
         editingCard ||
         imageReferenceTargetId
       ) return
-      if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       setContextMenu(undefined)
       setNodeTypePicker({
         projectId: project.id,
@@ -3375,7 +3271,7 @@ export function CanvasPage({
       ) return
       const point = canvasPoint(clientX, clientY)
       if (!point) return
-      if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       if (targetNodeId) {
         setSelectedEdgeIds(new Set())
         selectOnlyNode(targetNodeId)
@@ -3938,7 +3834,7 @@ export function CanvasPage({
       if (tool === 'connect') {
         if (pendingPlacement || imageReferenceTargetId) return
         if (connectionTool.phase !== 'idle') {
-          cancelConnection(false, false)
+          cancelConnection(false)
           return
         }
         placementTriggerRef.current = null
@@ -3949,7 +3845,7 @@ export function CanvasPage({
         return
       }
 
-      if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+      if (connectionTool.phase !== 'idle') cancelConnection(false)
       if (tool === 'hand') {
         if (editingCard) cancelCardEditing()
         else if (pendingPlacement) cancelPlacement()
@@ -4259,14 +4155,14 @@ export function CanvasPage({
 
       if (key === 'h' && !event.shiftKey) {
         event.preventDefault()
-        if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+        if (connectionTool.phase !== 'idle') cancelConnection(false)
         setActiveTool('hand')
         setGroupFeedback('已切换抓手工具')
         return
       }
       if (key === 'v' && !event.shiftKey) {
         event.preventDefault()
-        if (connectionTool.phase !== 'idle') cancelConnection(false, false)
+        if (connectionTool.phase !== 'idle') cancelConnection(false)
         setActiveTool('select')
         setGroupFeedback('已切换移动工具')
         return
@@ -4401,7 +4297,6 @@ export function CanvasPage({
         closeContextMenu(false)
       }
       if (connectionTool.phase !== 'idle') {
-        if (activeConnectionDraftId) return
         cancelConnection()
         return
       }
@@ -4442,7 +4337,6 @@ export function CanvasPage({
     },
     [
       cancelConnection,
-      activeConnectionDraftId,
       canvasPoint,
       closeContextMenu,
       connectionTool.phase,
@@ -5745,21 +5639,6 @@ export function CanvasPage({
           <Controls showInteractive={false} position="top-right" />
           {minimapVisible ? <MiniMap aria-label="画布小地图" pannable zoomable /> : null}
           <ViewportPortal>
-            {connectionsVisible
-              ? persistentConnectionDrafts.map(
-                  ({ draft, sourceTitle, sourcePosition }) => (
-                    <PersistentConnectionDraft
-                      key={draft.id}
-                      draft={draft}
-                      sourceTitle={sourceTitle}
-                      sourcePosition={sourcePosition}
-                      active={activeConnectionDraftId === draft.id}
-                      onActivate={activateConnectionDraft}
-                      onDelete={deleteConnectionDraft}
-                    />
-                  ),
-                )
-              : null}
             {selectionGroupOverlay ? (
               <CanvasGroupOverlay
                 key={selectionGroupOverlay.group.nodeIds.join(':')}

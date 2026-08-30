@@ -2594,7 +2594,7 @@ describe('creative canvas', () => {
     expect(useProjectStore.getState().past).toHaveLength(1)
   })
 
-  test('keeps a dropped source connection visible until it connects to any node', async () => {
+  test('opens the recorded downstream picker when a source connection ends on blank canvas', async () => {
     const user = userEvent.setup()
     renderCanvas()
     initializeFlow({ x: 860, y: 420 })
@@ -2605,38 +2605,29 @@ describe('creative canvas', () => {
         { clientX: 640, clientY: 360 },
         {
           isValid: false,
-          fromNode: { id: 'character' },
+          fromNode: { id: 'video' },
           fromHandle: { type: 'source' },
         },
       )
     })
 
-    expect(screen.queryByRole('menu', { name: '引用该节点生成' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '连接线已保留，请选择任意目标节点',
+    const picker = screen.getByRole('menu', { name: '引用该节点生成' })
+    expect(picker).toHaveTextContent('视频片段')
+    await user.click(within(picker).getByRole('menuitem', { name: '图片' }))
+
+    const currentProject = useProjectStore.getState().activeProject
+    const created = currentProject?.nodes.find(
+      ({ title, position }) => title.startsWith('图片') && position.x === 860 && position.y === 420,
     )
-    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([
-      expect.objectContaining({
-        sourceNodeId: 'character',
-        position: { x: 860, y: 420 },
-      }),
-    ])
+    expect(created).toBeDefined()
+    expect(currentProject?.edges).toContainEqual(
+      expect.objectContaining({ sourceNodeId: 'video', targetNodeId: created?.id }),
+    )
     expect(useProjectStore.getState().past).toHaveLength(1)
 
-    await user.click(screen.getByRole('button', { name: '成片预览' }))
-    expect(useProjectStore.getState().activeProject?.connectionDrafts).toEqual([])
-    expect(useProjectStore.getState().activeProject?.edges).toContainEqual(
-      expect.objectContaining({
-        sourceNodeId: 'character',
-        targetNodeId: 'preview',
-      }),
-    )
-
     act(() => useProjectStore.getState().undo())
-    expect(useProjectStore.getState().activeProject?.connectionDrafts).toHaveLength(1)
-    expect(useProjectStore.getState().activeProject?.edges).not.toContainEqual(
-      expect.objectContaining({ sourceNodeId: 'character', targetNodeId: 'preview' }),
+    expect(useProjectStore.getState().activeProject?.nodes).not.toContainEqual(
+      expect.objectContaining({ id: created?.id }),
     )
   })
 

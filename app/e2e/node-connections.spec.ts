@@ -890,14 +890,11 @@ test('exposes real handles as named buttons and connects them by keyboard', asyn
   await expect(page.getByRole('status').filter({ hasText: '请选择目标节点' })).toHaveCount(0)
 })
 
-test('keeps a blank-dropped connection across reload and connects it to any node', async ({
+test('opens the LibLib downstream menu and creates a connected node at the drop point', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1024 })
   await createCinematicProject(page)
-  await openAddNodeAtBlank(page, '文本')
-  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toBeVisible()
-
   const sourceHandle = page.getByRole('button', {
     name: '从角色参考建立连接',
   })
@@ -913,19 +910,19 @@ test('keeps a blank-dropped connection across reload and connects it to any node
   await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 14 })
   await page.mouse.up()
 
-  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
-  await expect(page.getByRole('status')).toContainText('连接线已保留')
-  await clickBlankCanvas(page)
-  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
+  const picker = page.getByRole('menu', { name: '引用该节点生成' })
+  await expect(picker).toBeVisible()
+  await expect(picker.getByRole('menuitem', { name: '参考节点' })).toBeDisabled()
+  await picker.getByRole('menuitem', { name: '文本', exact: true }).click()
+
+  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toBeVisible()
+  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(1)
+  await expect(picker).toHaveCount(0)
   await expect(page.getByText('已保存', { exact: true })).toBeVisible()
 
-  await page.reload()
-  await expect(page.getByRole('region', { name: '项目画布' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toBeVisible()
-  await page.getByRole('button', { name: '继续连接：角色参考' }).click()
-  await page.getByRole('button', { name: '文本 01', exact: true }).click()
-  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(1)
-  await expect(page.getByRole('button', { name: '继续连接：角色参考' })).toHaveCount(0)
+  await page.keyboard.press('Meta+z')
+  await expect(page.getByRole('button', { name: '文本 01', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('角色参考 → 文本 01', { exact: true })).toHaveCount(0)
 })
 
 test('inserts a contextual media node from the edge midpoint and undoes the graph replacement once', async ({
