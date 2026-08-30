@@ -197,7 +197,11 @@ test('stabilization: four image results and remaining node panels render without
 })
 
 test('stabilization: all site routes survive viewport and equivalent zoom matrix', async ({ page }) => {
-  test.setTimeout(240_000)
+  // This deliberately exercises 168 route/viewport combinations. GitHub's
+  // shared Linux runner needs more headroom than a local machine, especially
+  // while screenshots are encoded, so keep the exhaustive matrix and give it
+  // a realistic upper bound instead of dropping coverage.
+  test.setTimeout(600_000)
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   const results: Array<{ page: string; width: number; zoom: number; cssWidth: number; overflow: number; title: string }> = []

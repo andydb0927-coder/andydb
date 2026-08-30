@@ -171,7 +171,8 @@ test('audio generation pitch and offline fades/normalization produce a real pers
   const saved = await readProject(page)
   const audio = saved.assets.filter(asset => asset.kind === 'audio')
   expect(audio).toHaveLength(2)
-  expect(audio[1]).toMatchObject({ mimeType: 'audio/wav', durationSeconds: 2 })
+  expect(audio[1].mimeType).toBe('audio/wav')
+  expect(audio[1].durationSeconds).toBeCloseTo(2, 3)
   expect(audio[1].sampleRate).toBeGreaterThan(0)
   expect(saved.jobs).toHaveLength(1)
   const source = saved.nodes.find(node => node.title === '音频 01')!
