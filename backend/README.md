@@ -1,6 +1,6 @@
 # 无线画布 Cloudflare Workers 后端骨架
 
-本目录是与 `app/` 完全独立的 Hono + TypeScript Cloudflare Worker。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV 数据存储层；不会在源码、配置文件或响应中暴露供应商密钥。
+本目录是与 `app/` 完全独立的 Hono + TypeScript 边缘 API。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV / EdgeKV 双存储实现；不会在源码、配置文件或响应中暴露供应商密钥。运行时检测到 `DB` 时继续使用 D1，只有没有 `DB` 且存在 `EDGEKV` 时才切换 EdgeKV，避免双写。
 
 ## 本地启动
 
@@ -27,19 +27,19 @@ npm run test:run
 | --- | --- | --- | --- | --- |
 | GET | `/api/health` | 无 | Worker 存活检查 | 无 |
 | POST | `/api/auth/device` | 邀请码 | 以 `deviceId + inviteCode` 换取短期设备 token | 无 |
-| POST | `/api/account/register` | Bearer 设备 token | 邀请码注册或绑定设备，返回 `user_id` 与配额 | D1 |
-| GET | `/api/account/me` | Bearer 设备 token | 查询当前用户四类用量与剩余配额 | D1 |
-| GET/POST | `/api/admin/invites` | Bearer 管理端 token | 列出或创建邀请码及配额 | D1 |
-| PUT/DELETE | `/api/admin/invites/:code` | Bearer 管理端 token | 调整配额/状态或停用邀请码 | D1 |
+| POST | `/api/account/register` | Bearer 设备 token | 邀请码注册或绑定设备，返回 `user_id` 与配额 | D1 / EdgeKV |
+| GET | `/api/account/me` | Bearer 设备 token | 查询当前用户四类用量与剩余配额 | D1 / EdgeKV |
+| GET/POST | `/api/admin/invites` | Bearer 管理端 token | 列出或创建邀请码及配额 | D1 / EdgeKV |
+| PUT/DELETE | `/api/admin/invites/:code` | Bearer 管理端 token | 调整配额/状态或停用邀请码 | D1 / EdgeKV |
 | POST | `/api/proxy/image` | Bearer 设备 token | 图片生成请求白名单与代理 | Ark Seedream `/images/generations` |
 | POST | `/api/proxy/video` | Bearer 设备 token | 视频任务创建请求白名单与代理 | Ark Seedance `/contents/generations/tasks` |
 | GET | `/api/proxy/video/:taskId` | Bearer 设备 token | 查询指定 Seedance 视频任务 | Ark Seedance `/contents/generations/tasks/:taskId` |
 | POST | `/api/proxy/text` | Bearer 设备 token | 文本对话请求白名单与代理 | Ark 豆包 `/chat/completions` |
 | POST | `/api/proxy/tts` | Bearer 设备 token | 语音合成请求白名单与代理 | OpenSpeech `/tts/unidirectional` |
-| GET/POST | `/api/data/projects` | Bearer 设备 token | 当前设备的项目列表、创建项目 | D1 + KV |
-| GET/PUT/DELETE | `/api/data/projects/:id` | Bearer 设备 token | 读取、乐观锁更新、删除项目 | D1 + KV |
-| GET/POST | `/api/data/assets` | Bearer 设备 token | 资产元数据列表、创建资产 | D1 |
-| GET/PUT/DELETE | `/api/data/assets/:id` | Bearer 设备 token | 读取、乐观锁更新、删除资产元数据 | D1 |
+| GET/POST | `/api/data/projects` | Bearer 设备 token | 当前设备的项目列表、创建项目 | D1 + KV / EdgeKV |
+| GET/PUT/DELETE | `/api/data/projects/:id` | Bearer 设备 token | 读取、乐观锁更新、删除项目 | D1 + KV / EdgeKV |
+| GET/POST | `/api/data/assets` | Bearer 设备 token | 资产元数据列表、创建资产 | D1 / EdgeKV |
+| GET/PUT/DELETE | `/api/data/assets/:id` | Bearer 设备 token | 读取、乐观锁更新、删除资产元数据 | D1 / EdgeKV |
 
 视频路由同时代理“创建任务”和按任务 ID 轮询，浏览器不会在任一步接触 Ark Key。四类代理均拒绝客户端传入上游 Key、上游 URL 或模型 ID；这些值只从 Worker Bindings 读取。
 
@@ -92,6 +92,12 @@ npm run dev:mock
 
 迁移文件位于 `migrations/`。D1 会在 `d1_migrations` 表记录已应用版本；绑定名分别为 `DB` 和 `SNAPSHOT_CACHE`。
 
+## EdgeKV 运行时
+
+EdgeKV 部署不创建 D1；把 KVNamespace-like 存储绑定为 `EDGEKV` 即可。项目、资产、账号和用量使用 `v1:user:{userId}:...` 键空间，邀请码和设备到用户的反向查找分别使用 `v1:invite:*` 与 `v1:device:*`。值均为 JSON，并保留 `version` 乐观锁字段。
+
+完整控制台步骤、环境变量、灰度验证和一致性限制见 [EdgeOne / 火山边缘函数部署手册](docs/edgeone-deploy.md)。
+
 ## 错误契约
 
 所有错误统一为：
@@ -134,7 +140,7 @@ KV 适合作为大体积快照的读取层，但具有最终一致性；项目�
 
 ## 测试隔离
 
-Vitest 通过 `createApp({ fetchFn, dataRepository, snapshotStore })` 注入内存 fixture，覆盖代理错误、数据 CRUD、设备隔离、乐观锁并发冲突、D1 映射和 KV 回退，不会访问火山方舟、OpenSpeech 或 Cloudflare 远程资源，也不会产生费用。
+Vitest 通过 `createApp({ fetchFn, dataRepository, snapshotStore })` 注入内存 fixture，并用 `Map` 模拟 EdgeKV，覆盖代理错误、数据 CRUD、设备隔离、乐观锁并发冲突、D1 映射、运行时自动选择和 KV 回退，不会访问火山方舟、OpenSpeech 或远程边缘资源，也不会产生费用。
 
 ## 官方参考
 

@@ -4,6 +4,7 @@ import type { AppEnv } from './bindings'
 import { registerAccountRoutes } from './account/account-routes'
 import type { AccountRepository } from './account/account-repository'
 import { D1AccountRepository } from './account/d1-account-repository'
+import { EdgeKvAccountRepository } from './account/edgekv-account-repository'
 import {
   actualUsageAmount,
   releaseUnusedReservation,
@@ -21,12 +22,21 @@ import {
 } from './proxy-contracts'
 import { forwardUpstream } from './upstream'
 import { registerDataRoutes, type DataRouteOptions } from './data/data-routes'
+import { D1DataRepository } from './data/d1-data-repository'
+import { EdgeKvDataRepository } from './data/edgekv-data-repository'
+import type { EdgeKvNamespace } from './data/edgekv-namespace'
 
 export interface AppOptions extends Omit<DataRouteOptions, 'now'> {
   fetchFn?: typeof fetch
   now?: () => number
   timeoutMs?: number
   accountRepository?: AccountRepository
+}
+
+export function storageBackend(env: AppEnv['Bindings']) {
+  if (env.DB) return 'd1' as const
+  if (env.EDGEKV) return 'edgekv' as const
+  return undefined
 }
 
 async function requestJson(request: Request) {
@@ -61,8 +71,34 @@ export function createApp(options: AppOptions = {}) {
   const app = new Hono<AppEnv>()
   const fetchFn = options.fetchFn ?? fetch
   const now = options.now ?? Date.now
-  const accountRepository = (env: AppEnv['Bindings']) =>
-    options.accountRepository ?? (env.DB ? new D1AccountRepository(env.DB) : undefined)
+  const edgeAccountRepositories = new WeakMap<EdgeKvNamespace, EdgeKvAccountRepository>()
+  const edgeDataRepositories = new WeakMap<EdgeKvNamespace, EdgeKvDataRepository>()
+  const edgeAccountRepository = (namespace: EdgeKvNamespace) => {
+    const current = edgeAccountRepositories.get(namespace)
+    if (current) return current
+    const repository = new EdgeKvAccountRepository(namespace)
+    edgeAccountRepositories.set(namespace, repository)
+    return repository
+  }
+  const edgeDataRepository = (namespace: EdgeKvNamespace) => {
+    const current = edgeDataRepositories.get(namespace)
+    if (current) return current
+    const repository = new EdgeKvDataRepository(namespace)
+    edgeDataRepositories.set(namespace, repository)
+    return repository
+  }
+  const accountRepository = (env: AppEnv['Bindings']) => {
+    if (options.accountRepository) return options.accountRepository
+    if (env.DB) return new D1AccountRepository(env.DB)
+    return env.EDGEKV ? edgeAccountRepository(env.EDGEKV) : undefined
+  }
+  const dataRepository = (env: AppEnv['Bindings']) => {
+    if (options.dataRepository) return options.dataRepository
+    const resolved = options.resolveDataRepository?.(env)
+    if (resolved) return resolved
+    if (env.DB) return new D1DataRepository(env.DB)
+    return env.EDGEKV ? edgeDataRepository(env.EDGEKV) : undefined
+  }
 
   app.get('/api/health', (context) => context.json({ status: 'ok' }))
 
@@ -168,6 +204,7 @@ export function createApp(options: AppOptions = {}) {
   registerDataRoutes(app, {
     now,
     ...(options.dataRepository === undefined ? {} : { dataRepository: options.dataRepository }),
+    resolveDataRepository: dataRepository,
     ...(options.snapshotStore === undefined ? {} : { snapshotStore: options.snapshotStore }),
     ...(options.snapshotThresholdBytes === undefined
       ? {}

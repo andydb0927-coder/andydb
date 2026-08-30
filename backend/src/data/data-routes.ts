@@ -19,6 +19,7 @@ import { KvSnapshotStore, type SnapshotStore } from './snapshot-store'
 
 export interface DataRouteOptions {
   dataRepository?: DataRepository
+  resolveDataRepository?: (env: AppEnv['Bindings']) => DataRepository | undefined
   snapshotStore?: SnapshotStore
   snapshotThresholdBytes?: number
   now: () => number
@@ -133,11 +134,15 @@ export function registerDataRoutes(app: Hono<AppEnv>, options: DataRouteOptions)
     context.get('ownerId') ?? context.get('deviceId') ?? ''
 
   const service = (env: AppEnv['Bindings']) => {
-    const repository = options.dataRepository ?? (env.DB ? new D1DataRepository(env.DB) : undefined)
+    const repository = options.dataRepository
+      ?? options.resolveDataRepository?.(env)
+      ?? (env.DB ? new D1DataRepository(env.DB) : undefined)
     if (!repository) return undefined
     const snapshots = options.snapshotStore ?? (env.SNAPSHOT_CACHE
       ? new KvSnapshotStore(env.SNAPSHOT_CACHE)
-      : undefined)
+      : !env.DB && env.EDGEKV
+        ? new KvSnapshotStore(env.EDGEKV)
+        : undefined)
     const configuredThreshold = Number(env.SNAPSHOT_KV_THRESHOLD_BYTES)
     const threshold = options.snapshotThresholdBytes ?? (
       Number.isInteger(configuredThreshold) && configuredThreshold >= 1_024

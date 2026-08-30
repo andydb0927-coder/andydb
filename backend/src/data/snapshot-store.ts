@@ -1,3 +1,5 @@
+import type { EdgeKvNamespace } from './edgekv-namespace'
+
 export interface SnapshotStore {
   put(key: string, value: string): Promise<void>
   get(key: string): Promise<string | null>
@@ -5,7 +7,7 @@ export interface SnapshotStore {
 }
 
 export class KvSnapshotStore implements SnapshotStore {
-  constructor(private readonly namespace: KVNamespace) {}
+  constructor(private readonly namespace: Pick<EdgeKvNamespace, 'put' | 'get' | 'delete'>) {}
 
   async put(key: string, value: string) {
     await this.namespace.put(key, value)

@@ -1,3 +1,5 @@
+import type { EdgeKvNamespace } from './data/edgekv-namespace'
+
 export interface WorkerBindings {
   DEVICE_TOKEN_SECRET: string
   INVITE_CODES?: string
@@ -5,6 +7,7 @@ export interface WorkerBindings {
   ARK_API_KEY: string
   OPENSPEECH_API_KEY: string
   DB?: D1Database
+  EDGEKV?: EdgeKvNamespace
   SNAPSHOT_CACHE?: KVNamespace
   ARK_API_BASE?: string
   OPENSPEECH_API_BASE?: string
