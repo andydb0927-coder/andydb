@@ -69,11 +69,16 @@ function createRepositories() {
 }
 
 function renderPage(repositories = createRepositories()) {
+  const localOnlyMigration = {
+    enabled: false,
+    isMigrated: () => false,
+    migrate: vi.fn(),
+  }
   return {
     ...repositories,
     ...render(
       <MemoryRouter>
-        <ProjectsPage {...repositories} />
+        <ProjectsPage {...repositories} cloudMigration={localOnlyMigration} />
       </MemoryRouter>,
     ),
   }
@@ -86,7 +91,7 @@ describe('projects page', () => {
     expect(await screen.findByRole('heading', { name: '全部项目' })).toBeVisible()
     expect(screen.getByText('当前设备上的 2 个项目')).toBeVisible()
     expect(
-      screen.getByText('项目优先保存在当前浏览器；云端不可用时仍可继续创作。'),
+      screen.getByText('数据保存在当前浏览器，不会自动同步到云端。'),
     ).toBeVisible()
     expect(screen.getByRole('link', { name: '开始创作' })).toHaveAttribute(
       'href',
