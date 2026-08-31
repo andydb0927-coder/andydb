@@ -516,7 +516,7 @@ test('renders exact local configurations for video upscale and frame analysis no
     title: '逐帧拉片',
     videoTool: {
       kind: 'frame-analysis',
-      model: 'SD2.5',
+      model: '本地分析',
       dimensions: ['分镜', '动态', '音乐'],
     },
   }

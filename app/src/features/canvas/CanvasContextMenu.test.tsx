@@ -84,7 +84,7 @@ test('opens all nine node types by hover or click and dispatches the shared type
     '视频',
     '智能剪辑 Beta',
     '导演台 NEW',
-    '逐帧拉片 SD2.5',
+    '逐帧拉片 本地分析',
     '音频',
     '脚本',
     '素材库',
@@ -92,7 +92,7 @@ test('opens all nine node types by hover or click and dispatches the shared type
     expect(within(nodeMenu).getByRole('menuitem', { name })).toBeVisible()
   }
 
-  await user.click(within(nodeMenu).getByRole('menuitem', { name: '逐帧拉片 SD2.5' }))
+  await user.click(within(nodeMenu).getByRole('menuitem', { name: '逐帧拉片 本地分析' }))
   expect(props.onAddNode).toHaveBeenCalledWith('frame-analysis')
 
 })

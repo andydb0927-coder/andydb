@@ -127,7 +127,7 @@ test('exposes local publish, share, preview and export actions', async () => {
   )
   await user.click(screen.getByRole('button', { name: '发布与分享' }))
   const menu = screen.getByRole('menu', { name: '发布与分享菜单' })
-  expect(menu).toHaveTextContent('在LibTV上发布')
+  expect(menu).toHaveTextContent('发布到本地作品')
   expect(menu).toHaveTextContent('复制分享链接')
   expect(menu).toHaveTextContent('预览')
   expect(menu).toHaveTextContent('导出画布')
@@ -136,7 +136,7 @@ test('exposes local publish, share, preview and export actions', async () => {
   expect(menu).toHaveTextContent('预览导出')
   expect(menu).toHaveTextContent('发布与分享均为当前浏览器本地演示')
 
-  await user.click(screen.getByRole('menuitem', { name: '在LibTV上发布' }))
+  await user.click(screen.getByRole('menuitem', { name: '发布到本地作品' }))
   expect(onOpenPublish).toHaveBeenCalledOnce()
   await user.click(screen.getByRole('button', { name: '发布与分享' }))
   await user.click(screen.getByRole('menuitem', { name: '复制分享链接' }))

@@ -1673,7 +1673,7 @@ export function CanvasPage({
           content:
             tool === '视频高清'
               ? 'Topazlabs · 1080P · 不补帧 · 1x · 预计成本 16'
-              : 'SD2.5 · 分镜 / 动态 / 音乐',
+              : '本地分析 · 分镜 / 动态 / 音乐',
           position: {
             x: sourceNode.position.x + 420,
             y: sourceNode.position.y + 80,
@@ -1695,7 +1695,7 @@ export function CanvasPage({
                   }
                 : {
                     kind: 'frame-analysis',
-                    model: 'SD2.5',
+                    model: '本地分析',
                     dimensions: ['分镜', '动态', '音乐'],
                   },
           },
@@ -3495,12 +3495,12 @@ export function CanvasPage({
           'reference-video': {
             kind: 'video',
             title: numberedTitle('全能参考生视频'),
-            content: 'SD2.5 全能参考生视频：等待补充人物、场景与动作参考',
+            content: '需配置真实模型：等待补充人物、场景与动作参考',
           },
           'audio-video': {
             kind: 'video',
             title: numberedTitle('音频生视频'),
-            content: 'SD2.5 音频生视频：等待补充音频与节奏说明',
+            content: '需配置真实模型：等待补充音频与节奏说明',
           },
           'smart-edit': {
             kind: 'video',
@@ -3510,7 +3510,7 @@ export function CanvasPage({
           'frame-analysis': {
             kind: 'storyboard',
             title: numberedTitle('逐帧拉片'),
-            content: 'SD2.5 · 分镜 / 动态 / 音乐',
+            content: '本地分析 · 分镜 / 动态 / 音乐',
           },
           audio: {
             kind: 'text',
@@ -3615,7 +3615,7 @@ export function CanvasPage({
               ...creation.node,
               videoTool: {
                 kind: 'frame-analysis',
-                model: 'SD2.5',
+                model: '本地分析',
                 dimensions: ['分镜', '动态', '音乐'],
               },
             },

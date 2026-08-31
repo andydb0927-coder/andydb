@@ -2,6 +2,28 @@
 
 本目录是与 `app/` 完全独立的 Hono + TypeScript 边缘 API。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV / EdgeKV 双存储实现；不会在源码、配置文件或响应中暴露供应商密钥。运行时检测到 `DB` 时继续使用 D1，只有没有 `DB` 且存在 `EDGEKV` 时才切换 EdgeKV，避免双写。
 
+## v1 交付边界
+
+无线画布 v1 的可交付基线是 `app/` 的本地优先静态版本：项目与画布数据以浏览器本地存储为准，真实模型 API 由使用者后续自行接入。`backend/` 是可选的云端技术预览，不是 v1 静态交付的启动依赖，也不代表云 SaaS 已达到生产可用状态。
+
+仓库默认保持以下云端入口关闭：
+
+- `DEVICE_TOKEN_SECRET`、`ADMIN_TOKEN`、`ARK_API_KEY`、`OPENSPEECH_API_KEY` 只允许通过部署平台 Secret 注入，仓库不提供真实值。
+- `INVITE_CODES`、`SEEDREAM_MODEL_ID`、`SEEDANCE_MODEL_ID`、`ARK_TEXT_MODEL_ID`、`OPENSPEECH_RESOURCE_ID`、`CORS_ALLOWED_ORIGINS` 在 `wrangler.toml` 中默认为空。
+- 空值及示例占位值 `replace-with-account-enabled-endpoint-id` 都视为 Seedance 未配置，路由返回 `PROVIDER_NOT_CONFIGURED`，不会请求上游。
+- 带 `Origin` 的跨域请求只有在 `CORS_ALLOWED_ORIGINS` 精确列出来源时才放行；未配置、通配符 `*` 或非白名单来源均拒绝。无 `Origin` 的同源请求、Worker 内部调用和命令行健康检查不受影响。
+
+以下能力明确标为技术预览，不能纳入 v1 静态版的生产承诺：
+
+| 能力 | 当前边界 | 进入生产前必须补齐 |
+| --- | --- | --- |
+| 账号与任务所有权 | 以设备 token、邀请码和兼容的 `deviceId` 所有者键关联；不是可恢复的实名账号体系 | HttpOnly Cookie 或等效安全会话、token 撤销、身份恢复、登录限流、审计与跨设备所有权迁移验证 |
+| 配额与计费 | D1 路径有条件写入；EdgeKV 仅保证单实例内串行，跨边缘节点可能读到旧值 | 事务型强一致账本、幂等计费、对账和并发压力验证 |
+| 离线删除与重新同步 | 项目/资产删除为服务端硬删除，当前没有离线 tombstone、同步队列或跨设备删除冲突解决 | 可恢复删除、删除标记传播、离线重放和冲突策略 |
+| 真实生成任务 | 仅有代理契约、参数白名单和 fixture 测试；供应商权限与任务生命周期未做本轮验收 | 由项目所有者配置真实 API，并在隔离环境完成权限、费用、超时、轮询和失败恢复验收 |
+
+因此默认交付不应设置 `VITE_GENERATION_MODE=cloud-proxy`，也不应把下列云端路由描述成 v1 已上线能力。
+
 ## 本地启动
 
 ```bash
@@ -12,7 +34,7 @@ npx wrangler d1 migrations apply wireless-canvas --local
 npm run dev
 ```
 
-`npm run dev:mock` 可直接以假密钥启动本地 Worker，用于验证路由、鉴权和中文错误映射；假密钥请求真实上游会得到安全化的鉴权错误，不会产生费用。`.dev.vars` 已被忽略，禁止提交真实密钥。首次使用前需先应用 `0001` 与 `0002` 两个 D1 迁移。
+`npm run dev:mock` 可用固定的本地测试凭据启动 Worker，只用于健康检查、鉴权和数据路由验证。不要用它调用 `/api/proxy/*`：该脚本的假 Key 不代表 provider mock，也不替代 Vitest 中注入的 `fetchFn`。代理测试必须使用 fixture 与注入式网络替身，不访问真实上游。`.dev.vars` 已被忽略，禁止提交真实密钥。首次使用前需先应用 `0001` 与 `0002` 两个 D1 迁移。
 
 质量门禁：
 
@@ -69,9 +91,17 @@ npx wrangler secret put ARK_API_KEY
 npx wrangler secret put OPENSPEECH_API_KEY
 ```
 
-`INVITE_CODES` 只用于兼容批次1的静态预览邀请码，新环境可不配置。管理员使用 `ADMIN_TOKEN` 调用 `/api/admin/invites` 创建 D1 邀请码。
+`INVITE_CODES` 只用于兼容旧的静态预览邀请码，仓库默认值为空；只有明确启用云端技术预览时才配置。管理员使用 `ADMIN_TOKEN` 调用 `/api/admin/invites` 创建 D1 邀请码。
 
 其中 Seedance 必须把 `SEEDANCE_MODEL_ID` 换成当前账号已开通的模型或推理接入点 ID；OpenSpeech Key 是语音资源凭证，不能用 Ark Key 冒充。
+
+跨域部署还必须设置逗号分隔的精确来源列表，例如：
+
+```text
+CORS_ALLOWED_ORIGINS=https://canvas.example.com,https://studio.example.com
+```
+
+来源必须是完整的 `http://` 或 `https://` origin，不含路径；生产环境应使用 HTTPS。服务不会接受 `*`，也不会在未配置时隐式放行浏览器跨域请求。预检只允许 `GET/POST/PUT/DELETE/OPTIONS` 与 `Authorization/Content-Type`。
 
 ## D1 与 KV 初始化
 

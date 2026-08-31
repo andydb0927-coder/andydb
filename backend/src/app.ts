@@ -25,6 +25,7 @@ import { registerDataRoutes, type DataRouteOptions } from './data/data-routes'
 import { D1DataRepository } from './data/d1-data-repository'
 import { EdgeKvDataRepository } from './data/edgekv-data-repository'
 import type { EdgeKvNamespace } from './data/edgekv-namespace'
+import { explicitCorsMiddleware } from './cors'
 
 export interface AppOptions extends Omit<DataRouteOptions, 'now'> {
   fetchFn?: typeof fetch
@@ -62,7 +63,12 @@ function requiredConfiguration(
     : route === 'video'
       ? env.SEEDANCE_MODEL_ID
       : env.ARK_TEXT_MODEL_ID
-  return Boolean(env.ARK_API_KEY?.trim() && modelId?.trim())
+  const normalizedModelId = modelId?.trim()
+  if (
+    route === 'video' &&
+    normalizedModelId === 'replace-with-account-enabled-endpoint-id'
+  ) return false
+  return Boolean(env.ARK_API_KEY?.trim() && normalizedModelId)
 }
 
 type ProxyBuilder = (value: unknown, env: AppEnv['Bindings']) => UpstreamRequest | undefined
@@ -99,6 +105,8 @@ export function createApp(options: AppOptions = {}) {
     if (env.DB) return new D1DataRepository(env.DB)
     return env.EDGEKV ? edgeDataRepository(env.EDGEKV) : undefined
   }
+
+  app.use('*', explicitCorsMiddleware())
 
   app.get('/api/health', (context) => context.json({ status: 'ok' }))
 

@@ -66,7 +66,7 @@ async function openAddNodeAtBlank(
     | '视频'
     | '智能剪辑 Beta'
     | '导演台 NEW'
-    | '逐帧拉片 SD2.5'
+    | '逐帧拉片 本地分析'
     | '音频'
     | '脚本'
     | '素材库',

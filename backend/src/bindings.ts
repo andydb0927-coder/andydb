@@ -15,6 +15,7 @@ export interface WorkerBindings {
   SEEDANCE_MODEL_ID?: string
   ARK_TEXT_MODEL_ID?: string
   OPENSPEECH_RESOURCE_ID?: string
+  CORS_ALLOWED_ORIGINS?: string
   DEVICE_TOKEN_TTL_SECONDS?: string
   UPSTREAM_TIMEOUT_MS?: string
   SNAPSHOT_KV_THRESHOLD_BYTES?: string

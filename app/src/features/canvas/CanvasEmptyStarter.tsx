@@ -30,14 +30,14 @@ const starterOptions: ReadonlyArray<{
   {
     type: 'reference-video',
     label: '全能参考生视频',
-    badge: 'SD2.5',
+    badge: '需配置',
     tone: 'reference',
     icon: Images,
   },
   {
     type: 'audio-video',
     label: '音频生视频',
-    badge: 'SD2.5',
+    badge: '需配置',
     tone: 'audio',
     icon: AudioLines,
   },

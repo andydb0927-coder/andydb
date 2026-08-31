@@ -26,8 +26,8 @@ test('keeps creation-to-preview usable through platform navigation', async ({ pa
   await expect(starter.getByRole('button')).toHaveCount(4)
   await expect(starter.getByRole('button', { name: '故事脚本生成' })).toBeVisible()
   await expect(starter.getByRole('button', { name: '角色三视图' })).toBeVisible()
-  await expect(starter.getByRole('button', { name: '全能参考生视频 SD2.5' })).toBeVisible()
-  await expect(starter.getByRole('button', { name: '音频生视频 SD2.5' })).toBeVisible()
+  await expect(starter.getByRole('button', { name: '全能参考生视频 需配置' })).toBeVisible()
+  await expect(starter.getByRole('button', { name: '音频生视频 需配置' })).toBeVisible()
   await expect(page.locator('.react-flow__node')).toHaveCount(0)
 
   await page.reload()
@@ -131,7 +131,7 @@ test('keeps the empty-canvas starter reachable at 721 by 778', async ({ page }) 
   await page.keyboard.press('Escape')
   await expect(picker).toHaveCount(0)
 
-  await starter.getByRole('button', { name: '全能参考生视频 SD2.5' }).click()
+  await starter.getByRole('button', { name: '全能参考生视频 需配置' }).click()
   await expect(
     page.getByRole('button', { name: '全能参考生视频 01', exact: true }),
   ).toBeVisible()

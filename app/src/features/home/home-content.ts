@@ -64,9 +64,9 @@ const homeContentSeed: HomeContentRecord[] = [
   {
     id: 'home-mode-long-video',
     kind: 'mode',
-    title: 'SD2.5直出5分钟视频',
+    title: '长叙事视频工作流',
     description: '从完整故事梗概拆解章节，规划 5 分钟连续叙事。',
-    prompt: 'SD2.5 直出 5 分钟视频模式：请先规划章节节奏、角色连续性与长叙事镜头结构。',
+    prompt: '长叙事视频工作流：请先规划章节节奏、角色连续性与长叙事镜头结构，再把镜头草案送入画布。',
     order: 20,
   },
   {
@@ -184,10 +184,10 @@ const homeContentSeed: HomeContentRecord[] = [
   {
     id: 'home-capability-video-draft',
     kind: 'capability',
-    title: 'Seedance 2.5 模型上新',
-    description: '长叙事、多镜头与角色连续性能力现已进入本地模型目录。',
+    title: '离线创作链路',
+    description: '不配置真实模型时，仍可编排画布、管理素材并导出工作流；公开版不会伪造生成结果。',
     targetPath: '/agents',
-    ctaLabel: '查看模型上新',
+    ctaLabel: '查看生成能力',
     order: 60,
   },
   {
@@ -211,8 +211,8 @@ const homeContentSeed: HomeContentRecord[] = [
   {
     id: 'home-capability-agent',
     kind: 'capability',
-    title: 'Minimax H3 模型上新',
-    description: '高性价比视频草稿能力，用于快速验证动作与节奏。',
+    title: '真实模型接入中心',
+    description: '集中查看真实模型的配置状态；未配置时禁用并说明原因。',
     targetPath: '/agents',
     ctaLabel: '查看模型目录',
     order: 63,

@@ -71,7 +71,7 @@ async function openAddNodeAtBlank(
     | '视频'
     | '智能剪辑 Beta'
     | '导演台 NEW'
-    | '逐帧拉片 SD2.5'
+    | '逐帧拉片 本地分析'
     | '音频'
     | '脚本'
     | '素材库',
@@ -1102,7 +1102,7 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
     nodeSubmenu.getByRole('menuitem', { name: '导演台 NEW' }),
   ).toBeVisible()
   await expect(
-    nodeSubmenu.getByRole('menuitem', { name: '逐帧拉片 SD2.5' }),
+    nodeSubmenu.getByRole('menuitem', { name: '逐帧拉片 本地分析' }),
   ).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(contextMenu).toBeHidden()
@@ -1131,7 +1131,7 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
     '视频',
     '智能剪辑 Beta',
     '导演台 NEW',
-    '逐帧拉片 SD2.5',
+    '逐帧拉片 本地分析',
     '音频',
     '脚本',
     '素材库',
@@ -1141,10 +1141,10 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await typePicker.getByRole('button', { name: '素材库', exact: true }).click()
   const materialMenu = typePicker.getByRole('menu', { name: '素材库子菜单' })
   await expect(
-    materialMenu.getByRole('menuitem', { name: '全能参考生视频 SD2.5' }),
+    materialMenu.getByRole('menuitem', { name: '全能参考生视频 需配置' }),
   ).toBeVisible()
   await expect(
-    materialMenu.getByRole('menuitem', { name: '音频生视频 SD2.5' }),
+    materialMenu.getByRole('menuitem', { name: '音频生视频 需配置' }),
   ).toBeVisible()
   await typePicker.getByRole('button', { name: '文本', exact: true }).click()
   const textNode = page.getByRole('button', { name: '文本 01', exact: true })
@@ -1181,7 +1181,7 @@ test('creates canvas nodes with Liblib context interactions, persistence, drag, 
   await nodeMenu.getByRole('menuitem', { name: '合规校验' }).click()
   await expect(page.getByRole('status')).toContainText('已通过本地演示合规校验')
 
-  await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
+  await openAddNodeAtBlank(page, '逐帧拉片 本地分析')
   await expect(
     page.getByRole('button', { name: '逐帧拉片 01', exact: true }),
   ).toBeVisible()
@@ -1497,7 +1497,7 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
   await expect(page.getByRole('button', { name: '导演台 01 四视图', exact: true })).toBeVisible()
   await expect(page.getByText('导演台四视图 PNG 已生成图片节点并写入资产库。')).toBeVisible()
 
-  await openAddNodeAtBlank(page, '逐帧拉片 SD2.5')
+  await openAddNodeAtBlank(page, '逐帧拉片 本地分析')
   const analysisPanel = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
   await expect(analysisPanel).toContainText('选择上游视频或上传视频')
   await analysisPanel.getByRole('button', { name: '开始拉片' }).click()

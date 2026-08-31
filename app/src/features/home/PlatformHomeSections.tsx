@@ -59,7 +59,7 @@ type CommunityState =
 const skillCategories: HomeSkillCategory[] = ['专业影视', '商业广告', '音乐MV']
 const showCategories = [
   '全部',
-  'Seedance2.5',
+  '长叙事',
   '精选画布',
   '专业影视',
   '短剧漫剧',

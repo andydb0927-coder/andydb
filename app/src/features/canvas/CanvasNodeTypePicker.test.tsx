@@ -33,7 +33,7 @@ test('renders the Liblib double-click menu with grouped nodes and resources', as
     '视频',
     '智能剪辑 Beta',
     '导演台 NEW',
-    '逐帧拉片 SD2.5',
+    '逐帧拉片 本地分析',
     '音频',
     '脚本',
     '素材库',
@@ -86,12 +86,12 @@ test('opens the material submenu without losing the recorded quick types', async
     ),
   ).toEqual([
     '角色三视图',
-    '全能参考生视频 SD2.5',
-    '音频生视频 SD2.5',
+    '全能参考生视频 需配置',
+    '音频生视频 需配置',
     '素材库节点',
   ])
 
-  await user.click(screen.getByRole('menuitem', { name: '全能参考生视频 SD2.5' }))
+  await user.click(screen.getByRole('menuitem', { name: '全能参考生视频 需配置' }))
   expect(onSelect).toHaveBeenCalledWith('reference-video')
 })
 
@@ -151,7 +151,7 @@ test('renders the compact dock list and recorded downstream-reference list', () 
     '视频',
     '智能剪辑Beta',
     '导演台NEW',
-    '逐帧拉片SD2.5',
+    '逐帧拉片本地分析',
     '音频',
     '脚本',
     '素材库',

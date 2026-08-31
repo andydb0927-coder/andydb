@@ -30,7 +30,7 @@ npm --prefix app ci
 npm --prefix app run build:mock
 ```
 
-`build:mock` 执行 TypeScript 项目构建、强制 `VITE_GENERATION_MODE=mock` 的 `vite build` 和 404 fallback，输出仍为 `app/dist`。同时将构建进程中的 `VITE_SEEDREAM_API_KEY` 置空，防止本机 `.env.local` 的开发 Key 写入公开产物；不修改 `.env.local`。部署时应上传 `app/dist` 的完整内容，而不是只上传 `index.html`。
+`build:mock` 执行 TypeScript 项目构建、强制 `VITE_GENERATION_MODE=mock` 的 `vite build`、产物敏感配置检查和 404 fallback，输出仍为 `app/dist`。Mock 构建在 Vite 配置中设置 `envDir: false`，并将客户端环境前缀收窄到 `VITE_GENERATION_MODE`：它不读取、不修改 `.env.local`，也不会把新增的未知 `VITE_*` Key 自动打包。部署时应上传 `app/dist` 的完整内容，而不是只上传 `index.html`。
 
 普通 `build` 保留开发验证用途，会继承 `.env.local`，不能用于本节公开部署与离线验收。
 
@@ -45,7 +45,7 @@ PLAYWRIGHT_OFFLINE_DIST=dist npm --prefix app run e2e
 
 也可直接执行 `npm --prefix app run verify`，顺序与 GitHub Actions 一致。首次运行前安装 Chromium：在 `app` 目录执行 `npx playwright install chromium`（CI 使用 `--with-deps`）。
 
-`PLAYWRIGHT_OFFLINE_DIST` 是相对于 `app` 的 mock 构建目录，也可传绝对路径。它仅供 `public-model-catalog.spec.ts` 读取静态产物，不再关闭开发测试服务器。生成链路 E2E 仍使用原有 fixture Key 和拦截网络；不能把它们切换为禁用生成的 mock 静态站点。
+`PLAYWRIGHT_OFFLINE_DIST` 是相对于 `app` 的 mock 安全构建目录，也可传绝对路径。`public-model-catalog.spec.ts` 用它验证公开模型目录，`final-acceptance.spec.ts` 用它验证精确静态产物的路由和五视口；其余生成链路 E2E 仍使用独立开发服务器、fixture Key 和拦截网络，不调用真实 API。
 
 如需检查最终静态产物：
 
@@ -60,8 +60,8 @@ npx serve dist -l 4173
 
 仓库已包含：
 
-- `vercel.json`：构建命令为 `npm --prefix app run build`，输出目录为 `app/dist`，并将所有路径重写到 `/index.html`；
-- `netlify.toml`：发布目录为 `app/dist`，并使用状态码 200 将所有路径回退到 `/index.html`。
+- `vercel.json`：构建命令为 `VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`，输出目录为 `app/dist`，并将所有路径重写到 `/index.html`；
+- `netlify.toml`：构建命令为 `VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`，发布目录为 `app/dist`，并使用状态码 200 将所有路径回退到 `/index.html`。`VITE_PUBLIC_BASE=/` 避免沿用 GitHub Pages 的 `/andydb/` 子路径。
 
 其他静态托管服务必须配置等价规则：真实文件优先，其余请求返回 `/index.html`，HTTP 状态码为 200。
 
@@ -96,7 +96,7 @@ npx serve dist -l 4173
 1. 在 Vercel 导入 Git 仓库，Root Directory 保持仓库根目录。
 2. 安装命令设置为 `npm --prefix app ci`。
 3. 仓库内 `vercel.json` 已声明构建命令与输出目录；若控制台需要手动填写，使用：
-   - Build Command：`npm --prefix app run build`
+   - Build Command：`VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`
    - Output Directory：`app/dist`
 4. 当前静态演示版不配置任何真实供应商密钥。
 5. 创建 Preview Deployment，完成第 8 节清单后再考虑绑定正式域名。
@@ -106,9 +106,9 @@ npx serve dist -l 4173
 1. 在 Netlify 导入 Git 仓库，Base directory 保持仓库根目录。
 2. 使用仓库内 `netlify.toml` 的构建与回退规则。
 3. 确认：
-   - Build Command：`npm --prefix app run build`
+   - Build Command：`VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`
    - Publish Directory：`app/dist`
-4. 如果站点没有在构建前自动安装 lockfile 依赖，将命令改为 `npm --prefix app ci && npm --prefix app run build`。
+4. 如果站点没有在构建前自动安装 lockfile 依赖，将命令改为 `npm --prefix app ci && VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`。
 5. 当前静态演示版不配置任何真实供应商密钥。
 
 ## 6. 任意静态托管步骤
@@ -207,7 +207,7 @@ ALLOWED_ORIGINS=https://canvas.example.com
 - 临时验收：Vercel/Netlify 自动分配的分支 Preview 域名；
 - 后续生产：`canvas.<自有域名>`，不得与 Preview 共用第三方密钥或本地数据预期。
 
-Preview 页面应明显标注“演示”或“Preview”，避免用户把本地数据和 Mock 生成误认为正式云端能力。
+Preview 页面应明显标注“本地”或“Preview”，避免用户把本地数据或被禁用的生成入口误认为正式云端能力。
 
 ## 9. 上线前验收清单
 

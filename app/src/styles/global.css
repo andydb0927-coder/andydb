@@ -4349,7 +4349,8 @@ select {
   top: calc(100% + 16px);
   left: 50%;
   width: min(660px, calc(100vw - 32px));
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(calc(var(--canvas-handle-hit-size, 24px) / 24px));
+  transform-origin: top center;
   border: 1px solid var(--neutral-white-a10);
   border-radius: var(--radius-large);
   background: var(--surface-panel-strong);
@@ -4500,6 +4501,11 @@ select {
 .canvas-page__viewport:has(.creative-node-composer) .react-flow__controls {
   top: var(--space-4);
   bottom: auto;
+}
+
+.canvas-page__viewport:has(.image-parameter-picker) .canvas-mode-bar {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .react-flow__node:has(.creative-node--expanded) {
@@ -6069,11 +6075,13 @@ select {
 .image-parameter-picker {
   position: absolute;
   z-index: 28;
-  right: 88px;
-  bottom: 76px;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  left: 50%;
   display: grid;
-  width: min(430px, calc(100vw - 32px));
-  max-height: min(650px, calc(100vh - 96px));
+  width: min(430px, 100%);
+  max-height: 100%;
   gap: var(--space-3);
   overflow: auto;
   padding: var(--space-4);
@@ -6082,6 +6090,7 @@ select {
   color: var(--text-primary);
   background: rgb(30 31 34 / 98%);
   box-shadow: var(--shadow-overlay);
+  transform: translateX(-50%);
 }
 
 .image-parameter-picker fieldset {
@@ -16415,7 +16424,8 @@ select {
   .creative-node-composer {
     left: 0;
     width: 260px;
-    transform: none;
+    transform: scale(calc(var(--canvas-handle-hit-size, 24px) / 24px));
+    transform-origin: top left;
   }
 
   .creative-node-composer:has(.image-generation-panel--expanded) {

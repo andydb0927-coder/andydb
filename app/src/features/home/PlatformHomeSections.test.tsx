@@ -89,7 +89,7 @@ describe('platform home sections', () => {
     const modes = screen.getByRole('group', { name: '画布创作模式' })
     expect(within(modes).getAllByRole('button')).toHaveLength(6)
     for (const name of [
-      'SD2.5直出5分钟视频',
+      '长叙事视频工作流',
       '片段重拍',
       '智能引用 AutoLink',
       '讲解视频',
@@ -106,12 +106,12 @@ describe('platform home sections', () => {
 
     const carousel = await screen.findByRole('region', { name: '产品特性轮播' })
     expect(within(carousel).getAllByTestId('home-feature-card')).toHaveLength(5)
-    const position = within(carousel).getByText('1 / 5 · Seedance 2.5 模型上新')
+    const position = within(carousel).getByText('1 / 5 · 离线创作链路')
     expect(position).toHaveAttribute('aria-live', 'polite')
     expect(position).toHaveTextContent(
-      '1 / 5 · Seedance 2.5 模型上新',
+      '1 / 5 · 离线创作链路',
     )
-    expect(within(carousel).getByRole('link', { name: /Seedance 2.5 模型上新/ })).toHaveAttribute(
+    expect(within(carousel).getByRole('link', { name: /离线创作链路/ })).toHaveAttribute(
       'href',
       '/agents',
     )
@@ -119,8 +119,8 @@ describe('platform home sections', () => {
     await user.click(within(carousel).getByRole('button', { name: '下一张特性' }))
     expect(within(carousel).getByText('2 / 5 · 导演台')).toBeVisible()
     await user.click(within(carousel).getByRole('button', { name: '上一张特性' }))
-    expect(within(carousel).getByText('1 / 5 · Seedance 2.5 模型上新')).toHaveTextContent(
-      '1 / 5 · Seedance 2.5 模型上新',
+    expect(within(carousel).getByText('1 / 5 · 离线创作链路')).toHaveTextContent(
+      '1 / 5 · 离线创作链路',
     )
   })
 
@@ -181,18 +181,18 @@ describe('platform home sections', () => {
     )
   })
 
-  test('filters the eight-work TV Show by Seedance2.5 and explicit local search', async () => {
+  test('filters the eight-work TV Show by long-form workflow and explicit local search', async () => {
     const user = userEvent.setup()
     const { communityRepository } = renderHome()
     expect(communityRepository.ensureDemoWorks).toHaveBeenCalledTimes(1)
 
     const show = await screen.findByRole('region', { name: 'TV Show 社区作品' })
     expect(within(show).getAllByRole('article')).toHaveLength(8)
-    expect(within(show).getByRole('button', { name: 'Seedance2.5' })).toBeVisible()
+    expect(within(show).getByRole('button', { name: '长叙事' })).toBeVisible()
     expect(
       within(show).getByRole('button', { name: '教育生活' }),
     ).toBeVisible()
-    await user.click(within(show).getByRole('button', { name: 'Seedance2.5' }))
+    await user.click(within(show).getByRole('button', { name: '长叙事' }))
     expect(within(show).getAllByRole('article')).toHaveLength(2)
 
     await user.click(within(show).getByRole('button', { name: '全部' }))

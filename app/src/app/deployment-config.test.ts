@@ -15,7 +15,54 @@ test('builds the offline artifact in mock mode without bundling the local API ke
   }
 
   expect(scripts['build:mock']).toBe(
-    scripts.build.replace('vite build', 'VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= vite build'),
+    scripts.build.replace(
+      'vite build',
+      'VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= VITE_ARK_TTS_API_KEY= VITE_KLING_API_KEY= VITE_BACKEND_URL= VITE_BACKEND_INVITE_CODE= VITE_CODE_KEY= vite build && node scripts/verify-public-artifact.mjs',
+    ),
+  )
+})
+
+test('isolates public mock builds from local and shell VITE secrets', () => {
+  const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8')
+
+  expect(viteConfig).toContain("process.env.VITE_GENERATION_MODE === 'mock'")
+  expect(viteConfig).toContain('envDir: publicMockBuild ? false : undefined')
+  expect(viteConfig).toContain("envPrefix: publicMockBuild ? ['VITE_GENERATION_MODE'] : 'VITE_'")
+})
+
+test('rejects a public artifact containing a non-empty client secret', () => {
+  const outputDirectory = mkdtempSync(resolve(tmpdir(), 'wireless-canvas-public-artifact-'))
+  try {
+    writeFileSync(resolve(outputDirectory, 'safe.js'), 'const mode="mock"')
+    execFileSync(process.execPath, [
+      resolve(process.cwd(), 'scripts/verify-public-artifact.mjs'),
+      outputDirectory,
+    ])
+
+    writeFileSync(
+      resolve(outputDirectory, 'unsafe.js'),
+      'const env={VITE_KLING_API_KEY:"fixture-secret"}',
+    )
+    expect(() => execFileSync(process.execPath, [
+      resolve(process.cwd(), 'scripts/verify-public-artifact.mjs'),
+      outputDirectory,
+    ], { stdio: 'pipe' })).toThrow()
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true })
+  }
+})
+
+test('gates both frontend and optional backend before publishing GitHub Pages', () => {
+  const workflow = readFileSync(
+    resolve(repositoryRoot, '.github/workflows/deploy.yml'),
+    'utf8',
+  )
+
+  expect(workflow).toContain('npm --prefix backend ci')
+  expect(workflow).toContain('npm --prefix backend run typecheck')
+  expect(workflow).toContain('npm --prefix backend run test:run')
+  expect(workflow.indexOf('npm --prefix backend run test:run')).toBeLessThan(
+    workflow.indexOf('Publish app/dist to gh-pages'),
   )
 })
 
@@ -47,7 +94,9 @@ test('configures Vercel to build app and serve BrowserRouter routes', () => {
     rewrites?: Array<{ source: string; destination: string }>
   }
 
-  expect(config.buildCommand).toBe('npm --prefix app run build')
+  expect(config.buildCommand).toBe(
+    'VITE_PUBLIC_BASE=/ npm --prefix app run build:mock',
+  )
   expect(config.outputDirectory).toBe('app/dist')
   expect(config.rewrites).toEqual([{ source: '/(.*)', destination: '/index.html' }])
 })
@@ -55,7 +104,7 @@ test('configures Vercel to build app and serve BrowserRouter routes', () => {
 test('configures Netlify to publish app/dist with an SPA fallback', () => {
   const config = readFileSync(resolve(repositoryRoot, 'netlify.toml'), 'utf8')
 
-  expect(config).toMatch(/\[build\][\s\S]*command\s*=\s*"npm --prefix app run build"/)
+  expect(config).toMatch(/\[build\][\s\S]*command\s*=\s*"VITE_PUBLIC_BASE=\/ npm --prefix app run build:mock"/)
   expect(config).toMatch(/\[build\][\s\S]*publish\s*=\s*"app\/dist"/)
   expect(config).toMatch(/\[\[redirects\]\][\s\S]*from\s*=\s*"\/\*"/)
   expect(config).toMatch(/\[\[redirects\]\][\s\S]*to\s*=\s*"\/index\.html"/)
@@ -79,9 +128,8 @@ test('configures the GitHub Pages repository base and BrowserRouter basename', (
   const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8')
   const router = readFileSync(resolve(process.cwd(), 'src/app/router.tsx'), 'utf8')
 
-  expect(viteConfig).toMatch(
-    /base:\s*command\s*===\s*['"]build['"]\s*\|\|\s*isPreview\s*\?\s*['"]\/andydb\/['"]\s*:\s*['"]\/['"]/,
-  )
+  expect(viteConfig).toContain("process.env.VITE_PUBLIC_BASE || '/andydb/'")
+  expect(viteConfig).toMatch(/base:\s*command\s*===\s*['"]build['"]\s*\|\|\s*isPreview/)
   expect(router).toContain('basename: import.meta.env.BASE_URL')
 })
 

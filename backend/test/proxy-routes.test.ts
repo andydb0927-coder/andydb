@@ -308,6 +308,29 @@ describe.each(proxyCases)('$name代理', ({
 })
 
 describe('视频任务轮询代理', () => {
+  it('把示例 Seedance 接入点视为未配置且不请求上游', async () => {
+    const fetchFn = vi.fn<typeof fetch>()
+    const token = await deviceToken({ fetchFn })
+    const placeholderEnv: WorkerBindings = {
+      ...env,
+      SEEDANCE_MODEL_ID: 'replace-with-account-enabled-endpoint-id',
+    }
+    const response = await createApp({ fetchFn }).request('/api/proxy/video', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(proxyCases[1].validBody),
+    }, placeholderEnv)
+
+    expect(response.status).toBe(503)
+    expect(fetchFn).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({
+      error: { code: 'PROVIDER_NOT_CONFIGURED', message: '上游服务配置未完成。' },
+    })
+  })
+
   it('用设备 token 查询白名单 Seedance 任务端点', async () => {
     const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(
       JSON.stringify({ id: 'task-fixture-0001', status: 'succeeded' }),

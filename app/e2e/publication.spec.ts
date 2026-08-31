@@ -47,7 +47,7 @@ test('publishes locally, lists the work, copies its share link and renders the r
   await uploadCoverResult(page)
 
   await page.getByRole('button', { name: '发布与分享' }).click()
-  await page.getByRole('menuitem', { name: '在LibTV上发布' }).click()
+  await page.getByRole('menuitem', { name: '发布到本地作品' }).click()
   const dialog = page.getByRole('dialog', { name: '发布作品' })
   await dialog.getByRole('textbox', { name: '作品标题' }).fill('雨夜重逢 · 本地发布')
   await dialog.getByRole('textbox', { name: '作品简介' }).fill('从画布发布并生成只读分享页。')

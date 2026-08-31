@@ -1,10 +1,10 @@
 # 无线画布（Wireless Canvas）
 
-AI 驱动的无限画布短视频创作平台。从一句创作意图出发，整理剧本、角色、世界观，编排分镜，
-通过本地演示生成、工作流执行与专业时间线剪辑，最终发布为社区作品。
+AI 影视创作无限画布。从一句创作意图出发，整理剧本、角色、世界观，编排分镜，
+在画布和时间线中管理本地素材、处理媒体并导出工作流，最终发布为本地作品。
 
 **当前为纯本地版本**：数据全部保存在浏览器 IndexedDB（Dexie），无需后端服务；
-LibTV 真实生成已预留可插拔边界，默认使用本地演示适配器，不消耗任何积分。
+真实模型生成已预留可插拔边界；公开构建中的真实模型全部禁用，不会回退为 Mock 伪造结果，也不消耗任何积分。
 
 ## 快速开始
 
@@ -20,35 +20,34 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 |------|------|
 | `npm run dev` | 启动 Vite 开发服务器 |
 | `npm run build` | TypeScript 检查 + 生产构建（输出到 `dist/`） |
-| `npm run build:mock` | 强制 mock、清空构建进程中的火山 Key，包含 TypeScript 检查与 404 fallback |
+| `npm run build:mock` | 强制 mock，禁用 `.env.local` 加载并仅向浏览器暴露 mock 模式，完成产物敏感配置检查后生成 404 fallback |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
 | `npm run test:run` | 全量 Vitest 单测 |
 | `npm run e2e` | Playwright Chromium E2E；离线模型目录用例要求先执行 `build:mock` |
 | `npm run verify` | 完整门禁：typecheck → Vitest → build:mock → Playwright |
 
 公开静态部署和离线产物验收使用 `build:mock`，不要使用会继承 `.env.local` 的普通
-`build`。`PLAYWRIGHT_OFFLINE_DIST=dist` 仅指定生产模型目录用例读取的 mock 产物；
+`build`。`PLAYWRIGHT_OFFLINE_DIST=dist` 供公开模型目录和路由/五视口终验用例读取精确静态产物；
 其余 E2E 仍使用独立开发服务器、fixture Key 和网络拦截，不调用真实 API。
 
 ## 功能地图
 
 | 模块 | 路由 | 说明 |
 |------|------|------|
-| 平台首页 | `/home` | 编辑推荐内容、创作者认证展示 |
-| 项目启动 | `/` | 从创作意图创建项目（三种配方） |
-| 创作画布 | `/project/:id` | 无限画布：分镜/视频/图片/文本节点、连线、剧本卡/角色卡/世界观卡、AI 导演、节点评论 |
-| 素材与历史 | `/assets` | 本地素材库：上传、SHA-256 去重、搜索筛选、跨项目复用 |
-| 预览 / 专业剪辑 | `/preview/:id` | 四轨时间线（视频/音频/图片/字幕）、裁剪/分割/排序、预览播放器、JSON/EDL 导出、MediaRecorder 预览录制 |
-| 发现与作品 | `/discover` | 作品墙：标签/搜索筛选、最新/最热排序、点赞/收藏/浏览、作品详情、创作者主页、相关推荐、个人作品管理 |
-| 模型能力 | `/models` | 模型目录与远程画布选择（LibTV 目录只读预览，真实调用需确认） |
-| Agent / Skill / CLI | `/agents` | 5 个内置本地技能、可取消执行、输出契约校验、单次画布写入与同源 CLI 桥接状态 |
-| 本地工作区 | `/account` | 个人中心：会员等级（本地模拟）、协作角色权限、可追踪评论、项目统计、导出/导入备份 |
+| 平台首页 / 项目启动 | `/` | 推荐内容、快速配方与从创作意图创建项目 |
+| 项目 | `/projects` | 本地项目搜索、排序、分组、新建与恢复 |
+| 创作画布 | `/project/:projectId` | 无限画布、节点连线、素材/角色/历史工具坞、导演台、故事板与工作流 |
+| 预览 / 时间线 | `/project/:projectId/preview` | 多轨时间线、预览播放、本地合成和 JSON/EDL 导出 |
+| 作品 | `/works` | 本地作品搜索筛选、收藏、可见性标记、详情和导出 |
+| Skills | `/agents` | 内置本地技能、执行状态、输出契约和同源 CLI 桥接状态 |
+| 挑战赛 / 教程 | `/challenges`、`/tutorials` | 静态活动与教程目录，包含详情页 |
+| 会员 / 帮助 | `/membership`、`/help` | 本地积分展示、帮助搜索和能力边界说明 |
 
 ## 架构要点
 
 - **技术栈**：React + TypeScript + Vite + React Router + React Flow（画布）+ Dexie（本地库）+ Vitest + Playwright
 - **数据层**：Dexie 数据库按模块分表（项目/素材库/时间线/作品/会员/评论/技能状态），版本化 schema 幂等迁移
-- **生成边界**：`GenerationAdapter` 可插拔接口；默认 `DemoGenerationAdapter` 本地确定性产物（视频节点用 PNG 视觉缩略图）；`LibTvGenerationAdapter` 已实现但每次调用必须经用户确认，服务端桥接（`app/server`）默认禁止写入，CLI 一律参数数组 + `shell: false`
+- **生成边界**：`GenerationAdapter` 保留可插拔接口；`DemoGenerationAdapter` 只供开发/自动化 fixture，公开模型选择器不暴露 Mock 模型。`LibTvGenerationAdapter` 每次写入必须确认，服务端桥接（`app/server`）默认禁止写入，CLI 一律参数数组 + `shell: false`
 - **工作区 CLI/API**：`/api/workspace/manifest` + `/api/workspace/execute`（版本化 envelope、1 MiB 上限、规范错误码），与 `/api/libtv/*` 完全隔离
 - **扩展点**：技能注册表（`/agents`）、生成 provider、CLI 命令、云同步适配器均有文档化契约，见 `docs/superpowers/extensions.md`
 
@@ -79,20 +78,20 @@ npm --prefix app run verify
 ### Vercel
 
 1. 导入仓库，项目根目录保持为仓库根目录。
-2. 根目录 `vercel.json` 已将构建命令设为 `npm --prefix app run build`，将
+2. 根目录 `vercel.json` 已将构建命令设为 `VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`，将
    `outputDirectory` 设为 `app/dist`。
 3. 部署；`rewrites` 会把包括深层路由在内的所有请求回退到 `/index.html`。
 
 ### Netlify
 
 1. 从仓库根目录创建站点。
-2. 根目录 `netlify.toml` 已将构建命令设为 `npm --prefix app run build`，发布目录设为
+2. 根目录 `netlify.toml` 已将构建命令设为 `VITE_PUBLIC_BASE=/ npm --prefix app run build:mock`，发布目录设为
    `app/dist`。
 3. 部署；`[[redirects]]` 使用 `from = "/*"`、`to = "/index.html"`、`status = 200`
    提供 SPA fallback。
 
 SPA fallback 是 `BrowserRouter` 深层链接正常工作的必要条件。例如直接访问或刷新
-`/discover` 时，静态托管必须返回 `index.html`，再由前端路由渲染对应页面，而不是返回
+`/works` 时，静态托管必须返回 `index.html`，再由前端路由渲染对应页面，而不是返回
 托管平台的 404 页面。
 
 ### 环境变量
@@ -106,4 +105,4 @@ SPA fallback 是 `BrowserRouter` 深层链接正常工作的必要条件。例�
 - LibTV 桥接（`/api/libtv/*`）与 workspace CLI（`/api/workspace/*`）是 dev/preview
   中间件，在 Vercel、Netlify 等纯静态托管不可用。
 - 前端已对这些 API 不可用的情况优雅降级，并显示可操作的中文错误；本地 IndexedDB、
-  Demo 生成、画布编辑和其他纯前端能力仍可使用。
+  画布编辑、媒体本地处理和导出仍可使用，生成模型保持禁用且不会回退为 Mock 结果。

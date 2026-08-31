@@ -42,4 +42,13 @@ describe('tutorial detail page', () => {
       '/tutorials',
     )
   })
+
+  test('describes the current real-model catalog without a retired demo-model group', () => {
+    renderDetail('image-model')
+
+    const article = screen.getByRole('article', { name: '选择图片模型' })
+    expect(article).toHaveTextContent('真实模型目录与配置状态')
+    expect(article).toHaveTextContent('未配置的模型会显示禁用原因')
+    expect(article).not.toHaveTextContent('本地演示分组')
+  })
 })

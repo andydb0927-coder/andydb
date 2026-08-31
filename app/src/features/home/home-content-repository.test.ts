@@ -71,7 +71,7 @@ describe('home content repository', () => {
       '保留的本地活动文案',
     )
     expect(records.find(({ id }) => id === staleMode.id)?.title).toBe(
-      'SD2.5直出5分钟视频',
+      '长叙事视频工作流',
     )
     expect(records.map(({ order }) => order)).toEqual(
       [...records.map(({ order }) => order)].sort((a, b) => a - b),

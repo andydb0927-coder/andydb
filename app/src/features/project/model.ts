@@ -205,7 +205,7 @@ export type VideoToolConfig =
     }
   | {
       kind: 'frame-analysis'
-      model: 'SD2.5'
+      model: '本地分析'
       dimensions: ['分镜', '动态', '音乐']
     }
   | {

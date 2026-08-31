@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/github-pages-fallback.mjs",
-    "build:mock": "tsc -b && VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= vite build && node scripts/github-pages-fallback.mjs",
+    "build:mock": "tsc -b && VITE_GENERATION_MODE=mock VITE_SEEDREAM_API_KEY= VITE_ARK_TTS_API_KEY= VITE_KLING_API_KEY= VITE_BACKEND_URL= VITE_BACKEND_INVITE_CODE= VITE_CODE_KEY= vite build && node scripts/verify-public-artifact.mjs && node scripts/github-pages-fallback.mjs",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest",
     "test:run": "vitest run",

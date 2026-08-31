@@ -183,7 +183,7 @@ test('stabilization: four image results and remaining node panels render without
   for (const [type, label] of [
     ['文本', '文本 01 文本参数'], ['视频', '视频 01 生成参数'], ['音频', '音频 01 音频参数'],
     ['智能剪辑 Beta', '智能剪辑 01 智能剪辑参数'], ['导演台 NEW', '导演台 01 导演台参数'],
-    ['逐帧拉片 SD2.5', '逐帧拉片 01 逐帧拉片参数'],
+    ['逐帧拉片 本地分析', '逐帧拉片 01 逐帧拉片参数'],
   ]) {
     await page.getByRole('button', { name: '添加节点', exact: true }).click()
     await page.getByRole('menuitem', { name: type, exact: true }).click()

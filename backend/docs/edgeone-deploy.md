@@ -86,11 +86,14 @@ Access Key 只写入本机 CLI 配置，不写入仓库。官方说明调试环�
 | 普通变量 | `SEEDANCE_MODEL_ID` | 当前账号已开通的 Seedance 接入点 ID |
 | 普通变量 | `ARK_TEXT_MODEL_ID` | 当前账号已开通的豆包文本接入点 ID |
 | 普通变量 | `OPENSPEECH_RESOURCE_ID` | 已授权的 TTS 资源 ID |
+| 普通变量 | `CORS_ALLOWED_ORIGINS` | 逗号分隔的前端精确 origin；未配置时拒绝所有跨域请求 |
 | 普通变量 | `DEVICE_TOKEN_TTL_SECONDS` | 建议 `86400` |
 | 普通变量 | `UPSTREAM_TIMEOUT_MS` | 建议 `30000` |
 | 普通变量 | `SNAPSHOT_KV_THRESHOLD_BYTES` | 建议 `65536` |
 
 修改环境变量后重新发布函数才会生效。禁止把上述 Secret 写进代码、`nest.json`、提交记录或日志。
+
+`CORS_ALLOWED_ORIGINS` 必须写完整 origin（例如 `https://canvas.example.com`），不能使用 `*`，不能附带路径。只有前后端同源部署时才可保持为空；跨域预检仅允许项目实际使用的 HTTP 方法以及 `Authorization`、`Content-Type` 请求头。
 
 ## 5. 构建与上传
 
@@ -144,4 +147,3 @@ VITE_GENERATION_MODE=cloud-proxy
 2. 边缘函数回滚到上一个发布版本或移除 `/api/*` 触发规则。
 3. 不删除 EdgeKV 命名空间；导出或备份后再处理。
 4. 轮换 `DEVICE_TOKEN_SECRET` 会使现有设备 token 全部失效，只在确有安全事件时执行。
-

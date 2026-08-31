@@ -42,11 +42,11 @@ export const helpCategories: HelpCategory[] = [
     title: '生成',
     description: '模型选择、参数、队列与失败处理。',
     faqs: [
-      { id: 'generation-model', question: '如何选择生成模型？', answer: '选中生成节点，在节点下方参数面板打开“模型”选择器；模型会按官方 API、待接入和本地演示分组。' },
+      { id: 'generation-model', question: '如何选择生成模型？', answer: '选中生成节点，在节点下方参数面板打开“模型”选择器。公开静态版仅展示待配置的真实模型和待接入项，未配置时全部禁用。' },
       { id: 'generation-prompt', question: '为什么生成按钮不可用？', answer: '请确认已填写提示词或添加参考媒体、模型配置可用，并且预计成本已经显示；待接入模型会明确展示禁用原因。' },
       { id: 'generation-history', question: '在哪里查看生成历史？', answer: '点击底部工具坞“历史记录”，可以按图片、视频、音频筛选，查看、使用、下载或重新发送到画布。' },
       { id: 'generation-retry', question: '生成失败后如何重试？', answer: '在生成历史或失败节点状态中选择重试，系统会复用完整提示词、模型、参数与引用配置重新入队。' },
-      { id: 'generation-local', question: '“本地演示”和“官方 API 已接”有什么区别？', answer: '本地演示使用确定性 Mock，不产生真实费用；官方 API 已接会按开发配置调用供应商，产生真实模型费用。' },
+      { id: 'generation-local', question: '为什么公开版的真实模型不可用？', answer: '公开静态版不包含 API Key 或可用后端地址。页面即使展示模型目录信息，生成按钮仍保持禁用并显示原因。Mock 只用于自动化 fixture 验证，不是公开版可选的生成模型。' },
     ],
   },
   {
@@ -67,7 +67,7 @@ export const helpCategories: HelpCategory[] = [
     description: '预览、导出、发布作品与分享链接。',
     faqs: [
       { id: 'publish-preview', question: '如何预览成片？', answer: '点击画布顶栏“发布与分享”，选择“预览”进入成片预览页；已有时间线内容会按顺序播放。' },
-      { id: 'publish-work', question: '如何发布到作品页？', answer: '在“发布与分享”中选择“在 LibTV 上发布”，填写标题、简介、封面和标签后提交，本地作品会出现在“作品”页。' },
+      { id: 'publish-work', question: '如何发布到作品页？', answer: '在“发布与分享”中选择“发布到本地作品”，填写标题、简介、封面和标签后提交，作品会保存在当前浏览器并出现在“作品”页。' },
       { id: 'publish-share', question: '分享链接是否已经上传云端？', answer: '当前分享链接用于本地演示，复制时会提示“未发布到云端”；同一浏览器可打开只读查看页。' },
       { id: 'publish-canvas', question: '可以导出整个画布吗？', answer: '可以。在“发布与分享”中选择“导出画布”，支持当前视口或全画布范围的 PNG、SVG。' },
       { id: 'publish-json', question: '如何备份或迁移工作流？', answer: '从“发布与分享”导出工作流 JSON；导入时系统会校验结构并提示重名节点或引用缺失。' },

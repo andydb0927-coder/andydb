@@ -89,7 +89,7 @@ test('uploads a real video fixture for sampled analysis, persists timeline text 
   })
   await createFixtureCinematicProject(page)
   await page.getByRole('button', { name: '添加节点' }).click()
-  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '逐帧拉片 SD2.5' }).click()
+  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '逐帧拉片 本地分析' }).click()
   const node = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
   await node.getByRole('button', { name: '开始拉片' }).click()
   const dialog = page.getByRole('dialog', { name: '逐帧拉片分析' })

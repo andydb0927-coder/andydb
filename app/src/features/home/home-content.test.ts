@@ -10,7 +10,7 @@ describe('platform home content seed', () => {
     expect(
       records.filter(({ kind }) => kind === 'mode').map(({ title }) => title),
     ).toEqual([
-      'SD2.5直出5分钟视频',
+      '长叙事视频工作流',
       '片段重拍',
       '智能引用 AutoLink',
       '讲解视频',
@@ -28,10 +28,10 @@ describe('platform home content seed', () => {
     const capabilities = records.filter(({ kind }) => kind === 'capability')
     expect(capabilities).toHaveLength(5)
     expect(capabilities.map(({ title }) => title)).toEqual([
-      'Seedance 2.5 模型上新',
+      '离线创作链路',
       '导演台',
       'Blender 创作插件',
-      'Minimax H3 模型上新',
+      '真实模型接入中心',
       '镜头工作流插件',
     ])
     expect(capabilities.every(({ targetPath }) =>
@@ -39,6 +39,9 @@ describe('platform home content seed', () => {
       ['/projects', '/agents'].includes(targetPath),
     )).toBe(true)
     expect(new Set(records.map(({ id }) => id)).size).toBe(records.length)
+    expect(records.map(({ title, description, prompt }) =>
+      `${title} ${description} ${prompt ?? ''}`,
+    ).join(' ')).not.toMatch(/SD2\.5|Seedance\s*2\.5|Minimax\s*H3/i)
   })
 
   test('returns fresh records so callers cannot mutate the shared seed', () => {

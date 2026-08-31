@@ -19,8 +19,8 @@ export function makeProjectFixture(): Project {
       {
         id: 'asset-rain-audio',
         kind: 'audio',
-        url: '/demo/rain.mp3',
-        mimeType: 'audio/mpeg',
+        url: 'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==',
+        mimeType: 'audio/wav',
         durationSeconds: 12,
       },
     ],

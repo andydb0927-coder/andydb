@@ -1,5 +1,5 @@
 [build]
-  command = "npm --prefix app run build"
+  command = "VITE_PUBLIC_BASE=/ npm --prefix app run build:mock"
   publish = "app/dist"
 
 [[redirects]]

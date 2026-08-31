@@ -318,7 +318,7 @@ export function CanvasTopBar({
                 closeShareMenu()
                 onOpenPublish?.()
               }}>
-                <Send aria-hidden="true" />在LibTV上发布
+                <Send aria-hidden="true" />发布到本地作品
               </button>
               <button type="button" role="menuitem" disabled={!onCopyShareLink} onClick={() => {
                 closeShareMenu()

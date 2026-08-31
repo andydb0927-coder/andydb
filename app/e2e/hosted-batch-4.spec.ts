@@ -37,7 +37,7 @@ test('keeps smart edit unavailable and gates real frame analysis behind video se
   await expect(smartEdit).toContainText('待接入智能剪辑粗剪/混剪服务')
 
   await page.getByRole('button', { name: '添加节点' }).click()
-  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '逐帧拉片 SD2.5' }).click()
+  await page.getByRole('menu', { name: '添加节点' }).getByRole('menuitem', { name: '逐帧拉片 本地分析' }).click()
   const frameAnalysis = page.getByRole('region', { name: '逐帧拉片 01 逐帧拉片参数' })
   await frameAnalysis.getByRole('button', { name: '开始拉片' }).click()
   const dialog = page.getByRole('dialog', { name: '逐帧拉片分析' })

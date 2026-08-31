@@ -9,7 +9,8 @@ describe('community demo works', () => {
     expect(works.length).toBeGreaterThanOrEqual(8)
     expect(new Set(works.map(({ id }) => id)).size).toBe(works.length)
     expect(works.every(({ authorVerified }) => authorVerified)).toBe(true)
-    expect(works.filter(({ tags }) => tags.includes('Seedance2.5'))).toHaveLength(2)
+    expect(works.filter(({ tags }) => tags.includes('长叙事'))).toHaveLength(2)
+    expect(works.flatMap(({ tags }) => tags)).not.toContain('Seedance2.5')
     for (const category of [
       '精选画布',
       '专业影视',

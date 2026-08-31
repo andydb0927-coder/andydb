@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm --prefix app run build",
+  "buildCommand": "VITE_PUBLIC_BASE=/ npm --prefix app run build:mock",
   "outputDirectory": "app/dist",
   "rewrites": [
     {

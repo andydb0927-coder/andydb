@@ -58,7 +58,7 @@ const contextNodeTypes: Array<{
   { type: 'video', label: '视频', icon: Film },
   { type: 'smart-edit', label: '智能剪辑', badge: 'Beta', icon: Clapperboard },
   { type: 'director', label: '导演台', badge: 'NEW', icon: Sparkles },
-  { type: 'frame-analysis', label: '逐帧拉片', badge: 'SD2.5', icon: FileClock },
+  { type: 'frame-analysis', label: '逐帧拉片', badge: '本地分析', icon: FileClock },
   { type: 'audio', label: '音频', icon: AudioLines },
   { type: 'script', label: '脚本', icon: FileText },
   { type: 'asset-library', label: '素材库', icon: Library },

@@ -414,8 +414,8 @@ function chooseFreeNode(
   label:
     | '故事脚本生成'
     | '角色三视图'
-    | '全能参考生视频 SD2.5'
-    | '音频生视频 SD2.5'
+    | '全能参考生视频 需配置'
+    | '音频生视频 需配置'
     | '世界观卡',
 ) {
   const branch =
@@ -434,7 +434,7 @@ function chooseContextNode(
     | '视频'
     | '智能剪辑 Beta'
     | '导演台 NEW'
-    | '逐帧拉片 SD2.5'
+    | '逐帧拉片 本地分析'
     | '音频'
     | '脚本'
     | '素材库',
@@ -499,7 +499,7 @@ describe('creative canvas', () => {
     })
 
     await user.click(screen.getByRole('button', { name: '发布与分享' }))
-    await user.click(screen.getByRole('menuitem', { name: '在LibTV上发布' }))
+    await user.click(screen.getByRole('menuitem', { name: '发布到本地作品' }))
     const dialog = screen.getByRole('dialog', { name: '发布作品' })
     fireEvent.change(within(dialog).getByRole('textbox', { name: '作品标题' }), {
       target: { value: '雨夜追寻 · 发布版' },
@@ -3257,8 +3257,8 @@ describe('creative canvas', () => {
     ).toEqual([
       '故事脚本生成',
       '角色三视图',
-      '全能参考生视频 SD2.5',
-      '音频生视频 SD2.5',
+      '全能参考生视频 需配置',
+      '音频生视频 需配置',
     ])
 
     await user.click(within(starter).getByRole('button', { name: '角色三视图' }))
@@ -4516,8 +4516,8 @@ describe('creative canvas', () => {
     const cases = [
       { button: '故事脚本生成', kind: 'script', title: '故事脚本' },
       { button: '角色三视图', kind: 'character-card', title: '角色三视图' },
-      { button: '全能参考生视频 SD2.5', kind: 'video', title: '全能参考生视频' },
-      { button: '音频生视频 SD2.5', kind: 'video', title: '音频生视频' },
+      { button: '全能参考生视频 需配置', kind: 'video', title: '全能参考生视频' },
+      { button: '音频生视频 需配置', kind: 'video', title: '音频生视频' },
       { button: '世界观卡', kind: 'worldview', title: '世界观卡' },
     ] as const
 
@@ -4545,7 +4545,7 @@ describe('creative canvas', () => {
       ['视频', 'video', '视频', undefined],
       ['智能剪辑 Beta', 'video', '智能剪辑', 'smart-edit'],
       ['导演台 NEW', 'script', '导演台', 'director'],
-      ['逐帧拉片 SD2.5', 'storyboard', '逐帧拉片', 'frame-analysis'],
+      ['逐帧拉片 本地分析', 'storyboard', '逐帧拉片', 'frame-analysis'],
       ['音频', 'text', '音频', 'audio'],
       ['脚本', 'script', '脚本', 'script'],
       ['素材库', 'image', '素材库', undefined],
@@ -4569,7 +4569,7 @@ describe('creative canvas', () => {
       .activeProject?.nodes.find(({ title }) => title.startsWith('逐帧拉片'))
     expect(frameAnalysis?.videoTool).toEqual({
       kind: 'frame-analysis',
-      model: 'SD2.5',
+      model: '本地分析',
       dimensions: ['分镜', '动态', '音乐'],
     })
     expect(useProjectStore.getState().past).toHaveLength(cases.length)
@@ -4817,7 +4817,7 @@ describe('creative canvas', () => {
     const save = vi.fn().mockResolvedValue(undefined)
     renderCanvas({ repository: { load: async () => undefined, save } })
     const { screenToFlowPosition } = initializeFlow()
-    chooseContextNode('逐帧拉片 SD2.5')
+    chooseContextNode('逐帧拉片 本地分析')
 
     expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 420, y: 300 })
 
@@ -4827,7 +4827,7 @@ describe('creative canvas', () => {
     expect(created).toMatchObject({
       kind: 'storyboard',
       position: { x: 777, y: 333 },
-      versions: [{ prompt: 'SD2.5 · 分镜 / 动态 / 音乐' }],
+      versions: [{ prompt: '本地分析 · 分镜 / 动态 / 音乐' }],
     })
     expect(useProjectStore.getState().past).toHaveLength(1)
     expect(screen.queryByRole('menu', { name: '画布快捷菜单' })).not.toBeInTheDocument()
