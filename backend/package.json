@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "dev:mock": "DEVICE_TOKEN_SECRET=local-device-secret-change-me INVITE_CODES=LOCAL-DEMO ADMIN_TOKEN=local-admin-secret-change-me ARK_API_KEY=mock-ark-key OPENSPEECH_API_KEY=mock-openspeech-key wrangler dev --local",
+    "build:edgeone": "esbuild src/index.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260829.1",
+    "esbuild": "^0.28.1",
     "typescript": "~6.0.2",
     "vitest": "^4.1.10",
     "wrangler": "^4.127.1"

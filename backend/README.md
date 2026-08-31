@@ -1,6 +1,16 @@
-# 无线画布 Cloudflare Workers 后端骨架
+# 无线画布边缘 API 后端
 
-本目录是与 `app/` 完全独立的 Hono + TypeScript 边缘 API。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV / EdgeKV 双存储实现；不会在源码、配置文件或响应中暴露供应商密钥。运行时检测到 `DB` 时继续使用 D1，只有没有 `DB` 且存在 `EDGEKV` 时才切换 EdgeKV，避免双写。
+本目录是与 `app/` 完全独立的 Hono + TypeScript 边缘 API。当前包含设备鉴权、四类上游 API 安全代理，以及 D1 + Workers KV / EdgeKV 双存储实现；不会在源码、配置文件或响应中暴露供应商密钥。运行时检测到 `DB` 时继续使用 D1，只有没有 `DB` 且存在 `EDGEKV` 时才切换 EdgeKV，避免双写。新的国内部署目标是腾讯云 EdgeOne 中国内地节点，Cloudflare 仅保留兼容与测试配置，不再作为生产目标。
+
+## 三环境矩阵
+
+| 环境 | 当前状态 | 运行方式与存储 | 配置入口 | 使用边界 |
+| --- | --- | --- | --- | --- |
+| 本地 dev 直连 | 保留 | `wrangler dev`；本地 D1 + KV，服务端代理上游 | `.dev.vars`，不得提交 | 开发、fixture 联调和兼容验证 |
+| Cloudflare Workers（已弃用） | 只保留兼容 | 模块 Worker；D1 + Workers KV | `wrangler.toml` + Worker Secrets | 不再新增生产部署，不作为国内上线方案 |
+| EdgeOne 中国内地（目标） | 预部署 | `npm run build:edgeone` 输出 `dist/index.js`；绑定 `EDGEKV` | EdgeOne 控制台环境变量与 Secret | 域名备案后灰度；生产前接受最终一致性与账号配额边界验收 |
+
+EdgeOne 的国内预部署步骤见 [中国内地节点部署手册](docs/edgeone-deploy-cn.md)。旧的 [EdgeKV 兼容性说明](docs/edgeone-deploy.md) 保留用于追溯早期存储抽象与运行时边界。
 
 ## v1 交付边界
 
