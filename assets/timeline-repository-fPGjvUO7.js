@@ -1,0 +1,1 @@
+var e=class{database;constructor(e){this.database=e}async load(e){return this.database.timelineProjects.where(`projectId`).equals(e).first()}async save(e){await this.database.timelineProjects.put(e)}async list(){return this.database.timelineProjects.orderBy(`updatedAt`).reverse().toArray()}};export{e as t};

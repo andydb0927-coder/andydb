@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-CbXtAM7H.js";import{n as t,t as n}from"./jsx-runtime-CIHwb6Jn.js";import"./index-BZn6GeDS.js";var r=e(t(),1),i=n(),a=(0,r.forwardRef)(({className:e,type:t=`button`,...n},r)=>(0,i.jsx)(`button`,{ref:r,type:t,className:[`ui-button`,`focus-visible`,e].filter(Boolean).join(` `),...n}));a.displayName=`Button`;export{a as t};
