@@ -54,7 +54,9 @@
 .dubbing-workbench fieldset, .dubbing-dialog fieldset { border: 1px solid #3b4652; border-radius: 8px; margin: 14px 0; padding: 10px; min-width: 0; }
 .dubbing-workbench legend, .dubbing-dialog legend { color: #c1cdd8; padding: 0 4px; }
 .dubbing-workbench label:not(.dubbing-check), .dubbing-dialog label:not(.dubbing-check) { display: grid; gap: 6px; margin: 10px 0; font-size: 13px; }
-.dubbing-workbench select, .dubbing-dialog select, .dubbing-dialog input:not([type=checkbox]), .dubbing-dialog textarea { width: 100%; min-width: 0; border: 1px solid #53616e; border-radius: 6px; background: #111820; color: #ecf3f7; padding: 9px; font: inherit; }
+.dubbing-workbench select, .dubbing-workbench textarea, .dubbing-dialog select, .dubbing-dialog input:not([type=checkbox]), .dubbing-dialog textarea { width: 100%; min-width: 0; border: 1px solid #53616e; border-radius: 6px; background: #111820; color: #ecf3f7; padding: 9px; font: inherit; }
+.dubbing-qa-results { padding-left: 18px; line-height: 1.6; }
+.dubbing-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .dubbing-dialog textarea { min-height: 70px; resize: vertical; }
 .dubbing-error, .dubbing-dialog [role=alert] { padding: 10px; color: #ffb3ad; background: #422a2b; border-radius: 8px; }
 .dubbing-save-state { color: #9edecb; font-size: 12px; }

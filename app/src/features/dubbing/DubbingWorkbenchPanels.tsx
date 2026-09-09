@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DUBBING_REPLACEMENT_CATEGORIES, formatDubbingEpisodeNumber } from './dubbing-localization-plan'
-import { DUBBING_QA_CATEGORIES, DUBBING_QA_LEVELS, loadDubbingQaTemplate } from './dubbing-qa-standard'
+import { loadDubbingQaTemplate } from './dubbing-qa-standard'
+import { DubbingQaChecklist, type DubbingQaActions } from './DubbingQaChecklist'
 import { dubbingTimecode, type DubbingMedia, type DubbingWorkbenchShot, type DubbingWorkspace } from './dubbing-workbench-model'
 
 export function DubbingMediaPreview({ media }: { media: DubbingMedia }) {
@@ -32,7 +33,7 @@ export function DubbingShotTable({ shots, selectedId, select, busy }: { shots: D
   </section>
 }
 
-export function DubbingShotDetails({ shot, projectId, busy, action }: { shot?: DubbingWorkbenchShot; projectId: string; busy: boolean; action(type: 'submit' | 'approve' | 'revise' | 'deliver' | 'edit'): void }) {
+export function DubbingShotDetails({ shot, projectId, busy, action, canApprove = false }: { shot?: DubbingWorkbenchShot; projectId: string; busy: boolean; canApprove?: boolean; action(type: 'submit' | 'approve' | 'revise' | 'deliver' | 'edit'): void }) {
   const p0 = loadDubbingQaTemplate().rules.filter(rule => rule.level === 'P0')
   const record = shot?.record
   const p0Remaining = p0.filter(rule => !shot?.qa.checkedIds.includes(rule.standardId)).length
@@ -47,12 +48,12 @@ export function DubbingShotDetails({ shot, projectId, busy, action }: { shot?: D
       <div className="dubbing-actions">
         {['待生成', '待返修'].includes(record.status) && <><button disabled={busy || !shot.pending} type="button" className="dubbing-primary" onClick={() => action('submit')}>提交生成</button>
           <button disabled={busy} type="button" onClick={() => action('edit')}>编辑镜头资料</button></>}
-        {record.status === '待自审' && <button className="dubbing-primary" type="button" disabled={busy || p0Remaining > 0} onClick={() => action('approve')}>标记自审通过</button>}
+        {record.status === '待自审' && <button className="dubbing-primary" type="button" disabled={busy || !canApprove} onClick={() => action('approve')}>标记自审通过</button>}
         {['待自审', '已通过'].includes(record.status) && <button type="button" disabled={busy || record.revisionCount >= 3} title={record.revisionCount >= 3 ? '每镜头最多返修 3 次，第四次不可提交。' : undefined} onClick={() => action('revise')}>请求返修</button>}
         {record.status === '已通过' && <button type="button" className="dubbing-primary" disabled={busy} onClick={() => action('deliver')}>交付</button>}
       </div>
       {record.revisionCount >= 3 && <p className="dubbing-limit">已达 3 次返修上限，不能发起第 4 次返修；当前版本仍可完成自审与交付。</p>}
-      {record.status === '待自审' && <p className="dubbing-muted">还有 {p0Remaining} 项 P0 待核对。勾选表示人工确认符合或不适用，不是 AI 自动通过。</p>}
+      {record.status === '待自审' && <p className="dubbing-muted">还有 {p0Remaining} 项 P0 待核对。全部子项与九节逐集排查完成并生成当前自审确认表，才能提交审核；勾选不是 AI 自动通过。</p>}
       {['待生成', '待返修'].includes(record.status) && <p className="dubbing-muted">{shot.pending ? '提交已有生成结果，不发起 API 请求。' : '请从画布或生成历史送入新的返修结果。'}</p>}
       <Link to={`/project/${encodeURIComponent(projectId)}`}>返回画布补充结果</Link>
       <h3>待提交结果与引用资产</h3><div className="dubbing-media-grid">{shot.assets.map(asset => <DubbingMediaPreview key={asset.id} media={asset} />)}</div>
@@ -65,8 +66,8 @@ export function DubbingShotDetails({ shot, projectId, busy, action }: { shot?: D
   </section>
 }
 
-export function DubbingPlanPanel({ workspace, shot, busy, editPlan, checkQa }: { workspace: DubbingWorkspace; shot?: DubbingWorkbenchShot; busy: boolean; editPlan(): void; checkQa(ids: string[]): void }) {
-  const plan = workspace.plan, rules = loadDubbingQaTemplate().rules
+export function DubbingPlanPanel({ workspace, shot, busy, editPlan, qaActions }: { workspace: DubbingWorkspace; shot?: DubbingWorkbenchShot; busy: boolean; editPlan(): void; qaActions: DubbingQaActions }) {
+  const plan = workspace.plan
   return <aside className="dubbing-panel" aria-label="本地化方案与QA清单">
     <header className="dubbing-panel-heading"><h2>本地化方案</h2><button type="button" disabled={busy} onClick={editPlan}>编辑本地化方案</button></header>
     <p>{plan ? `目标语种：${plan.targetLanguage}` : '尚未设置目标语种与本地化方案。'}</p>
@@ -77,12 +78,6 @@ export function DubbingPlanPanel({ workspace, shot, busy, editPlan, checkQa }: {
       {plan?.specialRules.map(rule => <p key={rule.id}>{rule.requirement}</p>)}
       {plan && <p>数字规则：{plan.numberRules.mode}；边界包含：{plan.numberRules.thresholdInclusive === null ? '待确认' : plan.numberRules.thresholdInclusive ? '是' : '否'}</p>}
     </details>
-    <h2>镜头级 QA 清单</h2><p className="dubbing-muted">按客户 PDF 核对。勾选仅针对当前生成版本，返修新版本须重新核对；历史自审记录保留。</p>
-    {!shot ? <p>请先选择镜头。</p> : <><p>已勾选 {shot.qa.checkedIds.length}/{rules.length} · 历史自审 {shot.qaHistory.length} 次</p>
-      {DUBBING_QA_CATEGORIES.map(category => <fieldset key={category}><legend>{category}</legend>{rules.filter(rule => rule.category === category).map(rule => <label key={rule.standardId} className="dubbing-check">
-        <input type="checkbox" disabled={busy || shot.record.status !== '待自审'} checked={shot.qa.checkedIds.includes(rule.standardId)} onChange={event => checkQa(event.target.checked ? [...shot.qa.checkedIds, rule.standardId] : shot.qa.checkedIds.filter(id => id !== rule.standardId))} />
-        <span><span className="dubbing-qa-level" data-level={rule.level}>{rule.level} {DUBBING_QA_LEVELS[rule.level].color}</span> {rule.standardId}<br />{rule.requirement}<small>计划检查方式：{rule.checkMethod} · 客户 PDF 第 {rule.source.pages.join('、')} 页</small></span>
-      </label>)}</fieldset>)}
-    </>}
+    {!shot ? <p>请先选择镜头。</p> : <DubbingQaChecklist key={shot.record.id} workspace={workspace} shot={shot} busy={busy} actions={qaActions} />}
   </aside>
 }

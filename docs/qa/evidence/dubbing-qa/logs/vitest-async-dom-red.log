@@ -1,0 +1,1668 @@
+
+> app@0.0.0 test:run
+> vitest run
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+AggregateError:
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}
+stderr | src/features/dubbing/DubbingWorkbenchPage.test.tsx > 三栏显示镜头资料，按钮由状态驱动，自审与返修意见实际保存
+An update to DubbingWorkbenchPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ❯ src/features/dubbing/DubbingWorkbenchPage.test.tsx (4 tests | 1 failed) 2173ms
+   × 三栏显示镜头资料，按钮由状态驱动，自审与返修意见实际保存 1471ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/dubbing/DubbingWorkbenchPage.test.tsx > 三栏显示镜头资料，按钮由状态驱动，自审与返修意见实际保存
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "提交生成"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  <main
+    class="dubbing-workbench"
+  />
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  <header
+    class="dubbing-workbench-heading"
+  />
+
+  Name "":
+  <header
+    class="dubbing-detail-heading"
+  />
+
+  Name "":
+  <header
+    class="dubbing-panel-heading"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="dubbing-eyebrow"
+  />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p
+    class="dubbing-muted"
+  />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  --------------------------------------------------
+  heading:
+
+  Name "出海转绘":
+  <h1 />
+
+  Name "剧集与镜头 1":
+  <h2 />
+
+  Name "EP001":
+  <h3 />
+
+  Name "镜头详情与审核":
+  <h2 />
+
+  Name "EP001 · 镜头 1":
+  <h3 />
+
+  Name "待提交结果与引用资产":
+  <h3 />
+
+  Name "生成版本 · 1":
+  <h3 />
+
+  Name "返修记录 · 只追加保留":
+  <h3 />
+
+  Name "本地化方案":
+  <h2 />
+
+  Name "姓名映射":
+  <h3 />
+
+  Name "建筑":
+  <h4 />
+
+  Name "服装":
+  <h4 />
+
+  Name "图案":
+  <h4 />
+
+  Name "工具":
+  <h4 />
+
+  Name "交通":
+  <h4 />
+
+  Name "面孔":
+  <h4 />
+
+  Name "文字":
+  <h4 />
+
+  Name "家具":
+  <h4 />
+
+  Name "食物":
+  <h4 />
+
+  Name "品牌":
+  <h4 />
+
+  Name "日常":
+  <h4 />
+
+  Name "祭祀":
+  <h4 />
+
+  Name "镜头级 QA 清单":
+  <h2 />
+
+  --------------------------------------------------
+  link:
+
+  Name "返回项目空间":
+  <a
+    data-discover="true"
+    href="/projects"
+  />
+
+  Name "打开对应画布":
+  <a
+    data-discover="true"
+    href="/project/project-frost-river"
+  />
+
+  Name "返回画布补充结果":
+  <a
+    data-discover="true"
+    href="/project/project-frost-river"
+  />
+
+  --------------------------------------------------
+  combobox:
+
+  Name "所属项目":
+  <select />
+
+  --------------------------------------------------
+  option:
+
+  Name "霜河渡":
+  <option
+    value="project-frost-river"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "刷新工作台":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "查看 EP001 镜头 1":
+  <button
+    aria-label="查看 EP001 镜头 1"
+    aria-pressed="true"
+    disabled=""
+    type="button"
+  />
+
+  Name "标记自审通过":
+  <button
+    class="dubbing-primary"
+    disabled=""
+    type="button"
+  />
+
+  Name "请求返修":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "编辑本地化方案":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "填写检测数据":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "生成自审确认表":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  --------------------------------------------------
+  region:
+
+  Name "剧集与镜头表":
+  <section
+    aria-label="剧集与镜头表"
+    class="dubbing-panel dubbing-shot-list"
+  />
+
+  Name "镜头详情与审核":
+  <section
+    aria-label="镜头详情与审核"
+    class="dubbing-panel dubbing-detail"
+  />
+
+  Name "自审检查器":
+  <section
+    aria-label="自审检查器"
+  />
+
+  --------------------------------------------------
+  table:
+
+  Name "":
+  <table />
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  <thead />
+
+  Name "":
+  <tbody />
+
+  --------------------------------------------------
+  row:
+
+  Name "镜号 时间码 台词摘要 状态 返修 操作":
+  <tr />
+
+  Name "1 00:00:00.000 00:00:02.000 你好 待自审 0/3 查看":
+  <tr
+    data-selected="true"
+  />
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "镜号":
+  <th />
+
+  Name "时间码":
+  <th />
+
+  Name "台词摘要":
+  <th />
+
+  Name "状态":
+  <th />
+
+  Name "返修":
+  <th />
+
+  Name "操作":
+  <th />
+
+  --------------------------------------------------
+  cell:
+
+  Name "1":
+  <td />
+
+  Name "00:00:00.000 00:00:02.000":
+  <td />
+
+  Name "你好":
+  <td
+    class="dubbing-dialogue-summary"
+    title="你好"
+  />
+
+  Name "待自审":
+  <td />
+
+  Name "0/3":
+  <td />
+
+  Name "查看":
+  <td />
+
+  --------------------------------------------------
+  term:
+
+  Name "":
+  <dt />
+
+  Name "":
+  <dt />
+
+  Name "":
+  <dt />
+
+  --------------------------------------------------
+  definition:
+
+  Name "":
+  <dd />
+
+  Name "":
+  <dd />
+
+  Name "":
+  <dd />
+
+  --------------------------------------------------
+  figure:
+
+  Name "":
+  <figure
+    class="dubbing-media"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "引用资产 asset-shot-river-v1":
+  <img
+    alt="引用资产 asset-shot-river-v1"
+    src="/demo/shot-river.png"
+  />
+
+  --------------------------------------------------
+  group:
+
+  Name "":
+  <details />
+
+  Name "":
+  <details />
+
+  Name "":
+  <details />
+
+  Name "":
+  <details />
+
+  Name "资产":
+  <fieldset />
+
+  Name "场景":
+  <fieldset />
+
+  Name "道具":
+  <fieldset />
+
+  Name "画面":
+  <fieldset />
+
+  Name "声音":
+  <fieldset />
+
+  Name "字幕":
+  <fieldset />
+
+  Name "修改底线":
+  <fieldset />
+
+  Name "交付":
+  <fieldset />
+
+  Name "中国元素":
+  <fieldset />
+
+  --------------------------------------------------
+  complementary:
+
+  Name "本地化方案与QA清单":
+  <aside
+    aria-label="本地化方案与QA清单"
+    class="dubbing-panel"
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ul
+    class="dubbing-qa-results"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  Name "":
+  <li />
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  Name "":
+  <strong />
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "P0 红 DB-QA-ASSET-01 角色姓名及姓氏全剧唯一，并保持角色、服装与参考资产一致。 检查方式：人工 · 客户 PDF 第 2、3 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ASSET-02 保留角色多角度和必要服装资产，来源及使用授权可追溯。 检查方式：人工 · 客户 PDF 第 3、13 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "资产 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-SCENE-01 场景空间关系、镜头轴线及人物进出方向与剧情一致。 检查方式：AI辅助 · 客户 PDF 第 3、4、20 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-SCENE-02 光线、天气、时段和前后镜头环境连续，替换不得改变剧情功能。 检查方式：AI辅助 · 客户 PDF 第 4、7、20 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "场景 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-PROP-01 关键道具的数量、持握、交互和剧情用途保持一致。 检查方式：人工 · 客户 PDF 第 5、6、21 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-PROP-02 黑板、叫车标志、饮品设备等按已确认替换清单逐项核对。 检查方式：人工 · 客户 PDF 第 4、5、21 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "道具 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-FRAME-01 无人物结构异常、穿模、明显闪烁或关键内容缺失。 检查方式：AI辅助 · 客户 PDF 第 6、7、22 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-FRAME-02 保持镜头构图、动作衔接与剧情可理解性，时长不强求逐帧等同原片。 检查方式：人工 · 客户 PDF 第 7、10 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "画面 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-SOUND-01 人工核对口型同步：偏差不超过 0.3 秒；0.3–0.5 秒记一般问题，超过 0.5 秒记严重问题。 检查方式：人工 · 客户 PDF 第 8 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-SOUND-02 台词完整且本地化准确，角色音色连续，无缺音、杂音或错配。 检查方式：人工 · 客户 PDF 第 8、23 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-SOUND-03 对照客户音量要求检查音轨；±3 dB 的测量基准须先确认，不能默认等同 LUFS。 检查方式：人工 · 客户 PDF 第 16 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "声音 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-SUBTITLE-01 字幕与花字完整替换，姓名、数字、货币和标点服从全剧本地化方案。 检查方式：人工 · 客户 PDF 第 9、17、23 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-SUBTITLE-02 字幕位于安全区域、行数和换行便于阅读；工具字体数值按交付软件核对。 检查方式：人工 · 客户 PDF 第 14、15 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P2 白 DB-QA-SUBTITLE-03 检查非关键字幕的轻微排版和间距差异，并记录白色问题。 检查方式：人工 · 客户 PDF 第 1、14、15 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "字幕 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-REVISION-01 每镜头正式返修最多 3 次，意见、责任人及对应版本只追加保留。 检查方式：自动 · 客户 PDF 第 12 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-REVISION-02 原片、反馈与修改版本并存，不得覆盖旧版本或通过删镜、模糊、裁切、静音规避问题。 检查方式：人工 · 客户 PDF 第 10、17 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-REVISION-03 先完成自审再送审；返修后重新自审，不沿用旧版本通过记录。 检查方式：人工 · 客户 PDF 第 1、17 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "修改底线 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-DELIVERY-01 视频采用 H.264 MP4、1080×1920、至少 25 Mbps、25 或 30 fps、Rec.709 与立体声。 检查方式：自动 · 客户 PDF 第 13、14 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-DELIVERY-02 集号使用 EP001 等三位编号，按要求交付 1080×1440 与 1080×1920 海报。 检查方式：自动 · 客户 PDF 第 12 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P0 红 DB-QA-DELIVERY-03 发布前人工确认素材、音乐及字体使用授权，交付包文件齐全。 检查方式：人工 · 客户 PDF 第 13 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "交付 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-01 建筑：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-02 服装：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-03 图案：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-04 工具：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-05 交通：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-06 面孔：人工核对已确认的虚构角色外观与跨镜头一致性，不进行真人族裔识别。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-07 文字：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-08 家具：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-09 食物：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-10 品牌：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-11 日常：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "P1 黄 DB-QA-ELEMENT-12 祭祀：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。 检查方式：人工 · 客户 PDF 第 18、26 页":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "中国元素 · 逐集排查：已核对本集各镜头":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  --------------------------------------------------dialog:
+
+  Name "请求返修":
+  <div
+    aria-label="请求返修"
+    aria-modal="true"
+    class="dubbing-dialog"
+    role="dialog"
+  />
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  <header />
+
+  --------------------------------------------------
+  heading:
+
+  Name "请求返修":
+  <h2 />
+
+  --------------------------------------------------
+  button:
+
+  Name "关闭请求返修":
+  <button
+    aria-label="关闭请求返修"
+    disabled=""
+    type="button"
+  />
+
+  Name "保存返修意见":
+  <button
+    class="dubbing-primary"
+    disabled=""
+    type="submit"
+  />
+
+  --------------------------------------------------
+  textbox:
+
+  Name "返修意见":
+  <textarea
+    disabled=""
+    required=""
+  />
+
+  --------------------------------------------------
+  group:
+
+  Name "选择关联 QA 标准（至少一项）":
+  <fieldset />
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "DB-QA-ASSET-01 · 角色姓名及姓氏全剧唯一，并保持角色、服装与参考资产一致。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ASSET-02 · 保留角色多角度和必要服装资产，来源及使用授权可追溯。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SCENE-01 · 场景空间关系、镜头轴线及人物进出方向与剧情一致。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SCENE-02 · 光线、天气、时段和前后镜头环境连续，替换不得改变剧情功能。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-PROP-01 · 关键道具的数量、持握、交互和剧情用途保持一致。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-PROP-02 · 黑板、叫车标志、饮品设备等按已确认替换清单逐项核对。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-FRAME-01 · 无人物结构异常、穿模、明显闪烁或关键内容缺失。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-FRAME-02 · 保持镜头构图、动作衔接与剧情可理解性，时长不强求逐帧等同原片。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SOUND-01 · 人工核对口型同步：偏差不超过 0.3 秒；0.3–0.5 秒记一般问题，超过 0.5 秒记严重问题。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SOUND-02 · 台词完整且本地化准确，角色音色连续，无缺音、杂音或错配。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SOUND-03 · 对照客户音量要求检查音轨；±3 dB 的测量基准须先确认，不能默认等同 LUFS。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SUBTITLE-01 · 字幕与花字完整替换，姓名、数字、货币和标点服从全剧本地化方案。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SUBTITLE-02 · 字幕位于安全区域、行数和换行便于阅读；工具字体数值按交付软件核对。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-SUBTITLE-03 · 检查非关键字幕的轻微排版和间距差异，并记录白色问题。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-REVISION-01 · 每镜头正式返修最多 3 次，意见、责任人及对应版本只追加保留。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-REVISION-02 · 原片、反馈与修改版本并存，不得覆盖旧版本或通过删镜、模糊、裁切、静音规避问题。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-REVISION-03 · 先完成自审再送审；返修后重新自审，不沿用旧版本通过记录。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-DELIVERY-01 · 视频采用 H.264 MP4、1080×1920、至少 25 Mbps、25 或 30 fps、Rec.709 与立体声。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-DELIVERY-02 · 集号使用 EP001 等三位编号，按要求交付 1080×1440 与 1080×1920 海报。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-DELIVERY-03 · 发布前人工确认素材、音乐及字体使用授权，交付包文件齐全。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-01 · 建筑：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-02 · 服装：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-03 · 图案：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-04 · 工具：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-05 · 交通：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-06 · 面孔：人工核对已确认的虚构角色外观与跨镜头一致性，不进行真人族裔识别。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-07 · 文字：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-08 · 家具：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-09 · 食物：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-10 · 品牌：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-11 · 日常：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  Name "DB-QA-ELEMENT-12 · 祭祀：按项目已确认的源元素与目标替换清单核对，保留剧情意义和镜头连续性。":
+  <input
+    disabled=""
+    type="checkbox"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <main
+      class="dubbing-workbench"
+    >
+      <header
+        class="dubbing-workbench-heading"
+      >
+        <div>
+          <p
+            class="dubbing-eyebrow"
+          >
+            LOCAL REVIEW WORKSPACE
+          </p>
+          <h1>
+            出海转绘
+          </h1>
+          <p>
+            从已有镜头到自审、返修与交付记录 · 当前浏览器本地保存
+          </p>
+        </div>
+        <a
+          data-discover="true"
+          href="/projects"
+        >
+          返回项目空间
+        </a>
+      </header>
+      <div
+        class="dubbing-project-picker"
+      >
+        <label>
+          所属项目
+          <select>
+            <option
+              value="project-frost-river"
+            >
+              霜河渡
+            </option>
+          </select>
+        </label>
+        <a
+          data-discover="true"
+          href="/project/project-frost-river"
+        >
+          打开对应画布
+        </a>
+      </div>
+      <div
+        class="dubbing-workbench-summary"
+      >
+        <span>
+          1
+           个镜头 ·
+          0
+           已通过 ·
+          0
+           已交付
+        </span>
+        <button
+          disabled=""
+          type="button"
+        >
+          刷新工作台
+        </button>
+      </div>
+      <div
+        class="dubbing-columns"
+      >
+        <section
+          aria-label="剧集与镜头表"
+          class="dubbing-panel dubbing-shot-list"
+        >
+          <h2>
+            剧集与镜头
+            <span>
+              1
+            </span>
+          </h2>
+          <section>
+            <h3>
+              EP001
+            </h3>
+            <div
+              aria-label="EP001 镜头列表"
+              class="dubbing-table-scroll"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      镜号
+                    </th>
+                    <th>
+                      时间码
+                    </th>
+                    <th>
+                      台词摘要
+                    </th>
+                    <th>
+                      状态
+                    </th>
+                    <th>
+                      返修
+                    </th>
+                    <th>
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    data-selected="true"
+                  >
+                    <td>
+                      1
+                    </td>
+                    <td>
+                      00:00:00.000
+                      <br />
+                      00:00:02.000
+                    </td>
+                    <td
+                      class="dubbing-dialogue-summary"
+                      title="你好"
+                    >
+                      你好
+                    </td>
+                    <td>
+                      <span
+                        class="dubbing-badge"
+                        data-status="待自审"
+                      >
+                        待自审
+                      </span>
+                    </td>
+                    <td>
+                      0
+                      /3
+                    </td>
+                    <td>
+                      <button
+                        aria-label="查看 EP001 镜头 1"
+                        aria-pressed="true"
+                        disabled=""
+                        type="button"
+                      >
+                        查看
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+        <section
+          aria-label="镜头详情与审核"
+          class="dubbing-panel dubbing-detail"
+        >
+          <h2>
+            镜头详情与审核
+          </h2>
+          <header
+            class="dubbing-detail-heading"
+          >
+            <h3>
+              EP001
+               · 镜头
+              1
+            </h3>
+            <span
+              class="dubbing-badge"
+              data-status="待自审"
+            >
+              待自审
+            </span>
+          </header>
+          <p
+            class="dubbing-muted"
+          >
+            原片
+            00:00:00.000
+             —
+            00:00:02.000
+             · 返修
+            0
+            /3
+          </p>
+          <p
+            class="dubbing-muted"
+          >
+            原片引用：
+            original-episode-1
+            （人工登记）
+          </p>
+          <dl>
+            <dt>
+              台词原文
+            </dt>
+            <dd>
+              你好
+            </dd>
+            <dt>
+              本地化台词
+            </dt>
+            <dd>
+              Hello
+            </dd>
+          ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/dubbing/DubbingWorkbenchPage.test.tsx:35:17
+     33|   await screen.findByText('修正字幕')
+     34|   expect((await repository.load(project.id)).shots[0].record.revisionC…
+     35|   expect(screen.getByRole('button', { name: '提交生成' })).toBeDisabled()
+       |                 ^
+     36| })
+     37| test('Esc 关闭本地化编辑面板并归还焦点，不保存未提交草稿', async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 214 passed (215)
+      Tests  1 failed | 1723 passed (1724)
+   Start at  01:59:46
+   Duration  72.32s (transform 26.83s, setup 76.76s, import 71.72s, tests 149.20s, environment 201.06s)

@@ -1,0 +1,37 @@
+
+> app@0.0.0 test:run
+> vitest run
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+AggregateError:
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}
+
+ Test Files  215 passed (215)
+      Tests  1724 passed (1724)
+   Start at  02:01:46
+   Duration  66.83s (transform 27.15s, setup 71.01s, import 71.19s, tests 140.33s, environment 178.29s)

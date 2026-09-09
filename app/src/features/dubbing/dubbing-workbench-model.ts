@@ -1,5 +1,6 @@
 import type { DubbingShotRecord } from './dubbing-shot-record'
 import type { DubbingLocalizationPlan } from './dubbing-localization-plan'
+import type { DubbingQaConfirmation, DubbingQaEvidence } from './dubbing-qa-checklist'
 
 export interface DubbingMedia {
   id: string
@@ -35,8 +36,8 @@ export interface DubbingWorkbenchShot {
   sourceTitle: string
   assets: DubbingMedia[]
   pending: DubbingReviewSource | null
-  qa: { versionId: string | null; checkedIds: string[] }
-  qaHistory: { id: string; versionId: string; checkedIds: string[]; at: string }[]
+  qa: { versionId: string | null; checkedIds: string[]; checkedCategories?: string[]; evidence?: DubbingQaEvidence; confirmation?: DubbingQaConfirmation }
+  qaHistory: { id: string; versionId: string; checkedIds: string[]; at: string; confirmation?: DubbingQaConfirmation }[]
 }
 export interface DubbingWorkspace {
   namespace: 'dubbing.workspace'

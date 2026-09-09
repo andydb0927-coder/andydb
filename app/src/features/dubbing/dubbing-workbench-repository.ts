@@ -1,7 +1,8 @@
 import Dexie, { type Table } from 'dexie'
 import { createDubbingShotRecord, transitionDubbingShot, type DubbingShotContent, type DubbingShotEvent } from './dubbing-shot-record'
 import { createDubbingLocalizationPlan, type DubbingLocalizationPlanInput } from './dubbing-localization-plan'
-import { loadDubbingQaTemplate } from './dubbing-qa-standard'
+import { DUBBING_QA_CATEGORIES, loadDubbingQaTemplate } from './dubbing-qa-standard'
+import { createDubbingQaConfirmation, dubbingConfirmationCurrent, parseDubbingQaEvidence } from './dubbing-qa-checklist'
 import { dubbingAssert, dubbingText, dubbingUniqueIds } from './dubbing-domain-validation'
 import { emptyDubbingWorkspace, type DubbingIntakeFields, type DubbingReviewSource, type DubbingWorkbenchShot, type DubbingWorkspace } from './dubbing-workbench-model'
 
@@ -100,17 +101,43 @@ export class DubbingWorkbenchRepository {
       dubbingAssert(shot.record.status === '待自审', '仅待自审版本可以修改 QA 勾选。')
       validateStandards(ids)
       shot.qa.checkedIds = [...ids]
+      delete shot.qa.confirmation
+    })
+  }
+  checkQaCategories(projectId: string, version: number, shotId: string, categories: string[]) {
+    return this.mutate(projectId, version, state => {
+      const shot = shotAt(state, shotId)
+      dubbingAssert(shot.record.status === '待自审', '仅待自审版本可以修改逐集排查。')
+      dubbingAssert(categories.every(category => DUBBING_QA_CATEGORIES.some(known => known === category)), '未知 QA 分类。')
+      shot.qa.checkedCategories = [...new Set(categories)]
+      delete shot.qa.confirmation
+    })
+  }
+  saveQaEvidence(projectId: string, version: number, shotId: string, input: unknown) {
+    return this.mutate(projectId, version, state => {
+      const shot = shotAt(state, shotId)
+      dubbingAssert(shot.record.status === '待自审', '仅待自审版本可以修改检测数据。')
+      shot.qa.evidence = parseDubbingQaEvidence(input)
+      shot.qa.checkedIds = []; shot.qa.checkedCategories = []
+      delete shot.qa.confirmation
+    })
+  }
+  confirmChecklist(projectId: string, version: number, shotId: string) {
+    return this.mutate(projectId, version, state => {
+      const shot = shotAt(state, shotId)
+      dubbingAssert(shot.record.status === '待自审', '仅待自审版本可以生成确认表。')
+      shot.qa.confirmation = createDubbingQaConfirmation(state, shot, new Date().toISOString())
     })
   }
   approve(projectId: string, version: number, shotId: string) {
     return this.mutate(projectId, version, state => {
       const shot = shotAt(state, shotId), latest = shot.record.generationVersions.at(-1)
       dubbingAssert(latest && shot.qa.versionId === latest.id, '请先提交当前生成结果。')
-      const required = loadDubbingQaTemplate().rules.filter(rule => rule.level === 'P0')
-      dubbingAssert(required.every(rule => shot.qa.checkedIds.includes(rule.standardId)), '请先逐项核对全部 P0 标准（符合或已确认不适用），再标记自审通过。')
+      dubbingAssert(dubbingConfirmationCurrent(state, shot), '请完成全部 P0/P1/P2 子项、九节逐集排查并生成当前版本的自审确认表。')
+      createDubbingQaConfirmation(state, shot, new Date().toISOString())
       const event = metadata(shot), selfReviewId = crypto.randomUUID()
       advance(shot, { ...event, type: 'approve', versionId: latest.id, selfReviewId })
-      shot.qaHistory.push({ id: selfReviewId, versionId: latest.id, checkedIds: [...shot.qa.checkedIds], at: event.at })
+      shot.qaHistory.push({ id: selfReviewId, versionId: latest.id, checkedIds: [...shot.qa.checkedIds], at: event.at, confirmation: structuredClone(shot.qa.confirmation) })
     })
   }
   revise(projectId: string, version: number, shotId: string, feedback: string, standardIds: string[]) {
@@ -138,6 +165,9 @@ export class DubbingWorkbenchRepository {
     return this.mutate(projectId, version, state => {
       dubbingAssert(input.dramaId === projectId, '本地化方案不属于当前项目。')
       state.plan = createDubbingLocalizationPlan(input)
+      for (const shot of state.shots) if (shot.record.status === '待自审') {
+        shot.qa.checkedIds = []; shot.qa.checkedCategories = []; delete shot.qa.confirmation
+      }
     })
   }
 }

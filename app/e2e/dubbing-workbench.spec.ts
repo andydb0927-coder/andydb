@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { expect, test, type Page } from './provider-fixture'
 import { makeProjectFixture } from '../src/test/fixtures'
-import { loadDubbingQaTemplate } from '../src/features/dubbing/dubbing-qa-standard'
+import { DUBBING_QA_CATEGORIES, loadDubbingQaTemplate } from '../src/features/dubbing/dubbing-qa-standard'
 import type { DubbingWorkspace } from '../src/features/dubbing/dubbing-workbench-model'
 
 async function seed(page: Page) {
@@ -88,12 +88,19 @@ test('节点与历史送审贯通：三轮返修、第四次禁用、QA 自审�
   await expect(page.getByRole('button', { name: '请求返修', exact: true })).toBeDisabled()
   await expect(page.getByText(/不能发起第 4 次返修/)).toBeVisible()
   const qa = page.getByRole('complementary', { name: '本地化方案与QA清单' })
-  for (const rule of loadDubbingQaTemplate().rules.filter(rule => rule.level === 'P0')) {
+  for (const rule of loadDubbingQaTemplate().rules) {
     const checkbox = qa.getByRole('checkbox', { name: new RegExp(rule.standardId) })
     await expect(checkbox).toBeEnabled()
     await checkbox.check()
     await expect.poll(async () => (await stored(page)).shots[0].qa.checkedIds.includes(rule.standardId)).toBe(true)
   }
+  for (const category of DUBBING_QA_CATEGORIES) {
+    await qa.getByRole('checkbox', { name: `${category === '修改' ? '修改底线' : category} · 逐集排查：已核对本集各镜头`, exact: true }).check()
+    await expect.poll(async () => (await stored(page)).shots[0].qa.checkedCategories?.includes(category)).toBe(true)
+  }
+  await expect(page.getByRole('button', { name: '标记自审通过' })).toBeDisabled()
+  await page.getByRole('button', { name: '生成自审确认表' }).click()
+  await expect(page.getByRole('textbox', { name: '自审确认表文本' })).toContainText('《自审确认表》')
   await page.getByRole('button', { name: '标记自审通过' }).click()
   await page.getByRole('button', { name: '交付', exact: true }).click()
   const delivery = page.getByRole('dialog', { name: '记录交付' })
@@ -108,6 +115,53 @@ test('节点与历史送审贯通：三轮返修、第四次禁用、QA 自审�
   expect(state.shots[0].record.revisions).toHaveLength(3)
   await page.getByLabel('所属项目').selectOption('dubbing-isolation')
   await expect(page.getByText('暂无镜头。请从画布节点或生成历史选择“送审到工作台”。')).toBeVisible()
+})
+
+test('自审检查器：元数据失败阻断、九节全勾选、文本快照刷新恢复及Esc', async ({ page }) => {
+  test.setTimeout(120_000)
+  await seed(page); await sendNode(page)
+  await page.getByRole('button', { name: '提交生成', exact: true }).click()
+  const trigger = page.getByRole('button', { name: '填写检测数据' })
+  await trigger.click(); await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0); await expect(trigger).toBeFocused()
+  const save = async (channels: number) => {
+    await trigger.click()
+    await page.getByRole('textbox', { name: '检测数据 JSON' }).fill(JSON.stringify({ channels }))
+    await page.getByRole('button', { name: '保存检测数据' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
+  await save(1)
+  await expect(page.getByText('自动检查存在 FAIL，请修正后重新自审，不能用勾选代替修复。')).toBeVisible()
+  await expect(page.getByRole('button', { name: '生成自审确认表' })).toBeDisabled()
+  await save(2)
+  const qa = page.getByRole('region', { name: '自审检查器' })
+  for (const rule of loadDubbingQaTemplate().rules) {
+    const box = qa.getByRole('checkbox', { name: new RegExp(rule.standardId) })
+    await expect(box).toBeEnabled(); await box.check()
+    await expect.poll(async () => (await stored(page)).shots[0].qa.checkedIds.includes(rule.standardId)).toBe(true)
+  }
+  await expect(page.getByRole('button', { name: '生成自审确认表' })).toBeDisabled()
+  for (const category of DUBBING_QA_CATEGORIES) {
+    const box = qa.getByRole('checkbox', { name: `${category === '修改' ? '修改底线' : category} · 逐集排查：已核对本集各镜头`, exact: true })
+    await expect(box).toBeEnabled(); await box.check()
+    await expect.poll(async () => (await stored(page)).shots[0].qa.checkedCategories?.includes(category)).toBe(true)
+  }
+  await page.getByRole('button', { name: '生成自审确认表' }).click()
+  const snapshot = page.getByRole('textbox', { name: '自审确认表文本' })
+  await expect(snapshot).toHaveValue(/待人工确认/)
+  const text = await snapshot.inputValue()
+  await page.reload(); await expect(snapshot).toHaveValue(text)
+  await expect(page.getByRole('button', { name: '标记自审通过' })).toBeEnabled()
+  await mkdir('../docs/qa/evidence/dubbing-qa', { recursive: true })
+  for (const width of [1440, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 900 })
+    await snapshot.scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: `../docs/qa/evidence/dubbing-qa/${width}.png`, fullPage: true })
+  }
+  await page.getByRole('button', { name: '标记自审通过' }).click()
+  await expect(page.getByRole('button', { name: '交付', exact: true })).toBeVisible()
+  expect((await stored(page)).shots[0].qaHistory[0].confirmation?.text).toBe(text)
 })
 
 test('三栏主视口、本地化方案持久化、Esc 焦点回归与项目入口', async ({ page }) => {

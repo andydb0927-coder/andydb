@@ -30,9 +30,10 @@ test('三栏显示镜头资料，按钮由状态驱动，自审与返修意见�
   await user.type(within(dialog).getByRole('textbox', { name: '返修意见' }), '修正字幕')
   await user.click(within(dialog).getByRole('checkbox', { name: /DB-QA-SUBTITLE-01/ }))
   await user.click(within(dialog).getByRole('button', { name: '保存返修意见' }))
-  await screen.findByText('修正字幕')
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '请求返修' })).not.toBeInTheDocument())
+  await within(screen.getByRole('region', { name: '镜头详情与审核' })).findByText('修正字幕')
   expect((await repository.load(project.id)).shots[0].record.revisionCount).toBe(1)
-  expect(screen.getByRole('button', { name: '提交生成' })).toBeDisabled()
+  expect(await screen.findByRole('button', { name: '提交生成' })).toBeDisabled()
 })
 test('Esc 关闭本地化编辑面板并归还焦点，不保存未提交草稿', async () => {
   const { user, repository, project } = await setup()

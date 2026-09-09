@@ -8,6 +8,7 @@ import { DubbingPlanPanel, DubbingShotDetails, DubbingShotTable } from './Dubbin
 import { DubbingPlanEditor } from './DubbingPlanEditor'
 import { DubbingContentDialog, DubbingReviewDialog } from './DubbingReviewDialogs'
 import './dubbing-workbench.css'
+import { dubbingConfirmationCurrent } from './dubbing-qa-checklist'
 
 const defaultProjects = createDefaultProjectStorage()
 interface DubbingWorkbenchPageProps {
@@ -76,14 +77,21 @@ function DubbingProjectWorkbench({ project, repository, initialShotId }: { proje
     {error && <p role="alert" className="dubbing-error">{error}</p>}{message && <p role="status" className="dubbing-save-state">{message}</p>}
     <div className="dubbing-columns">
       <DubbingShotTable shots={workspace.shots} selectedId={selectedId} select={setSelectedId} busy={busy} />
-      <DubbingShotDetails shot={selected} projectId={project.id} busy={busy} action={act} />
-      <DubbingPlanPanel workspace={workspace} shot={selected} busy={busy} editPlan={() => setPanel('plan')} checkQa={ids => {
+      <DubbingShotDetails shot={selected} projectId={project.id} busy={busy} action={act} canApprove={Boolean(selected && dubbingConfirmationCurrent(workspace, selected))} />
+      <DubbingPlanPanel workspace={workspace} shot={selected} busy={busy} editPlan={() => setPanel('plan')} qaActions={{ checkQa: ids => {
         if (!selected || inFlight.current) return
         setWorkspace({ ...workspace, shots: workspace.shots.map(shot => shot.record.id === selectedId ? { ...shot, qa: { ...shot.qa, checkedIds: ids } } : shot) })
         void commit(() => repository.checkQa(project.id, workspace.version, selectedId, ids)).catch(failure => {
           if (mounted.current) { setWorkspace(workspace); setError(dubbingUiError(failure)) }
         })
-      }} />
+      }, checkCategories: ids => {
+        if (!selected || inFlight.current) return
+        setWorkspace({ ...workspace, shots: workspace.shots.map(shot => shot.record.id === selectedId ? { ...shot, qa: { ...shot.qa, checkedCategories: ids } } : shot) })
+        void commit(() => repository.checkQaCategories(project.id, workspace.version, selectedId, ids)).catch(failure => {
+          if (mounted.current) { setWorkspace(workspace); setError(dubbingUiError(failure)) }
+        })
+      }, saveEvidence: value => commit(() => repository.saveQaEvidence(project.id, workspace.version, selectedId, value)),
+      confirm: () => { void commit(() => repository.confirmChecklist(project.id, workspace.version, selectedId)).catch(failure => setError(dubbingUiError(failure))) } }} />
     </div>
     {panel === 'plan' && <DubbingPlanEditor projectId={project.id} plan={workspace.plan} onClose={() => setPanel(undefined)} save={input => commit(() => repository.savePlan(project.id, workspace.version, input))} />}
     {(panel === 'revise' || panel === 'deliver') && selected && <DubbingReviewDialog mode={panel} onClose={() => setPanel(undefined)} save={(text, ids) => commit(() => panel === 'revise' ? repository.revise(project.id, workspace.version, selectedId, text, ids) : repository.deliver(project.id, workspace.version, selectedId, text))} />}

@@ -1,0 +1,190 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/dubbing/dubbing-qa-checklist.test.ts
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/dubbing/dubbing-qa-checklist.test.ts (2 tests | 2 failed) 37ms
+   × P0不再足够；全项和逐集确认后才生成快照，持久化且批准保留依据 29ms
+   × 自动FAIL不能靠全勾选绕过，修改数据和方案使旧确认失效，拒绝非法元数据 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/dubbing/dubbing-qa-checklist.test.ts > P0不再足够；全项和逐集确认后才生成快照，持久化且批准保留依据
+AssertionError: promise resolved "{ namespace: 'dubbing.workspace', …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "namespace": "dubbing.workspace",
++   "plan": null,
++   "projectId": "project-frost-river",
++   "schemaVersion": 1,
++   "shots": [
++     {
++       "assets": [
++         {
++           "height": 1080,
++           "id": "asset-shot-river-v1",
++           "kind": "image",
++           "mimeType": "image/png",
++           "url": "/demo/shot-river.png",
++           "width": 1920,
++         },
++       ],
++       "pending": null,
++       "qa": {
++         "checkedIds": [
++           "DB-QA-ASSET-01",
++           "DB-QA-SCENE-01",
++           "DB-QA-PROP-01",
++           "DB-QA-FRAME-01",
++           "DB-QA-SOUND-01",
++           "DB-QA-SOUND-02",
++           "DB-QA-SUBTITLE-01",
++           "DB-QA-REVISION-01",
++           "DB-QA-REVISION-02",
++           "DB-QA-REVISION-03",
++           "DB-QA-DELIVERY-01",
++           "DB-QA-DELIVERY-03",
++         ],
++         "versionId": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++       },
++       "qaHistory": [
++         {
++           "at": "2026-09-09T17:51:02.800Z",
++           "checkedIds": [
++             "DB-QA-ASSET-01",
++             "DB-QA-SCENE-01",
++             "DB-QA-PROP-01",
++             "DB-QA-FRAME-01",
++             "DB-QA-SOUND-01",
++             "DB-QA-SOUND-02",
++             "DB-QA-SUBTITLE-01",
++             "DB-QA-REVISION-01",
++             "DB-QA-REVISION-02",
++             "DB-QA-REVISION-03",
++             "DB-QA-DELIVERY-01",
++             "DB-QA-DELIVERY-03",
++           ],
++           "id": "ca611080-2ce6-44cd-b3e0-91b9ec232eeb",
++           "versionId": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++         },
++       ],
++       "record": {
++         "approval": {
++           "actorId": "local-reviewer",
++           "at": "2026-09-09T17:51:02.800Z",
++           "selfReviewId": "ca611080-2ce6-44cd-b3e0-91b9ec232eeb",
++           "versionId": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++         },
++         "content": {
++           "camera": "",
++           "framing": "",
++           "localizedDialogue": "Hello",
++           "originalDialogue": "你好",
++           "referenceAssetIds": [],
++         },
++         "createdAt": "2026-09-09T17:51:02.792Z",
++         "delivery": null,
++         "dramaId": "project-frost-river",
++         "episodeId": "project-frost-river:ep:1",
++         "episodeNumber": 1,
++         "events": [
++           {
++             "actorId": "local-reviewer",
++             "at": "2026-09-09T17:51:02.797Z",
++             "id": "4a4ed226-08fc-4e93-b777-96ecea60fac8",
++             "type": "submit-generation",
++             "version": {
++               "assetIds": [
++                 "asset-shot-river-v1",
++               ],
++               "id": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++               "providerId": "existing-asset",
++               "requestId": "version-shot-river-v1",
++             },
++           },
++           {
++             "actorId": "local-reviewer",
++             "at": "2026-09-09T17:51:02.800Z",
++             "id": "e830b8e6-0ad8-482c-9968-c709bcc56666",
++             "selfReviewId": "ca611080-2ce6-44cd-b3e0-91b9ec232eeb",
++             "type": "approve",
++             "versionId": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++           },
++         ],
++         "generationVersions": [
++           {
++             "assetIds": [
++               "asset-shot-river-v1",
++             ],
++             "contentSnapshot": {
++               "camera": "",
++               "framing": "",
++               "localizedDialogue": "Hello",
++               "originalDialogue": "你好",
++               "referenceAssetIds": [],
++             },
++             "createdAt": "2026-09-09T17:51:02.797Z",
++             "id": "7a9f29f3-76d7-41bb-9034-0423615b3ad8",
++             "providerId": "existing-asset",
++             "requestId": "version-shot-river-v1",
++             "revisionId": null,
++           },
++         ],
++         "id": "01a908bc-8b4d-49d0-978a-d3dd80123257",
++         "namespace": "dubbing.shot",
++         "revisionCount": 0,
++         "revisions": [],
++         "schemaVersion": 1,
++         "shotNumber": 1,
++         "sourceAssetId": "original",
++         "sourceTimecode": {
++           "endMs": 1000,
++           "startMs": 0,
++         },
++         "status": "已通过",
++         "updatedAt": "2026-09-09T17:51:02.800Z",
++       },
++       "sourceKeys": [
++         "[\"shot-1\",\"asset-shot-river-v1\"]",
++       ],
++       "sourceNodeId": "shot-1",
++       "sourceTitle": "河岸寻人",
++     },
++   ],
++   "version": 4,
+  }
+
+ ❯ src/features/dubbing/dubbing-qa-checklist.test.ts:19:70
+     17|   const rules = loadDubbingQaTemplate().rules
+     18|   state = await repository.checkQa(project.id, state.version, shotId, …
+     19|   await expect(repository.approve(project.id, state.version, shotId)).…
+       |                                                                      ^
+     20|   await expect(repository.confirmChecklist(project.id, state.version, …
+     21|   state = await repository.checkQa(project.id, state.version, shotId, …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/dubbing/dubbing-qa-checklist.test.ts > 自动FAIL不能靠全勾选绕过，修改数据和方案使旧确认失效，拒绝非法元数据
+TypeError: repository.checkQaCategories is not a function
+ ❯ src/features/dubbing/dubbing-qa-checklist.test.ts:34:28
+     32|   let { repository, project, state, shotId } = await setup()
+     33|   state = await repository.checkQa(project.id, state.version, shotId, …
+     34|   state = await repository.checkQaCategories(project.id, state.version…
+       |                            ^
+     35|   state = await repository.saveQaEvidence(project.id, state.version, s…
+     36|   await expect(repository.confirmChecklist(project.id, state.version, …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  01:51:02
+   Duration  810ms (transform 121ms, setup 148ms, import 146ms, tests 37ms, environment 320ms)

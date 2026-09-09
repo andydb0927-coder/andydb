@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { makeProjectFixture } from '../../test/fixtures'
 import { DubbingWorkbenchDatabase, DubbingWorkbenchRepository } from './dubbing-workbench-repository'
 import { resolveDubbingSource } from './dubbing-canvas-adapter'
-import { loadDubbingQaTemplate } from './dubbing-qa-standard'
+import { DUBBING_QA_CATEGORIES, loadDubbingQaTemplate } from './dubbing-qa-standard'
 
 const databases: DubbingWorkbenchDatabase[] = []
 function setup() {
@@ -33,12 +33,16 @@ describe('转绘工作台独立持久化', () => {
   it('自审勾选绑定版本；三轮返修保留意见，新版本清空勾选，第四轮拒绝', async () => {
     const { repository, project } = setup()
     let { workspace: state, shotId } = await repository.intake(resolveDubbingSource(project, { type: 'node', id: 'shot-1' }), intake)
-    const p0 = loadDubbingQaTemplate().rules.filter(rule => rule.level === 'P0').map(rule => rule.standardId)
+    const p0 = loadDubbingQaTemplate().rules.map(rule => rule.standardId)
     for (let round = 0; round <= 3; round++) {
       state = await repository.submit(project.id, state.version, shotId)
       expect(state.shots[0].qa.checkedIds).toEqual([])
+      expect(state.shots[0].qa.confirmation).toBeUndefined()
+      expect(state.shots[0].qa.checkedCategories).toBeUndefined()
       await expect(repository.approve(project.id, state.version, shotId)).rejects.toThrow(/P0/)
       state = await repository.checkQa(project.id, state.version, shotId, p0)
+      state = await repository.checkQaCategories(project.id, state.version, shotId, [...DUBBING_QA_CATEGORIES])
+      state = await repository.confirmChecklist(project.id, state.version, shotId)
       state = await repository.approve(project.id, state.version, shotId)
       if (round === 3) break
       state = await repository.revise(project.id, state.version, shotId, `意见 ${round}`, [p0[0]])
@@ -50,6 +54,7 @@ describe('转绘工作台独立持久化', () => {
     expect(state.shots[0].record.revisions).toHaveLength(3)
     expect(state.shots[0].record.generationVersions).toHaveLength(4)
     expect(state.shots[0].qaHistory).toHaveLength(4)
+    expect(state.shots[0].qaHistory.every(entry => entry.confirmation?.text.includes('自审确认表'))).toBe(true)
     state = await repository.deliver(project.id, state.version, shotId, '交付包 EP001')
     expect((await repository.load(project.id)).shots[0].record.status).toBe('已交付')
   })
