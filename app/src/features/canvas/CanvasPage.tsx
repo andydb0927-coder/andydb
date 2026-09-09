@@ -1,4 +1,6 @@
 import { sameSelection, downstreamConsumers } from './canvas-page-selectors'
+import { useComposerViewport } from './use-composer-viewport'
+import { shouldFitNewCanvas } from './composer-viewport'
 import { usePipelineAutomation } from '../pipeline/use-pipeline-automation'
 import { PipelinePanel } from '../pipeline/PipelinePanel'
 import { restoreTaskStyle } from '../styles/style-model'
@@ -647,6 +649,8 @@ export function CanvasPage({
   const activeCanvas = project?.canvases?.find(
     ({ id }) => id === project.activeCanvasId,
   )
+  // Capture once per canvas; later saves must not cancel a queued first-node fit.
+  const initialAutoFit = useMemo(() => shouldFitNewCanvas(activeCanvas), [activeCanvas?.id])
 
   useEffect(() => {
     if (!flowInstance || !activeCanvas) return
@@ -664,6 +668,9 @@ export function CanvasPage({
     }
     setZoomPercent(activeCanvas.viewport.zoom * 100)
   }, [activeCanvas?.id, flowInstance])
+
+  useComposerViewport(viewportRef, flowInstance, primaryNodeId, activeCanvas?.id,
+    workspaceMode === 'workflow' && project?.nodes.length === 1 && selectedNodeIds.size === 1 && !imageReferenceTargetId && connectionTool.phase === 'idle')
 
   const selectOnlyNode = useCallback((nodeId: string) => {
     setSelectedNodeIds(new Set([nodeId]))
@@ -5591,6 +5598,7 @@ export function CanvasPage({
       <div
         ref={viewportRef}
         className="canvas-page__viewport"
+        data-single-node={project?.nodes.length === 1 || undefined}
         role="region"
         aria-label="项目画布"
         tabIndex={-1}
@@ -5662,7 +5670,8 @@ export function CanvasPage({
           onMove={(_event, viewport) => setZoomPercent(viewport.zoom * 100)}
           onMoveEnd={(_event, viewport) => updateCanvasViewport(viewport)}
           nodesConnectable={!imageReferenceTargetId}
-          fitView
+          defaultViewport={activeCanvas?.viewport}
+          fitView={initialAutoFit}
           fitViewOptions={{ padding: 0.16 }}
           zoomOnScroll
           panOnScroll={false}

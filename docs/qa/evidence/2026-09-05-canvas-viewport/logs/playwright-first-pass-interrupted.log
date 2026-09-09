@@ -1,0 +1,38 @@
+[WebServer] (node:70279) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 145 tests using 1 worker
+
+(node:70282) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 [chromium] › e2e/ark-analysis.spec.ts:5:1 › confirms panoramic and serial nine-grid requests and restores every image from IndexedDB (4.2s)
+  ✓    2 [chromium] › e2e/ark-analysis.spec.ts:55:1 › confirms reference lighting correction with a prompt bbox at 721px without touching unsupported tools (2.3s)
+  ✓    3 [chromium] › e2e/ark-analysis.spec.ts:84:1 › uploads a real video fixture for sampled analysis, persists timeline text and reopens the report (3.1s)
+  ✓    4 [chromium] › e2e/ark-audio.spec.ts:47:1 › selects Ark TTS, generates intercepted audio, and restores the persistent result (3.8s)
+  ✓    5 [chromium] › e2e/ark-audio.spec.ts:136:1 › keeps unsupported audio post tools disabled without requests or persistent changes (2.0s)
+  ✓    6 [chromium] › e2e/ark-final.spec.ts:20:1 › auto-extracts a reviewed subject without replacing the image and persists structured data for reuse (4.0s)
+  ✓    7 [chromium] › e2e/ark-final.spec.ts:63:1 › shows safe extraction errors, allows manual input and cancels pending analysis without creating subjects (2.4s)
+  ✓    8 [chromium] › e2e/ark-final.spec.ts:95:1 › exposes honest voice cloning limits and runs local video prompt optimization without networking (1.5s)
+  ✓    9 [chromium] › e2e/ark-image-edit.spec.ts:3:1 › edits an existing image through the intercepted Ark Pro contract and restores it after reload (2.9s)
+  ✓   10 [chromium] › e2e/ark-image-edit.spec.ts:70:1 › keeps the original after a rejected erase and retries the saved edit contract at a narrow viewport (3.5s)
+  ✓   11 [chromium] › e2e/ark-text-llm.spec.ts:25:1 › selects the intercepted Ark text model, generates, and restores its persistent result (2.4s)
+  ✓   12 [chromium] › e2e/ark-video-continue.spec.ts:39:1 › confirms continuation without reshoot/mask fields, then persists both versions and video history (10.2s)
+  ✘   13 [chromium] › e2e/ark-video-continue.spec.ts:92:1 › preserves the source on 401 and retries the saved continuation contract after reload at 721px (30.3s)
+(node:70422) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   14 [chromium] › e2e/audio-enhancements.spec.ts:53:1 › official voices and pitch persist; two audio versions preview and restore without more API requests at 721px (4.2s)
+  ✓   15 [chromium] › e2e/audio-enhancements.spec.ts:120:1 › audio generation pitch and offline fades/normalization produce a real persisted WAV without paid requests (4.7s)
+  ✓   16 [chromium] › e2e/canvas-account-menu.spec.ts:3:1 › keeps local settings usable on the compact canvas (1.4s)
+  ✓   17 [chromium] › e2e/canvas-account-menu.spec.ts:49:1 › keeps local settings inside an extra-narrow split preview (778ms)
+  ✓   18 [chromium] › e2e/canvas-composer-reachability.spec.ts:91:3 › keeps the image composer and parameter dialog reachable at 1280x720 (2.1s)
+  ✓   19 [chromium] › e2e/canvas-composer-reachability.spec.ts:91:3 › keeps the image composer and parameter dialog reachable at 1024x900 (2.1s)
+  ✓   20 [chromium] › e2e/canvas-composer-reachability.spec.ts:91:3 › keeps the image composer and parameter dialog reachable at 721x778 (1.6s)
+  ✘   21 [chromium] › e2e/canvas-composer-reachability.spec.ts:101:1 › keeps the composer screen-sized at maximum canvas zoom in a 200% equivalent layout (30.1s)
+(node:70509) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   22 [chromium] › e2e/canvas-export.spec.ts:20:1 › exports canvas ranges and a complete workflow JSON snapshot (2.3s)
+  ✓   23 [chromium] › e2e/canvas-viewport-regression.spec.ts:22:3 › new image composer is immediately usable without manual fitting at 1280px (1.5s)
+  ✓   24 [chromium] › e2e/canvas-viewport-regression.spec.ts:22:3 › new image composer is immediately usable without manual fitting at 1024px (1.5s)
+  ✓   25 [chromium] › e2e/canvas-viewport-regression.spec.ts:22:3 › new image composer is immediately usable without manual fitting at 721px (1.9s)
+  ✓   26 [chromium] › e2e/canvas-viewport-regression.spec.ts:44:3 › new 视频 composer is visible without manual fitting (1.6s)
+  ✓   27 [chromium] › e2e/canvas-viewport-regression.spec.ts:44:3 › new 文本 composer is visible without manual fitting (1.2s)

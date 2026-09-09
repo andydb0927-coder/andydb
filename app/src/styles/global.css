@@ -11791,8 +11791,9 @@ select {
 .collaboration-comments--floating {
   position: absolute;
   top: var(--space-4);
-  right: var(--space-4);
-  width: min(300px, calc(100vw - 96px));
+  /* Reserve a separate hit area for React Flow's top-right zoom controls. */
+  right: calc(var(--space-4) + 48px);
+  width: min(300px, calc(100vw - 144px));
   max-height: 44vh;
   overflow: auto;
   pointer-events: none;
@@ -11803,7 +11804,7 @@ select {
 }
 
 .collaboration-comments--collapsed {
-  width: min(220px, calc(100vw - 96px));
+  width: min(220px, calc(100vw - 144px));
   padding: var(--space-2) var(--space-3);
   pointer-events: none;
 }
@@ -16432,6 +16433,10 @@ select {
     width: min(520px, calc(100vw - 32px));
   }
 
+  .canvas-page__viewport[data-single-node] .creative-node-composer {
+    width: min(660px, calc(100vw - 96px));
+  }
+
   .creative-node-composer :is(
     .image-generation-panel__primary-actions,
     .video-generation-panel__primary-actions
@@ -16449,6 +16454,19 @@ select {
     .video-generation-panel__parameter-row
   ) {
     grid-column: 1 / -1;
+  }
+
+  @media (min-width: 600px) {
+    .canvas-page__viewport[data-single-node] .creative-node-composer .image-generation-panel__controls,
+    .canvas-page__viewport[data-single-node] .creative-node-composer .video-generation-panel__compact-controls {
+      grid-template-columns: minmax(112px, 1fr) repeat(4, auto);
+    }
+
+    .canvas-page__viewport[data-single-node] .image-generation-panel__model,
+    .canvas-page__viewport[data-single-node] .image-generation-panel__controls > .model-provider-capability,
+    .canvas-page__viewport[data-single-node] .video-generation-panel__compact-controls > label:not(.video-generation-panel__sound) {
+      grid-column: span 2;
+    }
   }
 
   .canvas-top-bar {

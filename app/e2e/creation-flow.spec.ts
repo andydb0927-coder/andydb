@@ -2,6 +2,7 @@ import { test, expect } from './provider-fixture'
 
 import { runSelectedNodeManagementAction } from './canvas-node-actions'
 import { createFixtureCinematicProject } from './provider-fixture'
+import { fitCanvasContent } from './canvas-viewport'
 
 async function createCinematicProject(page: import('@playwright/test').Page) {
   await createFixtureCinematicProject(page)
@@ -1478,6 +1479,9 @@ test('edits and persists all specialized Liblib node detail panels', async ({ pa
 
   await openAddNodeAtBlank(page, '导演台 NEW')
   const directorPanel = page.getByRole('region', { name: '导演台 01 导演台参数' })
+  // A new wide panel can be off-screen in a preserved multi-node viewport.
+  // Navigate the canvas as a user would; DOM scrollIntoView cannot pan React Flow.
+  await fitCanvasContent(page, directorPanel)
   const shotList = directorPanel.getByRole('list', { name: '分镜编排列表' })
   await expect(shotList.getByRole('listitem')).toHaveCount(2)
   await expect(directorPanel.getByRole('img', { name: '导演台 01 3D视口' })).toBeVisible()
