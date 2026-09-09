@@ -1,0 +1,1 @@
+function e(e){let t=e.playbackRate??1;return Math.max(0,e.sourceOutSeconds-e.sourceInSeconds)/t}export{e as t};
