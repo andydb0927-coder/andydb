@@ -3,7 +3,15 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import type { Project } from '../project/model'
+import { makeProjectFixture } from '../../test/fixtures'
 import { GenerationHistoryPanel } from './GenerationHistoryPanel'
+
+test('completed history exposes a real review-transfer callback', async () => {
+  const project = makeProjectFixture(), onSendToReview = vi.fn()
+  render(<GenerationHistoryPanel project={project} onDeleteJobs={vi.fn()} onResend={vi.fn()} onUse={vi.fn()} onSendToReview={onSendToReview} />)
+  await userEvent.click(screen.getByRole('button', { name: /送审到工作台/ }))
+  expect(onSendToReview).toHaveBeenCalledWith('generation-job-shot-1')
+})
 
 const now = new Date('2026-08-15T12:00:00.000Z')
 

@@ -243,6 +243,7 @@ export function ProjectsPage({
           </p>
         </div>
         <div className="projects-page__header-actions">
+          <Link className="projects-page__cloud-login focus-visible" to="/dubbing">出海转绘</Link>
           {cloudMigration?.enabled && cloudLoginRequired ? (
             <Link className="projects-page__cloud-login focus-visible" to="/login">
               登录后迁移

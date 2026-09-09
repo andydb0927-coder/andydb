@@ -75,6 +75,8 @@ export interface CanvasContextMenuProps {
   canPaste: boolean
   canSaveToAssets: boolean
   canCreateSubject: boolean
+  canSendToReview?: boolean
+  onSendToReview?(): void
   canExecuteGroup: boolean
   onUpload(): void
   onAddNode(type: ContextQuickNodeType): void
@@ -122,6 +124,8 @@ export function CanvasContextMenu({
   canPaste,
   canSaveToAssets,
   canCreateSubject,
+  canSendToReview = false,
+  onSendToReview,
   canExecuteGroup,
   onUpload,
   onAddNode,
@@ -215,6 +219,7 @@ export function CanvasContextMenu({
             <ShieldCheck aria-hidden="true" />合规校验
           </button>
           {onExecutePipeline && <button type="button" role="menuitem" onClick={onExecutePipeline}><Play aria-hidden="true" />执行下游管线</button>}
+          {onSendToReview && <button type="button" role="menuitem" disabled={!canSendToReview} title={canSendToReview ? undefined : '需要已有的节点结果资产'} onClick={onSendToReview}><ShieldCheck aria-hidden="true" />送审到工作台</button>}
           <button type="button" role="menuitem" disabled={!canSaveToAssets} onClick={onSaveToAssets}>
             <Save aria-hidden="true" />保存到我的资产
           </button>

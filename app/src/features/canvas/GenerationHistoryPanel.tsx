@@ -54,6 +54,7 @@ interface GenerationHistoryPanelProps {
   onDeleteJobs(jobIds: string[]): void
   onResend(jobId: string): void
   onUse(jobId: string): void
+  onSendToReview?(jobId: string): void
 }
 
 function inferKind(project: Project, job: GenerationJob): HistoryKind {
@@ -136,6 +137,7 @@ export function GenerationHistoryPanel({
   onDeleteJobs,
   onResend,
   onUse,
+  onSendToReview,
 }: GenerationHistoryPanelProps) {
   const records = useMemo(() => historyRecords(project), [project])
   const [kind, setKind] = useState<HistoryKind>(() =>
@@ -362,6 +364,7 @@ export function GenerationHistoryPanel({
                         </small>
                       </div>
                       <div className="generation-history__actions">
+                        {onSendToReview && <button type="button" disabled={!canUse} title={canUse ? undefined : '需要带资产的已完成任务'} aria-label={`送审到工作台 ${record.title}`} onClick={() => onSendToReview(record.job.id)}>送审到工作台</button>}
                         <button
                           ref={previewRecord?.job.id === record.job.id ? dialogTriggerRef : undefined}
                           type="button"

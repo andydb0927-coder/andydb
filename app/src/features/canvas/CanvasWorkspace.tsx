@@ -388,6 +388,7 @@ interface WorkspaceSidePanelProps {
   onInsertMaterial?(entry: MaterialLibraryEntry): void
   onInsertHistoryResult?(jobId: string): void
   onResendHistoryJob?(jobId: string): void
+  onSendHistoryToReview?(jobId: string): void
   onSelectNode(nodeId: string): void
 }
 
@@ -408,6 +409,7 @@ export function WorkspaceSidePanel({
   onInsertMaterial,
   onInsertHistoryResult,
   onResendHistoryJob,
+  onSendHistoryToReview,
   onSelectNode,
 }: WorkspaceSidePanelProps) {
   const [toolboxTab, setToolboxTab] = useState<'effects' | 'models'>('effects')
@@ -500,6 +502,7 @@ export function WorkspaceSidePanel({
           onDeleteJobs={(jobIds) => onDeleteHistoryJobs?.(jobIds)}
           onResend={(jobId) => onResendHistoryJob?.(jobId)}
           onUse={(jobId) => onInsertHistoryResult?.(jobId)}
+          onSendToReview={onSendHistoryToReview}
         />
       ) : null}
 

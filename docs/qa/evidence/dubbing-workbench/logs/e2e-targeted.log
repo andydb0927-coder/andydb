@@ -1,0 +1,80 @@
+[WebServer] (node:56406) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:56409) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › e2e/dubbing-workbench.spec.ts:62:1 › 节点与历史送审贯通：三轮返修、第四次禁用、QA 自审交付与刷新恢复 (6.7s)
+(node:56441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › e2e/dubbing-workbench.spec.ts:112:1 › 三栏主视口、本地化方案持久化、Esc 焦点回归与项目入口 (30.3s)
+
+
+  1) [chromium] › e2e/dubbing-workbench.spec.ts:62:1 › 节点与历史送审贯通：三轮返修、第四次禁用、QA 自审交付与刷新恢复 ───────────
+
+    Error: locator.check: Clicking the checkbox did not change its state
+    Call log:
+      - waiting for getByRole('complementary', { name: '本地化方案与QA清单' }).getByRole('checkbox', { name: /DB-QA-ASSET-01/ })
+        - locator resolved to <input type="checkbox"/>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - performing click action
+        - click action done
+        - waiting for scheduled navigations to finish
+        - navigations have finished
+
+
+      91 |     const checkbox = qa.getByRole('checkbox', { name: new RegExp(rule.standardId) })
+      92 |     await expect(checkbox).toBeEnabled()
+    > 93 |     await checkbox.check()
+         |                    ^
+      94 |     await expect.poll(async () => (await stored(page)).shots[0].qa.checkedIds.includes(rule.standardId)).toBe(true)
+      95 |   }
+      96 |   await page.getByRole('button', { name: '标记自审通过' }).click()
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/dubbing-workbench.spec.ts:93:20
+
+    Error Context: test-results/dubbing-workbench-节点与历史送审贯通：三轮返修、第四次禁用、QA-自审交付与刷新恢复-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/dubbing-workbench-节点与历史送审贯通：三轮返修、第四次禁用、QA-自审交付与刷新恢复-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/dubbing-workbench-节点与历史送审贯通：三轮返修、第四次禁用、QA-自审交付与刷新恢复-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/dubbing-workbench.spec.ts:112:1 › 三栏主视口、本地化方案持久化、Esc 焦点回归与项目入口 ───────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.selectOption: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '编辑本地化方案' }).getByLabel('分类', { exact: true })
+
+
+      129 |   await dialog.getByLabel('姓氏', { exact: true }).fill('River')
+      130 |   await dialog.getByRole('button', { name: '添加替换项' }).click()
+    > 131 |   await dialog.getByLabel('分类', { exact: true }).selectOption('工具')
+          |                                                  ^
+      132 |   await dialog.getByLabel('源元素').fill('黑板')
+      133 |   await dialog.getByLabel('目标元素').fill('白板')
+      134 |   await dialog.getByRole('button', { name: '保存本地化方案' }).click()
+        at /Users/andydb/.codex/worktrees/322b/无线画布/app/e2e/dubbing-workbench.spec.ts:131:50
+
+    Error Context: test-results/dubbing-workbench-三栏主视口、本地化方案持久化、Esc-焦点回归与项目入口-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/dubbing-workbench-三栏主视口、本地化方案持久化、Esc-焦点回归与项目入口-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/dubbing-workbench-三栏主视口、本地化方案持久化、Esc-焦点回归与项目入口-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › e2e/dubbing-workbench.spec.ts:62:1 › 节点与历史送审贯通：三轮返修、第四次禁用、QA 自审交付与刷新恢复 ────────────
+    [chromium] › e2e/dubbing-workbench.spec.ts:112:1 › 三栏主视口、本地化方案持久化、Esc 焦点回归与项目入口 ────────────────

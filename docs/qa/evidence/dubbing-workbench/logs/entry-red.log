@@ -1,0 +1,943 @@
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/canvas/CanvasContextMenu.test.tsx (8 tests | 1 failed) 265ms
+   × node review entry reports missing results and dispatches a valid transfer 73ms
+ ❯ src/features/canvas/GenerationHistoryPanel.test.tsx (5 tests | 1 failed) 428ms
+   × completed history exposes a real review-transfer callback 91ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/CanvasContextMenu.test.tsx > node review entry reports missing results and dispatches a valid transfer
+TestingLibraryElementError: Unable to find an accessible element with the role "menuitem" and name "送审到工作台"
+
+Here are the accessible roles:
+
+  menu:
+
+  Name "画布快捷菜单":
+  <div
+    aria-label="画布快捷菜单"
+    class="floating-panel canvas-context-menu nodrag nopan"
+    role="menu"
+    style="left: 110px; top: 90px; width: 220px;"
+  />
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  <strong />
+
+  --------------------------------------------------
+  menuitem:
+
+  Name "合规校验":
+  <button
+    role="menuitem"
+    type="button"
+  />
+
+  Name "保存到我的资产":
+  <button
+    disabled=""
+    role="menuitem"
+    type="button"
+  />
+
+  Name "创建主体":
+  <button
+    disabled=""
+    role="menuitem"
+    title="需要图片节点结果或上传图"
+    type="button"
+  />
+
+  Name "复制":
+  <button
+    role="menuitem"
+    type="button"
+  />
+
+  Name "创建副本":
+  <button
+    role="menuitem"
+    type="button"
+  />
+
+  Name "粘贴":
+  <button
+    disabled=""
+    role="menuitem"
+    type="button"
+  />
+
+  Name "删除节点":
+  <button
+    aria-label="删除节点"
+    class="canvas-context-menu__danger"
+    role="menuitem"
+    type="button"
+  />
+
+  Name "复制到剪贴板":
+  <button
+    role="menuitem"
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      aria-label="画布快捷菜单"
+      class="floating-panel canvas-context-menu nodrag nopan"
+      role="menu"
+      style="left: 110px; top: 90px; width: 220px;"
+    >
+      <div
+        class="canvas-context-menu__heading"
+      >
+        <span>
+          NODE MENU
+        </span>
+        <strong>
+          镜头
+        </strong>
+      </div>
+      <button
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-shield-check"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+          />
+          <path
+            d="m9 12 2 2 4-4"
+          />
+        </svg>
+        合规校验
+      </button>
+      <button
+        disabled=""
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-save"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+          />
+          <path
+            d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"
+          />
+          <path
+            d="M7 3v4a1 1 0 0 0 1 1h7"
+          />
+        </svg>
+        保存到我的资产
+      </button>
+      <button
+        disabled=""
+        role="menuitem"
+        title="需要图片节点结果或上传图"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-user-round-plus"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M2 21a8 8 0 0 1 13.292-6"
+          />
+          <circle
+            cx="10"
+            cy="8"
+            r="5"
+          />
+          <path
+            d="M19 16v6"
+          />
+          <path
+            d="M22 19h-6"
+          />
+        </svg>
+        创建主体
+      </button>
+      <button
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+        复制
+      </button>
+      <button
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy-plus"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <line
+            x1="15"
+            x2="15"
+            y1="12"
+            y2="18"
+          />
+          <line
+            x1="12"
+            x2="18"
+            y1="15"
+            y2="15"
+          />
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+        创建副本
+      </button>
+      <button
+        disabled=""
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-clipboard-paste"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M11 14h10"
+          />
+          <path
+            d="M16 4h2a2 2 0 0 1 2 2v1.344"
+          />
+          <path
+            d="m17 18 4-4-4-4"
+          />
+          <path
+            d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="8"
+            y="2"
+          />
+        </svg>
+        粘贴
+      </button>
+      <button
+        aria-label="删除节点"
+        class="canvas-context-menu__danger"
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
+        删除
+        <kbd>
+          ⌘⌫
+        </kbd>
+      </button>
+      <button
+        role="menuitem"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-clipboard-copy"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="4"
+            rx="1"
+            ry="1"
+            width="8"
+            x="8"
+            y="2"
+          />
+          <path
+            d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+          />
+          <path
+            d="M16 4h2a2 2 0 0 1 2 2v4"
+          />
+          <path
+            d="M21 14H11"
+          />
+          <path
+            d="m15 10-4 4 4 4"
+          />
+        </svg>
+        复制到剪贴板
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/canvas/CanvasContextMenu.test.tsx:10:32
+      8|   const callback = vi.fn()
+      9|   renderMenu({ targetNodeTitle: '镜头', canSendToReview: true, onSendToR…
+     10|   await userEvent.click(screen.getByRole('menuitem', { name: '送审到工作台' …
+       |                                ^
+     11|   expect(callback).toHaveBeenCalledOnce()
+     12| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/canvas/GenerationHistoryPanel.test.tsx > completed history exposes a real review-transfer callback
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/送审到工作台/`
+
+Here are the accessible roles:
+
+  tablist:
+
+  Name "历史类型":
+  <div
+    aria-label="历史类型"
+    class="generation-history__tabs"
+    role="tablist"
+  />
+
+  --------------------------------------------------
+  tab:
+
+  Name "图片 1":
+  <button
+    aria-selected="true"
+    role="tab"
+    type="button"
+  />
+
+  Name "视频 0":
+  <button
+    aria-selected="false"
+    role="tab"
+    type="button"
+  />
+
+  Name "音频 0":
+  <button
+    aria-selected="false"
+    role="tab"
+    type="button"
+  />
+
+  Name "文本 0":
+  <button
+    aria-selected="false"
+    role="tab"
+    type="button"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "全选当前页":
+  <button
+    type="button"
+  />
+
+  Name "反选当前页":
+  <button
+    type="button"
+  />
+
+  Name "批量下载":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "批量删除":
+  <button
+    disabled=""
+    type="button"
+  />
+
+  Name "小缩略图":
+  <button
+    aria-label="小缩略图"
+    aria-pressed="false"
+    type="button"
+  />
+
+  Name "大缩略图":
+  <button
+    aria-label="大缩略图"
+    aria-pressed="true"
+    type="button"
+  />
+
+  Name "查看 河岸寻人":
+  <button
+    aria-label="查看 河岸寻人"
+    type="button"
+  />
+
+  Name "使用 河岸寻人":
+  <button
+    aria-label="使用 河岸寻人"
+    type="button"
+  />
+
+  Name "下载 河岸寻人":
+  <button
+    aria-label="下载 河岸寻人"
+    type="button"
+  />
+
+  Name "重发画布 河岸寻人":
+  <button
+    aria-label="重发画布 河岸寻人"
+    type="button"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "更早 · 2026年8月6日":
+  <h3 />
+
+  --------------------------------------------------
+  article:
+
+  Name "历史任务 河岸寻人":
+  <article
+    aria-label="历史任务 河岸寻人"
+    class="generation-history__card"
+  />
+
+  --------------------------------------------------
+  checkbox:
+
+  Name "选择历史任务 河岸寻人":
+  <input
+    aria-label="选择历史任务 河岸寻人"
+    type="checkbox"
+  />
+
+  --------------------------------------------------
+  presentation:
+
+  Name "":
+  <img
+    alt=""
+    src="/demo/shot-river.png"
+  />
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  <strong />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      aria-label="生成历史内容"
+      class="generation-history"
+      data-thumbnail-size="large"
+    >
+      <div
+        aria-label="历史类型"
+        class="generation-history__tabs"
+        role="tablist"
+      >
+        <button
+          aria-selected="true"
+          role="tab"
+          type="button"
+        >
+          图片
+
+          1
+        </button>
+        <button
+          aria-selected="false"
+          role="tab"
+          type="button"
+        >
+          视频
+
+          0
+        </button>
+        <button
+          aria-selected="false"
+          role="tab"
+          type="button"
+        >
+          音频
+
+          0
+        </button>
+        <button
+          aria-selected="false"
+          role="tab"
+          type="button"
+        >
+          文本
+
+          0
+        </button>
+      </div>
+      <div
+        aria-label="生成历史批量操作"
+        class="generation-history__toolbar"
+      >
+        <button
+          type="button"
+        >
+          全选当前页
+        </button>
+        <button
+          type="button"
+        >
+          反选当前页
+        </button>
+        <button
+          disabled=""
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-download"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 15V3"
+            />
+            <path
+              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+            />
+            <path
+              d="m7 10 5 5 5-5"
+            />
+          </svg>
+          批量下载
+        </button>
+        <button
+          disabled=""
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-trash2 lucide-trash-2"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10 11v6"
+            />
+            <path
+              d="M14 11v6"
+            />
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+            />
+            <path
+              d="M3 6h18"
+            />
+            <path
+              d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            />
+          </svg>
+          批量删除
+        </button>
+        <span
+          aria-label="缩略图大小"
+          class="generation-history__size-controls"
+        >
+          <button
+            aria-label="小缩略图"
+            aria-pressed="false"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-list"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 5h.01"
+              />
+              <path
+                d="M3 12h.01"
+              />
+              <path
+                d="M3 19h.01"
+              />
+              <path
+                d="M8 5h13"
+              />
+              <path
+                d="M8 12h13"
+              />
+              <path
+                d="M8 19h13"
+              />
+            </svg>
+          </button>
+          <button
+            aria-label="大缩略图"
+            aria-pressed="true"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-grid2x2 lucide-grid-2x2"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 3v18"
+              />
+              <path
+                d="M3 12h18"
+              />
+              <rect
+                height="18"
+                rx="2"
+                width="18"
+                x="3"
+                y="3"
+              />
+            </svg>
+          </button>
+        </span>
+      </div>
+      <div
+        class="generation-history__groups"
+      >
+        <section
+          class="generation-history__group"
+        >
+          <h3>
+            更早 · 2026年8月6日
+          </h3>
+          <div
+            class="generation-history__grid"
+          >
+            <article
+              aria-label="历史任务 河岸寻人"
+              class="generation-history__card"
+            >
+              <label>
+                <input
+                  aria-label="选择历史任务 河岸寻人"
+                  type="checkbox"
+                />
+                <span
+                  class="generation-history__media"
+                >
+                  <img
+                    alt=""
+                    src="/demo/shot-river.png"
+                  />
+                </span>
+              </label>
+              <div
+                class="generation-history__meta"
+              >
+                <span>
+                  已完成
+                </span>
+                <strong>
+                  河岸寻人
+                </strong>
+                <p>
+                  远景，雨夜河岸
+                </p>
+                <small>
+                  本地演示模型
+                </small>
+              </div>
+              <div
+                class="generation-history__actions"
+              >
+                <button
+                  aria-label="查看 河岸寻人"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-eye"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="3"
+                    />
+                  </svg>
+                  查看
+                </button>
+                <button
+                  aria-label="使用 河岸寻人"
+                  type="button"
+                >
+                  使用
+                </button>
+                <button
+                  aria-label="下载 河岸寻人"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-download"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 15V3"
+                    />
+                    <path
+                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                    />
+                    <path
+                      d="m7 10 5 5 5-5"
+                    />
+                  </svg>
+                  下载
+                </button>
+                <button
+                  aria-label="重发画布 河岸寻人"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-refresh-cw"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                    />
+                    <path
+                      d="M21 3v5h-5"
+                    />
+                    <path
+                      d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                    />
+                    <path
+                      d="M8 16H3v5"
+                    />
+                  </svg>
+                  重发画布
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/canvas/GenerationHistoryPanel.test.tsx:12:32
+     10|   const project = makeProjectFixture(), onSendToReview = vi.fn()
+     11|   render(<GenerationHistoryPanel project={project} onDeleteJobs={vi.fn…
+     12|   await userEvent.click(screen.getByRole('button', { name: /送审到工作台/ }))
+       |                                ^
+     13|   expect(onSendToReview).toHaveBeenCalledWith('generation-job-shot-1')
+     14| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 11 passed (13)
+   Start at  00:50:12
+   Duration  1.71s (transform 262ms, setup 463ms, import 679ms, tests 694ms, environment 1.05s)

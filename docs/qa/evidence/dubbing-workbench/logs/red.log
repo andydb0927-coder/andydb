@@ -1,0 +1,53 @@
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/dubbing/DubbingWorkbenchPage.test.tsx (0 test)
+ ❯ src/features/dubbing/dubbing-workbench-repository.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/dubbing/DubbingWorkbenchPage.test.tsx [ src/features/dubbing/DubbingWorkbenchPage.test.tsx ]
+Error: Failed to resolve import "./dubbing-workbench-repository" from "src/features/dubbing/DubbingWorkbenchPage.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/DubbingWorkbenchPage.test.tsx:7:69
+  5  |  import { makeProjectFixture } from "../../test/fixtures";
+  6  |  import { DubbingWorkbenchPage } from "./DubbingWorkbenchPage";
+  7  |  import { DubbingWorkbenchDatabase, DubbingWorkbenchRepository } from "./dubbing-workbench-repository";
+     |                                                                        ^
+  8  |  import { resolveDubbingSource } from "./dubbing-canvas-adapter";
+  9  |  var _jsxFileName = "/Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/DubbingWorkbenchPage.test.tsx";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/dubbing/dubbing-workbench-repository.test.ts [ src/features/dubbing/dubbing-workbench-repository.test.ts ]
+Error: Failed to resolve import "./dubbing-workbench-repository" from "src/features/dubbing/dubbing-workbench-repository.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/dubbing-workbench-repository.test.ts:3:69
+  1  |  import { afterEach, describe, expect, it } from "vitest";
+  2  |  import { makeProjectFixture } from "../../test/fixtures";
+  3  |  import { DubbingWorkbenchDatabase, DubbingWorkbenchRepository } from "./dubbing-workbench-repository";
+     |                                                                        ^
+  4  |  import { resolveDubbingSource } from "./dubbing-canvas-adapter";
+  5  |  import { loadDubbingQaTemplate } from "./dubbing-qa-standard";
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  00:37:04
+   Duration  1.04s (transform 49ms, setup 503ms, import 0ms, tests 0ms, environment 1.15s)

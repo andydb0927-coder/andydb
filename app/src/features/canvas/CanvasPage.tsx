@@ -18,6 +18,8 @@ import { CanvasWorkflowTools, CanvasWorkflowBatchStatus, type WorkflowBatchView 
 import { ReferenceConnectionPreview } from './ReferenceConnectionPreview'
 import { buildGenerationRequest, generationEligibilityFailure, isWorkflowGeneratableNode, forceDemoProvider } from './canvas-generation-request'
 import { buildMediaAssetCreation, activeNodeAsset, processedMediaRecord } from './canvas-media-creation'
+import { DubbingIntakeDialog } from '../dubbing/DubbingIntakeDialog'
+import type { DubbingSourceSelection } from '../dubbing/dubbing-canvas-adapter'
 import {
   Background,
   Controls,
@@ -595,6 +597,7 @@ export function CanvasPage({
     useState<NodeTypePickerState>()
   const [contextMenu, setContextMenu] =
     useState<CanvasContextMenuState>()
+  const [dubbingReview, setDubbingReview] = useState<{ projectId: string; selection: DubbingSourceSelection }>()
   const [canvasClipboard, setCanvasClipboard] =
     useState<CanvasClipboardState>()
   const [contextUploadPlacement, setContextUploadPlacement] =
@@ -5568,6 +5571,7 @@ export function CanvasPage({
         onImportWorkflow={openWorkflowImport}
       />
       {pipeline.open && project && <PipelinePanel project={project} registry={providerRegistry} {...pipeline} actions={pipeline} />}
+      {project && dubbingReview?.projectId === project.id && <DubbingIntakeDialog project={project} selection={dubbingReview.selection} onClose={() => setDubbingReview(undefined)} />}
       <input
         ref={workflowImportInputRef}
         className="canvas-workflow-import-input"
@@ -5791,6 +5795,11 @@ export function CanvasPage({
               contextNode && contextNodeAsset,
             )}
             canCreateSubject={contextNodeAsset?.kind === 'image'}
+            canSendToReview={Boolean(contextNodeAsset)}
+            onSendToReview={() => {
+              if (contextNode) setDubbingReview({ projectId: project.id, selection: { type: 'node', id: contextNode.id } })
+              setContextMenu(undefined)
+            }}
             canExecuteGroup={Boolean(project.nodes.some(isWorkflowGeneratableNode))}
             onUpload={beginContextUpload}
             onAddNode={createContextNode}
@@ -5953,6 +5962,11 @@ export function CanvasPage({
             onRemoveProjectAsset: removeAssetReferences, onInsertEffect: insertEffectTemplate,
             onInsertMaterial: insertMaterialReference, onInsertHistoryResult: useHistoryResult,
             onResendHistoryJob: resendHistoryJob, onSelectNode: openWorkspaceNode,
+            onSendHistoryToReview: (jobId) => {
+              if (!project) return
+              closeWorkspacePanel()
+              setDubbingReview({ projectId: project.id, selection: { type: 'history', id: jobId } })
+            },
           }}
           agent={{ onClose: closeAgent, onExecute: handleDirectorCommand }} />
         {!project ? (

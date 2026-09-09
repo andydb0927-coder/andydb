@@ -1,0 +1,11 @@
+[WebServer] (node:57412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:57414) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › e2e/dubbing-workbench.spec.ts:63:1 › 节点与历史送审贯通：三轮返修、第四次禁用、QA 自审交付与刷新恢复 (7.3s)
+  ✓  2 [chromium] › e2e/dubbing-workbench.spec.ts:113:1 › 三栏主视口、本地化方案持久化、Esc 焦点回归与项目入口 (4.2s)
+
+  2 passed (13.2s)

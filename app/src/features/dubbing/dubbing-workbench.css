@@ -1,0 +1,68 @@
+.dubbing-workbench { padding: 24px; color: var(--text-primary, #ececec); min-width: 0; }
+.dubbing-workbench *, .dubbing-dialog * { box-sizing: border-box; }
+.dubbing-workbench-heading, .dubbing-workbench-summary, .dubbing-detail-heading, .dubbing-panel-heading, .dubbing-dialog > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dubbing-workbench-heading h1 { margin: 4px 0 8px; font-size: 28px; }
+.dubbing-workbench h2, .dubbing-dialog h2 { font-size: 18px; margin: 0 0 16px; }
+.dubbing-workbench h3, .dubbing-dialog h3 { font-size: 15px; margin: 20px 0 10px; }
+.dubbing-workbench h4 { margin: 12px 0 4px; }
+.dubbing-eyebrow { color: #6fd6e5; letter-spacing: .12em; font-size: 11px; }
+.dubbing-muted, .dubbing-workbench-heading p, .dubbing-workbench dt { color: #a6afb9; font-size: 13px; line-height: 1.6; }
+.dubbing-workbench a, .dubbing-dialog a { color: #85e0ed; text-decoration: underline; text-underline-offset: 3px; }
+.dubbing-workbench button, .dubbing-dialog button, .dubbing-dialog .dubbing-primary { cursor: pointer; border: 1px solid #46515d; border-radius: 8px; padding: 8px 12px; background: #252e38; color: #ecf3f7; font-size: 13px; min-height: 36px; text-decoration: none; }
+.dubbing-workbench button:hover:not(:disabled), .dubbing-dialog button:hover:not(:disabled) { background: #34434f; }
+.dubbing-workbench .dubbing-primary, .dubbing-dialog .dubbing-primary { background: #0a5362; border-color: #388594; color: #edfcff; }
+.dubbing-workbench button:disabled, .dubbing-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.dubbing-workbench :focus-visible, .dubbing-dialog :focus-visible { outline: 2px solid #6bd8ed; outline-offset: 3px; }
+.dubbing-project-picker { display: flex; align-items: end; gap: 20px; flex-wrap: wrap; margin: 18px 0; }
+.dubbing-project-picker label { width: min(320px, 100%); }
+.dubbing-workbench-summary { margin-bottom: 12px; font-size: 13px; color: #bfcad2; }
+.dubbing-columns { display: grid; grid-template-columns: minmax(230px, .9fr) minmax(280px, 1.25fr) minmax(260px, 1fr); gap: 12px; align-items: start; }
+.dubbing-panel { min-width: 0; background: #181e25; border: 1px solid #35404a; border-radius: 14px; padding: 16px; height: calc(100dvh - 355px); min-height: 330px; overflow: auto; scrollbar-gutter: stable; }
+.dubbing-table-scroll { overflow-x: auto; max-width: 100%; }
+.dubbing-shot-list table { border-collapse: collapse; font-size: 12px; width: 100%; }
+.dubbing-shot-list thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.dubbing-shot-list tbody { display: grid; gap: 12px; }
+.dubbing-shot-list tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 6px; padding: 12px; border: 1px solid #35404a; border-radius: 8px; }
+.dubbing-shot-list td { text-align: left; padding: 0; overflow-wrap: anywhere; }
+.dubbing-shot-list td:nth-child(1)::before { content: '镜头 '; color: #aebdca; }
+.dubbing-shot-list td:nth-child(2) { grid-column: 2 / 4; font-variant-numeric: tabular-nums; }
+.dubbing-shot-list td:nth-child(3) { grid-column: 1 / 4; white-space: pre-wrap; line-height: 1.6; }
+.dubbing-shot-list td:nth-child(5)::before { content: '返修 '; color: #aebdca; }
+.dubbing-shot-list tr[data-selected=true] { background: #173741; border-color: #388594; }
+.dubbing-badge { display: inline-block; border: 1px solid #58616d; background: #303a46; border-radius: 5px; padding: 3px 6px; font-size: 12px; white-space: nowrap; }
+.dubbing-badge[data-status=待返修] { color: #ffc982; border-color: #9a682a; background: #493923; }
+.dubbing-badge[data-status=已通过], .dubbing-badge[data-status=已交付] { color: #98e4c2; border-color: #4d8f75; background: #254536; }
+.dubbing-workbench dd { margin: 4px 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.dubbing-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.dubbing-limit { color: #f2c582; line-height: 1.5; font-size: 13px; }
+.dubbing-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dubbing-media { margin: 0; min-width: 0; }
+.dubbing-media img, .dubbing-media video { width: 100%; max-height: 200px; object-fit: contain; background: #0f141a; border-radius: 8px; }
+.dubbing-media audio { width: 100%; }
+.dubbing-media figcaption { font-size: 11px; color: #9fabb8; overflow-wrap: anywhere; }
+.dubbing-workbench details { padding: 10px 0; border-bottom: 1px solid #35404a; font-size: 13px; overflow-wrap: anywhere; }
+.dubbing-workbench summary { cursor: pointer; }
+.dubbing-revision { padding: 10px; border-left: 2px solid #ca9c52; background: #242a31; margin: 10px 0; overflow-wrap: anywhere; }
+.dubbing-revision p { white-space: pre-wrap; }
+.dubbing-check { display: flex; gap: 8px; align-items: start; padding: 9px 0; font-size: 12px; line-height: 1.6; }
+.dubbing-check input[type=checkbox] { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 4px; accent-color: #69d5e9; }
+.dubbing-check small { display: block; color: #a5b0bc; }
+.dubbing-qa-level { font-weight: 600; }
+.dubbing-qa-level[data-level=P0] { color: #ff9d9d; }
+.dubbing-qa-level[data-level=P1] { color: #f3cc7e; }
+.dubbing-qa-level[data-level=P2] { color: #e2e8ed; }
+.dubbing-workbench fieldset, .dubbing-dialog fieldset { border: 1px solid #3b4652; border-radius: 8px; margin: 14px 0; padding: 10px; min-width: 0; }
+.dubbing-workbench legend, .dubbing-dialog legend { color: #c1cdd8; padding: 0 4px; }
+.dubbing-workbench label:not(.dubbing-check), .dubbing-dialog label:not(.dubbing-check) { display: grid; gap: 6px; margin: 10px 0; font-size: 13px; }
+.dubbing-workbench select, .dubbing-dialog select, .dubbing-dialog input:not([type=checkbox]), .dubbing-dialog textarea { width: 100%; min-width: 0; border: 1px solid #53616e; border-radius: 6px; background: #111820; color: #ecf3f7; padding: 9px; font: inherit; }
+.dubbing-dialog textarea { min-height: 70px; resize: vertical; }
+.dubbing-error, .dubbing-dialog [role=alert] { padding: 10px; color: #ffb3ad; background: #422a2b; border-radius: 8px; }
+.dubbing-save-state { color: #9edecb; font-size: 12px; }
+.dubbing-state { padding: 36px 20px; border: 1px dashed #53616e; border-radius: 12px; }
+.dubbing-overlay { position: fixed; inset: 0; z-index: 2000; background: #050b14b8; display: grid; place-items: center; padding: 24px; }
+.dubbing-dialog { width: min(700px, 100%); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; background: #1b232d; color: #ecf3f7; border: 1px solid #526171; border-radius: 16px; box-shadow: 0 20px 70px #0008; }
+.dubbing-field-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dubbing-rule-picker { max-height: 36dvh; overflow: auto; }
+.dubbing-dialog footer { margin-top: 20px; }
+@media (max-width: 950px) { .dubbing-workbench { padding: 16px; } .dubbing-columns { grid-template-columns: 1fr; } .dubbing-panel { height: auto; min-height: 160px; } }
+@media (max-width: 480px) { .dubbing-field-pair { grid-template-columns: 1fr; gap: 0; } .dubbing-overlay { padding: 12px; } .dubbing-dialog { padding: 16px; max-height: calc(100dvh - 24px); } }

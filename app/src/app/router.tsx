@@ -16,6 +16,7 @@ const ProjectLauncherPage = lazy(() =>
 const ProjectsPage = lazy(() =>
   import('../features/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })),
 )
+const DubbingWorkbenchPage = lazy(() => import('../features/dubbing/DubbingWorkbenchPage').then(m => ({ default: m.DubbingWorkbenchPage })))
 const CanvasPage = lazy(() =>
   import('../features/canvas/CanvasPage').then((m) => ({ default: m.CanvasPage })),
 )
@@ -66,6 +67,7 @@ export const routes: RouteObject[] = withRouteRecovery([
       { index: true, element: withSuspense(<ProjectLauncherPage />) },
       { path: '/projects/new', loader: quickCreateProjectLoader, element: <RouteLoading /> },
       { path: '/projects', element: withSuspense(<ProjectsPage />) },
+      { path: '/dubbing', element: withSuspense(<DubbingWorkbenchPage />) },
       { path: '/works', element: withSuspense(<PublishedWorksPage />) },
       { path: '/tutorials', element: withSuspense(<TutorialCenterPage />) },
       { path: '/tutorials/:tutorialId', element: withSuspense(<TutorialDetailPage />) },

@@ -4,6 +4,13 @@ import { expect, test, vi } from 'vitest'
 
 import { CanvasContextMenu } from './CanvasContextMenu'
 
+test('node review entry reports missing results and dispatches a valid transfer', async () => {
+  const callback = vi.fn()
+  renderMenu({ targetNodeTitle: '镜头', canSendToReview: true, onSendToReview: callback })
+  await userEvent.click(screen.getByRole('menuitem', { name: '送审到工作台' }))
+  expect(callback).toHaveBeenCalledOnce()
+})
+
 function renderMenu(overrides: Partial<Parameters<typeof CanvasContextMenu>[0]> = {}) {
   const props: Parameters<typeof CanvasContextMenu>[0] = {
     anchor: { x: 110, y: 90 },
