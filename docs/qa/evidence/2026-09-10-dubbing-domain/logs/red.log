@@ -1,0 +1,71 @@
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/dubbing/dubbing-localization-plan.test.ts (0 test)
+ ❯ src/features/dubbing/dubbing-qa-standard.test.ts (0 test)
+ ❯ src/features/dubbing/dubbing-shot-record.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/dubbing/dubbing-localization-plan.test.ts [ src/features/dubbing/dubbing-localization-plan.test.ts ]
+Error: Failed to resolve import "./dubbing-localization-plan" from "src/features/dubbing/dubbing-localization-plan.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/dubbing-localization-plan.test.ts:3:71
+  1  |  import { describe, expect, it } from "vitest";
+  2  |  ..., dubbingNumberNotation, formatDubbingEpisodeNumber } from "./dubbing-localization-plan";
+     |                                                                 ^
+  3  |  const input = () => ({
+  4  |  	id: "plan-1",
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/features/dubbing/dubbing-qa-standard.test.ts [ src/features/dubbing/dubbing-qa-standard.test.ts ]
+Error: Failed to resolve import "./dubbing-qa-standard" from "src/features/dubbing/dubbing-qa-standard.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/dubbing-qa-standard.test.ts:2:107
+  1  |  import { describe, expect, it } from "vitest";
+  2  |  ...S, loadDubbingQaTemplate, validateDubbingQaTemplate } from "./dubbing-qa-standard";
+     |                                                                 ^
+  3  |  describe("客户 PDF 验收模板", () => {
+  4  |  	it("加载九大类、三级等级和对应颜色，所有规则可追溯到客户 PDF", () => {
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/features/dubbing/dubbing-shot-record.test.ts [ src/features/dubbing/dubbing-shot-record.test.ts ]
+Error: Failed to resolve import "./dubbing-shot-record" from "src/features/dubbing/dubbing-shot-record.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/andydb/.codex/worktrees/322b/无线画布/app/src/features/dubbing/dubbing-shot-record.test.ts:2:86
+  1  |  import { describe, expect, it } from "vitest";
+  2  |  import { createDubbingShotRecord, transitionDubbingShot } from "./dubbing-shot-record";
+     |                                                                  ^
+  3  |  const at = (second) => new Date(Date.UTC(2026, 8, 5, 0, 0, second)).toISOString();
+  4  |  const content = () => ({
+ ❯ TransformPluginContext._formatLog ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../%E6%97%A0%E7%BA%BF%E7%94%BB%E5%B8%83/app/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  no tests
+   Start at  00:00:07
+   Duration  1.18s (transform 61ms, setup 820ms, import 0ms, tests 0ms, environment 1.90s)

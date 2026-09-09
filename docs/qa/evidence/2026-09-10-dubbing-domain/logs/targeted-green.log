@@ -1,0 +1,8 @@
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+
+ Test Files  3 passed (3)
+      Tests  40 passed (40)
+   Start at  00:08:37
+   Duration  5.54s (transform 854ms, setup 2.07s, import 647ms, tests 140ms, environment 9.12s)

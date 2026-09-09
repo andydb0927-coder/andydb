@@ -1,0 +1,60 @@
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+ ❯ src/features/dubbing/dubbing-localization-plan.test.ts (12 tests | 1 failed) 133ms
+     × 英文时间、年龄、集数保留数字例外及单位分隔规则 60ms
+ ❯ src/features/dubbing/dubbing-shot-record.test.ts (19 tests | 1 failed) 108ms
+     × 拒绝缺失返修意见的损坏记录和早于创建时间的更新时间 30ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/dubbing/dubbing-localization-plan.test.ts > 全剧本地化方案 > 英文时间、年龄、集数保留数字例外及单位分隔规则
+AssertionError: expected [ 'money', 'phone', 'official-number' ] to deeply equal ArrayContaining{…}
+
+- Expected
++ Received
+
+- ArrayContaining [
+-   "time",
+-   "age",
+-   "episode",
++ [
++   "money",
++   "phone",
++   "official-number",
+  ]
+
+ ❯ src/features/dubbing/dubbing-localization-plan.test.ts:85:35
+     83|   it('英文时间、年龄、集数保留数字例外及单位分隔规则', () => {
+     84|     const rules = createDubbingLocalizationPlan(input()).numberRules
+     85|     expect(rules.digitExceptions).toEqual(expect.arrayContaining(['tim…
+       |                                   ^
+     86|     expect(rules).toMatchObject({ unitSeparator: ' ' })
+     87|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/dubbing/dubbing-shot-record.test.ts > 出海镜头审核领域 > 拒绝缺失返修意见的损坏记录和早于创建时间的更新时间
+AssertionError: expected [Function] to throw error matching /返修记录/ but got 'Cannot read properties of undefined (…'
+
+- Expected:
+/返修记录/
+
++ Received:
+"Cannot read properties of undefined (reading 'id')"
+
+ ❯ src/features/dubbing/dubbing-shot-record.test.ts:125:85
+    123|   it('拒绝缺失返修意见的损坏记录和早于创建时间的更新时间', () => {
+    124|     const generated = transitionDubbingShot(shot(), submit(0))
+    125|     expect(() => transitionDubbingShot({ ...generated, status: '待返修' }…
+       |                                                                                     ^
+    126|     expect(() => transitionDubbingShot({ ...shot(), updatedAt: at(-1) …
+    127|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  2 failed | 38 passed (40)
+   Start at  00:08:03
+   Duration  6.64s (transform 1.06s, setup 4.30s, import 1.14s, tests 359ms, environment 10.56s)

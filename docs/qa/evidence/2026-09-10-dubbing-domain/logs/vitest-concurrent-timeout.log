@@ -1,0 +1,55 @@
+
+> app@0.0.0 test:run
+> vitest run
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+AggregateError:
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3000
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+        at createConnectionError (node:net:1679:14)
+        at afterConnectMultiple (node:net:1709:16) {
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3000
+    }
+  ]
+}
+ ❯ src/features/canvas/CanvasPage.test.tsx (151 tests | 1 failed) 108471ms
+     × persists a custom Seedream size and submits the chosen dimensions 5629ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/canvas/CanvasPage.test.tsx > creative canvas > persists a custom Seedream size and submits the chosen dimensions
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/features/canvas/CanvasPage.test.tsx:1460:3
+    1458|   })
+    1459|
+    1460|   test('persists a custom Seedream size and submits the chosen dimensi…
+       |   ^
+    1461|     const user = userEvent.setup()
+    1462|     const project = makeCanvasProject()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 208 passed (209)
+      Tests  1 failed | 1681 passed (1682)
+   Start at  00:10:08
+   Duration  120.77s (transform 44.79s, setup 117.33s, import 125.23s, tests 245.70s, environment 288.80s)
