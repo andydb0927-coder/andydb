@@ -53,6 +53,7 @@ npm run dev        # 开发服务器，默认 http://localhost:5173
 
 ## 文档
 
+- 出海转绘：[`src/features/dubbing/README.md`](src/features/dubbing/README.md)（本地/开发API/客户交付三环境能力矩阵与交付门禁）
 - 设计规格与实施计划：`docs/superpowers/specs/`、`docs/superpowers/plans/`（每阶段一份）
 - CLI 文档：`docs/superpowers/local-workspace-cli.md`
 - 扩展指南：`docs/superpowers/extensions.md`

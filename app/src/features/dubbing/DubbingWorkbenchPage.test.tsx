@@ -45,6 +45,17 @@ test('Esc 关闭本地化编辑面板并归还焦点，不保存未提交草稿'
   expect(trigger).toHaveFocus()
   expect((await repository.load(project.id)).plan).toBeNull()
 })
+test('交付检查弹层Esc关闭后焦点回到入口，不因打开弹层禁用入口而丢失焦点', async () => {
+  const { user } = await setup()
+  const trigger = await screen.findByRole('button', { name: '交付包检查与导出' })
+  await waitFor(() => expect(trigger).toBeEnabled())
+  await user.click(trigger)
+  expect(screen.getByRole('dialog', { name: '交付包检查与导出' })).toBeVisible()
+  expect(trigger).toBeEnabled()
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+})
 test('无项目与读取失败展示中文状态，不伪造示例镜头', async () => {
   const listAll = vi.fn().mockRejectedValue(new Error('fixture-private-error'))
   render(<MemoryRouter><DubbingWorkbenchPage projectRepository={{ listAll }} /></MemoryRouter>)

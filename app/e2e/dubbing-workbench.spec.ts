@@ -3,6 +3,8 @@ import { expect, test, type Page } from './provider-fixture'
 import { makeProjectFixture } from '../src/test/fixtures'
 import { DUBBING_QA_CATEGORIES, loadDubbingQaTemplate } from '../src/features/dubbing/dubbing-qa-standard'
 import type { DubbingWorkspace } from '../src/features/dubbing/dubbing-workbench-model'
+import { deliveryQaFixture, externalDeliveryFixture, approvedDeliveryFixture } from '../src/features/dubbing/__fixtures__/dubbing-delivery.fixture'
+import { DUBBING_EXTERNAL_CHECKS } from '../src/features/dubbing/dubbing-delivery'
 
 async function seed(page: Page) {
   await page.goto('/projects')
@@ -87,6 +89,16 @@ test('节点与历史送审贯通：三轮返修、第四次禁用、QA 自审�
   }
   await expect(page.getByRole('button', { name: '请求返修', exact: true })).toBeDisabled()
   await expect(page.getByText(/不能发起第 4 次返修/)).toBeVisible()
+  await expect(page.getByRole('button', { name: '请求返修', exact: true })).toHaveAttribute('title', '已达修改上限，请走人工复核')
+  await expect(page.getByRole('region', { name: '镜头详情与审核' })).toContainText('操作人：local-reviewer')
+  await page.getByRole('button', { name: '编辑本地化方案' }).click()
+  await page.getByLabel('目标语种').selectOption('en-US')
+  await page.getByRole('button', { name: '保存本地化方案' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: '填写检测数据' }).click()
+  await page.getByRole('textbox', { name: '检测数据 JSON' }).fill(JSON.stringify(deliveryQaFixture()))
+  await page.getByRole('button', { name: '保存检测数据' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   const qa = page.getByRole('complementary', { name: '本地化方案与QA清单' })
   for (const rule of loadDubbingQaTemplate().rules) {
     const checkbox = qa.getByRole('checkbox', { name: new RegExp(rule.standardId) })
@@ -103,18 +115,64 @@ test('节点与历史送审贯通：三轮返修、第四次禁用、QA 自审�
   await expect(page.getByRole('textbox', { name: '自审确认表文本' })).toContainText('《自审确认表》')
   await page.getByRole('button', { name: '标记自审通过' }).click()
   await page.getByRole('button', { name: '交付', exact: true }).click()
-  const delivery = page.getByRole('dialog', { name: '记录交付' })
+  const delivery = page.getByRole('dialog', { name: '交付包检查与导出' })
+  await expect(delivery.getByRole('alert')).toContainText('外部检测报告缺失')
+  await expect(delivery.getByRole('button', { name: '生成交付清单并记录交付' })).toBeDisabled()
+  await delivery.getByText('镜头1 · 外部检测报告与人工核验', { exact: true }).click()
+  const evidence = externalDeliveryFixture()
+  await delivery.getByLabel('检测报告引用').fill(evidence.reportReference)
+  await delivery.getByLabel('实际交付文件引用').fill(evidence.fileReference)
+  await delivery.getByLabel('外部核验人').fill(evidence.reviewer)
+  for (const check of DUBBING_EXTERNAL_CHECKS) await delivery.getByRole('checkbox', { name: check.label, exact: true }).check()
+  await delivery.getByRole('button', { name: '保存外部检测记录' }).click()
+  await expect(delivery.getByRole('alert')).toHaveCount(0)
   await delivery.getByLabel('交付包名称或引用').fill('EP001-v4')
-  await delivery.getByRole('button', { name: '确认记录交付' }).click()
+  await delivery.getByLabel('交付范围').selectOption('episode')
+  await delivery.getByRole('button', { name: '生成交付清单并记录交付' }).click()
   await expect.poll(async () => (await stored(page)).shots[0].record.status).toBe('已交付')
+  await delivery.getByText(/EP001-v4 · .*镜头/).click()
+  const download = page.waitForEvent('download')
+  await delivery.getByRole('button', { name: '下载交付清单 JSON' }).click()
+  expect((await download).suggestedFilename()).toMatch(/^dubbing-delivery-.+\.json$/)
+  await mkdir('../docs/qa/evidence/dubbing-delivery', { recursive: true })
+  await page.screenshot({ path: '../docs/qa/evidence/dubbing-delivery/archived.png' })
   await page.reload()
   await expect(page.getByRole('region', { name: '镜头详情与审核' })).toContainText('EP001-v4')
   const state = await stored(page)
   expect(state.shots).toHaveLength(1)
   expect(state.shots[0].record.generationVersions).toHaveLength(4)
   expect(state.shots[0].record.revisions).toHaveLength(3)
+  expect(state.deliveryPackages?.[0].shots[0].versionId).toBe(state.shots[0].record.generationVersions.at(-1)?.id)
   await page.getByLabel('所属项目').selectOption('dubbing-isolation')
   await expect(page.getByText('暂无镜头。请从画布节点或生成历史选择“送审到工作台”。')).toBeVisible()
+})
+
+test('交付面板：整集阻塞、Esc焦点、三视口可达', async ({ page }) => {
+  await seed(page)
+  const state = approvedDeliveryFixture('project-frost-river')
+  // Synthetic independent workspace, no account data or paid API involved.
+  delete state.shots[0].deliveryEvidence
+  await page.goto('/dubbing?projectId=project-frost-river')
+  await expect(page.getByRole('button', { name: '刷新工作台' })).toBeVisible()
+  await page.evaluate(async value => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const req = indexedDB.open('wireless-canvas-dubbing-v1'); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error) })
+    try { await new Promise<void>((resolve, reject) => { const tx = db.transaction('workspaces', 'readwrite'); tx.objectStore('workspaces').put(value); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) }) } finally { db.close() }
+  }, state)
+  await page.reload()
+  const trigger = page.getByRole('button', { name: '交付包检查与导出', exact: true })
+  await trigger.click(); await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0); await expect(trigger).toBeFocused()
+  await mkdir('../docs/qa/evidence/dubbing-delivery', { recursive: true })
+  for (const width of [1440, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 1000 }); await trigger.click()
+    const panel = page.getByRole('dialog', { name: '交付包检查与导出' })
+    await panel.getByLabel('交付范围').selectOption('episode')
+    await expect(panel.getByRole('alert')).toContainText('外部检测报告缺失')
+    await expect(panel.getByRole('button', { name: '生成交付清单并记录交付' })).toBeDisabled()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: `../docs/qa/evidence/dubbing-delivery/${width}.png` })
+    await page.keyboard.press('Escape')
+  }
 })
 
 test('自审检查器：元数据失败阻断、九节全勾选、文本快照刷新恢复及Esc', async ({ page }) => {

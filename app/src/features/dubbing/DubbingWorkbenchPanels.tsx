@@ -49,17 +49,17 @@ export function DubbingShotDetails({ shot, projectId, busy, action, canApprove =
         {['待生成', '待返修'].includes(record.status) && <><button disabled={busy || !shot.pending} type="button" className="dubbing-primary" onClick={() => action('submit')}>提交生成</button>
           <button disabled={busy} type="button" onClick={() => action('edit')}>编辑镜头资料</button></>}
         {record.status === '待自审' && <button className="dubbing-primary" type="button" disabled={busy || !canApprove} onClick={() => action('approve')}>标记自审通过</button>}
-        {['待自审', '已通过'].includes(record.status) && <button type="button" disabled={busy || record.revisionCount >= 3} title={record.revisionCount >= 3 ? '每镜头最多返修 3 次，第四次不可提交。' : undefined} onClick={() => action('revise')}>请求返修</button>}
+        {['待自审', '已通过'].includes(record.status) && <button type="button" disabled={busy || record.revisionCount >= 3} title={record.revisionCount >= 3 ? '已达修改上限，请走人工复核' : undefined} onClick={() => action('revise')}>请求返修</button>}
         {record.status === '已通过' && <button type="button" className="dubbing-primary" disabled={busy} onClick={() => action('deliver')}>交付</button>}
       </div>
-      {record.revisionCount >= 3 && <p className="dubbing-limit">已达 3 次返修上限，不能发起第 4 次返修；当前版本仍可完成自审与交付。</p>}
+      {record.revisionCount >= 3 && <p className="dubbing-limit">已达修改上限，请走人工复核。不能发起第 4 次返修；当前版本仍须完成自审与交付检查。</p>}
       {record.status === '待自审' && <p className="dubbing-muted">还有 {p0Remaining} 项 P0 待核对。全部子项与九节逐集排查完成并生成当前自审确认表，才能提交审核；勾选不是 AI 自动通过。</p>}
       {['待生成', '待返修'].includes(record.status) && <p className="dubbing-muted">{shot.pending ? '提交已有生成结果，不发起 API 请求。' : '请从画布或生成历史送入新的返修结果。'}</p>}
       <Link to={`/project/${encodeURIComponent(projectId)}`}>返回画布补充结果</Link>
       <h3>待提交结果与引用资产</h3><div className="dubbing-media-grid">{shot.assets.map(asset => <DubbingMediaPreview key={asset.id} media={asset} />)}</div>
       <h3>生成版本 · {record.generationVersions.length}</h3>{record.generationVersions.map((version, index) => <details key={version.id}><summary>版本 {index + 1} · {version.createdAt}</summary>
-        <p>结果资产：{version.assetIds.join('、')}</p><p>{version.contentSnapshot.localizedDialogue || '无本地化台词'}</p><p>关联返修：{version.revisionId ?? '首次提交'}</p></details>)}
-      <h3>返修记录 · 只追加保留</h3>{record.revisions.length ? record.revisions.map(revision => <article className="dubbing-revision" key={revision.id}><strong>第 {revision.round} 次 · {revision.at}</strong><p>{revision.feedback}</p><small>{revision.standardIds.join('、')}</small></article>) : <p className="dubbing-muted">暂无返修记录</p>}
+        <p>版本 ID：{version.id}</p><p>结果资产：{version.assetIds.join('、')}</p><p>{version.contentSnapshot.localizedDialogue || '无本地化台词'}</p><p>关联返修：{version.revisionId ?? '首次提交'}</p></details>)}
+      <h3>返修记录 · 只追加保留</h3>{record.revisions.length ? record.revisions.map(revision => <article className="dubbing-revision" key={revision.id}><strong>第 {revision.round} 次 · {revision.at}</strong><p>操作人：{revision.actorId} · 基准版本：{revision.baseVersionId}</p><p>{revision.feedback}</p><small>{revision.standardIds.join('、')}</small></article>) : <p className="dubbing-muted">暂无返修记录</p>}
       {record.approval && <p>自审通过：{record.approval.at} · {record.approval.actorId}</p>}
       {record.delivery && <p>本地交付记录：{record.delivery.reference}（不代表客户签收）</p>}
     </>}

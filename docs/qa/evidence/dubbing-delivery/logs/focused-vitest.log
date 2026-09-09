@@ -1,0 +1,12 @@
+
+> app@0.0.0 test:run
+> vitest run src/features/dubbing
+
+
+ RUN  v4.1.10 /Users/andydb/.codex/worktrees/322b/无线画布/app
+
+
+ Test Files  11 passed (11)
+      Tests  99 passed (99)
+   Start at  02:46:32
+   Duration  3.45s (transform 2.67s, setup 2.93s, import 4.41s, tests 3.23s, environment 9.59s)

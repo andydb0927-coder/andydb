@@ -2,7 +2,8 @@ import Dexie, { type Table } from 'dexie'
 import { createDubbingShotRecord, transitionDubbingShot, type DubbingShotContent, type DubbingShotEvent } from './dubbing-shot-record'
 import { createDubbingLocalizationPlan, type DubbingLocalizationPlanInput } from './dubbing-localization-plan'
 import { DUBBING_QA_CATEGORIES, loadDubbingQaTemplate } from './dubbing-qa-standard'
-import { createDubbingQaConfirmation, dubbingConfirmationCurrent, parseDubbingQaEvidence } from './dubbing-qa-checklist'
+import { createDubbingQaConfirmation, dubbingConfirmationCurrent, dubbingQaSignature, parseDubbingQaEvidence } from './dubbing-qa-checklist'
+import { createDubbingDeliveryPackage, parseDubbingExternalEvidence, type DubbingDeliveryScope } from './dubbing-delivery'
 import { dubbingAssert, dubbingText, dubbingUniqueIds } from './dubbing-domain-validation'
 import { emptyDubbingWorkspace, type DubbingIntakeFields, type DubbingReviewSource, type DubbingWorkbenchShot, type DubbingWorkspace } from './dubbing-workbench-model'
 
@@ -150,9 +151,25 @@ export class DubbingWorkbenchRepository {
     })
   }
   deliver(projectId: string, version: number, shotId: string, reference: string) {
+    // Legacy callers cannot bypass the same delivery gate used by the panel.
+    return this.exportDelivery(projectId, version, { type: 'shot', shotId }, undefined, reference)
+  }
+  saveDeliveryEvidence(projectId: string, version: number, shotId: string, input: unknown) {
     return this.mutate(projectId, version, state => {
       const shot = shotAt(state, shotId)
-      advance(shot, { ...metadata(shot), type: 'deliver', deliveryReference: reference.trim() })
+      dubbingAssert(shot.record.status === '已通过', '请先完成当前版本自审，再登记外部检测报告。')
+      shot.deliveryEvidence = { ...parseDubbingExternalEvidence(input), signature: dubbingQaSignature(state, shot), at: new Date().toISOString() }
+    })
+  }
+  exportDelivery(projectId: string, version: number, scope: DubbingDeliveryScope, expectedEpisodeCount: number | undefined, reference: string) {
+    return this.mutate(projectId, version, state => {
+      const count = expectedEpisodeCount ?? (scope.type === 'shot' ? shotAt(state, scope.shotId).qa.evidence?.expectedEpisodeCount : undefined)
+      const snapshot = createDubbingDeliveryPackage(state, scope, count ?? 0, reference, new Date().toISOString(), crypto.randomUUID())
+      for (const item of snapshot.shots) {
+        const shot = shotAt(state, item.shotId)
+        advance(shot, { ...metadata(shot), type: 'deliver', deliveryReference: snapshot.reference })
+      }
+      state.deliveryPackages = [...(state.deliveryPackages ?? []), snapshot]
     })
   }
   editContent(projectId: string, version: number, shotId: string, content: DubbingShotContent) {

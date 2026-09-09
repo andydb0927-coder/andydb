@@ -1,6 +1,7 @@
 import type { DubbingShotRecord } from './dubbing-shot-record'
 import type { DubbingLocalizationPlan } from './dubbing-localization-plan'
 import type { DubbingQaConfirmation, DubbingQaEvidence } from './dubbing-qa-checklist'
+import type { DubbingDeliveryPackage, DubbingExternalEvidence } from './dubbing-delivery'
 
 export interface DubbingMedia {
   id: string
@@ -30,6 +31,7 @@ export interface DubbingIntakeFields {
   camera: string
 }
 export interface DubbingWorkbenchShot {
+  deliveryEvidence?: DubbingExternalEvidence
   record: DubbingShotRecord
   sourceKeys: string[]
   sourceNodeId: string
@@ -40,6 +42,7 @@ export interface DubbingWorkbenchShot {
   qaHistory: { id: string; versionId: string; checkedIds: string[]; at: string; confirmation?: DubbingQaConfirmation }[]
 }
 export interface DubbingWorkspace {
+  deliveryPackages?: DubbingDeliveryPackage[]
   namespace: 'dubbing.workspace'
   schemaVersion: 1
   projectId: string

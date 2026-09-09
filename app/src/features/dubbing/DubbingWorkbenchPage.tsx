@@ -9,6 +9,7 @@ import { DubbingPlanEditor } from './DubbingPlanEditor'
 import { DubbingContentDialog, DubbingReviewDialog } from './DubbingReviewDialogs'
 import './dubbing-workbench.css'
 import { dubbingConfirmationCurrent } from './dubbing-qa-checklist'
+import { DubbingDeliveryHistory, DubbingDeliveryPanel } from './DubbingDeliveryPanel'
 
 const defaultProjects = createDefaultProjectStorage()
 interface DubbingWorkbenchPageProps {
@@ -73,6 +74,7 @@ function DubbingProjectWorkbench({ project, repository, initialShotId }: { proje
   }
   return <>
     <div className="dubbing-workbench-summary"><span>{workspace.shots.length} 个镜头 · {workspace.shots.filter(shot => shot.record.status === '已通过').length} 已通过 · {workspace.shots.filter(shot => shot.record.status === '已交付').length} 已交付</span>
+      <button type="button" disabled={busy || !selected} onClick={() => setPanel('deliver')}>交付包检查与导出</button>
       <button type="button" disabled={busy || Boolean(panel)} onClick={() => void load()}>刷新工作台</button></div>
     {error && <p role="alert" className="dubbing-error">{error}</p>}{message && <p role="status" className="dubbing-save-state">{message}</p>}
     <div className="dubbing-columns">
@@ -94,7 +96,11 @@ function DubbingProjectWorkbench({ project, repository, initialShotId }: { proje
       confirm: () => { void commit(() => repository.confirmChecklist(project.id, workspace.version, selectedId)).catch(failure => setError(dubbingUiError(failure))) } }} />
     </div>
     {panel === 'plan' && <DubbingPlanEditor projectId={project.id} plan={workspace.plan} onClose={() => setPanel(undefined)} save={input => commit(() => repository.savePlan(project.id, workspace.version, input))} />}
-    {(panel === 'revise' || panel === 'deliver') && selected && <DubbingReviewDialog mode={panel} onClose={() => setPanel(undefined)} save={(text, ids) => commit(() => panel === 'revise' ? repository.revise(project.id, workspace.version, selectedId, text, ids) : repository.deliver(project.id, workspace.version, selectedId, text))} />}
+    {panel === 'revise' && selected && <DubbingReviewDialog mode="revise" onClose={() => setPanel(undefined)} save={(text, ids) => commit(() => repository.revise(project.id, workspace.version, selectedId, text, ids))} />}
+    {panel === 'deliver' && selected && <DubbingDeliveryPanel workspace={workspace} selectedId={selectedId} onClose={() => setPanel(undefined)}
+      saveEvidence={(shotId, value) => commit(() => repository.saveDeliveryEvidence(project.id, workspace.version, shotId, value))}
+      exportPackage={(scope, count, reference) => commit(() => repository.exportDelivery(project.id, workspace.version, scope, count, reference))} />}
+    <DubbingDeliveryHistory packages={workspace.deliveryPackages ?? []} />
     {panel === 'edit' && selected && <DubbingContentDialog content={selected.record.content} onClose={() => setPanel(undefined)} save={content => commit(() => repository.editContent(project.id, workspace.version, selectedId, content))} />}
   </>
 }

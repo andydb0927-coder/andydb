@@ -60,6 +60,8 @@
 .dubbing-dialog textarea { min-height: 70px; resize: vertical; }
 .dubbing-error, .dubbing-dialog [role=alert] { padding: 10px; color: #ffb3ad; background: #422a2b; border-radius: 8px; }
 .dubbing-save-state { color: #9edecb; font-size: 12px; }
+.dubbing-delivery-history { margin-top: 20px; min-width: 0; overflow-wrap: anywhere; }
+.dubbing-dialog .dubbing-error li { margin: 8px 0; overflow-wrap: anywhere; }
 .dubbing-state { padding: 36px 20px; border: 1px dashed #53616e; border-radius: 12px; }
 .dubbing-overlay { position: fixed; inset: 0; z-index: 2000; background: #050b14b8; display: grid; place-items: center; padding: 24px; }
 .dubbing-dialog { width: min(700px, 100%); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; background: #1b232d; color: #ecf3f7; border: 1px solid #526171; border-radius: 16px; box-shadow: 0 20px 70px #0008; }
